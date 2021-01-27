@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<JUCERPROJECT id="vctzEm" name="Plastic Funeral" projectType="audioplug" useAppConfig="0"
+              addUsingNamespaceToJuceHeader="0" displaySplashScreen="1" jucerFormatVersion="1"
+              companyName="unplugred" companyWebsite="https://unplug.red" companyEmail="arihanan@protonmail.com"
+              pluginFormats="buildVST,buildVST3" pluginChannelConfigs="{1,1},{2,2}"
+              pluginAAXCategory="64" pluginRTASCategory="64" pluginVST3Category="Distortion"
+              headerPath="C:\VST_SDK\vstsdk2.4">
+  <MAINGROUP id="cwqzUg" name="Plastic Funeral">
+    <GROUP id="{67EC23A0-031A-9AC5-CDDD-77F12247C5DB}" name="Source">
+      <FILE id="c9ngUg" name="components.cpp" compile="1" resource="0" file="Source/components.cpp"/>
+      <FILE id="EOQBaV" name="components.h" compile="0" resource="0" file="Source/components.h"/>
+      <FILE id="Jud1UJ" name="PluginProcessor.cpp" compile="1" resource="0"
+            file="Source/PluginProcessor.cpp"/>
+      <FILE id="p4M3r8" name="PluginProcessor.h" compile="0" resource="0"
+            file="Source/PluginProcessor.h"/>
+      <FILE id="KtWD4Z" name="PluginEditor.cpp" compile="1" resource="0"
+            file="Source/PluginEditor.cpp"/>
+      <FILE id="s7s3Is" name="PluginEditor.h" compile="0" resource="0" file="Source/PluginEditor.h"/>
+    </GROUP>
+    <GROUP id="{6F9A9B8E-4453-DEEB-953E-DAFA6974DF59}" name="Resources">
+      <FILE id="aso9TN" name="base.png" compile="0" resource="1" file="Resources/base.png"/>
+      <FILE id="DnIDOV" name="credits.png" compile="0" resource="1" file="Resources/credits.png"/>
+      <FILE id="FdRFbM" name="knob1.png" compile="0" resource="1" file="Resources/knob1.png"/>
+      <FILE id="qUu1zg" name="knob2.png" compile="0" resource="1" file="Resources/knob2.png"/>
+    </GROUP>
+  </MAINGROUP>
+  <JUCEOPTIONS JUCE_STRICT_REFCOUNTEDPOINTER="1" JUCE_VST3_CAN_REPLACE_VST2="0"/>
+  <EXPORTFORMATS>
+    <VS2019 targetFolder="Builds/VisualStudio2019">
+      <CONFIGURATIONS>
+        <CONFIGURATION isDebug="1" name="Debug" targetName="fmer"/>
+        <CONFIGURATION isDebug="0" name="Release" targetName="fmer"/>
+      </CONFIGURATIONS>
+      <MODULEPATHS>
+        <MODULEPATH id="juce_audio_basics" path="C:/Program Files (x86)/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_devices" path="C:/Program Files (x86)/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_formats" path="C:/Program Files (x86)/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_plugin_client" path="C:/Program Files (x86)/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_processors" path="C:/Program Files (x86)/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_utils" path="C:/Program Files (x86)/JUCE/modules"/>
+        <MODULEPATH id="juce_core" path="C:/Program Files (x86)/JUCE/modules"/>
+        <MODULEPATH id="juce_data_structures" path="C:/Program Files (x86)/JUCE/modules"/>
+        <MODULEPATH id="juce_events" path="C:/Program Files (x86)/JUCE/modules"/>
+        <MODULEPATH id="juce_graphics" path="C:/Program Files (x86)/JUCE/modules"/>
+        <MODULEPATH id="juce_gui_basics" path="C:/Program Files (x86)/JUCE/modules"/>
+        <MODULEPATH id="juce_gui_extra" path="C:/Program Files (x86)/JUCE/modules"/>
+      </MODULEPATHS>
+    </VS2019>
+  </EXPORTFORMATS>
+  <MODULES>
+    <MODULE id="juce_audio_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_audio_devices" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_audio_formats" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_audio_plugin_client" showAllCode="1" useLocalCopy="0"
+            useGlobalPath="1"/>
+    <MODULE id="juce_audio_processors" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_audio_utils" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_core" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_data_structures" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_events" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_graphics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_gui_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_gui_extra" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+  </MODULES>
+  <LIVE_SETTINGS>
+    <WINDOWS/>
+  </LIVE_SETTINGS>
+</JUCERPROJECT>
