@@ -289,22 +289,20 @@ void FmerAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
 
 float FmerAudioProcessor::plasticfuneral(float source, int channel, float freq, float fat, float drive, float dry, float stereo, float gain)
 {
-	freq = fmax(fmin(freq + stereo * .2 * ((float)channel * 2 - 1), 1), 0);
+	freq = fmax(fmin(freq + stereo * .2f * ((float)channel * 2 - 1), 1), 0);
 	float smpl = source * (100 - cos(freq * 1.5708f) * 99);
-	float pdrive = fmax(fmin(smpl, 1), -1);
-	float pfreq = fmod(abs(smpl),4);
+	float pfreq = fmod(fabs(smpl), 4);
 	pfreq = (pfreq > 3 ? (pfreq - 4) : (pfreq > 1 ? (2 - pfreq) : pfreq)) * (smpl > 0 ? 1 : -1);
+	float pdrive = fmax(fmin(smpl, 1), -1);
 	smpl = pdrive * drive + pfreq * (1 - drive);
 	return ((smpl + (sin(smpl * 1.5708f) - smpl) * fat) * (1 - dry) + source * dry) * gain;
 }
 
 void FmerAudioProcessor::normalizegain() {
-	norm = 0.25;
-	for (int i = 0; i < 400; i++) {
-		norm = fmax(norm, abs(plasticfuneral((i - 200) / 200.f, 0, freq, fat, drive, dry, stereo, 1)));
-		norm = fmax(norm, abs(plasticfuneral((i - 200) / 200.f, 1, freq, fat, drive, dry, stereo, 1)));
-	}
-	norm = 1/norm;
+	norm = 0.25f;
+	for (float i = 0; i <= 1; i += .005f)
+		norm = fmax(norm, fabs(i + (sin(i * 1.5708f) - i) * fat) * (1 - dry) + i * dry);
+	norm = 1 / norm;
 }
 
 //==============================================================================
