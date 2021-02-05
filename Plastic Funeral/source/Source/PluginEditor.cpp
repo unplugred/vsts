@@ -80,6 +80,12 @@ FmerAudioProcessorEditor::~FmerAudioProcessorEditor()
 //==============================================================================
 void FmerAudioProcessorEditor::paint (Graphics& g)
 {
+	/*
+	g.fillAll(juce::Colours::green);
+	g.setColour(juce::Colours::blue);
+	g.setFont(18.0f);
+	g.drawSingleLineText(std::to_string(audioProcessor.norm), 70, 30, Justification::left);
+	*/
 }
 
 void FmerAudioProcessorEditor::resized()
