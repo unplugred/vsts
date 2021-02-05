@@ -64,9 +64,8 @@ public:
 	UndoManager undoManager;
 
 	void normalizegain();
-	float newnorm;
 	float oldfreq = 0, oldfat = 0, olddrive = 0, olddry = 1, oldstereo = 0, oldgain = 1, oldnorm = 1;
-	float freq = 0, fat = 0, drive = 0, dry = 1, stereo = 0, gain = 1, norm = 1;
+	float freq = 0, fat = 0, drive = 0, dry = 0, stereo = 0, gain = 1, norm = 1;
 
 	PluginPreset presets[10];
 	int currentpreset = 0;

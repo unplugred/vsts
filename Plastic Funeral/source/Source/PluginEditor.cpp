@@ -23,7 +23,7 @@ FmerAudioProcessorEditor::FmerAudioProcessorEditor (FmerAudioProcessor& p)
 	mFreqKnob.setSliderStyle(Slider::RotaryVerticalDrag);
 	mFreqKnob.setRange(0.0f, 1.0f);
 	mFreqKnob.setTextBoxStyle(Slider::NoTextBox, true, 50, 20);
-	mFreqKnob.setLookAndFeel(&darkKnob);
+	mFreqKnob.setLookAndFeel(&darkKnobb);
 	mFreqKnob.addListener(this);
 	addAndMakeVisible(mFreqKnob);
 	mFreqAttachment = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(audioProcessor.apvts, "freq", mFreqKnob);
@@ -31,7 +31,7 @@ FmerAudioProcessorEditor::FmerAudioProcessorEditor (FmerAudioProcessor& p)
 	mFatKnob.setSliderStyle(Slider::RotaryVerticalDrag);
 	mFatKnob.setRange(-20.0f, 20.0f);
 	mFatKnob.setTextBoxStyle(Slider::NoTextBox, true, 50, 20);
-	mFatKnob.setLookAndFeel(&darkKnob);
+	mFatKnob.setLookAndFeel(&darkKnobb);
 	mFatKnob.addListener(this);
 	addAndMakeVisible(mFatKnob);
 	mFatAttachment = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(audioProcessor.apvts, "fat", mFatKnob);
@@ -39,7 +39,7 @@ FmerAudioProcessorEditor::FmerAudioProcessorEditor (FmerAudioProcessor& p)
 	mDriveKnob.setSliderStyle(Slider::RotaryVerticalDrag);
 	mDriveKnob.setRange(0.0f, 1.0f);
 	mDriveKnob.setTextBoxStyle(Slider::NoTextBox, true, 50, 20);
-	mDriveKnob.setLookAndFeel(&brightKnob);
+	mDriveKnob.setLookAndFeel(&brightKnobb);
 	mDriveKnob.addListener(this);
 	addAndMakeVisible(mDriveKnob);
 	mDriveAttachment = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(audioProcessor.apvts, "drive", mDriveKnob);
@@ -47,7 +47,7 @@ FmerAudioProcessorEditor::FmerAudioProcessorEditor (FmerAudioProcessor& p)
 	mDryKnob.setSliderStyle(Slider::RotaryVerticalDrag);
 	mDryKnob.setRange(0.0f, 1.0f);
 	mDryKnob.setTextBoxStyle(Slider::NoTextBox, true, 50, 20);
-	mDryKnob.setLookAndFeel(&brightKnob);
+	mDryKnob.setLookAndFeel(&brightKnobb);
 	mDryKnob.addListener(this);
 	addAndMakeVisible(mDryKnob);
 	mDryAttachment = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(audioProcessor.apvts, "dry", mDryKnob);
@@ -55,7 +55,7 @@ FmerAudioProcessorEditor::FmerAudioProcessorEditor (FmerAudioProcessor& p)
 	mStereoKnob.setSliderStyle(Slider::RotaryVerticalDrag);
 	mStereoKnob.setRange(0.0f, 1.0f);
 	mStereoKnob.setTextBoxStyle(Slider::NoTextBox, true, 50, 20);
-	mStereoKnob.setLookAndFeel(&brightKnob);
+	mStereoKnob.setLookAndFeel(&brightKnobb);
 	mStereoKnob.addListener(this);
 	addAndMakeVisible(mStereoKnob);
 	mStereoAttachment = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(audioProcessor.apvts, "stereo", mStereoKnob);
@@ -63,7 +63,7 @@ FmerAudioProcessorEditor::FmerAudioProcessorEditor (FmerAudioProcessor& p)
 	mGainKnob.setSliderStyle(Slider::RotaryVerticalDrag);
 	mGainKnob.setRange(0.0f, 1.0f);
 	mGainKnob.setTextBoxStyle(Slider::NoTextBox, true, 50, 20);
-	mGainKnob.setLookAndFeel(&brightKnob);
+	mGainKnob.setLookAndFeel(&brightKnobb);
 	mGainKnob.addListener(this);
 	addAndMakeVisible(mGainKnob);
 	mGainAttachment = std::make_unique<AudioProcessorValueTreeState::SliderAttachment>(audioProcessor.apvts, "gain", mGainKnob);
@@ -100,17 +100,17 @@ void FmerAudioProcessorEditor::resized()
 void FmerAudioProcessorEditor::sliderValueChanged(Slider* slider)
 {
 	if(slider == &mFreqKnob)
-		audioProcessor.freq = slider.getValue();
+		audioProcessor.freq = mFreqKnob.getValue();
 	else if(slider == &mFatKnob)
-		audioProcessor.fat = slider.getValue();
+		audioProcessor.fat = mFatKnob.getValue();
 	else if(slider == &mDriveKnob)
-		audioProcessor.drive = slider.getValue();
+		audioProcessor.drive = mDriveKnob.getValue();
 	else if(slider == &mDryKnob)
-		audioProcessor.dry = slider.getValue();
+		audioProcessor.dry = mDryKnob.getValue();
 	else if(slider == &mStereoKnob)
-		audioProcessor.stereo = slider.getValue();
+		audioProcessor.stereo = mStereoKnob.getValue();
 	else if(slider == &mGainKnob)
-		audioProcessor.gain = slider.getValue();
+		audioProcessor.gain = mGainKnob.getValue();
 	audioProcessor.normalizegain();
 	calcvis();
 }
@@ -128,18 +128,11 @@ void FmerAudioProcessorEditor::sliderDragEnded(Slider* slider)
 
 
 void FmerAudioProcessorEditor::calcvis() {
-	float freq = *audioProcessor.apvts.getRawParameterValue("freq");
-	float fat = *audioProcessor.apvts.getRawParameterValue("fat");
-	float drive = *audioProcessor.apvts.getRawParameterValue("drive");
-	float dry = *audioProcessor.apvts.getRawParameterValue("dry");
-	float stereo = *audioProcessor.apvts.getRawParameterValue("stereo");
-	float gain = *audioProcessor.apvts.getRawParameterValue("gain");
-
-	mVisualizer.isStereo = stereo > 0 && dry < 1 && gain > 0;
+	mVisualizer.isStereo = audioProcessor.stereo > 0 && audioProcessor.dry < 1 && audioProcessor.gain > 0;
 	for (int i = 0; i < 226; i++) {
-		mVisualizer.visline[0][i] = 40 + audioProcessor.plasticfuneral(sin(i / 35.9690171388f) * .8, 0, freq, fat, drive, dry, stereo, gain) * audioProcessor.newnorm * 38;
+		mVisualizer.visline[0][i] = 40 + audioProcessor.plasticfuneral(sin(i / 35.9690171388f) * .8, 0, audioProcessor.freq, audioProcessor.fat, audioProcessor.drive, audioProcessor.dry, audioProcessor.stereo, audioProcessor.gain) * audioProcessor.norm * 38;
 		if(mVisualizer.isStereo)
-			mVisualizer.visline[1][i] = 40 + audioProcessor.plasticfuneral(sin(i / 35.9690171388f) * .8, 1, freq, fat, drive, dry, stereo, gain) * audioProcessor.newnorm * 38;
+			mVisualizer.visline[1][i] = 40 + audioProcessor.plasticfuneral(sin(i / 35.9690171388f) * .8, 1, audioProcessor.freq, audioProcessor.fat, audioProcessor.drive, audioProcessor.dry, audioProcessor.stereo, audioProcessor.gain) * audioProcessor.norm * 38;
 	}
 	mVisualizer.repaint();
 }

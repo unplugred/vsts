@@ -34,8 +34,8 @@ public:
 	void calcvis();
 
 private:
-	darkKnob darkKnob;
-	brightKnob brightKnob;
+	darkKnob darkKnobb;
+	brightKnob brightKnobb;
 
 	ImageComponent mBaseImg;
 	VisualizerComponent mVisualizer;
