@@ -136,9 +136,9 @@ void FmerAudioProcessorEditor::sliderDragEnded(Slider* slider)
 void FmerAudioProcessorEditor::calcvis() {
 	mVisualizer.isStereo = audioProcessor.stereo > 0 && audioProcessor.dry < 1 && audioProcessor.gain > 0;
 	for (int i = 0; i < 226; i++) {
-		mVisualizer.visline[0][i] = 40 + audioProcessor.plasticfuneral(sin(i / 35.9690171388f) * .8, 0, audioProcessor.freq, audioProcessor.fat, audioProcessor.drive, audioProcessor.dry, audioProcessor.stereo, audioProcessor.gain) * audioProcessor.norm * 38;
+		mVisualizer.visline[0][i] = 40 + audioProcessor.plasticfuneral(sin(i / 35.8098621957f) * .8f, 0, audioProcessor.freq, audioProcessor.fat, audioProcessor.drive, audioProcessor.dry, audioProcessor.stereo, audioProcessor.gain) * audioProcessor.norm * 38;
 		if(mVisualizer.isStereo)
-			mVisualizer.visline[1][i] = 40 + audioProcessor.plasticfuneral(sin(i / 35.9690171388f) * .8, 1, audioProcessor.freq, audioProcessor.fat, audioProcessor.drive, audioProcessor.dry, audioProcessor.stereo, audioProcessor.gain) * audioProcessor.norm * 38;
+			mVisualizer.visline[1][i] = 40 + audioProcessor.plasticfuneral(sin(i / 35.8098621957f) * .8f, 1, audioProcessor.freq, audioProcessor.fat, audioProcessor.drive, audioProcessor.dry, audioProcessor.stereo, audioProcessor.gain) * audioProcessor.norm * 38;
 	}
 	mVisualizer.repaint();
 }

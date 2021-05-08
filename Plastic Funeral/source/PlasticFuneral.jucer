@@ -4,8 +4,7 @@
               addUsingNamespaceToJuceHeader="0" displaySplashScreen="1" jucerFormatVersion="1"
               companyName="unplugred" companyWebsite="https://unplug.red" companyEmail="arihanan@protonmail.com"
               pluginFormats="buildVST,buildVST3" pluginChannelConfigs="{1,1},{2,2}"
-              pluginAAXCategory="64" pluginRTASCategory="64" pluginVST3Category="Distortion"
-              headerPath="C:\vstsdk2.4&#10;~/software/JUCE/vstsdk2.4">
+              pluginAAXCategory="64" pluginRTASCategory="64" pluginVST3Category="Distortion">
   <MAINGROUP id="cwqzUg" name="Plastic Funeral">
     <GROUP id="{67EC23A0-031A-9AC5-CDDD-77F12247C5DB}" name="Source">
       <FILE id="c9ngUg" name="components.cpp" compile="1" resource="0" file="Source/components.cpp"/>
@@ -27,10 +26,11 @@
   </MAINGROUP>
   <JUCEOPTIONS JUCE_STRICT_REFCOUNTEDPOINTER="1" JUCE_VST3_CAN_REPLACE_VST2="0"/>
   <EXPORTFORMATS>
-    <VS2019 targetFolder="Builds/VisualStudio2019">
+    <VS2019 targetFolder="Builds/VisualStudio2019" vstLegacyFolder="C:\vstsdk2.4">
       <CONFIGURATIONS>
-        <CONFIGURATION isDebug="1" name="Debug" targetName="fmer"/>
-        <CONFIGURATION isDebug="0" name="Release" targetName="fmer"/>
+        <CONFIGURATION isDebug="1" name="Debug" targetName="Plastic Funeral Preview"/>
+        <CONFIGURATION isDebug="0" name="Win64" targetName="Plastic Funeral" winArchitecture="x64"/>
+        <CONFIGURATION isDebug="0" name="Win32" targetName="Plastic Funeral" winArchitecture="Win32"/>
       </CONFIGURATIONS>
       <MODULEPATHS>
         <MODULEPATH id="juce_audio_basics" path="C:/Program Files (x86)/JUCE/modules"/>
@@ -47,10 +47,9 @@
         <MODULEPATH id="juce_gui_extra" path="C:/Program Files (x86)/JUCE/modules"/>
       </MODULEPATHS>
     </VS2019>
-    <LINUX_MAKE targetFolder="Builds/LinuxMakefile">
+    <LINUX_MAKE targetFolder="Builds/LinuxMakefile" vstLegacyFolder="../../../vstsdk2.4">
       <CONFIGURATIONS>
-        <CONFIGURATION isDebug="0" name="Debug"/>
-        <CONFIGURATION isDebug="0" name="Release"/>
+        <CONFIGURATION isDebug="0" name="Release" targetName="Plastic Funeral" linkTimeOptimisation="1"/>
       </CONFIGURATIONS>
       <MODULEPATHS>
         <MODULEPATH id="juce_gui_extra" path="../../juce"/>
