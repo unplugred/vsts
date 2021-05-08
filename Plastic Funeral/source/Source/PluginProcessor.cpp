@@ -328,22 +328,28 @@ void FmerAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 	currentpreset = std::stoi(token);
 
 	std::getline(ss, token, '\n');
-	apvts.getParameter("freq")->setValueNotifyingHost(std::stof(token));
+	freq = std::stof(token);
+	apvts.getParameter("freq")->setValueNotifyingHost(freq);
 
 	std::getline(ss, token, '\n');
-	apvts.getParameter("fat")->setValueNotifyingHost(std::stof(token)*.025 + .5);
+	fat = std::stof(token);
+	apvts.getParameter("fat")->setValueNotifyingHost(fat*.025 + .5);
 
 	std::getline(ss, token, '\n');
-	apvts.getParameter("drive")->setValueNotifyingHost(std::stof(token));
+	drive = std::stof(token);
+	apvts.getParameter("drive")->setValueNotifyingHost(drive);
 
 	std::getline(ss, token, '\n');
-	apvts.getParameter("dry")->setValueNotifyingHost(std::stof(token));
+	dry = std::stof(token);
+	apvts.getParameter("dry")->setValueNotifyingHost(dry);
 
 	std::getline(ss, token, '\n');
-	apvts.getParameter("stereo")->setValueNotifyingHost(std::stof(token));
+	stereo = std::stof(token);
+	apvts.getParameter("stereo")->setValueNotifyingHost(stereo);
 
 	std::getline(ss, token, '\n');
-	apvts.getParameter("gain")->setValueNotifyingHost(std::stof(token));
+	gain = std::stof(token);
+	apvts.getParameter("gain")->setValueNotifyingHost(gain);
 
 	for(int i = 0; i < getNumPrograms(); i++) {
 		std::getline(ss, token, '\n'); presets[i].name = token;
