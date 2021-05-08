@@ -15,7 +15,7 @@ using namespace juce;
 */
 struct PluginPreset {
 	String name;
-	float freq, fat, drive, dry, stereo, gain;
+	float freq, fat, drive, dry, stereo;
 };
 
 class FmerAudioProcessor  : public juce::AudioProcessor
@@ -63,11 +63,14 @@ public:
 	AudioProcessorValueTreeState::ParameterLayout createParameters();
 	UndoManager undoManager;
 
-	void normalizegain();
-	float oldfreq = 0, oldfat = 0, olddrive = 0, olddry = 1, oldstereo = 0, oldgain = 1, oldnorm = 1;
-	float freq = 0, fat = 0, drive = 0, dry = 0, stereo = 0, gain = 1, norm = 1;
+	int version = 1;
+	bool boot = false;
 
-	PluginPreset presets[10];
+	void normalizegain();
+	float oldfreq = 0, oldfat = 0, olddrive = 0, olddry = 0, oldstereo = 0, oldgain = 1, oldnorm = 1;
+	float freq = 0.32, fat = 0, drive = 0, dry = 0, stereo = 0.37, gain = .4, norm = 1;
+
+	PluginPreset presets[8];
 	int currentpreset = 0;
 	void lerpPreset(float);
 	void lerpValue(StringRef, float&, float);
