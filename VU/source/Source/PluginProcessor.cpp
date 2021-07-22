@@ -103,7 +103,7 @@ void VuAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mid
 				rightrms += data;
 				rightpeak = rightpeak || fabs(channelData[sample]) >= .999;
 			}
-			channelData[sample] = 0;
+			//channelData[sample] = 0;
 		}
 		if(channel == 0)
 			leftrms = std::sqrt(leftrms/buffer.getNumSamples());
