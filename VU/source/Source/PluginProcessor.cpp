@@ -1,4 +1,4 @@
-﻿/*
+/*
   ==============================================================================
 
 	This file contains the basic framework code for a JUCE plugin processor.
@@ -16,8 +16,13 @@ VuAudioProcessor::VuAudioProcessor() :
 #endif
 	apvts(*this, &undoManager, "Parameters", createParameters())
 {
+	//SystemStats::setApplicationCrashHandler(crashhandler);
 }
-
+/*
+void VuAudioProcessor::crashhandler(void*) {
+	File::getCurrentWorkingDirectory().getChildFile("digital_tombstone.txt").replaceWithText(SystemStats::getStackBacktrace());
+}
+*/
 VuAudioProcessor::~VuAudioProcessor() {
 }
 

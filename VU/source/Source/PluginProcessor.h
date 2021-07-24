@@ -19,6 +19,7 @@ class VuAudioProcessor	: public AudioProcessor
 public:
 	//==============================================================================
 	VuAudioProcessor();
+	//static void crashhandler(void*);
 	~VuAudioProcessor() override;
 
 	//==============================================================================
