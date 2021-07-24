@@ -27,8 +27,8 @@ public:
 
 	void timerCallback() override;
 
-	int prevh;
-	int prevw;
+	int prevh = 0;
+	int prevw = 0;
 private:
 	VuAudioProcessor& audioProcessor;
 	displayComponent displaycomp;

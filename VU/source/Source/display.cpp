@@ -53,13 +53,13 @@ void displayComponent::newOpenGLContextCreated() {
 	openGLContext.extensions.glGenBuffers(0, &arraybuffer);
 }
 void displayComponent::renderOpenGL() {
-	openGLContext.extensions.glBindBuffer(GL_ARRAY_BUFFER, arraybuffer);
 	glDisable(GL_BLEND);
 	glEnable(GL_TEXTURE_2D);
 	glDisable(GL_LIGHTING);
 	glDisable(GL_DEPTH_TEST);
-	glDisable(GL_LINE_SMOOTH);
+	glDisable(GL_ALPHA_TEST);
 
+	openGLContext.extensions.glBindBuffer(GL_ARRAY_BUFFER, arraybuffer);
 	vushader->use();
 	openGLContext.extensions.glActiveTexture(GL_TEXTURE0);
 	vutex.bind();
@@ -146,7 +146,7 @@ void displayComponent::mouseMove(const MouseEvent& event) {
 	settingstimer = fmax(settingstimer,60);
 	int prevhover = hover;
 	hover = recalchover(event.x,event.y);
-	if(hover == 4 && prevhover != 4 && websiteht < -.6) websiteht = 0.6;
+	if(hover == 4 && prevhover != 4 && websiteht < -.6) websiteht = 0.6f;
 }
 void displayComponent::mouseExit(const MouseEvent& event) {
 	if(!held) settingstimer = 0;
