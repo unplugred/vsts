@@ -13,21 +13,21 @@
 VuAudioProcessorEditor::VuAudioProcessorEditor (VuAudioProcessor& p)
 	: AudioProcessorEditor (&p), audioProcessor (p) {
 
+	displaycomp.stereo = audioProcessor.stereo;
+	displaycomp.stereodamp = audioProcessor.stereo?1:0;
+	displaycomp.damping = audioProcessor.damping;
+	displaycomp.nominal = audioProcessor.nominal;
+	addAndMakeVisible(displaycomp);
+
 	setResizable(true,true);
 	audioProcessor.width = round(audioProcessor.height*((audioProcessor.stereo?64.f:32.f)/19.f));
 	setSize(audioProcessor.width, audioProcessor.height);
 	setResizeLimits(3,2,3200,950);
 	//getConstrainer()->setFixedAspectRatio((audioProcessor.stereo?64.f:32.f)/19.f);
 
-	addAndMakeVisible(displaycomp);
-	displaycomp.stereo = audioProcessor.stereo;
-	displaycomp.stereodamp = audioProcessor.stereo?1:0;
-	displaycomp.damping = audioProcessor.damping;
-	displaycomp.nominal = audioProcessor.nominal;
 	displaycomp.setBounds(0,0,getWidth(),getHeight());
 
 	startTimerHz(30);
-
 }
 
 VuAudioProcessorEditor::~VuAudioProcessorEditor() {
