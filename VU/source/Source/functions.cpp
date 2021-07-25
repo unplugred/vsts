@@ -21,7 +21,7 @@ float functions::smoothdamp(float current, float target, float* currentvelocity,
 	float num5 = (*currentvelocity+num1*num4)*deltatime;
 	target = current-num4;
 	float num6 = target+(num4+num5)*num3;
-	if (target - current > 0 == num6 > target) {
+	if ((target-current > 0) == (num6 > target)) {
 		num6 = target;
 		*currentvelocity = 0;
 	} else *currentvelocity = (*currentvelocity-num1*num5)*num3;
