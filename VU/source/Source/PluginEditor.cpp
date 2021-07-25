@@ -31,6 +31,7 @@ VuAudioProcessorEditor::VuAudioProcessorEditor (VuAudioProcessor& p)
 }
 
 VuAudioProcessorEditor::~VuAudioProcessorEditor() {
+	stopTimer();
 }
 
 void VuAudioProcessorEditor::timerCallback() {
