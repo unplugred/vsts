@@ -15,7 +15,7 @@ displayComponent::displayComponent()
 	multiplier = 1.f/Decibels::decibelsToGain((float)nominal);
 
 	openGLContext.setOpenGLVersionRequired(OpenGLContext::openGL3_2);
-	setOpaque(false);
+	setOpaque(true);
 	openGLContext.setRenderer(this);
 	openGLContext.attachTo(*this);
 }
@@ -167,7 +167,7 @@ void main(){
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 
-	openGLContext.extensions.glGenBuffers(0, &arraybuffer);
+	openGLContext.extensions.glGenBuffers(1, &arraybuffer);
 }
 void displayComponent::renderOpenGL() {
 	glDisable(GL_BLEND);
@@ -206,9 +206,10 @@ void displayComponent::renderOpenGL() {
 	vushader->setUniform("size", 800.f/vutex.getWidth(), 475.f/vutex.getHeight());
 	vushader->setUniform("txtsize", 384.f/vutex.getWidth(), 354.f/vutex.getHeight());
 
-	openGLContext.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(square), square, GL_DYNAMIC_DRAW);
-	openGLContext.extensions.glEnableVertexAttribArray(0);
-	openGLContext.extensions.glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0);
+	openGLContext.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
+	auto coord = openGLContext.extensions.glGetAttribLocation(vushader->getProgramID(),"aPos");
+	openGLContext.extensions.glEnableVertexAttribArray(coord);
+	openGLContext.extensions.glVertexAttribPointer(coord, 2, GL_FLOAT, GL_FALSE, 0, 0);
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
 	if (stereodamp > .001) {
