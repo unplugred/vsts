@@ -224,7 +224,7 @@ void displayComponent::renderOpenGL() {
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 	}
 
-	openGLContext.extensions.glDisableVertexAttribArray(0);
+	openGLContext.extensions.glDisableVertexAttribArray(coord);
 }
 void displayComponent::openGLContextClosing() {
 	vushader->release();
