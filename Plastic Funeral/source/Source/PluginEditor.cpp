@@ -126,8 +126,8 @@ out vec2 gradcoord;
 out vec2 v_TexCoord;
 void main(){
 	gl_Position = vec4(aPos,0,1);
-	//(.5-(79/2+8)/462)*2
-	gradcoord = (aPos-vec2(0,.794372294372))*vec2(1.0708,2.04425);
+	//(.5-(80/2+8)/462)*2
+	gradcoord = (aPos-vec2(0,.7922077922))*vec2(1.0708,2.04425);
 	v_TexCoord = vec2((aPos.x*.5+.5)*texscale.x,1-(.5-aPos.y*.5)*texscale.y);
 })";
 	visfrag = 
@@ -136,8 +136,10 @@ in vec2 gradcoord;
 in vec2 v_TexCoord;
 uniform sampler2D basetex;
 void main(){
-	float gradient = .390625-sqrt(gradcoord.x*gradcoord.x+gradcoord.y*gradcoord.y)*.15625;
-	gl_FragColor = vec4(texture2D(basetex,v_TexCoord).rgb*(1-gradient)+gradient,1);
+	if(gradcoord.x < 1 && gradcoord.x > -1 && gradcoord.y < .3539823009 && gradcoord.y > -.3539823009) {
+		float gradient = .390625-sqrt(gradcoord.x*gradcoord.x+gradcoord.y*gradcoord.y)*.15625;
+		gl_FragColor = vec4(texture2D(basetex,v_TexCoord).rgb*(1-gradient)+gradient,1);
+	} else gl_FragColor = vec4(0,0,0,0);
 })";
 	visshader.reset(new OpenGLShaderProgram(openGLContext));
 	visshader->addVertexShader(visvert);
