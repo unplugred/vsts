@@ -72,6 +72,8 @@ FmerAudioProcessor::FmerAudioProcessor() :
 	presets[7].drive = 0.0f;
 	presets[7].dry = 0.0f;
 	presets[7].stereo = 0.69f;
+
+	normalizegain();
 }
 
 FmerAudioProcessor::~FmerAudioProcessor(){}
@@ -155,6 +157,8 @@ void FmerAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
 
 	for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
 		buffer.clear (i, 0, buffer.getNumSamples());
+
+	if(fat != oldfat || dry != olddry) normalizegain();
 
 	float unit, mult;
 	for (int channel = 0; channel < totalNumInputChannels; ++channel)
@@ -260,6 +264,8 @@ void FmerAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 	std::getline(ss, token, '\n');
 	gain = std::stof(token);
 	apvts.getParameter("gain")->setValueNotifyingHost(gain);
+
+	normalizegain();
 
 	for(int i = 0; i < getNumPrograms(); i++) {
 		std::getline(ss, token, '\n'); presets[i].name = token;

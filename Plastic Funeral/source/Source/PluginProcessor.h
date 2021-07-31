@@ -57,15 +57,15 @@ public:
 	float freq = 0.32, fat = 0, drive = 0, dry = 0, stereo = 0.37, gain = .4, norm = 1;
 
 private:
-	AudioProcessorValueTreeState::ParameterLayout createParameters();
-	float oldfreq = 0, oldfat = 0, olddrive = 0, olddry = 0, oldstereo = 0, oldgain = 1, oldnorm = 1;
 	bool boot = false;
 
+	AudioProcessorValueTreeState::ParameterLayout createParameters();
 	PluginPreset presets[8];
 	int currentpreset = 0;
 	void lerpPreset(float);
 	void lerpValue(StringRef, float&, float);
 	float lerptable[6];
+	float oldfreq = 0, oldfat = 0, olddrive = 0, olddry = 0, oldstereo = 0, oldgain = 1, oldnorm = 1;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FmerAudioProcessor)
 };
