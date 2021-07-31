@@ -21,11 +21,11 @@ struct knob {
 	String id;
 	String name;
 };
-class FmerAudioProcessorEditor : public AudioProcessorEditor, public OpenGLRenderer, public AudioProcessorValueTreeState::Listener, private Timer
+class PFAudioProcessorEditor : public AudioProcessorEditor, public OpenGLRenderer, public AudioProcessorValueTreeState::Listener, private Timer
 {
 public:
-	FmerAudioProcessorEditor (FmerAudioProcessor&);
-	~FmerAudioProcessorEditor() override;
+	PFAudioProcessorEditor (PFAudioProcessor&);
+	~PFAudioProcessorEditor() override;
 
 	void newOpenGLContextCreated() override;
 	void renderOpenGL() override;
@@ -48,7 +48,7 @@ public:
 	float visline[2][452];
 	bool isStereo;
 private:
-	FmerAudioProcessor& audioProcessor;
+	PFAudioProcessor& audioProcessor;
 
 	int hover = 0;
 	int initialdrag = 0;
@@ -89,5 +89,5 @@ private:
 	String ppvert;
 	String ppfrag;
 
-	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FmerAudioProcessorEditor)
+	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PFAudioProcessorEditor)
 };

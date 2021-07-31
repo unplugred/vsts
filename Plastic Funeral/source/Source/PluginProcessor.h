@@ -15,10 +15,10 @@ struct PluginPreset {
 	float freq, fat, drive, dry, stereo;
 };
 
-class FmerAudioProcessor : public AudioProcessor, private Timer {
+class PFAudioProcessor : public AudioProcessor, private Timer {
 public:
-	FmerAudioProcessor();
-	~FmerAudioProcessor() override;
+	PFAudioProcessor();
+	~PFAudioProcessor() override;
 
 	void prepareToPlay (double sampleRate, int samplesPerBlock) override;
 	void releaseResources() override;
@@ -68,5 +68,5 @@ private:
 	float lerpstage = 0;
 	bool boot = false;
 
-	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FmerAudioProcessor)
+	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PFAudioProcessor)
 };

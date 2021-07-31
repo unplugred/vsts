@@ -11,7 +11,7 @@
 using namespace juce;
 
 //==============================================================================
-FmerAudioProcessorEditor::FmerAudioProcessorEditor (FmerAudioProcessor& p)
+PFAudioProcessorEditor::PFAudioProcessorEditor (PFAudioProcessor& p)
 	: AudioProcessorEditor (&p), audioProcessor (p)
 {
 	knobs[0].id = "freq";
@@ -50,12 +50,12 @@ FmerAudioProcessorEditor::FmerAudioProcessorEditor (FmerAudioProcessor& p)
 
 	startTimerHz(30);
 }
-FmerAudioProcessorEditor::~FmerAudioProcessorEditor() {
+PFAudioProcessorEditor::~PFAudioProcessorEditor() {
 	stopTimer();
 	openGLContext.detach();
 }
 
-void FmerAudioProcessorEditor::newOpenGLContextCreated() {
+void PFAudioProcessorEditor::newOpenGLContextCreated() {
 	basevert =
 R"(#version 330 core
 in vec2 aPos;
@@ -216,7 +216,7 @@ void main(){
 
 	openGLContext.extensions.glGenBuffers(1, &arraybuffer);
 }
-void FmerAudioProcessorEditor::renderOpenGL() {
+void PFAudioProcessorEditor::renderOpenGL() {
 	glEnable(GL_BLEND);
 	glEnable(GL_TEXTURE_2D);
 	glDisable(GL_LIGHTING);
@@ -288,7 +288,7 @@ void FmerAudioProcessorEditor::renderOpenGL() {
 
 	openGLContext.extensions.glDisableVertexAttribArray(coord);
 }
-void FmerAudioProcessorEditor::openGLContextClosing() {
+void PFAudioProcessorEditor::openGLContextClosing() {
 	baseshader->release();
 	knobshader->release();
 	visshader->release();
@@ -301,7 +301,7 @@ void FmerAudioProcessorEditor::openGLContextClosing() {
 
 	openGLContext.extensions.glDeleteBuffers(1,&arraybuffer);
 }
-void FmerAudioProcessorEditor::calcvis() {
+void PFAudioProcessorEditor::calcvis() {
 	isStereo = audioProcessor.stereo > 0 && audioProcessor.dry < 1 && audioProcessor.gain > 0;
 	for(int c = 0; c < (isStereo ? 2 : 1); c++) {
 		for(int i = 0; i < 226; i++) {
@@ -310,14 +310,14 @@ void FmerAudioProcessorEditor::calcvis() {
 		}
 	}
 }
-void FmerAudioProcessorEditor::paint (Graphics& g) { }
+void PFAudioProcessorEditor::paint (Graphics& g) { }
 
-void FmerAudioProcessorEditor::timerCallback() {
+void PFAudioProcessorEditor::timerCallback() {
 	creditsalpha = fmax(fmin(creditsalpha+(hover==-2?.07f:-.07f),1),0);
 	openGLContext.triggerRepaint();
 }
 
-void FmerAudioProcessorEditor::parameterChanged(const String& parameterID, float newValue) {
+void PFAudioProcessorEditor::parameterChanged(const String& parameterID, float newValue) {
 	if(parameterID == "freq") {
 		audioProcessor.freq = newValue;
 		knobs[0].value = newValue;
@@ -341,16 +341,16 @@ void FmerAudioProcessorEditor::parameterChanged(const String& parameterID, float
 	}
 	calcvis();
 }
-void FmerAudioProcessorEditor::mouseEnter(const MouseEvent& event) {
+void PFAudioProcessorEditor::mouseEnter(const MouseEvent& event) {
 //dlt
 }
-void FmerAudioProcessorEditor::mouseMove(const MouseEvent& event) {
+void PFAudioProcessorEditor::mouseMove(const MouseEvent& event) {
 	hover = recalchover(event.x,event.y);
 }
-void FmerAudioProcessorEditor::mouseExit(const MouseEvent& event) {
+void PFAudioProcessorEditor::mouseExit(const MouseEvent& event) {
 	hover = -1;
 }
-void FmerAudioProcessorEditor::mouseDown(const MouseEvent& event) {
+void PFAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 	held = true;
 	initialdrag = hover; //unnecessary
 	if(hover > -1) {
@@ -358,7 +358,7 @@ void FmerAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		audioProcessor.undoManager.beginNewTransaction();
 	}
 }
-void FmerAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
+void PFAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 	if(hover > -1) {
 		if(!finemode && (event.mods.isShiftDown() || event.mods.isAltDown())) {
 			finemode = true;
@@ -372,7 +372,7 @@ void FmerAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 			(fmin(fmax(initialvalue-(event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*(finemode?.0005f:.005f),0),1));
 	}
 }
-void FmerAudioProcessorEditor::mouseUp(const MouseEvent& event) {
+void PFAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 	if(hover > -1) {
 		audioProcessor.undoManager.setCurrentTransactionName(
 			(String)((knobs[hover].value - initialvalue) >= 0 ? "Increased " : "Decreased ") += knobs[hover].name);
@@ -382,7 +382,7 @@ void FmerAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 	held = false;
 	hover = recalchover(event.x,event.y);
 }
-int FmerAudioProcessorEditor::recalchover(float x, float y) {
+int PFAudioProcessorEditor::recalchover(float x, float y) {
 	if(y > 403) return -2;
 	float xx = 0, yy = 0;
 	for(int i = 0; i < 6; i++) {
