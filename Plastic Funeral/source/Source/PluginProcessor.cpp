@@ -11,18 +11,9 @@
 using namespace juce;
 
 //==============================================================================
-FmerAudioProcessor::FmerAudioProcessor()
+FmerAudioProcessor::FmerAudioProcessor() :
 #ifndef JucePlugin_PreferredChannelConfigurations
-	: AudioProcessor(BusesProperties()
-			#if ! JucePlugin_IsMidiEffect
-			 #if ! JucePlugin_IsSynth
-			  .withInput("Input", juce::AudioChannelSet::stereo(), true)
-			 #endif
-			  .withOutput("Output", juce::AudioChannelSet::stereo(), true)
-			#endif
-			  ),
-#else
-	:
+	AudioProcessor(BusesProperties().withInput("Input",juce::AudioChannelSet::stereo(),true).withOutput("Output",juce::AudioChannelSet::stereo(),true)),
 #endif
 	apvts(*this, &undoManager, "Parameters", createParameters())
 {
@@ -83,60 +74,17 @@ FmerAudioProcessor::FmerAudioProcessor()
 	presets[7].stereo = 0.69f;
 }
 
-FmerAudioProcessor::~FmerAudioProcessor()
-{
-}
+FmerAudioProcessor::~FmerAudioProcessor(){}
 
-//==============================================================================
-const juce::String FmerAudioProcessor::getName() const
-{
-	return "Plastic Funeral";
-}
+const juce::String FmerAudioProcessor::getName() const { return "Plastic Funeral"; }
+bool FmerAudioProcessor::acceptsMidi() const { return false; }
+bool FmerAudioProcessor::producesMidi() const { return false; }
+bool FmerAudioProcessor::isMidiEffect() const { return false; }
+double FmerAudioProcessor::getTailLengthSeconds() const { return 0.0; }
 
-bool FmerAudioProcessor::acceptsMidi() const
-{
-   #if JucePlugin_WantsMidiInput
-	return true;
-   #else
-	return false;
-   #endif
-}
-
-bool FmerAudioProcessor::producesMidi() const
-{
-   #if JucePlugin_ProducesMidiOutput
-	return true;
-   #else
-	return false;
-   #endif
-}
-
-bool FmerAudioProcessor::isMidiEffect() const
-{
-   #if JucePlugin_IsMidiEffect
-	return true;
-   #else
-	return false;
-   #endif
-}
-
-double FmerAudioProcessor::getTailLengthSeconds() const
-{
-	return 0.0;
-}
-
-int FmerAudioProcessor::getNumPrograms()
-{
-	return 8;
-}
-
-int FmerAudioProcessor::getCurrentProgram()
-{
-	return currentpreset;
-}
-
-void FmerAudioProcessor::setCurrentProgram (int index)
-{
+int FmerAudioProcessor::getNumPrograms() { return 8; }
+int FmerAudioProcessor::getCurrentProgram() { return currentpreset; }
+void FmerAudioProcessor::setCurrentProgram (int index) {
 	if(!boot) return;
 	undoManager.beginNewTransaction((String)"Changed preset to " += presets[index].name);
 	currentpreset = index;
@@ -147,8 +95,7 @@ void FmerAudioProcessor::setCurrentProgram (int index)
 	lerptable[4] = stereo;
 	lerpPreset(1);
 }
-void FmerAudioProcessor::lerpPreset(float stage)
-{
+void FmerAudioProcessor::lerpPreset(float stage) {
 	stage *= .8;
 	if(stage < .001) {
 		apvts.getParameter("freq")->setValueNotifyingHost(presets[currentpreset].freq);
@@ -164,21 +111,16 @@ void FmerAudioProcessor::lerpPreset(float stage)
 	lerpValue("drive", lerptable[2], presets[currentpreset].drive);
 	lerpValue("dry", lerptable[3], presets[currentpreset].dry);
 	lerpValue("stereo", lerptable[4], presets[currentpreset].stereo);
-	new DelayedOneShotLambda(50.f/3.f, [this,stage]() { lerpPreset(stage); });
+	//new DelayedOneShotLambda(50.f/3.f, [this,stage]() { lerpPreset(stage); });
 }
-void FmerAudioProcessor::lerpValue(StringRef slider, float& oldval, float newval)
-{
+void FmerAudioProcessor::lerpValue(StringRef slider, float& oldval, float newval) {
 	oldval = (newval-oldval)*.2+oldval;
 	apvts.getParameter(slider)->setValueNotifyingHost(oldval);
 }
-
-const juce::String FmerAudioProcessor::getProgramName (int index)
-{
+const juce::String FmerAudioProcessor::getProgramName (int index) {
 	return { presets[index].name };
 }
-
-void FmerAudioProcessor::changeProgramName (int index, const juce::String& newName)
-{
+void FmerAudioProcessor::changeProgramName (int index, const juce::String& newName) {
 	presets[index].name = newName;
 	presets[index].freq = freq;
 	presets[index].fat = fat;
@@ -188,44 +130,25 @@ void FmerAudioProcessor::changeProgramName (int index, const juce::String& newNa
 }
 
 //==============================================================================
-void FmerAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
-{
-	// Use this method as the place to do any pre-playback
-	// initialisation that you need..
+void FmerAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {
 }
-
-void FmerAudioProcessor::releaseResources()
-{
-	// When playback stops, you can use this as an opportunity to free up any
-	// spare memory, etc.
+void FmerAudioProcessor::releaseResources() {
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
-bool FmerAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
-{
-  #if JucePlugin_IsMidiEffect
-	juce::ignoreUnused (layouts);
-	return true;
-  #else
-	// This is the place where you check if the layout is supported.
-	// In this template code we only support mono or stereo.
+bool FmerAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const {
 	if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono()
 	 && layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
 		return false;
 
-	// This checks if the input layout matches the output layout
-   #if ! JucePlugin_IsSynth
 	if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
 		return false;
-   #endif
 
 	return true;
-  #endif
 }
 #endif
 
-void FmerAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
-{
+void FmerAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) {
 	juce::ScopedNoDenormals noDenormals;
 	auto totalNumInputChannels	= getTotalNumInputChannels();
 	auto totalNumOutputChannels = getTotalNumOutputChannels();
@@ -262,8 +185,7 @@ void FmerAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
 	boot = true;
 }
 
-float FmerAudioProcessor::plasticfuneral(float source, int channel, float freq, float fat, float drive, float dry, float stereo, float gain)
-{
+float FmerAudioProcessor::plasticfuneral(float source, int channel, float freq, float fat, float drive, float dry, float stereo, float gain) {
 	freq = fmax(fmin(freq + stereo * .2f * ((float)channel * 2 - 1), 1), 0);
 	float smpl = source * (100 - cos(freq * 1.5708f) * 99);
 	float pfreq = fmod(fabs(smpl), 4);
@@ -276,24 +198,14 @@ float FmerAudioProcessor::plasticfuneral(float source, int channel, float freq, 
 void FmerAudioProcessor::normalizegain() {
 	norm = 0.25f;
 	for (float i = 0; i <= 1; i += .005f)
-		norm = fmax(norm, fabs(i + (sin(i * 1.5708f) - i) * fat) * (1 - dry) + i * dry);
-	norm = 1 / norm;
+		norm = fmax(norm,fabs(i+(sin(i*1.5708f)-i)*fat)*(1-dry)+i*dry);
+	norm = 1/norm;
 }
 
-//==============================================================================
-bool FmerAudioProcessor::hasEditor() const
-{
-	return true; // (change this to false if you choose to not supply an editor)
-}
+bool FmerAudioProcessor::hasEditor() const { return true; }
+juce::AudioProcessorEditor* FmerAudioProcessor::createEditor() { return new FmerAudioProcessorEditor (*this); }
 
-juce::AudioProcessorEditor* FmerAudioProcessor::createEditor()
-{
-	return new FmerAudioProcessorEditor (*this);
-}
-
-//==============================================================================
-void FmerAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
-{
+void FmerAudioProcessor::getStateInformation (juce::MemoryBlock& destData) {
 	const char linebreak = '\n';
 	std::ostringstream data;
 	data << version
@@ -315,9 +227,7 @@ void FmerAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 	MemoryOutputStream stream(destData, false);
 	stream.writeString(data.str());
 }
-
-void FmerAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
-{
+void FmerAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
 	std::stringstream ss(String::createStringFromData(data, sizeInBytes).toRawUTF8());
 	std::string token;
 
@@ -361,12 +271,7 @@ void FmerAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 	}
 }
 
-//==============================================================================
-// This creates new instances of the plugin..
-juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
-{
-	return new FmerAudioProcessor();
-}
+juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new FmerAudioProcessor(); }
 
 AudioProcessorValueTreeState::ParameterLayout
 	FmerAudioProcessor::createParameters()
