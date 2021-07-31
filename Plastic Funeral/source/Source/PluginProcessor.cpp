@@ -10,7 +10,6 @@
 #include "PluginEditor.h"
 using namespace juce;
 
-//==============================================================================
 FmerAudioProcessor::FmerAudioProcessor() :
 #ifndef JucePlugin_PreferredChannelConfigurations
 	AudioProcessor(BusesProperties().withInput("Input",juce::AudioChannelSet::stereo(),true).withOutput("Output",juce::AudioChannelSet::stereo(),true)),
@@ -88,6 +87,7 @@ int FmerAudioProcessor::getNumPrograms() { return 8; }
 int FmerAudioProcessor::getCurrentProgram() { return currentpreset; }
 void FmerAudioProcessor::setCurrentProgram (int index) {
 	if(!boot) return;
+
 	undoManager.beginNewTransaction((String)"Changed preset to " += presets[index].name);
 	currentpreset = index;
 	lerptable[0] = freq;
@@ -95,17 +95,23 @@ void FmerAudioProcessor::setCurrentProgram (int index) {
 	lerptable[2] = drive;
 	lerptable[3] = dry;
 	lerptable[4] = stereo;
-	lerpPreset(1);
+
+	if(lerpstage <= 0) {
+		lerpstage = 1;
+		startTimerHz(30);
+	} else lerpstage = 1;
 }
-void FmerAudioProcessor::lerpPreset(float stage) {
-	stage *= .8;
-	if(stage < .001) {
+void FmerAudioProcessor::timerCallback() {
+	lerpstage *= .64f;
+	if(lerpstage < .001) {
 		apvts.getParameter("freq")->setValueNotifyingHost(presets[currentpreset].freq);
 		apvts.getParameter("fat")->setValueNotifyingHost(presets[currentpreset].fat*.025f + .5f);
 		apvts.getParameter("drive")->setValueNotifyingHost(presets[currentpreset].drive);
 		apvts.getParameter("dry")->setValueNotifyingHost(presets[currentpreset].dry);
 		apvts.getParameter("stereo")->setValueNotifyingHost(presets[currentpreset].stereo);
+		lerpstage = 0;
 		undoManager.beginNewTransaction();
+		stopTimer();
 		return;
 	}
 	lerpValue("freq", lerptable[0], presets[currentpreset].freq);
@@ -113,10 +119,9 @@ void FmerAudioProcessor::lerpPreset(float stage) {
 	lerpValue("drive", lerptable[2], presets[currentpreset].drive);
 	lerpValue("dry", lerptable[3], presets[currentpreset].dry);
 	lerpValue("stereo", lerptable[4], presets[currentpreset].stereo);
-	//new DelayedOneShotLambda(50.f/3.f, [this,stage]() { lerpPreset(stage); });
 }
 void FmerAudioProcessor::lerpValue(StringRef slider, float& oldval, float newval) {
-	oldval = (newval-oldval)*.2+oldval;
+	oldval = (newval-oldval)*.36f+oldval;
 	apvts.getParameter(slider)->setValueNotifyingHost(oldval);
 }
 const juce::String FmerAudioProcessor::getProgramName (int index) {
@@ -131,7 +136,6 @@ void FmerAudioProcessor::changeProgramName (int index, const juce::String& newNa
 	presets[index].stereo = stereo;
 }
 
-//==============================================================================
 void FmerAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {
 }
 void FmerAudioProcessor::releaseResources() {
