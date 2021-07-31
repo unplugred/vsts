@@ -41,9 +41,7 @@ FmerAudioProcessorEditor::FmerAudioProcessorEditor (FmerAudioProcessor& p)
 		}
 	}
 
-	audioProcessor.normalizegain();
 	calcvis();
-
 	setSize (242, 462);
 
 	setOpaque(true);
