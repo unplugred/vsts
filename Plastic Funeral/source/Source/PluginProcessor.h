@@ -15,7 +15,7 @@ struct PluginPreset {
 	float freq, fat, drive, dry, stereo;
 };
 
-class FmerAudioProcessor  : public AudioProcessor {
+class FmerAudioProcessor : public AudioProcessor, private Timer {
 public:
 	FmerAudioProcessor();
 	~FmerAudioProcessor() override;
@@ -57,15 +57,16 @@ public:
 	float freq = 0.32, fat = 0, drive = 0, dry = 0, stereo = 0.37, gain = .4, norm = 1;
 
 private:
-	bool boot = false;
+	float oldfreq = 0, oldfat = 0, olddrive = 0, olddry = 0, oldstereo = 0, oldgain = 1, oldnorm = 1;
 
 	AudioProcessorValueTreeState::ParameterLayout createParameters();
 	PluginPreset presets[8];
 	int currentpreset = 0;
-	void lerpPreset(float);
+	void timerCallback() override;
 	void lerpValue(StringRef, float&, float);
 	float lerptable[6];
-	float oldfreq = 0, oldfat = 0, olddrive = 0, olddry = 0, oldstereo = 0, oldgain = 1, oldnorm = 1;
+	float lerpstage = 0;
+	bool boot = false;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FmerAudioProcessor)
 };
