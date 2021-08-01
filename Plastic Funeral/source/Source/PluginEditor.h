@@ -54,7 +54,7 @@ private:
 	int initialdrag = 0;
 	bool held = false;
 	float initialvalue = 0;
-	int websiteht = 0;
+	float websiteht = -1;
 	float creditsalpha = 0;
 	bool finemode = false;
 
