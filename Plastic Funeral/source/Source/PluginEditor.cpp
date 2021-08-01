@@ -10,7 +10,6 @@
 #include "PluginEditor.h"
 using namespace juce;
 
-//==============================================================================
 PFAudioProcessorEditor::PFAudioProcessorEditor (PFAudioProcessor& p)
 	: AudioProcessorEditor (&p), audioProcessor (p)
 {
@@ -160,8 +159,10 @@ R"(#version 330 core
 in vec2 v_TexCoord;
 uniform sampler2D creditstex;
 uniform float alpha;
+uniform float shineprog;
 void main(){
-	gl_FragColor = vec4(texture2D(creditstex,v_TexCoord).rgb,alpha);
+	vec2 creditols = texture2D(creditstex,v_TexCoord).rb;
+	gl_FragColor = vec4(vec3(creditols.g+texture2D(creditstex,v_TexCoord+vec2(shineprog,0)).g*creditols.r*.8),alpha);
 })";
 	creditsshader.reset(new OpenGLShaderProgram(openGLContext));
 	creditsshader->addVertexShader(creditsvert);
@@ -280,6 +281,7 @@ void PFAudioProcessorEditor::renderOpenGL() {
 	creditsshader->setUniform("creditstex",0);
 	creditsshader->setUniform("texscale",242.f/creditstex.getWidth(),59.f/creditstex.getHeight());
 	creditsshader->setUniform("alpha",creditsalpha<0.5?4*creditsalpha*creditsalpha*creditsalpha:1-(float)pow(-2*creditsalpha+2,3)/2);
+	creditsshader->setUniform("shineprog",websiteht);
 	openGLContext.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
 	coord = openGLContext.extensions.glGetAttribLocation(creditsshader->getProgramID(),"aPos");
 	openGLContext.extensions.glEnableVertexAttribArray(coord);
@@ -313,7 +315,9 @@ void PFAudioProcessorEditor::calcvis() {
 void PFAudioProcessorEditor::paint (Graphics& g) { }
 
 void PFAudioProcessorEditor::timerCallback() {
-	creditsalpha = fmax(fmin(creditsalpha+(hover==-2?.07f:-.07f),1),0);
+	creditsalpha = fmax(fmin(creditsalpha+((hover<=-2&&hover>=-3)?.07f:-.07f),1),0);
+	if(creditsalpha <= 0) websiteht = -1;
+	websiteht -= .05;
 	openGLContext.triggerRepaint();
 }
 
@@ -345,21 +349,24 @@ void PFAudioProcessorEditor::mouseEnter(const MouseEvent& event) {
 //dlt
 }
 void PFAudioProcessorEditor::mouseMove(const MouseEvent& event) {
+	int prevhover = hover;
 	hover = recalchover(event.x,event.y);
+	if(hover == -3 && prevhover != -3 && websiteht < -.227273) websiteht = 0.7933884298f;
 }
 void PFAudioProcessorEditor::mouseExit(const MouseEvent& event) {
 	hover = -1;
 }
 void PFAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 	held = true;
-	initialdrag = hover; //unnecessary
+	initialdrag = hover;
 	if(hover > -1) {
 		initialvalue = knobs[hover].value;
 		audioProcessor.undoManager.beginNewTransaction();
 	}
 }
 void PFAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
-	if(hover > -1) {
+	if(hover == -1) return;
+	if(initialdrag > -1) {
 		if(!finemode && (event.mods.isShiftDown() || event.mods.isAltDown())) {
 			finemode = true;
 			initialvalue -= (event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*.0045f;
@@ -370,6 +377,13 @@ void PFAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 
 		audioProcessor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost
 			(fmin(fmax(initialvalue-(event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*(finemode?.0005f:.005f),0),1));
+	} else if(initialdrag == -2) {
+		int draghover = recalchover(event.x,event.y);
+		hover = (draghover>=-2||draghover<=-3)?-2:0;
+	} else if (initialdrag == -3) {
+		int prevhover = hover;
+		hover = recalchover(event.x,event.y)==-3?-3:-2;
+		if(hover == -3 && prevhover != -3 && websiteht < -.227273) websiteht = 0.7933884298f;
 	}
 }
 void PFAudioProcessorEditor::mouseUp(const MouseEvent& event) {
@@ -377,13 +391,18 @@ void PFAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 		audioProcessor.undoManager.setCurrentTransactionName(
 			(String)((knobs[hover].value - initialvalue) >= 0 ? "Increased " : "Decreased ") += knobs[hover].name);
 		audioProcessor.undoManager.beginNewTransaction();
-	}
-
+	} else if(hover == -3) URL("https://vst.unplug.red/").launchInDefaultBrowser();
 	held = false;
+
+	int prevhover = hover;
 	hover = recalchover(event.x,event.y);
+	if(hover == -3 && prevhover != -3 && websiteht < -.227273) websiteht = 0.7933884298f;
 }
 int PFAudioProcessorEditor::recalchover(float x, float y) {
-	if(y > 403) return -2;
+	if(y > 403) {
+		if(x >= 50 && x <= 196 && y >= 412 && y <= 456) return -3;
+		return -2;
+	}
 	float xx = 0, yy = 0;
 	for(int i = 0; i < 6; i++) {
 		xx = knobs[i].x-x;
