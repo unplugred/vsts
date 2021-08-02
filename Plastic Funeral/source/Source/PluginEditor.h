@@ -17,6 +17,7 @@ struct knob {
 	int x = 0;
 	int y = 0;
 	float value = 0.5f;
+	int hoverstate = 0;
 	String id;
 	String name;
 };
@@ -51,12 +52,8 @@ private:
 
 	int hover = -1;
 	int initialdrag = 0;
-	bool held = false;
+	int held = 0;
 	float initialvalue = 0;
-	float websiteht = -1;
-	float creditsalpha = 0;
-	bool finemode = false;
-	Point<int> dragpos;
 
 	OpenGLContext openGLContext;
 	unsigned int arraybuffer;
@@ -71,6 +68,8 @@ private:
 	String basevert;
 	String basefrag;
 
+	bool finemode = false;
+	Point<int> dragpos;
 	OpenGLTexture knobtex;
 	std::unique_ptr<OpenGLShaderProgram> knobshader;
 	String knobvert;
@@ -80,6 +79,8 @@ private:
 	String visvert;
 	String visfrag;
 
+	float websiteht = -1;
+	float creditsalpha = 0;
 	OpenGLTexture creditstex;
 	std::unique_ptr<OpenGLShaderProgram> creditsshader;
 	String creditsvert;
