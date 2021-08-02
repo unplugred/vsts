@@ -86,9 +86,13 @@ private:
 	String creditsvert;
 	String creditsfrag;
 
+	float rms = 0;
+	OpenGLFrameBuffer framebuffer;
 	std::unique_ptr<OpenGLShaderProgram> ppshader;
 	String ppvert;
 	String ppfrag;
+
+	Random random;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PFAudioProcessorEditor)
 };

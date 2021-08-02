@@ -191,11 +191,11 @@ void main(){
 	ppvert =
 R"(#version 330 core
 in vec2 aPos;
-uniform vec2 shake;
+uniform float shake;
 out vec2 v_TexCoord;
 void main(){
-	gl_Position = vec4((aPos+shake)*2-1,0,1);
-	v_TexCoord = aPos;
+	gl_Position = vec4(aPos*2-1,0,1);
+	v_TexCoord = aPos+vec2(shake,0);
 })";
 	ppfrag =
 R"(#version 330 core
@@ -203,10 +203,10 @@ in vec2 v_TexCoord;
 uniform sampler2D buffertex;
 uniform float chroma;
 void main(){
-	gl_FragColor = vec4(
-		texture2D(buffertex,v_TexCoord+chroma).r,
-		texture2D(buffertex,v_TexCoord).g,
-		texture2D(buffertex,v_TexCoord-chroma).b,1.);
+	gl_FragColor = vec4(vec3((
+		texture2D(buffertex,v_TexCoord+vec2(chroma,0)).r+
+		texture2D(buffertex,v_TexCoord-vec2(chroma,0)).r+
+		texture2D(buffertex,v_TexCoord).r)*.333333333),1.);
 })";
 	ppshader.reset(new OpenGLShaderProgram(openGLContext));
 	ppshader->addVertexShader(ppvert);
@@ -234,6 +234,8 @@ void main(){
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 
+	framebuffer.initialise(openGLContext, getWidth(), getHeight());
+	glBindTexture(GL_TEXTURE_2D, framebuffer.getTextureID());
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
@@ -246,6 +248,7 @@ void PFAudioProcessorEditor::renderOpenGL() {
 	glDisable(GL_DEPTH_TEST);
 	glEnable(GL_LINE_SMOOTH);
 
+	framebuffer.makeCurrentRenderingTarget();
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	openGLContext.extensions.glBindBuffer(GL_ARRAY_BUFFER, arraybuffer);
 	baseshader->use();
@@ -317,6 +320,18 @@ void PFAudioProcessorEditor::renderOpenGL() {
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	openGLContext.extensions.glDisableVertexAttribArray(coord);
 
+	framebuffer.releaseAsRenderingTarget();
+	ppshader->use();
+	openGLContext.extensions.glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, framebuffer.getTextureID());
+	ppshader->setUniform("pptex",0);
+	ppshader->setUniform("chroma",rms*.01f);
+	ppshader->setUniform("shake",rms*.005f*(random.nextFloat()-.5f));
+	coord = openGLContext.extensions.glGetAttribLocation(ppshader->getProgramID(),"aPos");
+	openGLContext.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
+	openGLContext.extensions.glEnableVertexAttribArray(coord);
+	openGLContext.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	openGLContext.extensions.glDisableVertexAttribArray(coord);
 }
 void PFAudioProcessorEditor::openGLContextClosing() {
@@ -329,6 +344,8 @@ void PFAudioProcessorEditor::openGLContextClosing() {
 	basetex.release();
 	knobtex.release();
 	creditstex.release();
+
+	framebuffer.release();
 
 	openGLContext.extensions.glDeleteBuffers(1,&arraybuffer);
 }
@@ -350,6 +367,14 @@ void PFAudioProcessorEditor::timerCallback() {
 
 	for(int i = 0; i < 6; i++) knobs[i].hoverstate = fmin(knobs[i].hoverstate+1,-1);
 	if(held > 0) held--;
+
+	if(audioProcessor.rmscount > 0) {
+		rms = sqrt(audioProcessor.rmsadd/audioProcessor.rmscount);
+		if(knobs[5].value > .4f) rms = rms/knobs[5].value;
+		else rms *= 2.5f;
+	}
+	audioProcessor.rmsadd = 0;
+	audioProcessor.rmscount = 0;
 
 	openGLContext.triggerRepaint();
 }

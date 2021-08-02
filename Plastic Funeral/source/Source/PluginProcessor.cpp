@@ -164,7 +164,7 @@ void PFAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mid
 
 	if(fat != oldfat || dry != olddry) normalizegain();
 
-	float unit, mult;
+	float unit = 0, mult = 0;
 	for (int channel = 0; channel < totalNumInputChannels; ++channel)
 	{
 		auto* channelData = buffer.getWritePointer (channel);
@@ -179,6 +179,8 @@ void PFAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mid
 				oldstereo * (1 - mult) + stereo * mult,
 				oldgain * (1 - mult) + gain * mult) * (
 				oldnorm * (1 - mult) + norm * mult);
+			rmsadd += channelData[sample]*channelData[sample];
+			rmscount++;
 		}
 	}
 
