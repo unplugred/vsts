@@ -53,6 +53,9 @@ public:
 	AudioProcessorValueTreeState apvts;
 	UndoManager undoManager;
 
+	float rmsadd = 0;
+	int rmscount = 0;
+
 	int version = 1;
 	float freq = 0.32, fat = 0, drive = 0, dry = 0, stereo = 0.37, gain = .4, norm = 1;
 
