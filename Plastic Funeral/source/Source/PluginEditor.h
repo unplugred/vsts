@@ -17,7 +17,6 @@ struct knob {
 	int x = 0;
 	int y = 0;
 	float value = 0.5f;
-	int hoverstate = 0;
 	String id;
 	String name;
 };
@@ -50,13 +49,14 @@ public:
 private:
 	PFAudioProcessor& audioProcessor;
 
-	int hover = 0;
+	int hover = -1;
 	int initialdrag = 0;
 	bool held = false;
 	float initialvalue = 0;
 	float websiteht = -1;
 	float creditsalpha = 0;
 	bool finemode = false;
+	Point<int> dragpos;
 
 	OpenGLContext openGLContext;
 	unsigned int arraybuffer;
