@@ -362,6 +362,8 @@ void PFAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 	if(hover > -1) {
 		initialvalue = knobs[hover].value;
 		audioProcessor.undoManager.beginNewTransaction();
+		dragpos = event.getScreenPosition();
+		event.source.enableUnboundedMouseMovement(true);
 	}
 }
 void PFAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
@@ -391,6 +393,8 @@ void PFAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 		audioProcessor.undoManager.setCurrentTransactionName(
 			(String)((knobs[hover].value - initialvalue) >= 0 ? "Increased " : "Decreased ") += knobs[hover].name);
 		audioProcessor.undoManager.beginNewTransaction();
+		event.source.enableUnboundedMouseMovement(false);
+		Desktop::setMousePosition(dragpos);
 	} else if(hover == -3) URL("https://vst.unplug.red/").launchInDefaultBrowser();
 	held = false;
 
