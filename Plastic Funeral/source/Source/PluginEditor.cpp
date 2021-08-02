@@ -69,7 +69,7 @@ R"(#version 330 core
 in vec2 v_TexCoord;
 uniform sampler2D basetex;
 void main(){
-	gl_FragColor = texture2D(basetex,v_TexCoord);
+	gl_FragColor = vec4(vec3(texture2D(basetex,v_TexCoord).r),1);
 })";
 	baseshader.reset(new OpenGLShaderProgram(openGLContext));
 	baseshader->addVertexShader(basevert);
@@ -80,37 +80,56 @@ void main(){
 R"(#version 330 core
 in vec2 aPos;
 uniform vec2 texscale;
+uniform vec2 basescale;
 uniform float knobrot;
 uniform vec2 knobscale;
 uniform vec2 knobpos;
 uniform float ratio;
 out vec2 v_TexCoord;
-out vec2 noisecoord;
+out vec2 hovercoord;
+out vec2 basecoord;
 void main(){
 	vec2 pos = (aPos*2*knobscale-vec2(knobscale.x,knobscale.y*.727272727))/vec2(ratio,1);
 	float rot = mod(knobrot,1)*-6.2831853072;
 	gl_Position = vec4(
 		(pos.x*cos(rot)-pos.y*sin(rot))*ratio-1+knobpos.x,
 		pos.x*sin(rot)+pos.y*cos(rot)-1+knobpos.y,0,1);
-	noisecoord = (gl_Position.xy*texscale*.5)/knobscale;
+	//noisecoord = (gl_Position.xy*texscale*.5)/knobscale;
 	v_TexCoord = vec2(aPos.x*texscale.x,1-(1-aPos.y)*texscale.y);
+	hovercoord = (aPos-vec2(.5,.3636363636))/vec2(1.1379310345,1);
+	hovercoord = vec2(
+		(hovercoord.x*cos(rot*2)-hovercoord.y*sin(rot*2))*1.1379310345+.5,
+		hovercoord.x*sin(rot*2)+hovercoord.y*cos(rot*2)+.36363636);
+	hovercoord = vec2(hovercoord.x*texscale.x,1-(1-hovercoord.y)*texscale.y);
+	basecoord = vec2((gl_Position.x*.5+.5)*basescale.x,1-(.5-gl_Position.y*.5)*basescale.y);
 })";
 	knobfrag =
 R"(#version 330 core
 in vec2 v_TexCoord;
-in vec2 noisecoord;
+in vec2 hovercoord;
+in vec2 basecoord;
 uniform float knobcolor;
 uniform float knobrot;
 uniform vec2 texscale;
 uniform sampler2D knobtex;
+uniform sampler2D basetex;
+uniform float id;
+uniform float hoverstate;
 void main(){
-	float lerp = mod(knobrot*6,1);
 	float index = floor(knobrot*6);
 	gl_FragColor = texture2D(knobtex,v_TexCoord-vec2(0,texscale.y*mod(index,6)));
-	float col = gl_FragColor.b*(1-lerp)+texture2D(knobtex,v_TexCoord-vec2(0,texscale.y*mod(index+1,6))).b*lerp;
-	if(col<.5) col = knobcolor*col*2;
-	else col = knobcolor+(col-.5)*.8;
-	gl_FragColor = vec4(vec3(col+texture2D(knobtex,vec2(mod(noisecoord.x,texscale.x),1-mod(1-noisecoord.y,texscale.y*6))).g-.5),gl_FragColor.r);
+	if(gl_FragColor.r > 0) {
+		float lerp = mod(knobrot*6,1);
+		float col = gl_FragColor.b*(1-lerp)+texture2D(knobtex,v_TexCoord-vec2(0,texscale.y*mod(index+1,6))).b*lerp;
+		if(col<.5) col = knobcolor*col*2;
+		else col = knobcolor+(col-.5)*.8;
+		if(hoverstate != 0) {
+			float hover = texture2D(knobtex,hovercoord-vec2(0,texscale.y*id)).g;
+			if(hoverstate < -1) col += (hoverstate==-3?(1-hover):hover)*.3;
+			else col = col*(1-hover)+.01171875*hover;
+		}
+		gl_FragColor = vec4(vec3(col+texture2D(basetex,basecoord).g-.5),gl_FragColor.r);
+	} else gl_FragColor = vec4(0);
 })";
 	knobshader.reset(new OpenGLShaderProgram(openGLContext));
 	knobshader->addVertexShader(knobvert);
@@ -137,8 +156,8 @@ uniform sampler2D basetex;
 void main(){
 	if(gradcoord.x < 1 && gradcoord.x > -1 && gradcoord.y < .3539823009 && gradcoord.y > -.3539823009) {
 		float gradient = .390625-sqrt(gradcoord.x*gradcoord.x+gradcoord.y*gradcoord.y)*.15625;
-		gl_FragColor = vec4(texture2D(basetex,v_TexCoord).rgb*(1-gradient)+gradient,1);
-	} else gl_FragColor = vec4(0,0,0,0);
+		gl_FragColor = vec4(vec3(texture2D(basetex,v_TexCoord).r*(1-gradient)+gradient),1);
+	} else gl_FragColor = vec4(0);
 })";
 	visshader.reset(new OpenGLShaderProgram(openGLContext));
 	visshader->addVertexShader(visvert);
@@ -201,6 +220,13 @@ void main(){
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 
+	knobtex.loadImage(ImageCache::getFromMemory(BinaryData::knob_png, BinaryData::knob_pngSize));
+	knobtex.bind();
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
 	creditstex.loadImage(ImageCache::getFromMemory(BinaryData::credits_png, BinaryData::credits_pngSize));
 	creditstex.bind();
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -208,12 +234,8 @@ void main(){
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 
-	knobtex.loadImage(ImageCache::getFromMemory(BinaryData::knob_png, BinaryData::knob_pngSize));
-	knobtex.bind();
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
 	openGLContext.extensions.glGenBuffers(1, &arraybuffer);
 }
@@ -238,14 +260,17 @@ void PFAudioProcessorEditor::renderOpenGL() {
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	openGLContext.extensions.glDisableVertexAttribArray(coord);
 
-	glLineWidth(1.3);
 	knobshader->use();
 	openGLContext.extensions.glActiveTexture(GL_TEXTURE0);
 	knobtex.bind();
 	knobshader->setUniform("knobtex",0);
+	openGLContext.extensions.glActiveTexture(GL_TEXTURE1);
+	basetex.bind();
+	knobshader->setUniform("basetex",1);
 	knobshader->setUniform("texscale",58.f/knobtex.getWidth(),66.f/knobtex.getHeight());
 	knobshader->setUniform("knobscale",58.f/getWidth(),66.f/getHeight());
 	knobshader->setUniform("ratio",((float)getHeight())/getWidth());
+	knobshader->setUniform("basescale",242.f/basetex.getWidth(),462.f/basetex.getHeight());
 	openGLContext.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
 	coord = openGLContext.extensions.glGetAttribLocation(knobshader->getProgramID(),"aPos");
 	openGLContext.extensions.glEnableVertexAttribArray(coord);
@@ -255,10 +280,13 @@ void PFAudioProcessorEditor::renderOpenGL() {
 		if(i == 2) knobshader->setUniform("knobcolor",.61328125f);
 		knobshader->setUniform("knobpos",((float)knobs[i].x*2)/getWidth(),2-((float)knobs[i].y*2)/getHeight());
 		knobshader->setUniform("knobrot",(knobs[i].value-.5f)*.748f);
+		knobshader->setUniform("id",(float)i);
+		knobshader->setUniform("hoverstate",(float)(knobs[i].hoverstate==-1?(hover==i?-1:0):knobs[i].hoverstate));
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	}
 	openGLContext.extensions.glDisableVertexAttribArray(coord);
 
+	glLineWidth(1.3);
 	visshader->use();
 	coord = openGLContext.extensions.glGetAttribLocation(visshader->getProgramID(),"aPos");
 	openGLContext.extensions.glActiveTexture(GL_TEXTURE0);
@@ -267,13 +295,13 @@ void PFAudioProcessorEditor::renderOpenGL() {
 	visshader->setUniform("texscale",242.f/basetex.getWidth(),462.f/basetex.getHeight());
 	openGLContext.extensions.glEnableVertexAttribArray(coord);
 	openGLContext.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
-
 	openGLContext.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*452, visline[0], GL_DYNAMIC_DRAW);
 	glDrawArrays(GL_LINE_STRIP,0,226);
 	if(isStereo) {
 		openGLContext.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*452, visline[1], GL_DYNAMIC_DRAW);
 		glDrawArrays(GL_LINE_STRIP,0,226);
 	}
+	openGLContext.extensions.glDisableVertexAttribArray(coord);
 
 	creditsshader->use();
 	openGLContext.extensions.glActiveTexture(GL_TEXTURE0);
@@ -287,6 +315,7 @@ void PFAudioProcessorEditor::renderOpenGL() {
 	openGLContext.extensions.glEnableVertexAttribArray(coord);
 	openGLContext.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+	openGLContext.extensions.glDisableVertexAttribArray(coord);
 
 	openGLContext.extensions.glDisableVertexAttribArray(coord);
 }
@@ -318,6 +347,10 @@ void PFAudioProcessorEditor::timerCallback() {
 	creditsalpha = fmax(fmin(creditsalpha+((hover<=-2&&hover>=-3)?.07f:-.07f),1),0);
 	if(creditsalpha <= 0) websiteht = -1;
 	websiteht -= .05;
+
+	for(int i = 0; i < 6; i++) knobs[i].hoverstate = fmin(knobs[i].hoverstate+1,-1);
+	if(held > 0) held--;
+
 	openGLContext.triggerRepaint();
 }
 
@@ -352,12 +385,16 @@ void PFAudioProcessorEditor::mouseMove(const MouseEvent& event) {
 	int prevhover = hover;
 	hover = recalchover(event.x,event.y);
 	if(hover == -3 && prevhover != -3 && websiteht < -.227273) websiteht = 0.7933884298f;
+	if(prevhover != hover && held == 0) {
+		if(hover > -1) knobs[hover].hoverstate = -4;
+		if(prevhover > -1) knobs[prevhover].hoverstate = -3;
+	}
 }
 void PFAudioProcessorEditor::mouseExit(const MouseEvent& event) {
 	hover = -1;
 }
 void PFAudioProcessorEditor::mouseDown(const MouseEvent& event) {
-	held = true;
+	held = -1;
 	initialdrag = hover;
 	if(hover > -1) {
 		initialvalue = knobs[hover].value;
@@ -395,12 +432,13 @@ void PFAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 		audioProcessor.undoManager.beginNewTransaction();
 		event.source.enableUnboundedMouseMovement(false);
 		Desktop::setMousePosition(dragpos);
-	} else if(hover == -3) URL("https://vst.unplug.red/").launchInDefaultBrowser();
-	held = false;
-
-	int prevhover = hover;
-	hover = recalchover(event.x,event.y);
-	if(hover == -3 && prevhover != -3 && websiteht < -.227273) websiteht = 0.7933884298f;
+	} else {
+		if(hover == -3) URL("https://vst.unplug.red/").launchInDefaultBrowser();
+		int prevhover = hover;
+		hover = recalchover(event.x,event.y);
+		if(hover == -3 && prevhover != -3 && websiteht < -.227273) websiteht = 0.7933884298f;
+	}
+	held = 1;
 }
 int PFAudioProcessorEditor::recalchover(float x, float y) {
 	if(y > 403) {
