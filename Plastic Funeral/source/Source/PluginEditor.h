@@ -54,6 +54,7 @@ private:
 	int initialdrag = 0;
 	int held = 0;
 	float initialvalue = 0;
+	int needtoupdate = 2;
 
 	OpenGLContext openGLContext;
 	unsigned int arraybuffer;
