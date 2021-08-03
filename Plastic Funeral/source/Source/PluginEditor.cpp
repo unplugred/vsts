@@ -248,79 +248,85 @@ void PFAudioProcessorEditor::renderOpenGL() {
 	glDisable(GL_DEPTH_TEST);
 	glEnable(GL_LINE_SMOOTH);
 
-	framebuffer.makeCurrentRenderingTarget();
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	openGLContext.extensions.glBindBuffer(GL_ARRAY_BUFFER, arraybuffer);
-	baseshader->use();
-	openGLContext.extensions.glActiveTexture(GL_TEXTURE0);
-	basetex.bind();
-	baseshader->setUniform("basetex",0);
-	baseshader->setUniform("texscale",242.f/basetex.getWidth(),462.f/basetex.getHeight());
-	openGLContext.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
 	auto coord = openGLContext.extensions.glGetAttribLocation(baseshader->getProgramID(),"aPos");
-	openGLContext.extensions.glEnableVertexAttribArray(coord);
-	openGLContext.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
-	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
-	openGLContext.extensions.glDisableVertexAttribArray(coord);
-
-	knobshader->use();
-	openGLContext.extensions.glActiveTexture(GL_TEXTURE0);
-	knobtex.bind();
-	knobshader->setUniform("knobtex",0);
-	openGLContext.extensions.glActiveTexture(GL_TEXTURE1);
-	basetex.bind();
-	knobshader->setUniform("basetex",1);
-	knobshader->setUniform("texscale",58.f/knobtex.getWidth(),66.f/knobtex.getHeight());
-	knobshader->setUniform("knobscale",58.f/getWidth(),66.f/getHeight());
-	knobshader->setUniform("ratio",((float)getHeight())/getWidth());
-	knobshader->setUniform("basescale",242.f/basetex.getWidth(),462.f/basetex.getHeight());
 	openGLContext.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
-	coord = openGLContext.extensions.glGetAttribLocation(knobshader->getProgramID(),"aPos");
-	openGLContext.extensions.glEnableVertexAttribArray(coord);
-	openGLContext.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
-	knobshader->setUniform("knobcolor",.2265625f);
-	for (int i = 0; i < 6; i++) {
-		if(i == 2) knobshader->setUniform("knobcolor",.61328125f);
-		knobshader->setUniform("knobpos",((float)knobs[i].x*2)/getWidth(),2-((float)knobs[i].y*2)/getHeight());
-		knobshader->setUniform("knobrot",(knobs[i].value-.5f)*.748f);
-		knobshader->setUniform("id",(float)i);
-		knobshader->setUniform("hoverstate",(float)(knobs[i].hoverstate==-1?(hover==i?-1:0):knobs[i].hoverstate));
+	if(needtoupdate > 0) {
+		framebuffer.makeCurrentRenderingTarget();
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		baseshader->use();
+		openGLContext.extensions.glActiveTexture(GL_TEXTURE0);
+		basetex.bind();
+		baseshader->setUniform("basetex",0);
+		baseshader->setUniform("texscale",242.f/basetex.getWidth(),462.f/basetex.getHeight());
+		openGLContext.extensions.glEnableVertexAttribArray(coord);
+		openGLContext.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
-	}
-	openGLContext.extensions.glDisableVertexAttribArray(coord);
+		openGLContext.extensions.glDisableVertexAttribArray(coord);
 
-	glLineWidth(1.3);
-	visshader->use();
-	coord = openGLContext.extensions.glGetAttribLocation(visshader->getProgramID(),"aPos");
-	openGLContext.extensions.glActiveTexture(GL_TEXTURE0);
-	basetex.bind();
-	visshader->setUniform("basetex",0);
-	visshader->setUniform("texscale",242.f/basetex.getWidth(),462.f/basetex.getHeight());
-	openGLContext.extensions.glEnableVertexAttribArray(coord);
-	openGLContext.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
-	openGLContext.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*452, visline[0], GL_DYNAMIC_DRAW);
-	glDrawArrays(GL_LINE_STRIP,0,226);
-	if(isStereo) {
-		openGLContext.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*452, visline[1], GL_DYNAMIC_DRAW);
+		knobshader->use();
+		openGLContext.extensions.glActiveTexture(GL_TEXTURE0);
+		knobtex.bind();
+		knobshader->setUniform("knobtex",0);
+		openGLContext.extensions.glActiveTexture(GL_TEXTURE1);
+		basetex.bind();
+		knobshader->setUniform("basetex",1);
+		knobshader->setUniform("texscale",58.f/knobtex.getWidth(),66.f/knobtex.getHeight());
+		knobshader->setUniform("knobscale",58.f/getWidth(),66.f/getHeight());
+		knobshader->setUniform("ratio",((float)getHeight())/getWidth());
+		knobshader->setUniform("basescale",242.f/basetex.getWidth(),462.f/basetex.getHeight());
+		coord = openGLContext.extensions.glGetAttribLocation(knobshader->getProgramID(),"aPos");
+		openGLContext.extensions.glEnableVertexAttribArray(coord);
+		openGLContext.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+		knobshader->setUniform("knobcolor",.2265625f);
+		for (int i = 0; i < 6; i++) {
+			if(i == 2) knobshader->setUniform("knobcolor",.61328125f);
+			knobshader->setUniform("knobpos",((float)knobs[i].x*2)/getWidth(),2-((float)knobs[i].y*2)/getHeight());
+			knobshader->setUniform("knobrot",(knobs[i].value-.5f)*.748f);
+			knobshader->setUniform("id",(float)i);
+			knobshader->setUniform("hoverstate",(float)(knobs[i].hoverstate==-1?(hover==i?-1:0):knobs[i].hoverstate));
+			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+		}
+		openGLContext.extensions.glDisableVertexAttribArray(coord);
+
+		glLineWidth(1.3);
+		visshader->use();
+		coord = openGLContext.extensions.glGetAttribLocation(visshader->getProgramID(),"aPos");
+		openGLContext.extensions.glActiveTexture(GL_TEXTURE0);
+		basetex.bind();
+		visshader->setUniform("basetex",0);
+		visshader->setUniform("texscale",242.f/basetex.getWidth(),462.f/basetex.getHeight());
+		openGLContext.extensions.glEnableVertexAttribArray(coord);
+		openGLContext.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+		openGLContext.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*452, visline[0], GL_DYNAMIC_DRAW);
 		glDrawArrays(GL_LINE_STRIP,0,226);
+		if(isStereo) {
+			openGLContext.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*452, visline[1], GL_DYNAMIC_DRAW);
+			glDrawArrays(GL_LINE_STRIP,0,226);
+		}
+		openGLContext.extensions.glDisableVertexAttribArray(coord);
+		openGLContext.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
+
+		if(creditsalpha > 0) {
+			creditsshader->use();
+			openGLContext.extensions.glActiveTexture(GL_TEXTURE0);
+			creditstex.bind();
+			creditsshader->setUniform("creditstex",0);
+			creditsshader->setUniform("texscale",242.f/creditstex.getWidth(),59.f/creditstex.getHeight());
+			creditsshader->setUniform("alpha",creditsalpha<0.5?4*creditsalpha*creditsalpha*creditsalpha:1-(float)pow(-2*creditsalpha+2,3)/2);
+			creditsshader->setUniform("shineprog",websiteht);
+			openGLContext.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
+			coord = openGLContext.extensions.glGetAttribLocation(creditsshader->getProgramID(),"aPos");
+			openGLContext.extensions.glEnableVertexAttribArray(coord);
+			openGLContext.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+			openGLContext.extensions.glDisableVertexAttribArray(coord);
+		}
+
+		needtoupdate--;
+		framebuffer.releaseAsRenderingTarget();
 	}
-	openGLContext.extensions.glDisableVertexAttribArray(coord);
 
-	creditsshader->use();
-	openGLContext.extensions.glActiveTexture(GL_TEXTURE0);
-	creditstex.bind();
-	creditsshader->setUniform("creditstex",0);
-	creditsshader->setUniform("texscale",242.f/creditstex.getWidth(),59.f/creditstex.getHeight());
-	creditsshader->setUniform("alpha",creditsalpha<0.5?4*creditsalpha*creditsalpha*creditsalpha:1-(float)pow(-2*creditsalpha+2,3)/2);
-	creditsshader->setUniform("shineprog",websiteht);
-	openGLContext.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
-	coord = openGLContext.extensions.glGetAttribLocation(creditsshader->getProgramID(),"aPos");
-	openGLContext.extensions.glEnableVertexAttribArray(coord);
-	openGLContext.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
-	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
-	openGLContext.extensions.glDisableVertexAttribArray(coord);
-
-	framebuffer.releaseAsRenderingTarget();
 	ppshader->use();
 	openGLContext.extensions.glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, framebuffer.getTextureID());
@@ -328,7 +334,6 @@ void PFAudioProcessorEditor::renderOpenGL() {
 	ppshader->setUniform("chroma",rms*.01f);
 	ppshader->setUniform("shake",rms*.005f*(random.nextFloat()-.5f));
 	coord = openGLContext.extensions.glGetAttribLocation(ppshader->getProgramID(),"aPos");
-	openGLContext.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
 	openGLContext.extensions.glEnableVertexAttribArray(coord);
 	openGLContext.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
@@ -362,11 +367,22 @@ void PFAudioProcessorEditor::calcvis() {
 void PFAudioProcessorEditor::paint (Graphics& g) { }
 
 void PFAudioProcessorEditor::timerCallback() {
-	creditsalpha = fmax(fmin(creditsalpha+((hover<=-2&&hover>=-3)?.07f:-.07f),1),0);
+	if(creditsalpha != ((hover<=-2&&hover>=-3)?1:0)) {
+		creditsalpha = fmax(fmin(creditsalpha+((hover<=-2&&hover>=-3)?.07f:-.07f),1),0);
+		needtoupdate = 2;
+	}
 	if(creditsalpha <= 0) websiteht = -1;
-	websiteht -= .05;
+	if(websiteht >= -.227273) {
+		websiteht -= .05;
+		needtoupdate = 2;
+	}
 
-	for(int i = 0; i < 6; i++) knobs[i].hoverstate = fmin(knobs[i].hoverstate+1,-1);
+	for(int i = 0; i < 6; i++) {
+		if(knobs[i].hoverstate < -1) {
+			needtoupdate = 2;
+			knobs[i].hoverstate++;
+		}
+	}
 	if(held > 0) held--;
 
 	if(audioProcessor.rmscount.get() > 0) {
@@ -403,6 +419,7 @@ void PFAudioProcessorEditor::parameterChanged(const String& parameterID, float n
 		knobs[5].value = newValue;
 	}
 	calcvis();
+	needtoupdate = 2;
 }
 void PFAudioProcessorEditor::mouseEnter(const MouseEvent& event) {
 //dlt
