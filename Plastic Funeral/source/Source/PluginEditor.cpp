@@ -15,22 +15,22 @@ PFAudioProcessorEditor::PFAudioProcessorEditor (PFAudioProcessor& p)
 {
 	knobs[0].id = "freq";
 	knobs[0].name = "frequency";
-	knobs[0].value = audioProcessor.freq;
+	knobs[0].value = audioProcessor.freq.get();
 	knobs[1].id = "fat";
 	knobs[1].name = "fatness";
-	knobs[1].value = audioProcessor.fat*.025f+.5f;
+	knobs[1].value = audioProcessor.fat.get()*.025f+.5f;
 	knobs[2].id = "drive";
 	knobs[2].name = "drive";
-	knobs[2].value = audioProcessor.drive;
+	knobs[2].value = audioProcessor.drive.get();
 	knobs[3].id = "dry";
 	knobs[3].name = "dry";
-	knobs[3].value = audioProcessor.dry;
+	knobs[3].value = audioProcessor.dry.get();
 	knobs[4].id = "stereo";
 	knobs[4].name = "stereo";
-	knobs[4].value = audioProcessor.stereo;
+	knobs[4].value = audioProcessor.stereo.get();
 	knobs[5].id = "gain";
 	knobs[5].name = "gain";
-	knobs[5].value = audioProcessor.gain;
+	knobs[5].value = audioProcessor.gain.get();
 
 	for (int x = 0; x < 2; x++) {
 		for (int y = 0; y < 3; y++) {
@@ -350,11 +350,12 @@ void PFAudioProcessorEditor::openGLContextClosing() {
 	openGLContext.extensions.glDeleteBuffers(1,&arraybuffer);
 }
 void PFAudioProcessorEditor::calcvis() {
-	isStereo = audioProcessor.stereo > 0 && audioProcessor.dry < 1 && audioProcessor.gain > 0;
+	float freq = audioProcessor.freq.get(), fat = audioProcessor.fat.get(), drive = audioProcessor.drive.get(), dry = audioProcessor.dry.get(), stereo = audioProcessor.stereo.get(), gain = audioProcessor.gain.get(), norm = audioProcessor.norm.get();
+	isStereo = stereo > 0 && dry < 1 && gain > 0;
 	for(int c = 0; c < (isStereo ? 2 : 1); c++) {
 		for(int i = 0; i < 226; i++) {
 			visline[c][i*2] = (i+8)/121.f-1;
-			visline[c][i*2+1] = 1-(48+audioProcessor.plasticfuneral(sin(i/35.8098621957f)*.8f,c,audioProcessor.freq,audioProcessor.fat,audioProcessor.drive,audioProcessor.dry,audioProcessor.stereo,audioProcessor.gain)*audioProcessor.norm*38)/231.f;
+			visline[c][i*2+1] = 1-(48+audioProcessor.plasticfuneral(sin(i/35.8098621957f)*.8f,c,freq,fat,drive,dry,stereo,gain)*norm*38)/231.f;
 		}
 	}
 }
@@ -368,8 +369,8 @@ void PFAudioProcessorEditor::timerCallback() {
 	for(int i = 0; i < 6; i++) knobs[i].hoverstate = fmin(knobs[i].hoverstate+1,-1);
 	if(held > 0) held--;
 
-	if(audioProcessor.rmscount > 0) {
-		rms = sqrt(audioProcessor.rmsadd/audioProcessor.rmscount);
+	if(audioProcessor.rmscount.get() > 0) {
+		rms = sqrt(audioProcessor.rmsadd.get()/audioProcessor.rmscount.get());
 		if(knobs[5].value > .4f) rms = rms/knobs[5].value;
 		else rms *= 2.5f;
 	}

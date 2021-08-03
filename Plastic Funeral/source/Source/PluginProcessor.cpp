@@ -90,11 +90,11 @@ void PFAudioProcessor::setCurrentProgram (int index) {
 
 	undoManager.beginNewTransaction((String)"Changed preset to " += presets[index].name);
 	currentpreset = index;
-	lerptable[0] = freq;
-	lerptable[1] = fat*.025f + .5f;
-	lerptable[2] = drive;
-	lerptable[3] = dry;
-	lerptable[4] = stereo;
+	lerptable[0] = freq.get();
+	lerptable[1] = fat.get()*.025f + .5f;
+	lerptable[2] = drive.get();
+	lerptable[3] = dry.get();
+	lerptable[4] = stereo.get();
 
 	if(lerpstage <= 0) {
 		lerpstage = 1;
@@ -129,11 +129,11 @@ const String PFAudioProcessor::getProgramName (int index) {
 }
 void PFAudioProcessor::changeProgramName (int index, const String& newName) {
 	presets[index].name = newName;
-	presets[index].freq = freq;
-	presets[index].fat = fat;
-	presets[index].drive = drive;
-	presets[index].dry = dry;
-	presets[index].stereo = stereo;
+	presets[index].freq = freq.get();
+	presets[index].fat = fat.get();
+	presets[index].drive = drive.get();
+	presets[index].dry = dry.get();
+	presets[index].stereo = stereo.get();
 }
 
 void PFAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {
@@ -162,7 +162,10 @@ void PFAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mid
 	for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
 		buffer.clear (i, 0, buffer.getNumSamples());
 
-	if(fat != oldfat || dry != olddry) normalizegain();
+	float newfreq = freq.get(), newfat = fat.get(), newdrive = drive.get(), newdry = dry.get(), newstereo = stereo.get(), newgain = gain.get(), prmsadd = rmsadd.get();
+	int prmscount = rmscount.get();
+	if(newfat != oldfat || newdry != olddry) normalizegain();
+	float newnorm = norm.get();
 
 	float unit = 0, mult = 0;
 	for (int channel = 0; channel < totalNumInputChannels; ++channel)
@@ -172,25 +175,27 @@ void PFAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mid
 		for (int sample = 0; sample < buffer.getNumSamples(); ++sample) {
 			mult = unit * sample;
 			channelData[sample] = plasticfuneral(channelData[sample], channel,
-				oldfreq * (1 - mult) + freq * mult,
-				oldfat * (1 - mult) + fat * mult,
-				olddrive * (1 - mult) + drive * mult,
-				olddry * (1 - mult) + dry * mult,
-				oldstereo * (1 - mult) + stereo * mult,
-				oldgain * (1 - mult) + gain * mult) * (
-				oldnorm * (1 - mult) + norm * mult);
-			rmsadd += channelData[sample]*channelData[sample];
-			rmscount++;
+				oldfreq  *(1-mult)+newfreq  *mult,
+				oldfat   *(1-mult)+newfat   *mult,
+				olddrive *(1-mult)+newdrive *mult,
+				olddry   *(1-mult)+newdry   *mult,
+				oldstereo*(1-mult)+newstereo*mult,
+				oldgain  *(1-mult)+newgain  *mult)*(
+				oldnorm  *(1-mult)+newnorm  *mult);
+			prmsadd += channelData[sample]*channelData[sample];
+			prmscount++;
 		}
 	}
 
-	oldfreq = freq;
-	oldfat = fat;
-	olddrive = drive;
-	olddry = dry;
-	oldstereo = stereo;
-	oldgain = gain;
-	oldnorm = norm;
+	oldfreq = newfreq;
+	oldfat = newfat;
+	olddrive = newdrive;
+	olddry = newdry;
+	oldstereo = newstereo;
+	oldgain = newgain;
+	oldnorm = newnorm;
+	rmsadd = prmsadd;
+	rmscount = prmscount;
 
 	boot = true;
 }
@@ -206,10 +211,10 @@ float PFAudioProcessor::plasticfuneral(float source, int channel, float freq, fl
 }
 
 void PFAudioProcessor::normalizegain() {
-	norm = 0.25f;
+	float newnorm = 0.25f, newfat = fat.get(), newdry = dry.get();
 	for (float i = 0; i <= 1; i += .005f)
-		norm = fmax(norm,fabs(i+(sin(i*1.5708f)-i)*fat)*(1-dry)+i*dry);
-	norm = 1/norm;
+		newnorm = fmax(newnorm,fabs(i+(sin(i*1.5708f)-i)*newfat)*(1-newdry)+i*newdry);
+	norm = 1.f/newnorm;
 }
 
 bool PFAudioProcessor::hasEditor() const { return true; }
@@ -220,12 +225,12 @@ void PFAudioProcessor::getStateInformation (MemoryBlock& destData) {
 	std::ostringstream data;
 	data << version
 		<< linebreak << currentpreset
-		<< linebreak << freq
-		<< linebreak << fat
-		<< linebreak << drive
-		<< linebreak << dry
-		<< linebreak << stereo
-		<< linebreak << gain << linebreak;
+		<< linebreak << freq.get()
+		<< linebreak << fat.get()
+		<< linebreak << drive.get()
+		<< linebreak << dry.get()
+		<< linebreak << stereo.get()
+		<< linebreak << gain.get() << linebreak;
 	for (int i = 0; i < getNumPrograms(); i++) {
 		data << presets[i].name
 			<< linebreak << presets[i].freq
@@ -249,27 +254,27 @@ void PFAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
 
 	std::getline(ss, token, '\n');
 	freq = std::stof(token);
-	apvts.getParameter("freq")->setValueNotifyingHost(freq);
+	apvts.getParameter("freq")->setValueNotifyingHost(std::stof(token));
 
 	std::getline(ss, token, '\n');
 	fat = std::stof(token);
-	apvts.getParameter("fat")->setValueNotifyingHost(fat*.025 + .5);
+	apvts.getParameter("fat")->setValueNotifyingHost(std::stof(token)*.025 + .5);
 
 	std::getline(ss, token, '\n');
 	drive = std::stof(token);
-	apvts.getParameter("drive")->setValueNotifyingHost(drive);
+	apvts.getParameter("drive")->setValueNotifyingHost(std::stof(token));
 
 	std::getline(ss, token, '\n');
 	dry = std::stof(token);
-	apvts.getParameter("dry")->setValueNotifyingHost(dry);
+	apvts.getParameter("dry")->setValueNotifyingHost(std::stof(token));
 
 	std::getline(ss, token, '\n');
 	stereo = std::stof(token);
-	apvts.getParameter("stereo")->setValueNotifyingHost(stereo);
+	apvts.getParameter("stereo")->setValueNotifyingHost(std::stof(token));
 
 	std::getline(ss, token, '\n');
 	gain = std::stof(token);
-	apvts.getParameter("gain")->setValueNotifyingHost(gain);
+	apvts.getParameter("gain")->setValueNotifyingHost(std::stof(token));
 
 	normalizegain();
 
