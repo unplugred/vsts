@@ -497,11 +497,12 @@ void PFAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 	if(hover > -1) {
 		initialvalue = knobs[hover].value;
 		audioProcessor.undoManager.beginNewTransaction();
+		audioProcessor.apvts.getParameter(knobs[hover].id)->beginChangeGesture();
 		dragpos = event.getScreenPosition();
 		event.source.enableUnboundedMouseMovement(true);
 	} else if(hover < -4) {
 		oversampling = hover+8;
-		audioProcessor.apvts.getParameter("oversampling")->setValueNotifyingHost((float)oversampling+1);
+		audioProcessor.apvts.getParameter("oversampling")->setValueNotifyingHost(oversampling+1);
 		audioProcessor.undoManager.setCurrentTransactionName(
 			(String)("Set Over-Sampling to ") += (oversampling+1));
 		audioProcessor.undoManager.beginNewTransaction();
@@ -530,6 +531,7 @@ void PFAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 	if(hover > -1) {
 		audioProcessor.undoManager.setCurrentTransactionName(
 			(String)((knobs[hover].value - initialvalue) >= 0 ? "Increased " : "Decreased ") += knobs[hover].name);
+		audioProcessor.apvts.getParameter(knobs[hover].id)->endChangeGesture();
 		audioProcessor.undoManager.beginNewTransaction();
 		event.source.enableUnboundedMouseMovement(false);
 		Desktop::setMousePosition(dragpos);
