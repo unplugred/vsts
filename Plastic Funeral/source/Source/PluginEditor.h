@@ -36,7 +36,6 @@ public:
 	void timerCallback() override;
 
 	virtual void parameterChanged(const String& parameterID, float newValue);
-	void mouseEnter(const MouseEvent& event) override;
 	void mouseMove(const MouseEvent& event) override;
 	void mouseExit(const MouseEvent& event) override;
 	void mouseDown(const MouseEvent& event) override;
@@ -79,6 +78,13 @@ private:
 	std::unique_ptr<OpenGLShaderProgram> visshader;
 	String visvert;
 	String visfrag;
+
+	float oversamplingalpha = 0;
+	float oversamplinglerped = 0;
+	int oversampling = 0;
+	std::unique_ptr<OpenGLShaderProgram> oversamplingshader;
+	String oversamplingvert;
+	String oversamplingfrag;
 
 	float websiteht = -1;
 	float creditsalpha = 0;
