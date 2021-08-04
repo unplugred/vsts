@@ -230,7 +230,8 @@ void PFAudioProcessor::getStateInformation (MemoryBlock& destData) {
 		<< linebreak << drive.get()
 		<< linebreak << dry.get()
 		<< linebreak << stereo.get()
-		<< linebreak << gain.get() << linebreak;
+		<< linebreak << gain.get()
+		<< linebreak << (oversampling.get()+1) << linebreak;
 	for (int i = 0; i < getNumPrograms(); i++) {
 		data << presets[i].name
 			<< linebreak << presets[i].freq
@@ -276,6 +277,12 @@ void PFAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
 	gain = std::stof(token);
 	apvts.getParameter("gain")->setValueNotifyingHost(std::stof(token));
 
+	if (saveversion > 1) {
+		std::getline(ss, token, '\n');
+		oversampling = std::stoi(token);
+		apvts.getParameter("oversampling")->setValueNotifyingHost(std::stoi(token));
+	}
+
 	normalizegain();
 
 	for(int i = 0; i < getNumPrograms(); i++) {
@@ -300,5 +307,6 @@ AudioProcessorValueTreeState::ParameterLayout
 	parameters.push_back(std::make_unique<AudioParameterFloat>("dry","Dry",0.0f,1.0f,0.0f));
 	parameters.push_back(std::make_unique<AudioParameterFloat>("stereo","Stereo",0.0f,1.0f,0.37f));
 	parameters.push_back(std::make_unique<AudioParameterFloat>("gain","Out Gain",0.0f,1.0f,0.4f));
+	parameters.push_back(std::make_unique<AudioParameterInt>("oversampling","Over-Sampling",1,4,1));
 	return { parameters.begin(), parameters.end() };
 }

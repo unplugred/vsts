@@ -69,7 +69,7 @@ R"(#version 330 core
 in vec2 v_TexCoord;
 uniform sampler2D basetex;
 void main(){
-	gl_FragColor = vec4(vec3(texture2D(basetex,v_TexCoord).r),1);
+	gl_FragColor = vec4(texture2D(basetex,v_TexCoord).r,0,0,1);
 })";
 	baseshader.reset(new OpenGLShaderProgram(openGLContext));
 	baseshader->addVertexShader(basevert);
@@ -128,7 +128,7 @@ void main(){
 			if(hoverstate < -1) col += (hoverstate==-3?(1-hover):hover)*.3;
 			else col = col*(1-hover)+.01171875*hover;
 		}
-		gl_FragColor = vec4(vec3(col+texture2D(basetex,basecoord).g-.5),gl_FragColor.r);
+		gl_FragColor = vec4(col+texture2D(basetex,basecoord).g-.5,0,0,gl_FragColor.r);
 	} else gl_FragColor = vec4(0);
 })";
 	knobshader.reset(new OpenGLShaderProgram(openGLContext));
@@ -140,29 +140,53 @@ void main(){
 R"(#version 330 core
 in vec2 aPos;
 uniform vec2 texscale;
-out vec2 gradcoord;
-out vec2 v_TexCoord;
+out vec2 basecoord;
 void main(){
 	gl_Position = vec4(aPos,0,1);
-	//(.5-(80/2+8)/462)*2
-	gradcoord = (aPos-vec2(0,.7922077922))*vec2(1.0708,2.04425);
-	v_TexCoord = vec2((aPos.x*.5+.5)*texscale.x,1-(.5-aPos.y*.5)*texscale.y);
+	basecoord = vec2((aPos.x+1)*texscale.x*.5,1-(1-aPos.y)*texscale.y*.5);
 })";
 	visfrag = 
 R"(#version 330 core
-in vec2 gradcoord;
-in vec2 v_TexCoord;
+in vec2 basecoord;
 uniform sampler2D basetex;
+uniform float alpha;
 void main(){
-	if(gradcoord.x < 1 && gradcoord.x > -1 && gradcoord.y < .3539823009 && gradcoord.y > -.3539823009) {
-		float gradient = .390625-sqrt(gradcoord.x*gradcoord.x+gradcoord.y*gradcoord.y)*.15625;
-		gl_FragColor = vec4(vec3(texture2D(basetex,v_TexCoord).r*(1-gradient)+gradient),1);
-	} else gl_FragColor = vec4(0);
+	vec2 base = texture2D(basetex,basecoord).rb;
+	float gradient = (base.g<.5?base.g:(1-base.g))*alpha;
+	gl_FragColor = vec4(base.r*(1-gradient)+gradient,0,0,1);
 })";
 	visshader.reset(new OpenGLShaderProgram(openGLContext));
 	visshader->addVertexShader(visvert);
 	visshader->addFragmentShader(visfrag);
 	visshader->link();
+
+	oversamplingvert =
+R"(#version 330 core
+in vec2 aPos;
+uniform vec2 texscale;
+uniform float selection;
+out vec2 basecoord;
+out vec2 highlightcoord;
+void main(){
+	gl_Position = vec4(aPos.x-.5,aPos.y*.2+.7,0,1);
+	basecoord = vec2((aPos.x+.5)*.5*texscale.x,1-(1.5-aPos.y)*.1*texscale.y);
+	highlightcoord = vec2(aPos.x*6.3684210526+selection,aPos.y*3.3-1.1642857143);
+})";
+	oversamplingfrag =
+R"(#version 330 core
+in vec2 basecoord;
+in vec2 highlightcoord;
+uniform sampler2D basetex;
+uniform float alpha;
+void main(){
+	float tex = texture2D(basetex,basecoord).b;
+	if(highlightcoord.x>0&&highlightcoord.x<1&&highlightcoord.y>0&&highlightcoord.y<1)tex=1-tex;
+	gl_FragColor = vec4(1,0,0,tex>.5?((1-tex)*alpha):0);
+})";
+	oversamplingshader.reset(new OpenGLShaderProgram(openGLContext));
+	oversamplingshader->addVertexShader(oversamplingvert);
+	oversamplingshader->addFragmentShader(oversamplingfrag);
+	oversamplingshader->link();
 
 	creditsvert =
 R"(#version 330 core
@@ -181,7 +205,7 @@ uniform float alpha;
 uniform float shineprog;
 void main(){
 	vec2 creditols = texture2D(creditstex,v_TexCoord).rb;
-	gl_FragColor = vec4(vec3(creditols.g+texture2D(creditstex,v_TexCoord+vec2(shineprog,0)).g*creditols.r*.8),alpha);
+	gl_FragColor = vec4(creditols.g+texture2D(creditstex,v_TexCoord+vec2(shineprog,0)).g*creditols.r*.8,0,0,alpha);
 })";
 	creditsshader.reset(new OpenGLShaderProgram(openGLContext));
 	creditsshader->addVertexShader(creditsvert);
@@ -215,8 +239,8 @@ void main(){
 
 	basetex.loadImage(ImageCache::getFromMemory(BinaryData::base_png, BinaryData::base_pngSize));
 	basetex.bind();
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 
@@ -229,8 +253,8 @@ void main(){
 
 	creditstex.loadImage(ImageCache::getFromMemory(BinaryData::credits_png, BinaryData::credits_pngSize));
 	creditstex.bind();
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 
@@ -289,23 +313,44 @@ void PFAudioProcessorEditor::renderOpenGL() {
 		}
 		openGLContext.extensions.glDisableVertexAttribArray(coord);
 
-		glLineWidth(1.3);
-		visshader->use();
-		coord = openGLContext.extensions.glGetAttribLocation(visshader->getProgramID(),"aPos");
-		openGLContext.extensions.glActiveTexture(GL_TEXTURE0);
-		basetex.bind();
-		visshader->setUniform("basetex",0);
-		visshader->setUniform("texscale",242.f/basetex.getWidth(),462.f/basetex.getHeight());
-		openGLContext.extensions.glEnableVertexAttribArray(coord);
-		openGLContext.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
-		openGLContext.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*452, visline[0], GL_DYNAMIC_DRAW);
-		glDrawArrays(GL_LINE_STRIP,0,226);
-		if(isStereo) {
-			openGLContext.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*452, visline[1], GL_DYNAMIC_DRAW);
+		float osalpha = oversamplingalpha;
+		if(oversamplingalpha < 1) {
+			if(oversamplingalpha > 0)
+				osalpha = oversamplingalpha<0.5?4*oversamplingalpha*oversamplingalpha*oversamplingalpha:1-(float)pow(-2*oversamplingalpha+2,3)/2;
+			glLineWidth(1.3);
+			visshader->use();
+			coord = openGLContext.extensions.glGetAttribLocation(visshader->getProgramID(),"aPos");
+			openGLContext.extensions.glActiveTexture(GL_TEXTURE0);
+			basetex.bind();
+			visshader->setUniform("basetex",0);
+			visshader->setUniform("alpha",1-osalpha);
+			visshader->setUniform("texscale",242.f/basetex.getWidth(),462.f/basetex.getHeight());
+			openGLContext.extensions.glEnableVertexAttribArray(coord);
+			openGLContext.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+			openGLContext.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*452, visline[0], GL_DYNAMIC_DRAW);
 			glDrawArrays(GL_LINE_STRIP,0,226);
+			if(isStereo) {
+				openGLContext.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*452, visline[1], GL_DYNAMIC_DRAW);
+				glDrawArrays(GL_LINE_STRIP,0,226);
+			}
+			openGLContext.extensions.glDisableVertexAttribArray(coord);
+			openGLContext.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
 		}
-		openGLContext.extensions.glDisableVertexAttribArray(coord);
-		openGLContext.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
+
+		if(oversamplingalpha > 0) {
+			oversamplingshader->use();
+			coord = openGLContext.extensions.glGetAttribLocation(oversamplingshader->getProgramID(),"aPos");
+			openGLContext.extensions.glActiveTexture(GL_TEXTURE0);
+			basetex.bind();
+			oversamplingshader->setUniform("basetex",0);
+			oversamplingshader->setUniform("alpha",osalpha);
+			oversamplingshader->setUniform("selection",-.3947368421f-1.5263157895f*oversamplinglerped);
+			oversamplingshader->setUniform("texscale",242.f/basetex.getWidth(),462.f/basetex.getHeight());
+			openGLContext.extensions.glEnableVertexAttribArray(coord);
+			openGLContext.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+			openGLContext.extensions.glDisableVertexAttribArray(coord);
+		}
 
 		if(creditsalpha > 0) {
 			creditsshader->use();
@@ -315,7 +360,6 @@ void PFAudioProcessorEditor::renderOpenGL() {
 			creditsshader->setUniform("texscale",242.f/creditstex.getWidth(),59.f/creditstex.getHeight());
 			creditsshader->setUniform("alpha",creditsalpha<0.5?4*creditsalpha*creditsalpha*creditsalpha:1-(float)pow(-2*creditsalpha+2,3)/2);
 			creditsshader->setUniform("shineprog",websiteht);
-			openGLContext.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
 			coord = openGLContext.extensions.glGetAttribLocation(creditsshader->getProgramID(),"aPos");
 			openGLContext.extensions.glEnableVertexAttribArray(coord);
 			openGLContext.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
@@ -367,6 +411,25 @@ void PFAudioProcessorEditor::calcvis() {
 void PFAudioProcessorEditor::paint (Graphics& g) { }
 
 void PFAudioProcessorEditor::timerCallback() {
+	for(int i = 0; i < 6; i++) {
+		if(knobs[i].hoverstate < -1) {
+			needtoupdate = 2;
+			knobs[i].hoverstate++;
+		}
+	}
+	if(held > 0) held--;
+
+	if(oversamplingalpha != (hover<=-4?1:0)) {
+		oversamplingalpha = fmax(fmin(oversamplingalpha+(hover<=-4?.07f:-.07f),1),0);
+		needtoupdate = 2;
+	}
+
+	if (oversamplinglerped != oversampling) {
+		needtoupdate = 2;
+		if(fabs(oversamplinglerped-oversampling) <= .001f) oversamplinglerped = oversampling;
+		oversamplinglerped = oversamplinglerped*.75f+oversampling*.25f;
+	}
+
 	if(creditsalpha != ((hover<=-2&&hover>=-3)?1:0)) {
 		creditsalpha = fmax(fmin(creditsalpha+((hover<=-2&&hover>=-3)?.07f:-.07f),1),0);
 		needtoupdate = 2;
@@ -376,14 +439,6 @@ void PFAudioProcessorEditor::timerCallback() {
 		websiteht -= .05;
 		needtoupdate = 2;
 	}
-
-	for(int i = 0; i < 6; i++) {
-		if(knobs[i].hoverstate < -1) {
-			needtoupdate = 2;
-			knobs[i].hoverstate++;
-		}
-	}
-	if(held > 0) held--;
 
 	if(audioProcessor.rmscount.get() > 0) {
 		rms = sqrt(audioProcessor.rmsadd.get()/audioProcessor.rmscount.get());
@@ -417,12 +472,12 @@ void PFAudioProcessorEditor::parameterChanged(const String& parameterID, float n
 	} else if(parameterID == "gain") {
 		audioProcessor.gain = newValue;
 		knobs[5].value = newValue;
+	} else if(parameterID == "oversampling") {
+		audioProcessor.oversampling = newValue-1;
+		oversampling = newValue-1;
 	}
 	calcvis();
 	needtoupdate = 2;
-}
-void PFAudioProcessorEditor::mouseEnter(const MouseEvent& event) {
-//dlt
 }
 void PFAudioProcessorEditor::mouseMove(const MouseEvent& event) {
 	int prevhover = hover;
@@ -444,6 +499,12 @@ void PFAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		audioProcessor.undoManager.beginNewTransaction();
 		dragpos = event.getScreenPosition();
 		event.source.enableUnboundedMouseMovement(true);
+	} else if(hover < -4) {
+		oversampling = hover+8;
+		audioProcessor.apvts.getParameter("oversampling")->setValueNotifyingHost((float)oversampling+1);
+		audioProcessor.undoManager.setCurrentTransactionName(
+			(String)("Set Over-Sampling to ") += (oversampling+1));
+		audioProcessor.undoManager.beginNewTransaction();
 	}
 }
 void PFAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
@@ -459,9 +520,6 @@ void PFAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 
 		audioProcessor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost
 			(fmin(fmax(initialvalue-(event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*(finemode?.0005f:.005f),0),1));
-	} else if(initialdrag == -2) {
-		int draghover = recalchover(event.x,event.y);
-		hover = (draghover>=-2||draghover<=-3)?-2:0;
 	} else if (initialdrag == -3) {
 		int prevhover = hover;
 		hover = recalchover(event.x,event.y)==-3?-3:-2;
@@ -480,11 +538,19 @@ void PFAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 		int prevhover = hover;
 		hover = recalchover(event.x,event.y);
 		if(hover == -3 && prevhover != -3 && websiteht < -.227273) websiteht = 0.7933884298f;
+		if(hover > -1) knobs[hover].hoverstate = -4;
 	}
 	held = 1;
 }
 int PFAudioProcessorEditor::recalchover(float x, float y) {
-	if(y > 403) {
+	if (x >= 8 && x <= 234 && y >= 8 && y <= 87) {
+		if(y < 39 || y > 53) return -4;
+		if(x >= 68 && x <= 87) return -8;
+		if(x >= 97 && x <= 116) return -7;
+		if(x >= 126 && x <= 145) return -6;
+		if(x >= 155 && x <= 174) return -5;
+		return -4;
+	} else if(y >= 403) {
 		if(x >= 50 && x <= 196 && y >= 412 && y <= 456) return -3;
 		return -2;
 	}
