@@ -93,8 +93,7 @@ void VuAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mid
 	for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
 		buffer.clear (i, 0, buffer.getNumSamples());
 
-	float leftrms = 0;
-	float rightrms = 0;
+	float leftrms = 0, rightrms = 0, newleftpeak = leftpeak.get(), newrightpeak = rightpeak.get();
 	for (int channel = 0; channel < fmin(totalNumInputChannels,2); ++channel)
 	{
 		auto* channelData = buffer.getWritePointer (channel);
@@ -103,10 +102,10 @@ void VuAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mid
 			data *= data;
 			if(channel == 0) {
 				leftrms += data;
-				leftpeak = leftpeak || fabs(channelData[sample]) >= .999;
+				newleftpeak = newleftpeak || fabs(channelData[sample]) >= .999;
 			} else {
 				rightrms += data;
-				rightpeak = rightpeak || fabs(channelData[sample]) >= .999;
+				newrightpeak = newrightpeak || fabs(channelData[sample]) >= .999;
 			}
 			if(JUCEApplication::isStandaloneApp()) channelData[sample] = 0;
 		}
@@ -115,18 +114,22 @@ void VuAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mid
 		else
 			rightrms = std::sqrt(rightrms/buffer.getNumSamples());
 	}
-	buffercount++;
+	buffercount = buffercount.get()+1;
 	if(totalNumInputChannels == 1) {
-		leftvu += leftrms*leftrms;
-		rightvu = leftvu;
-		rightpeak = leftpeak;
-	} else if(stereo) {
-		leftvu += leftrms*leftrms;
-		rightvu += rightrms*rightrms;
+		float output = leftvu.get()+leftrms*leftrms;
+		leftvu = output;
+		rightvu = output;
+		leftpeak = newleftpeak;
+		rightpeak = newleftpeak;
+	} else if(stereo.get()) {
+		leftvu = leftvu.get()+leftrms*leftrms;
+		rightvu = rightvu.get()+rightrms*rightrms;
+		leftpeak = newleftpeak;
+		rightpeak = newrightpeak;
 	} else {
 		float centervu = std::sqrt((leftrms*leftrms+rightrms*rightrms)*.5f);
-		leftvu += centervu*centervu;
-		leftpeak = leftpeak || rightpeak;
+		leftvu = leftvu.get()+centervu*centervu;
+		leftpeak = newleftpeak || newrightpeak;
 	}
 }
 
@@ -144,10 +147,10 @@ void VuAudioProcessor::getStateInformation (MemoryBlock& destData) {
 	const char linebreak = '\n';
 	std::ostringstream data;
 	data << version
-		<< linebreak << nominal
-		<< linebreak << damping
-		<< linebreak << (stereo?1:0)
-		<< linebreak << height
+		<< linebreak << nominal.get()
+		<< linebreak << damping.get()
+		<< linebreak << (stereo.get()?1:0)
+		<< linebreak << height.get()
 		<< linebreak;
 	MemoryOutputStream stream(destData,false);
 	stream.writeString(data.str());
@@ -162,15 +165,15 @@ void VuAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
 
 	std::getline(ss,token,'\n');
 	nominal = std::stoi(token);
-	apvts.getParameter("nominal")->setValueNotifyingHost(nominal);
+	apvts.getParameter("nominal")->setValueNotifyingHost(std::stoi(token));
 	
 	std::getline(ss,token,'\n');
 	damping = std::stoi(token);
-	apvts.getParameter("damping")->setValueNotifyingHost(nominal);
+	apvts.getParameter("damping")->setValueNotifyingHost(std::stoi(token));
 
 	std::getline(ss,token,'\n');
 	stereo = std::stoi(token) == 1;
-	apvts.getParameter("stereo")->setValueNotifyingHost(stereo);
+	apvts.getParameter("stereo")->setValueNotifyingHost(std::stoi(token) == 1);
 
 	std::getline(ss,token,'\n');
 	height = std::stoi(token);
