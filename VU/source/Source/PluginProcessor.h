@@ -55,18 +55,18 @@ public:
 	void getStateInformation (MemoryBlock& destData) override;
 	void setStateInformation (const void* data, int sizeInBytes) override;
 
-	bool stereo = false;
-	int damping = 5;
-	int nominal = -18;
+	Atomic<bool> stereo = false;
+	Atomic<int> damping = 5;
+	Atomic<int> nominal = -18;
 
-	float leftvu = 0;
-	float rightvu = 0;
-	bool leftpeak = false;
-	bool rightpeak = false;
-	int buffercount = 0;
+	Atomic<float> leftvu = 0;
+	Atomic<float> rightvu = 0;
+	Atomic<bool> leftpeak = false;
+	Atomic<bool> rightpeak = false;
+	Atomic<int> buffercount = 0;
 
-	int width = 505;
-	int height = 300;
+	Atomic<int> width = 505;
+	Atomic<int> height = 300;
 
 	AudioProcessorValueTreeState apvts;
 	AudioProcessorValueTreeState::ParameterLayout createParameters();
