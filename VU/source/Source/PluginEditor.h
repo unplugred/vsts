@@ -62,6 +62,7 @@ public:
 	int initialvalue = 0;
 	float stereovelocity = 0;
 	float websiteht = 0;
+	Point<int> dragpos;
 
 	void timerCallback() override;
 
