@@ -14,8 +14,6 @@
             file="Source/genuine_soundware.png"/>
       <FILE id="plAKfE" name="functions.cpp" compile="1" resource="0" file="Source/functions.cpp"/>
       <FILE id="LD1s4J" name="functions.h" compile="0" resource="0" file="Source/functions.h"/>
-      <FILE id="YuQRZK" name="display.cpp" compile="1" resource="0" file="Source/display.cpp"/>
-      <FILE id="HkLNLO" name="display.h" compile="0" resource="0" file="Source/display.h"/>
       <FILE id="hvMk5X" name="PluginProcessor.cpp" compile="1" resource="0"
             file="Source/PluginProcessor.cpp"/>
       <FILE id="gDKK3C" name="PluginProcessor.h" compile="0" resource="0"
