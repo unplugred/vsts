@@ -346,8 +346,17 @@ void VuAudioProcessorEditor::mouseExit(const MouseEvent& event) {
 void VuAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 	held = true;
 	initialdrag = hover;
-	if(hover == 1) initialvalue = audioProcessor.nominal.get();
-	else if(hover == 2) initialvalue = audioProcessor.damping.get();
+	if(hover == 1 || hover == 2) {
+		dragpos = event.getScreenPosition();
+		event.source.enableUnboundedMouseMovement(true);
+		if(hover == 1) {
+			initialvalue = audioProcessor.nominal.get();
+			audioProcessor.apvts.getParameter("nominal")->beginChangeGesture();
+		} else {
+			initialvalue = audioProcessor.damping.get();
+			audioProcessor.apvts.getParameter("damping")->beginChangeGesture();
+		}
+	}
 }
 void VuAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 	if(initialdrag == 3) hover = recalchover(event.x,event.y)==3?3:0;
@@ -372,7 +381,11 @@ void VuAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 	}
 }
 void VuAudioProcessorEditor::mouseUp(const MouseEvent& event) {
-	if(hover == 3) {
+	if(hover == 1 || hover == 2) {
+		event.source.enableUnboundedMouseMovement(false);
+		Desktop::setMousePosition(dragpos);
+		audioProcessor.apvts.getParameter(hover==1?"nominal":"damping")->endChangeGesture();
+	} else if(hover == 3) {
 		bool stereo = !audioProcessor.stereo.get();
 		audioProcessor.stereo = stereo;
 		audioProcessor.apvts.getParameter("stereo")->setValueNotifyingHost(stereo);
