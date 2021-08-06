@@ -9,7 +9,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-//==============================================================================
 VuAudioProcessor::VuAudioProcessor() :
 #ifndef JucePlugin_PreferredChannelConfigurations
 	AudioProcessor(BusesProperties().withInput("Input",AudioChannelSet::stereo(),true).withOutput("Output",AudioChannelSet::stereo(),true)),
@@ -23,54 +22,21 @@ void VuAudioProcessor::crashhandler(void*) {
 	File::getCurrentWorkingDirectory().getChildFile("digital_tombstone.txt").replaceWithText(SystemStats::getStackBacktrace());
 }
 */
-VuAudioProcessor::~VuAudioProcessor() {
-}
+VuAudioProcessor::~VuAudioProcessor() {}
 
-//==============================================================================
-const String VuAudioProcessor::getName() const {
-	return "VU";
-}
+const String VuAudioProcessor::getName() const { return "VU"; }
+bool VuAudioProcessor::acceptsMidi() const { return false; }
+bool VuAudioProcessor::producesMidi() const { return false; }
+bool VuAudioProcessor::isMidiEffect() const { return false; }
+double VuAudioProcessor::getTailLengthSeconds() const { return 0.0; }
+int VuAudioProcessor::getNumPrograms() { return 1; }
+int VuAudioProcessor::getCurrentProgram() { return 0; }
+void VuAudioProcessor::setCurrentProgram (int index) {} 
+const String VuAudioProcessor::getProgramName (int index) { return ":)"; }
+void VuAudioProcessor::changeProgramName (int index, const String& newName) {}
 
-bool VuAudioProcessor::acceptsMidi() const {
-	return false;
-}
-
-bool VuAudioProcessor::producesMidi() const {
-	return false;
-}
-
-bool VuAudioProcessor::isMidiEffect() const {
-	return false;
-}
-
-double VuAudioProcessor::getTailLengthSeconds() const {
-	return 0.0;
-}
-
-int VuAudioProcessor::getNumPrograms() {
-	return 1;
-}
-
-int VuAudioProcessor::getCurrentProgram() {
-	return 0;
-}
-
-void VuAudioProcessor::setCurrentProgram (int index) {
-}
-
-const String VuAudioProcessor::getProgramName (int index) {
-	return ":)";
-}
-
-void VuAudioProcessor::changeProgramName (int index, const String& newName) {
-}
-
-//==============================================================================
-void VuAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {
-}
-
-void VuAudioProcessor::releaseResources() {
-}
+void VuAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {}
+void VuAudioProcessor::releaseResources() {}
 
 #ifndef JucePlugin_PreferredChannelConfigurations
 bool VuAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const {
@@ -133,16 +99,9 @@ void VuAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mid
 	}
 }
 
-//==============================================================================
-bool VuAudioProcessor::hasEditor() const {
-	return true;
-}
+bool VuAudioProcessor::hasEditor() const { return true; }
+AudioProcessorEditor* VuAudioProcessor::createEditor() { return new VuAudioProcessorEditor (*this); }
 
-AudioProcessorEditor* VuAudioProcessor::createEditor() {
-	return new VuAudioProcessorEditor (*this);
-}
-
-//==============================================================================
 void VuAudioProcessor::getStateInformation (MemoryBlock& destData) {
 	const char linebreak = '\n';
 	std::ostringstream data;
@@ -165,25 +124,21 @@ void VuAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
 
 	std::getline(ss,token,'\n');
 	nominal = std::stoi(token);
-	apvts.getParameter("nominal")->setValueNotifyingHost(std::stoi(token));
+	apvts.getParameter("nominal")->setValueNotifyingHost((std::stof(token)+24)/18);
 	
 	std::getline(ss,token,'\n');
 	damping = std::stoi(token);
-	apvts.getParameter("damping")->setValueNotifyingHost(std::stoi(token));
+	apvts.getParameter("damping")->setValueNotifyingHost((std::stof(token)-1)/8);
 
 	std::getline(ss,token,'\n');
 	stereo = std::stoi(token) == 1;
-	apvts.getParameter("stereo")->setValueNotifyingHost(std::stoi(token) == 1);
+	apvts.getParameter("stereo")->setValueNotifyingHost(std::stof(token));
 
 	std::getline(ss,token,'\n');
 	height = std::stoi(token);
 }
 
-//==============================================================================
-// This creates new instances of the plugin..
-AudioProcessor* JUCE_CALLTYPE createPluginFilter() {
-	return new VuAudioProcessor();
-}
+AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new VuAudioProcessor(); }
 
 AudioProcessorValueTreeState::ParameterLayout
 	VuAudioProcessor::createParameters() {
