@@ -58,6 +58,7 @@ public:
 	int initialdrag = 0;
 	bool held = false;
 	int initialvalue = 0;
+	float valueoffset = 0;
 	float stereovelocity = 0;
 	float websiteht = 0;
 	Point<int> dragpos;

@@ -365,9 +365,11 @@ void VuAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		event.source.enableUnboundedMouseMovement(true);
 		if(hover == 1) {
 			initialvalue = audioProcessor.nominal.get();
+			valueoffset = 0;
 			audioProcessor.apvts.getParameter("nominal")->beginChangeGesture();
 		} else {
 			initialvalue = audioProcessor.damping.get();
+			valueoffset = 0;
 			audioProcessor.apvts.getParameter("damping")->beginChangeGesture();
 		}
 	}
@@ -376,12 +378,15 @@ void VuAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 	if(initialdrag == 3) hover = recalchover(event.x,event.y)==3?3:0;
 	else if(initialdrag == 4) hover = recalchover(event.x,event.y)==4?4:0;
 	else if(hover != 0) {
-		float val = (event.getDistanceFromDragStartY()+event.getDistanceFromDragStartX())*-.04f;
+		float dist = (event.getDistanceFromDragStartY()+event.getDistanceFromDragStartX())*-.04f;
+		float val = dist+valueoffset;
 		int clampval = initialvalue-(val>0?floor(val):ceil(val));
 		if(hover == 1) {
 			audioProcessor.apvts.getParameter("nominal")->setValueNotifyingHost(((float)clampval+24)/18);
+			valueoffset = fmax(fmin(valueoffset,initialvalue-dist+25),initialvalue-dist+5);
 		} else {
 			audioProcessor.apvts.getParameter("damping")->setValueNotifyingHost(((float)clampval-1)/8);
+			valueoffset = fmax(fmin(valueoffset,initialvalue-dist),initialvalue-dist-10);
 		}
 	}
 }
