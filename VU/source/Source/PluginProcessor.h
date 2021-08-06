@@ -11,18 +11,13 @@
 #include "functions.h"
 using namespace juce;
 
-//==============================================================================
-/**
-*/
 class VuAudioProcessor	: public AudioProcessor
 {
 public:
-	//==============================================================================
 	VuAudioProcessor();
 	//static void crashhandler(void*);
 	~VuAudioProcessor() override;
 
-	//==============================================================================
 	void prepareToPlay (double sampleRate, int samplesPerBlock) override;
 	void releaseResources() override;
 
@@ -32,11 +27,9 @@ public:
 
 	void processBlock (AudioBuffer<float>&, MidiBuffer&) override;
 
-	//==============================================================================
 	AudioProcessorEditor* createEditor() override;
 	bool hasEditor() const override;
 
-	//==============================================================================
 	const String getName() const override;
 
 	bool acceptsMidi() const override;
@@ -44,14 +37,12 @@ public:
 	bool isMidiEffect() const override;
 	double getTailLengthSeconds() const override;
 
-	//==============================================================================
 	int getNumPrograms() override;
 	int getCurrentProgram() override;
 	void setCurrentProgram (int index) override;
 	const String getProgramName (int index) override;
 	void changeProgramName (int index, const String& newName) override;
 
-	//==============================================================================
 	void getStateInformation (MemoryBlock& destData) override;
 	void setStateInformation (const void* data, int sizeInBytes) override;
 
@@ -74,6 +65,5 @@ public:
 	int version = 1;
 
 private:
-	//==============================================================================
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (VuAudioProcessor)
 };

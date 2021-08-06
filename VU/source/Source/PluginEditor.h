@@ -12,10 +12,7 @@
 #include "functions.h"
 using namespace juce;
 
-//==============================================================================
-/**
-*/
-class VuAudioProcessorEditor  : public AudioProcessorEditor, public OpenGLRenderer, private Timer
+class VuAudioProcessorEditor : public AudioProcessorEditor, public OpenGLRenderer, public AudioProcessorValueTreeState::Listener, private Timer
 {
 public:
 	VuAudioProcessorEditor (VuAudioProcessor&);
@@ -27,6 +24,7 @@ public:
 	void paint (Graphics&) override;
 	void resized() override;
 
+	virtual void parameterChanged(const String& parameterID, float newValue);
 	void mouseEnter(const MouseEvent& event) override;
 	void mouseMove(const MouseEvent& event) override;
 	void mouseExit(const MouseEvent& event) override;

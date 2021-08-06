@@ -9,9 +9,12 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-//==============================================================================
 VuAudioProcessorEditor::VuAudioProcessorEditor (VuAudioProcessor& p)
 	: AudioProcessorEditor (&p), audioProcessor (p) {
+
+	audioProcessor.apvts.addParameterListener("nominal", this);
+	audioProcessor.apvts.addParameterListener("damping", this);
+	audioProcessor.apvts.addParameterListener("stereo", this);
 
 	multiplier = 1.f/Decibels::decibelsToGain((float)audioProcessor.nominal.get());
 	stereodamp = audioProcessor.stereo.get()?1:0;
@@ -265,8 +268,7 @@ void VuAudioProcessorEditor::openGLContextClosing() {
 	lgtex.release();
 	openGLContext.extensions.glDeleteBuffers(1, &arraybuffer);
 }
-void VuAudioProcessorEditor::paint(Graphics& g) {
-}
+void VuAudioProcessorEditor::paint(Graphics& g) {}
 
 void VuAudioProcessorEditor::timerCallback() {
 	int buffercount = audioProcessor.buffercount.get();
@@ -331,6 +333,18 @@ void VuAudioProcessorEditor::timerCallback() {
 	openGLContext.triggerRepaint();
 }
 
+void VuAudioProcessorEditor::parameterChanged(const String& parameterID, float newValue) {
+	DBG(parameterID);
+	DBG(newValue);
+	if(parameterID == "nominal") {
+		audioProcessor.nominal = newValue;
+		multiplier = 1.f/Decibels::decibelsToGain((float)newValue);
+	} else if(parameterID == "damping") {
+		audioProcessor.damping = newValue;
+	} else if(parameterID == "stereo") {
+		audioProcessor.stereo = newValue > .5;
+	}
+}
 void VuAudioProcessorEditor::mouseEnter(const MouseEvent& event) {
 	settingstimer = 120;
 }
@@ -365,18 +379,9 @@ void VuAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 		float val = (event.getDistanceFromDragStartY()+event.getDistanceFromDragStartX())*-.04f;
 		int clampval = initialvalue-(val>0?floor(val):ceil(val));
 		if(hover == 1) {
-			clampval = fmin(fmax(clampval,-24),-6);
-			if(audioProcessor.nominal.get() != clampval) {
-				audioProcessor.nominal = clampval;
-				multiplier = 1.f/Decibels::decibelsToGain((float)clampval);
-				audioProcessor.apvts.getParameter("nominal")->setValueNotifyingHost(clampval);
-			}
+			audioProcessor.apvts.getParameter("nominal")->setValueNotifyingHost(((float)clampval+24)/18);
 		} else {
-			clampval = fmin(fmax(clampval,1),9);
-			if(audioProcessor.damping.get() != clampval) {
-				audioProcessor.damping = clampval;
-				audioProcessor.apvts.getParameter("damping")->setValueNotifyingHost(clampval);
-			}
+			audioProcessor.apvts.getParameter("damping")->setValueNotifyingHost(((float)clampval-1)/8);
 		}
 	}
 }
@@ -388,7 +393,7 @@ void VuAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 	} else if(hover == 3) {
 		bool stereo = !audioProcessor.stereo.get();
 		audioProcessor.stereo = stereo;
-		audioProcessor.apvts.getParameter("stereo")->setValueNotifyingHost(stereo);
+		audioProcessor.apvts.getParameter("stereo")->setValueNotifyingHost(stereo?1:0);
 	} else if(hover == 4) URL("https://vst.unplug.red/").launchInDefaultBrowser();
 	held = false;
 	hover = recalchover(event.x,event.y);
