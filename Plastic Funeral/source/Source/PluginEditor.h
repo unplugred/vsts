@@ -41,6 +41,7 @@ public:
 	void mouseDown(const MouseEvent& event) override;
 	void mouseDrag(const MouseEvent& event) override;
 	void mouseUp(const MouseEvent& event) override;
+	void mouseDoubleClick(const MouseEvent& event) override;
 	int recalchover(float x, float y);
 
 	knob knobs[6];
