@@ -137,6 +137,14 @@ void PFAudioProcessor::changeProgramName (int index, const String& newName) {
 }
 
 void PFAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {
+	for(int i = 0; i < 3; i++) {
+		os[i].reset(new dsp::Oversampling<float>(2,i+1,dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR));
+		os[i]->initProcessing(samplesPerBlock);
+		os[i]->setUsingIntegerLatency(true);
+	}
+	if(oversampling.get() == 0) setLatencySamples(0);
+	else setLatencySamples(os[oversampling.get()-1]->getLatencyInSamples());
+	preparedtoplay = true;
 }
 void PFAudioProcessor::releaseResources() {
 }
@@ -156,23 +164,40 @@ bool PFAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 
 void PFAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midiMessages) {
 	ScopedNoDenormals noDenormals;
-	auto totalNumInputChannels	= getTotalNumInputChannels();
-	auto totalNumOutputChannels = getTotalNumOutputChannels();
 
-	for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
+	for (auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
 		buffer.clear (i, 0, buffer.getNumSamples());
 
 	float newfreq = freq.get(), newfat = fat.get(), newdrive = drive.get(), newdry = dry.get(), newstereo = stereo.get(), newgain = gain.get(), prmsadd = rmsadd.get();
-	int prmscount = rmscount.get();
+	int prmscount = rmscount.get(), poversampling = oversampling.get();
 	if(newfat != oldfat || newdry != olddry) normalizegain();
 	float newnorm = norm.get();
 
+	dsp::AudioBlock<float> block(buffer);
+	dsp::AudioBlock<float> osblock(buffer);
+	AudioBuffer<float> osbuffer;
+	int numsamples = 0;
+	if(poversampling > 0) {
+		osblock = os[poversampling-1]->processSamplesUp(block);
+		if (getTotalNumInputChannels() == 1) {
+			float* ptrArray[] = {osblock.getChannelPointer(0)};
+			osbuffer = AudioBuffer<float>(ptrArray,1,static_cast<int>(osblock.getNumSamples()));
+		} else if(getTotalNumInputChannels() >= 2){
+			float* ptrArray[] = {osblock.getChannelPointer(0),osblock.getChannelPointer(1)};
+			osbuffer = AudioBuffer<float>(ptrArray,2,static_cast<int>(osblock.getNumSamples()));
+		}
+		numsamples = osbuffer.getNumSamples();
+	} else numsamples = buffer.getNumSamples();
+
 	float unit = 0, mult = 0;
-	for (int channel = 0; channel < totalNumInputChannels; ++channel)
+	for (int channel = 0; channel < getTotalNumInputChannels(); ++channel)
 	{
-		auto* channelData = buffer.getWritePointer (channel);
-		unit = 1.f / buffer.getNumSamples();
-		for (int sample = 0; sample < buffer.getNumSamples(); ++sample) {
+		float* channelData;
+		if(poversampling > 0) channelData = osbuffer.getWritePointer (channel);
+		else channelData = buffer.getWritePointer (channel);
+
+		unit = 1.f/numsamples;
+		for (int sample = 0; sample < numsamples; ++sample) {
 			mult = unit * sample;
 			channelData[sample] = plasticfuneral(channelData[sample], channel,
 				oldfreq  *(1-mult)+newfreq  *mult,
@@ -186,6 +211,8 @@ void PFAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mid
 			prmscount++;
 		}
 	}
+
+	if(poversampling > 0) os[poversampling-1]->processSamplesDown(block);
 
 	oldfreq = newfreq;
 	oldfat = newfat;
@@ -215,6 +242,15 @@ void PFAudioProcessor::normalizegain() {
 	for (float i = 0; i <= 1; i += .005f)
 		newnorm = fmax(newnorm,fabs(i+(sin(i*1.5708f)-i)*newfat)*(1-newdry)+i*newdry);
 	norm = 1.f/newnorm;
+}
+
+void PFAudioProcessor::setoversampling(int factor) {
+	oversampling = factor;
+	if(factor == 0) setLatencySamples(0);
+	else if(preparedtoplay) {
+		setLatencySamples(os[factor-1]->getLatencyInSamples());
+		//os[factor-1].reset();
+	}
 }
 
 bool PFAudioProcessor::hasEditor() const { return true; }

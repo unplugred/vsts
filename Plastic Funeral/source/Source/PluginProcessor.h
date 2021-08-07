@@ -30,6 +30,7 @@ public:
 	void processBlock (AudioBuffer<float>&, MidiBuffer&) override;
 	float plasticfuneral(float source, int channel, float freq, float fat, float drive, float dry, float stereo, float gain);
 	void normalizegain();
+	void setoversampling(int factor);
 
 	AudioProcessorEditor* createEditor() override;
 	bool hasEditor() const override;
@@ -71,6 +72,9 @@ private:
 	float lerptable[6];
 	float lerpstage = 0;
 	bool boot = false;
+	bool preparedtoplay = false;
+
+	std::unique_ptr<dsp::Oversampling<float>> os[3];
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PFAudioProcessor)
 };
