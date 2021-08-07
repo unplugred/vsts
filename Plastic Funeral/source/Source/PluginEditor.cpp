@@ -453,35 +453,36 @@ void PFAudioProcessorEditor::timerCallback() {
 	audioProcessor.rmsadd = 0;
 	audioProcessor.rmscount = 0;
 
+	if (audioProcessor.updatevis.get()) {
+		calcvis();
+		audioProcessor.updatevis = false;
+		needtoupdate = 2;
+	}
+
 	openGLContext.triggerRepaint();
 }
 
 void PFAudioProcessorEditor::parameterChanged(const String& parameterID, float newValue) {
 	if(parameterID == "freq") {
-		audioProcessor.freq = newValue;
 		knobs[0].value = newValue;
+		calcvis();
 	} else if(parameterID == "fat") {
-		audioProcessor.fat = newValue;
 		knobs[1].value = newValue*.025f+.5f;
-		audioProcessor.normalizegain();
 	} else if(parameterID == "drive") {
-		audioProcessor.drive = newValue;
 		knobs[2].value = newValue;
+		calcvis();
 	} else if(parameterID == "dry") {
-		audioProcessor.dry = newValue;
 		knobs[3].value = newValue;
-		audioProcessor.normalizegain();
 	} else if(parameterID == "stereo") {
-		audioProcessor.stereo = newValue;
 		knobs[4].value = newValue;
+		calcvis();
 	} else if(parameterID == "gain") {
-		audioProcessor.gain = newValue;
 		knobs[5].value = newValue;
+		calcvis();
 	} else if(parameterID == "oversampling") {
-		audioProcessor.setoversampling(newValue-1);
 		oversampling = newValue-1;
+		calcvis();
 	}
-	calcvis();
 	needtoupdate = 2;
 }
 void PFAudioProcessorEditor::mouseMove(const MouseEvent& event) {

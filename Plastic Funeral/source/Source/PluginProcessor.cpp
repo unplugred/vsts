@@ -16,6 +16,14 @@ PFAudioProcessor::PFAudioProcessor() :
 #endif
 	apvts(*this, &undoManager, "Parameters", createParameters())
 {
+	apvts.addParameterListener("freq",this);
+	apvts.addParameterListener("fat",this);
+	apvts.addParameterListener("drive",this);
+	apvts.addParameterListener("dry",this);
+	apvts.addParameterListener("stereo",this);
+	apvts.addParameterListener("gain",this);
+	apvts.addParameterListener("oversampling",this);
+
 	presets[0].name = "Default";
 	presets[0].freq = 0.32f;
 	presets[0].fat = 0.0f;
@@ -75,7 +83,16 @@ PFAudioProcessor::PFAudioProcessor() :
 	normalizegain();
 }
 
-PFAudioProcessor::~PFAudioProcessor(){}
+PFAudioProcessor::~PFAudioProcessor(){
+	apvts.removeParameterListener("freq", this);
+	apvts.removeParameterListener("fat", this);
+	apvts.removeParameterListener("drive", this);
+	apvts.removeParameterListener("dry", this);
+	apvts.removeParameterListener("stereo", this);
+	apvts.removeParameterListener("gain", this);
+	apvts.removeParameterListener("oversampling",this);
+
+}
 
 const String PFAudioProcessor::getName() const { return "Plastic Funeral"; }
 bool PFAudioProcessor::acceptsMidi() const { return false; }
@@ -170,7 +187,6 @@ void PFAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mid
 
 	float newfreq = freq.get(), newfat = fat.get(), newdrive = drive.get(), newdry = dry.get(), newstereo = stereo.get(), newgain = gain.get(), prmsadd = rmsadd.get();
 	int prmscount = rmscount.get(), poversampling = oversampling.get();
-	if(newfat != oldfat || newdry != olddry) normalizegain();
 	float newnorm = norm.get();
 
 	dsp::AudioBlock<float> block(buffer);
@@ -242,6 +258,7 @@ void PFAudioProcessor::normalizegain() {
 	for (float i = 0; i <= 1; i += .005f)
 		newnorm = fmax(newnorm,fabs(i+(sin(i*1.5708f)-i)*newfat)*(1-newdry)+i*newdry);
 	norm = 1.f/newnorm;
+	updatevis = true;
 }
 
 void PFAudioProcessor::setoversampling(int factor) {
@@ -328,6 +345,26 @@ void PFAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
 		std::getline(ss, token, '\n'); presets[i].drive = std::stof(token);
 		std::getline(ss, token, '\n'); presets[i].dry = std::stof(token);
 		std::getline(ss, token, '\n'); presets[i].stereo = std::stof(token);
+	}
+}
+void PFAudioProcessor::parameterChanged(const String& parameterID, float newValue) {
+	if(parameterID == "freq") {
+		freq = newValue;
+	} else if(parameterID == "fat") {
+		fat = newValue;
+		normalizegain();
+	} else if(parameterID == "drive") {
+		drive = newValue;
+	} else if(parameterID == "dry") {
+		dry = newValue;
+		normalizegain();
+	} else if(parameterID == "stereo") {
+		stereo = newValue;
+	} else if(parameterID == "gain") {
+		gain = newValue;
+	} else if(parameterID == "oversampling") {
+		setoversampling(newValue-1);
+		oversampling = newValue-1;
 	}
 }
 
