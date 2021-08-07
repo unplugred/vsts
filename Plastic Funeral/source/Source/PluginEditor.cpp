@@ -377,8 +377,8 @@ void PFAudioProcessorEditor::renderOpenGL() {
 	openGLContext.extensions.glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, framebuffer.getTextureID());
 	ppshader->setUniform("pptex",0);
-	ppshader->setUniform("chroma",rms*.01f);
-	ppshader->setUniform("shake",rms*.005f*(random.nextFloat()-.5f));
+	ppshader->setUniform("chroma",rms*.005f);
+	ppshader->setUniform("shake",rms*.0025f*(random.nextFloat()-.5f));
 	coord = openGLContext.extensions.glGetAttribLocation(ppshader->getProgramID(),"aPos");
 	openGLContext.extensions.glEnableVertexAttribArray(coord);
 	openGLContext.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
