@@ -37,10 +37,10 @@ PFAudioProcessorEditor::PFAudioProcessorEditor (PFAudioProcessor& p)
 		for (int y = 0; y < 3; y++) {
 			knobs[x+y*2].x = x*106+68;
 			knobs[x+y*2].y = y*100+144;
-			audioProcessor.apvts.addParameterListener(knobs[x+y*2].id, this);
+			audioProcessor.apvts.addParameterListener(knobs[x+y*2].id,this);
 		}
 	}
-	audioProcessor.apvts.addParameterListener("oversampling", this);
+	audioProcessor.apvts.addParameterListener("oversampling",this);
 
 	calcvis();
 	setSize (242, 462);
@@ -52,6 +52,8 @@ PFAudioProcessorEditor::PFAudioProcessorEditor (PFAudioProcessor& p)
 	startTimerHz(30);
 }
 PFAudioProcessorEditor::~PFAudioProcessorEditor() {
+	for (int i = 0; i < 6; i++) audioProcessor.apvts.removeParameterListener(knobs[i].id,this);
+	audioProcessor.apvts.removeParameterListener("oversampling",this);
 	stopTimer();
 	openGLContext.detach();
 }
