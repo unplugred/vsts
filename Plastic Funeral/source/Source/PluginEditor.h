@@ -81,8 +81,8 @@ private:
 	String visfrag;
 
 	float oversamplingalpha = 0;
-	float oversamplinglerped = 0;
-	int oversampling = 0;
+	float oversamplinglerped = 1;
+	int oversampling = 1;
 	std::unique_ptr<OpenGLShaderProgram> oversamplingshader;
 	String oversamplingvert;
 	String oversamplingfrag;
