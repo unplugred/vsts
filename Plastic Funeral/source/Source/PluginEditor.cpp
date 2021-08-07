@@ -560,6 +560,11 @@ void PFAudioProcessorEditor::mouseDoubleClick(const MouseEvent& event) {
 		audioProcessor.undoManager.beginNewTransaction();
 	}
 }
+void PFAudioProcessorEditor::mouseWheelMove(const MouseEvent& event, const MouseWheelDetails& wheel) {
+	if(hover > -1)
+		audioProcessor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(
+			knobs[hover].value+wheel.deltaY*((event.mods.isShiftDown() || event.mods.isAltDown())?.03f:.2f));
+}
 int PFAudioProcessorEditor::recalchover(float x, float y) {
 	if (x >= 8 && x <= 234 && y >= 8 && y <= 87) {
 		if(y < 39 || y > 53) return -4;
