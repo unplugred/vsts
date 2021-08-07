@@ -45,7 +45,7 @@ public:
 
 	knob knobs[6];
 	float visline[2][452];
-	bool isStereo;
+	bool isStereo = false;
 private:
 	PFAudioProcessor& audioProcessor;
 

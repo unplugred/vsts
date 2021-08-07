@@ -138,7 +138,7 @@ void PFAudioProcessor::changeProgramName (int index, const String& newName) {
 
 void PFAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {
 	for(int i = 0; i < 3; i++) {
-		os[i].reset(new dsp::Oversampling<float>(2,i+1,dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR));
+		os[i].reset(new dsp::Oversampling<float>(getTotalNumInputChannels(),i+1,dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR));
 		os[i]->initProcessing(samplesPerBlock);
 		os[i]->setUsingIntegerLatency(true);
 	}
@@ -248,8 +248,8 @@ void PFAudioProcessor::setoversampling(int factor) {
 	oversampling = factor;
 	if(factor == 0) setLatencySamples(0);
 	else if(preparedtoplay) {
+		os[factor-1]->reset();
 		setLatencySamples(os[factor-1]->getLatencyInSamples());
-		//os[factor-1].reset();
 	}
 }
 
