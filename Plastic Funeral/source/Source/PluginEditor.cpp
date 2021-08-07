@@ -499,6 +499,7 @@ void PFAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 	initialdrag = hover;
 	if(hover > -1) {
 		initialvalue = knobs[hover].value;
+		valueoffset = 0;
 		audioProcessor.undoManager.beginNewTransaction();
 		audioProcessor.apvts.getParameter(knobs[hover].id)->beginChangeGesture();
 		dragpos = event.getScreenPosition();
@@ -522,8 +523,10 @@ void PFAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 			initialvalue += (event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*.0045f;
 		}
 
-		audioProcessor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost
-			(fmin(fmax(initialvalue-(event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*(finemode?.0005f:.005f),0),1));
+		float value = initialvalue-(event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*(finemode?.0005f:.005f);
+		audioProcessor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(value-valueoffset);
+
+		valueoffset = fmax(fmin(valueoffset,value+.1),value-1.1);
 	} else if (initialdrag == -3) {
 		int prevhover = hover;
 		hover = recalchover(event.x,event.y)==-3?-3:-2;
