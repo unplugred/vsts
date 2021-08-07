@@ -552,6 +552,14 @@ void PFAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 	}
 	held = 1;
 }
+void PFAudioProcessorEditor::mouseDoubleClick(const MouseEvent& event) {
+	if(hover > -1) {
+		audioProcessor.undoManager.setCurrentTransactionName((String)"Reset " += knobs[hover].name);
+		audioProcessor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(
+			audioProcessor.apvts.getParameter(knobs[hover].id)->getDefaultValue());
+		audioProcessor.undoManager.beginNewTransaction();
+	}
+}
 int PFAudioProcessorEditor::recalchover(float x, float y) {
 	if (x >= 8 && x <= 234 && y >= 8 && y <= 87) {
 		if(y < 39 || y > 53) return -4;
