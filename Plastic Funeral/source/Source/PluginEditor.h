@@ -69,6 +69,7 @@ private:
 	String basefrag;
 
 	bool finemode = false;
+	float valueoffset = 0;
 	Point<int> dragpos;
 	OpenGLTexture knobtex;
 	std::unique_ptr<OpenGLShaderProgram> knobshader;
