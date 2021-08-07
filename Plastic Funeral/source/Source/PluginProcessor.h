@@ -15,7 +15,7 @@ struct PluginPreset {
 	float freq, fat, drive, dry, stereo;
 };
 
-class PFAudioProcessor : public AudioProcessor, private Timer {
+class PFAudioProcessor : public AudioProcessor, public AudioProcessorValueTreeState::Listener, private Timer {
 public:
 	PFAudioProcessor();
 	~PFAudioProcessor() override;
@@ -50,12 +50,14 @@ public:
 
 	void getStateInformation (MemoryBlock& destData) override;
 	void setStateInformation (const void* data, int sizeInBytes) override;
+	virtual void parameterChanged(const String& parameterID, float newValue);
  
 	AudioProcessorValueTreeState apvts;
 	UndoManager undoManager;
 
 	Atomic<float> rmsadd = 0;
 	Atomic<int> rmscount = 0;
+	Atomic<bool> updatevis;
 
 	int version = 2;
 	Atomic<float> freq = 0.32, fat = 0, drive = 0, dry = 0, stereo = 0.37, gain = .4, norm = 1;
