@@ -343,6 +343,6 @@ AudioProcessorValueTreeState::ParameterLayout
 	parameters.push_back(std::make_unique<AudioParameterFloat>("dry","Dry",0.0f,1.0f,0.0f));
 	parameters.push_back(std::make_unique<AudioParameterFloat>("stereo","Stereo",0.0f,1.0f,0.37f));
 	parameters.push_back(std::make_unique<AudioParameterFloat>("gain","Out Gain",0.0f,1.0f,0.4f));
-	parameters.push_back(std::make_unique<AudioParameterInt>("oversampling","Over-Sampling",1,4,1));
+	parameters.push_back(std::make_unique<AudioParameterInt>("oversampling","Over-Sampling",1,4,2));
 	return { parameters.begin(), parameters.end() };
 }

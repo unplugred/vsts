@@ -59,7 +59,7 @@ public:
 
 	int version = 2;
 	Atomic<float> freq = 0.32, fat = 0, drive = 0, dry = 0, stereo = 0.37, gain = .4, norm = 1;
-	Atomic<int> oversampling = 0;
+	Atomic<int> oversampling = 1;
 
 private:
 	float oldfreq = 0, oldfat = 0, olddrive = 0, olddry = 0, oldstereo = 0, oldgain = 1, oldnorm = 1;
