@@ -31,7 +31,8 @@ PFAudioProcessorEditor::PFAudioProcessorEditor (PFAudioProcessor& p)
 	knobs[5].id = "gain";
 	knobs[5].name = "gain";
 	knobs[5].value = audioProcessor.gain.get();
-
+	oversampling = audioProcessor.oversampling.get();
+	oversamplinglerped = oversampling;
 	for (int x = 0; x < 2; x++) {
 		for (int y = 0; y < 3; y++) {
 			knobs[x+y*2].x = x*106+68;
@@ -39,6 +40,7 @@ PFAudioProcessorEditor::PFAudioProcessorEditor (PFAudioProcessor& p)
 			audioProcessor.apvts.addParameterListener(knobs[x+y*2].id, this);
 		}
 	}
+	audioProcessor.apvts.addParameterListener("oversampling", this);
 
 	calcvis();
 	setSize (242, 462);
@@ -387,6 +389,7 @@ void PFAudioProcessorEditor::openGLContextClosing() {
 	baseshader->release();
 	knobshader->release();
 	visshader->release();
+	oversamplingshader->release();
 	creditsshader->release();
 	ppshader->release();
 
@@ -473,7 +476,7 @@ void PFAudioProcessorEditor::parameterChanged(const String& parameterID, float n
 		audioProcessor.gain = newValue;
 		knobs[5].value = newValue;
 	} else if(parameterID == "oversampling") {
-		audioProcessor.oversampling = newValue-1;
+		audioProcessor.setoversampling(newValue-1);
 		oversampling = newValue-1;
 	}
 	calcvis();
@@ -502,7 +505,7 @@ void PFAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		event.source.enableUnboundedMouseMovement(true);
 	} else if(hover < -4) {
 		oversampling = hover+8;
-		audioProcessor.apvts.getParameter("oversampling")->setValueNotifyingHost(oversampling+1);
+		audioProcessor.apvts.getParameter("oversampling")->setValueNotifyingHost(oversampling/3.f);
 		audioProcessor.undoManager.setCurrentTransactionName(
 			(String)("Set Over-Sampling to ") += (oversampling+1));
 		audioProcessor.undoManager.beginNewTransaction();

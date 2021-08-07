@@ -279,8 +279,8 @@ void PFAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
 
 	if (saveversion > 1) {
 		std::getline(ss, token, '\n');
-		oversampling = std::stoi(token);
-		apvts.getParameter("oversampling")->setValueNotifyingHost(std::stoi(token));
+		setoversampling(std::stoi(token)-1);
+		apvts.getParameter("oversampling")->setValueNotifyingHost((std::stoi(token)-1)/3.f);
 	}
 
 	normalizegain();
