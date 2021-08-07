@@ -84,12 +84,12 @@ PFAudioProcessor::PFAudioProcessor() :
 }
 
 PFAudioProcessor::~PFAudioProcessor(){
-	apvts.removeParameterListener("freq", this);
-	apvts.removeParameterListener("fat", this);
-	apvts.removeParameterListener("drive", this);
-	apvts.removeParameterListener("dry", this);
-	apvts.removeParameterListener("stereo", this);
-	apvts.removeParameterListener("gain", this);
+	apvts.removeParameterListener("freq",this);
+	apvts.removeParameterListener("fat",this);
+	apvts.removeParameterListener("drive",this);
+	apvts.removeParameterListener("dry",this);
+	apvts.removeParameterListener("stereo",this);
+	apvts.removeParameterListener("gain",this);
 	apvts.removeParameterListener("oversampling",this);
 
 }
