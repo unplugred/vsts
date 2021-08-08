@@ -12,10 +12,7 @@
 VuAudioProcessorEditor::VuAudioProcessorEditor (VuAudioProcessor& p)
 	: AudioProcessorEditor (&p), audioProcessor (p) {
 
-	audioProcessor.apvts.addParameterListener("nominal", this);
-	audioProcessor.apvts.addParameterListener("damping", this);
-	audioProcessor.apvts.addParameterListener("stereo", this);
-
+	audioProcessor.apvts.addParameterListener("nominal",this);
 	multiplier = 1.f/Decibels::decibelsToGain((float)audioProcessor.nominal.get());
 	stereodamp = audioProcessor.stereo.get()?1:0;
 
@@ -36,6 +33,7 @@ VuAudioProcessorEditor::VuAudioProcessorEditor (VuAudioProcessor& p)
 VuAudioProcessorEditor::~VuAudioProcessorEditor() {
 	stopTimer();
 	openGLContext.detach();
+	audioProcessor.apvts.removeParameterListener("nominal",this);
 }
 
 void VuAudioProcessorEditor::resized() {
@@ -334,16 +332,7 @@ void VuAudioProcessorEditor::timerCallback() {
 }
 
 void VuAudioProcessorEditor::parameterChanged(const String& parameterID, float newValue) {
-	DBG(parameterID);
-	DBG(newValue);
-	if(parameterID == "nominal") {
-		audioProcessor.nominal = newValue;
-		multiplier = 1.f/Decibels::decibelsToGain((float)newValue);
-	} else if(parameterID == "damping") {
-		audioProcessor.damping = newValue;
-	} else if(parameterID == "stereo") {
-		audioProcessor.stereo = newValue > .5;
-	}
+	if(parameterID == "nominal") multiplier = 1.f/Decibels::decibelsToGain((float)newValue);
 }
 void VuAudioProcessorEditor::mouseEnter(const MouseEvent& event) {
 	settingstimer = 120;
@@ -395,11 +384,9 @@ void VuAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 		event.source.enableUnboundedMouseMovement(false);
 		Desktop::setMousePosition(dragpos);
 		audioProcessor.apvts.getParameter(hover==1?"nominal":"damping")->endChangeGesture();
-	} else if(hover == 3) {
-		bool stereo = !audioProcessor.stereo.get();
-		audioProcessor.stereo = stereo;
-		audioProcessor.apvts.getParameter("stereo")->setValueNotifyingHost(stereo?1:0);
-	} else if(hover == 4) URL("https://vst.unplug.red/").launchInDefaultBrowser();
+	} else if(hover == 3)
+		audioProcessor.apvts.getParameter("stereo")->setValueNotifyingHost(audioProcessor.stereo.get()?0:1);
+	else if(hover == 4) URL("https://vst.unplug.red/").launchInDefaultBrowser();
 	held = false;
 	hover = recalchover(event.x,event.y);
 }

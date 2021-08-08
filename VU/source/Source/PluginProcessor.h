@@ -11,8 +11,7 @@
 #include "functions.h"
 using namespace juce;
 
-class VuAudioProcessor	: public AudioProcessor
-{
+class VuAudioProcessor	: public AudioProcessor, public AudioProcessorValueTreeState::Listener {
 public:
 	VuAudioProcessor();
 	//static void crashhandler(void*);
@@ -45,6 +44,7 @@ public:
 
 	void getStateInformation (MemoryBlock& destData) override;
 	void setStateInformation (const void* data, int sizeInBytes) override;
+	virtual void parameterChanged(const String& parameterID, float newValue);
 
 	Atomic<bool> stereo = false;
 	Atomic<int> damping = 5;

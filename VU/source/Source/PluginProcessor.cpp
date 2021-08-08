@@ -15,6 +15,9 @@ VuAudioProcessor::VuAudioProcessor() :
 #endif
 	apvts(*this, &undoManager, "Parameters", createParameters())
 {
+	apvts.addParameterListener("nominal", this);
+	apvts.addParameterListener("damping", this);
+	apvts.addParameterListener("stereo", this);
 	//SystemStats::setApplicationCrashHandler(crashhandler);
 }
 /*
@@ -22,7 +25,11 @@ void VuAudioProcessor::crashhandler(void*) {
 	File::getCurrentWorkingDirectory().getChildFile("digital_tombstone.txt").replaceWithText(SystemStats::getStackBacktrace());
 }
 */
-VuAudioProcessor::~VuAudioProcessor() {}
+VuAudioProcessor::~VuAudioProcessor() {
+	apvts.removeParameterListener("nominal",this);
+	apvts.removeParameterListener("damping",this);
+	apvts.removeParameterListener("stereo",this);
+}
 
 const String VuAudioProcessor::getName() const { return "VU"; }
 bool VuAudioProcessor::acceptsMidi() const { return false; }
@@ -114,7 +121,6 @@ void VuAudioProcessor::getStateInformation (MemoryBlock& destData) {
 	MemoryOutputStream stream(destData,false);
 	stream.writeString(data.str());
 }
-
 void VuAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
 	std::stringstream ss(String::createStringFromData(data, sizeInBytes).toRawUTF8());
 	std::string token;
@@ -123,19 +129,21 @@ void VuAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
 	int saveversion = std::stoi(token);
 
 	std::getline(ss,token,'\n');
-	nominal = std::stoi(token);
 	apvts.getParameter("nominal")->setValueNotifyingHost((std::stof(token)+24)/18);
 	
 	std::getline(ss,token,'\n');
-	damping = std::stoi(token);
 	apvts.getParameter("damping")->setValueNotifyingHost((std::stof(token)-1)/8);
 
 	std::getline(ss,token,'\n');
-	stereo = std::stoi(token) == 1;
 	apvts.getParameter("stereo")->setValueNotifyingHost(std::stof(token));
 
 	std::getline(ss,token,'\n');
 	height = std::stoi(token);
+}
+void VuAudioProcessor::parameterChanged(const String& parameterID, float newValue) {
+	if(parameterID == "nominal") nominal = newValue;
+	else if(parameterID == "damping") damping = newValue;
+	else if(parameterID == "stereo") stereo = newValue > .5;
 }
 
 AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new VuAudioProcessor(); }
