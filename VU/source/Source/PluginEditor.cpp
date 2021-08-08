@@ -371,10 +371,10 @@ void VuAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 		float val = dist+valueoffset;
 		int clampval = initialvalue-(val>0?floor(val):ceil(val));
 		if(hover == 1) {
-			audioProcessor.apvts.getParameter("nominal")->setValueNotifyingHost(((float)clampval+24)/18);
+			audioProcessor.apvts.getParameter("nominal")->setValueNotifyingHost((clampval+24)/18.f);
 			valueoffset = fmax(fmin(valueoffset,initialvalue-dist+25),initialvalue-dist+5);
 		} else {
-			audioProcessor.apvts.getParameter("damping")->setValueNotifyingHost(((float)clampval-1)/8);
+			audioProcessor.apvts.getParameter("damping")->setValueNotifyingHost((clampval-1)/8.f);
 			valueoffset = fmax(fmin(valueoffset,initialvalue-dist),initialvalue-dist-10);
 		}
 	}
@@ -389,6 +389,26 @@ void VuAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 	else if(hover == 4) URL("https://vst.unplug.red/").launchInDefaultBrowser();
 	held = false;
 	hover = recalchover(event.x,event.y);
+}
+void VuAudioProcessorEditor::mouseDoubleClick(const MouseEvent& event) {
+	if(hover == 1) {
+		audioProcessor.undoManager.setCurrentTransactionName("Reset nominal");
+		audioProcessor.apvts.getParameter("nominal")->setValueNotifyingHost(
+			audioProcessor.apvts.getParameter("nominal")->getDefaultValue());
+		audioProcessor.undoManager.beginNewTransaction();
+	} else if (hover == 2) {
+		audioProcessor.undoManager.setCurrentTransactionName("Reset damping");
+		audioProcessor.apvts.getParameter("damping")->setValueNotifyingHost(
+			audioProcessor.apvts.getParameter("damping")->getDefaultValue());
+		audioProcessor.undoManager.beginNewTransaction();
+	}
+}
+void VuAudioProcessorEditor::mouseWheelMove(const MouseEvent& event, const MouseWheelDetails& wheel) {
+	if(wheel.isSmooth) return;
+	if(hover == 1)
+		audioProcessor.apvts.getParameter("nominal")->setValueNotifyingHost((audioProcessor.nominal.get()+(wheel.deltaY>0?25:23))/18.f);
+	else if(hover == 2)
+		audioProcessor.apvts.getParameter("damping")->setValueNotifyingHost((audioProcessor.damping.get()+(wheel.deltaY>0?0:-2))/8.f);
 }
 int VuAudioProcessorEditor::recalchover(float x, float y) {
 	bool stereo = audioProcessor.stereo.get();
