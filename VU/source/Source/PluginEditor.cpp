@@ -361,6 +361,7 @@ void VuAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 			valueoffset = 0;
 			audioProcessor.apvts.getParameter("damping")->beginChangeGesture();
 		}
+		audioProcessor.undoManager.beginNewTransaction();
 	}
 }
 void VuAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
@@ -381,11 +382,24 @@ void VuAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 }
 void VuAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 	if(hover == 1 || hover == 2) {
+		if(hover == 1) {
+			audioProcessor.undoManager.setCurrentTransactionName(
+				(audioProcessor.nominal.get() - initialvalue) >= 0 ? "Increased nominal" : "Decreased nominal");
+			audioProcessor.apvts.getParameter("nominal")->endChangeGesture();
+		} else {
+			audioProcessor.undoManager.setCurrentTransactionName(
+				(audioProcessor.damping.get() - initialvalue) >= 0 ? "Increased damping" : "Decreased damping");
+			audioProcessor.apvts.getParameter("damping")->endChangeGesture();
+		}
+		audioProcessor.undoManager.beginNewTransaction();
 		event.source.enableUnboundedMouseMovement(false);
 		Desktop::setMousePosition(dragpos);
-		audioProcessor.apvts.getParameter(hover==1?"nominal":"damping")->endChangeGesture();
-	} else if(hover == 3)
-		audioProcessor.apvts.getParameter("stereo")->setValueNotifyingHost(audioProcessor.stereo.get()?0:1);
+	} else if(hover == 3) {
+		bool stereo = !audioProcessor.stereo.get();
+		audioProcessor.apvts.getParameter("stereo")->setValueNotifyingHost(stereo?1:0);
+		audioProcessor.undoManager.setCurrentTransactionName(stereo?"Set to stereo":"Set to mono");
+		audioProcessor.undoManager.beginNewTransaction();
+	}
 	else if(hover == 4) URL("https://vst.unplug.red/").launchInDefaultBrowser();
 	held = false;
 	hover = recalchover(event.x,event.y);
