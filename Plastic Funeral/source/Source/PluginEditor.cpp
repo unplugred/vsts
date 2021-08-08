@@ -210,7 +210,10 @@ uniform float alpha;
 uniform float shineprog;
 void main(){
 	vec2 creditols = texture2D(creditstex,v_TexCoord).rb;
-	gl_FragColor = vec4(creditols.g+texture2D(creditstex,v_TexCoord+vec2(shineprog,0)).g*creditols.r*.8,0,0,alpha);
+	float shine = 0;
+	if(v_TexCoord.x+shineprog < 1 && v_TexCoord.x+shineprog > .582644628099)
+		shine = texture2D(creditstex,v_TexCoord+vec2(shineprog,0)).g*creditols.r*.8;
+	gl_FragColor = vec4(creditols.g+shine,0,0,alpha);
 })";
 	creditsshader.reset(new OpenGLShaderProgram(openGLContext));
 	creditsshader->addVertexShader(creditsvert);
