@@ -98,13 +98,11 @@ void main(){
 	gl_Position = vec4(
 		(pos.x*cos(rot)-pos.y*sin(rot))*ratio-1+knobpos.x,
 		pos.x*sin(rot)+pos.y*cos(rot)-1+knobpos.y,0,1);
-	//noisecoord = (gl_Position.xy*texscale*.5)/knobscale;
 	v_TexCoord = vec2(aPos.x*texscale.x,1-(1-aPos.y)*texscale.y);
 	hovercoord = (aPos-vec2(.5,.3636363636))/vec2(1.1379310345,1);
 	hovercoord = vec2(
 		(hovercoord.x*cos(rot*2)-hovercoord.y*sin(rot*2))*1.1379310345+.5,
 		hovercoord.x*sin(rot*2)+hovercoord.y*cos(rot*2)+.36363636);
-	hovercoord = vec2(hovercoord.x*texscale.x,1-(1-hovercoord.y)*texscale.y);
 	basecoord = vec2((gl_Position.x*.5+.5)*basescale.x,1-(.5-gl_Position.y*.5)*basescale.y);
 })";
 	knobfrag =
@@ -128,7 +126,9 @@ void main(){
 		if(col<.5) col = knobcolor*col*2;
 		else col = knobcolor+(col-.5)*.8;
 		if(hoverstate != 0) {
-			float hover = texture2D(knobtex,hovercoord-vec2(0,texscale.y*id)).g;
+			float hover = 0;
+			if(hovercoord.x < .95 && hovercoord.x > .05 && hovercoord.y > .005 && hovercoord.y < .78)
+				hover = texture2D(knobtex,vec2(hovercoord.x*texscale.x,1-(1-hovercoord.y+id)*texscale.y)).g;
 			if(hoverstate < -1) col += (hoverstate==-3?(1-hover):hover)*.3;
 			else col = col*(1-hover)+.01171875*hover;
 		}
@@ -404,12 +404,12 @@ void PFAudioProcessorEditor::openGLContextClosing() {
 	openGLContext.extensions.glDeleteBuffers(1,&arraybuffer);
 }
 void PFAudioProcessorEditor::calcvis() {
-	float freq = audioProcessor.freq.get(), fat = audioProcessor.fat.get(), drive = audioProcessor.drive.get(), dry = audioProcessor.dry.get(), stereo = audioProcessor.stereo.get(), gain = audioProcessor.gain.get(), norm = audioProcessor.norm.get();
-	isStereo = stereo > 0 && dry < 1 && gain > 0;
+	float norm = audioProcessor.norm.get();
+	isStereo = knobs[4].value > 0 && knobs[3].value < 1 && knobs[5].value > 0;
 	for(int c = 0; c < (isStereo ? 2 : 1); c++) {
 		for(int i = 0; i < 226; i++) {
 			visline[c][i*2] = (i+8)/121.f-1;
-			visline[c][i*2+1] = 1-(48+audioProcessor.plasticfuneral(sin(i/35.8098621957f)*.8f,c,freq,fat,drive,dry,stereo,gain)*norm*38)/231.f;
+			visline[c][i*2+1] = 1-(48+audioProcessor.plasticfuneral(sin(i/35.8098621957f)*.8f,c,knobs[0].value,knobs[1].value*40-20,knobs[2].value,knobs[3].value,knobs[4].value,knobs[5].value)*norm*38)/231.f;
 		}
 	}
 }
