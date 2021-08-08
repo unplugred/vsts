@@ -41,9 +41,10 @@ PFAudioProcessorEditor::PFAudioProcessorEditor (PFAudioProcessor& p)
 		}
 	}
 	audioProcessor.apvts.addParameterListener("oversampling",this);
-
 	calcvis();
+
 	setSize (242, 462);
+	setResizable(false, false);
 
 	setOpaque(true);
 	openGLContext.setRenderer(this);
