@@ -88,7 +88,7 @@ ClickBoxAudioProcessorEditor::ClickBoxAudioProcessorEditor (ClickBoxAudioProcess
 
 	setSize (256, 256);
 	setResizable(false,false);
-	
+
 	openGLContext.setRenderer(this);
 	openGLContext.attachTo(*this);
 
@@ -212,7 +212,7 @@ void main() {
 			}
 
 			if(map.b < .5) col = 1-col;
-			gl_FragColor = vec4(col>.5?color:.10546875,1);
+			gl_FragColor = vec4(col>.5?color:vec3(.10546875),1);
 		}
 	} else gl_FragColor = vec4(0);
 })";
@@ -292,7 +292,7 @@ void main() {
 	else {
 		vec2 texx = texture2D(tex,texcoord).rg;
 		if(clamp > .5) texx.g *= texture2D(base,basecoord).b;
-		gl_FragColor = vec4(texx.g>.5?col:vec3(clamp<.5?(col+.8):.10546875),texx.r>.5?1:0);
+		gl_FragColor = vec4(texx.g>.5?col:(clamp<.5?(col+.8):vec3(.10546875)),texx.r>.5?1:0);
 	}
 })";
 	cursorshader.reset(new OpenGLShaderProgram(openGLContext));
@@ -417,7 +417,7 @@ void ClickBoxAudioProcessorEditor::renderOpenGL() {
 	openGLContext.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	openGLContext.extensions.glDisableVertexAttribArray(coord);
-	
+
 	cursorshader->use();
 	openGLContext.extensions.glActiveTexture(GL_TEXTURE0);
 	cursortex.bind();
