@@ -385,9 +385,9 @@ void ClickBoxAudioProcessorEditor::renderOpenGL() {
 		creditsshader->setUniform("htpos",websiteht);
 		creditsshader->setUniform("lineoffset",shadertime*.5f);
 		creditsshader->setUniform("rot",
-			sin(shadertime*.37)*3,
-			cos(shadertime*.37)*3,
-			shadertime*.13);
+			sin(shadertime*.37f)*3,
+			cos(shadertime*.37f)*3,
+			shadertime*.13f);
 		creditsshader->setUniform("color",getr(shadertime*.02f),getg(shadertime*.02f),getb(shadertime*.02f));
 		creditsshader->setUniform("htback",hover==-4?.8f:0.f);
 
@@ -458,7 +458,7 @@ void ClickBoxAudioProcessorEditor::resized() {}
 
 void ClickBoxAudioProcessorEditor::timerCallback() {
 	shadertime += .02f;
-	websiteht -= .05;
+	websiteht -= .05f;
 
 	randomsblend += .03f;
 	if(randomsblend >= 1) {
@@ -478,14 +478,14 @@ void ClickBoxAudioProcessorEditor::timerCallback() {
 		prevpos[1].y = floor(audioProcessor.y.get()*106+5)/256.f;
 		prevpos[1].automated = true;
 		if(prevpos[1].x == prevpos[2].x && prevpos[1].y == prevpos[2].y && prevpos[2].automated == true)
-			prevpos[2].x == -1000;
+			prevpos[2].x = -1000;
 		else
-			mousecolor = fmod(mousecolor+1,6);
+			mousecolor = (mousecolor+1)%6;
 		prevpos[1].col = mousecolor;
 	} else if(prevpos[0].x == prevpos[1].x && prevpos[0].y == prevpos[1].y && prevpos[1].automated == false) {
 		prevpos[1].x = -1000;
 	} else {
-		mousecolor = fmod(mousecolor+1,6);
+		mousecolor = (mousecolor+1)%6;
 		prevpos[0].col = mousecolor;
 	}
 
@@ -520,7 +520,7 @@ void ClickBoxAudioProcessorEditor::mouseMove(const MouseEvent& event) {
 	prevpos[0].y = event.y*.00390625f;
 	int prevhover = hover;
 	hover = recalchover(event.x,event.y);
-	if(hover == -3 && prevhover != -3 && websiteht < -.78515625) websiteht = .16015625;
+	if(hover == -3 && prevhover != -3 && websiteht < -.78515625) websiteht = .16015625f;
 }
 void ClickBoxAudioProcessorEditor::mouseEnter(const MouseEvent& event) {
 	setMouseCursor(MouseCursor::NoCursor);
