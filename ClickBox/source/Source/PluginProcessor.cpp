@@ -83,15 +83,15 @@ void ClickBoxAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer
 	if (!overridee) {
 		newx = prlin.noise(time,0)*.5f+.5f;
 		newy = prlin.noise(0,time)*.5f+.5f;
-		compensation = abs(oldautomod-automod)*sqrt((newx-xval)*(newx-xval)+(newy-yval)*(newy-yval));
+		compensation = fabs(oldautomod-automod)*sqrt((newx-xval)*(newx-xval)+(newy-yval)*(newy-yval));
 		newx = newx*automod+xval*(1-automod);
 		newy = newx*automod+yval*(1-automod);
 	}
 
 	float i = olddi;
 	if (overridee == oldoverride) {
-		float xdiff = abs(x.get()-newx);
-		float ydiff = abs(y.get()-newy);
+		float xdiff = fabs(x.get()-newx);
+		float ydiff = fabs(y.get()-newy);
 		i = (((sqrt(xdiff*xdiff+ydiff*ydiff)-compensation)*120)/buffer.getNumSamples())*amount*amount;
 	}
 
