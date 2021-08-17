@@ -85,7 +85,7 @@ void ClickBoxAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer
 		newy = prlin.noise(0,time)*.5f+.5f;
 		compensation = fabs(oldautomod-automod)*sqrt((newx-xval)*(newx-xval)+(newy-yval)*(newy-yval));
 		newx = newx*automod+xval*(1-automod);
-		newy = newx*automod+yval*(1-automod);
+		newy = newy*automod+yval*(1-automod);
 	}
 
 	float i = olddi;
