@@ -103,7 +103,7 @@ void ClickBoxAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer
 			float r = buffer.getRMSLevel(1,0,buffer.getNumSamples());
 			i *= sqrt(l*l+r*r);
 		}
-		i *= 2;
+		i *= 4;
 	}
 
 	float unit = 1.f/buffer.getNumSamples();
