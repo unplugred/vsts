@@ -8,7 +8,7 @@
 
 #pragma once
 #include <JuceHeader.h>
-#include "perlin.h";
+#include "perlin.h"
 using namespace juce;
 
 class ClickBoxAudioProcessor : public AudioProcessor, public AudioProcessorValueTreeState::Listener {
