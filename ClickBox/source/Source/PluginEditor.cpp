@@ -8,7 +8,6 @@
 
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-#include <windows.h>
 using namespace juce;
 
 ClickBoxAudioProcessorEditor::ClickBoxAudioProcessorEditor (ClickBoxAudioProcessor& p) : AudioProcessorEditor (&p), audioProcessor (p) {
@@ -472,7 +471,7 @@ void ClickBoxAudioProcessorEditor::timerCallback() {
 		randoms[6] = random.nextFloat();
 		randoms[7] = random.nextFloat();
 	}
-	ppamount = ppamount*.7f + .3f*min(sqrt(sqrt(audioProcessor.oldi.get()*20)),.4f);
+	ppamount = ppamount*.7f + .3f*fmin(sqrt(sqrt(audioProcessor.oldi.get()*20)),.4f);
 
 	if(!overridee) {
 		prevpos[1].x = floor(audioProcessor.x.get()*246+5)/256.f;
@@ -524,10 +523,10 @@ void ClickBoxAudioProcessorEditor::mouseMove(const MouseEvent& event) {
 	if(hover == -3 && prevhover != -3 && websiteht < -.78515625) websiteht = .16015625;
 }
 void ClickBoxAudioProcessorEditor::mouseEnter(const MouseEvent& event) {
-	ShowCursor(false);
+	setMouseCursor(MouseCursor::NoCursor);
 }
 void ClickBoxAudioProcessorEditor::mouseExit(const MouseEvent& event) {
-	ShowCursor(true);
+	setMouseCursor(MouseCursor::NormalCursor);
 	prevpos[0].x = -1000;
 	hover = -1;
 }
