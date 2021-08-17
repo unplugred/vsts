@@ -52,7 +52,8 @@
     </VS2019>
     <LINUX_MAKE targetFolder="Builds/LinuxMakefile" vstLegacyFolder="../../../vstsdk2.4">
       <CONFIGURATIONS>
-        <CONFIGURATION isDebug="0" name="Release" targetName="Plastic Funeral" linkTimeOptimisation="1"/>
+        <CONFIGURATION isDebug="0" name="Release" targetName="Plastic Funeral" linkTimeOptimisation="1"
+                       enablePluginBinaryCopyStep="0"/>
       </CONFIGURATIONS>
       <MODULEPATHS>
         <MODULEPATH id="juce_gui_extra" path="../../juce"/>
