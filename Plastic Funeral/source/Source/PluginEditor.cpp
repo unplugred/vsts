@@ -9,6 +9,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 using namespace juce;
+using namespace gl;
 
 PFAudioProcessorEditor::PFAudioProcessorEditor (PFAudioProcessor& p)
 	: AudioProcessorEditor (&p), audioProcessor (p)

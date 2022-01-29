@@ -72,7 +72,7 @@ private:
 
 	bool finemode = false;
 	float valueoffset = 0;
-	Point<int> dragpos;
+	Point<int> dragpos = Point<int>(0,0);
 	OpenGLTexture knobtex;
 	std::unique_ptr<OpenGLShaderProgram> knobshader;
 	String knobvert;
