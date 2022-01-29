@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<JUCERPROJECT id="mBrYkh" name="RedVJ" projectType="audioplug" useAppConfig="0"
+              addUsingNamespaceToJuceHeader="1" jucerFormatVersion="1" pluginFormats="buildStandalone,buildVST"
+              pluginCharacteristicsValue="pluginEditorRequiresKeys,pluginWantsMidiIn"
+              pluginVST3Category="Fx" displaySplashScreen="0" companyName="unplugred"
+              companyWebsite="https://vst.unplug.red/">
+  <MAINGROUP id="AO8J4g" name="RedVJ">
+    <GROUP id="{3805DDCD-59BF-C5AE-F92D-D7577C0298AB}" name="lua-5.4.3">
+      <FILE id="xf0vBX" name="lapi.c" compile="1" resource="0" file="Source/lua-5.4.3/lapi.c"/>
+      <FILE id="U5xOPj" name="lapi.h" compile="0" resource="0" file="Source/lua-5.4.3/lapi.h"/>
+      <FILE id="Tw1RBX" name="lauxlib.c" compile="1" resource="0" file="Source/lua-5.4.3/lauxlib.c"/>
+      <FILE id="zeditK" name="lauxlib.h" compile="0" resource="0" file="Source/lua-5.4.3/lauxlib.h"/>
+      <FILE id="LcR1Kx" name="lbaselib.c" compile="1" resource="0" file="Source/lua-5.4.3/lbaselib.c"/>
+      <FILE id="E2NA6X" name="lcode.c" compile="1" resource="0" file="Source/lua-5.4.3/lcode.c"/>
+      <FILE id="BN1ksr" name="lcode.h" compile="0" resource="0" file="Source/lua-5.4.3/lcode.h"/>
+      <FILE id="p5SjXv" name="lcorolib.c" compile="1" resource="0" file="Source/lua-5.4.3/lcorolib.c"/>
+      <FILE id="Cqw1k1" name="lctype.c" compile="1" resource="0" file="Source/lua-5.4.3/lctype.c"/>
+      <FILE id="At5HRH" name="lctype.h" compile="0" resource="0" file="Source/lua-5.4.3/lctype.h"/>
+      <FILE id="D2Pfa2" name="ldblib.c" compile="1" resource="0" file="Source/lua-5.4.3/ldblib.c"/>
+      <FILE id="Tuqhw9" name="ldebug.c" compile="1" resource="0" file="Source/lua-5.4.3/ldebug.c"/>
+      <FILE id="WDG5aA" name="ldebug.h" compile="0" resource="0" file="Source/lua-5.4.3/ldebug.h"/>
+      <FILE id="UjToGb" name="ldo.c" compile="1" resource="0" file="Source/lua-5.4.3/ldo.c"/>
+      <FILE id="Z7jwqW" name="ldo.h" compile="0" resource="0" file="Source/lua-5.4.3/ldo.h"/>
+      <FILE id="QCtI1K" name="ldump.c" compile="1" resource="0" file="Source/lua-5.4.3/ldump.c"/>
+      <FILE id="F7Jq4l" name="lfunc.c" compile="1" resource="0" file="Source/lua-5.4.3/lfunc.c"/>
+      <FILE id="tVScjG" name="lfunc.h" compile="0" resource="0" file="Source/lua-5.4.3/lfunc.h"/>
+      <FILE id="dRS30s" name="lgc.c" compile="1" resource="0" file="Source/lua-5.4.3/lgc.c"/>
+      <FILE id="Pn6o3c" name="lgc.h" compile="0" resource="0" file="Source/lua-5.4.3/lgc.h"/>
+      <FILE id="XTqRXw" name="linit.c" compile="1" resource="0" file="Source/lua-5.4.3/linit.c"/>
+      <FILE id="H4VyOV" name="liolib.c" compile="1" resource="0" file="Source/lua-5.4.3/liolib.c"/>
+      <FILE id="QhdACd" name="ljumptab.h" compile="0" resource="0" file="Source/lua-5.4.3/ljumptab.h"/>
+      <FILE id="ZvhFRf" name="llex.c" compile="1" resource="0" file="Source/lua-5.4.3/llex.c"/>
+      <FILE id="oDK5t7" name="llex.h" compile="0" resource="0" file="Source/lua-5.4.3/llex.h"/>
+      <FILE id="maX7jk" name="llimits.h" compile="0" resource="0" file="Source/lua-5.4.3/llimits.h"/>
+      <FILE id="nzBHln" name="lmathlib.c" compile="1" resource="0" file="Source/lua-5.4.3/lmathlib.c"/>
+      <FILE id="PCI8ij" name="lmem.c" compile="1" resource="0" file="Source/lua-5.4.3/lmem.c"/>
+      <FILE id="PWq4M3" name="lmem.h" compile="0" resource="0" file="Source/lua-5.4.3/lmem.h"/>
+      <FILE id="PnUulU" name="loadlib.c" compile="1" resource="0" file="Source/lua-5.4.3/loadlib.c"/>
+      <FILE id="TrUWFP" name="lobject.c" compile="1" resource="0" file="Source/lua-5.4.3/lobject.c"/>
+      <FILE id="FCEiP6" name="lobject.h" compile="0" resource="0" file="Source/lua-5.4.3/lobject.h"/>
+      <FILE id="KO9MCv" name="lopcodes.c" compile="1" resource="0" file="Source/lua-5.4.3/lopcodes.c"/>
+      <FILE id="DvSNNg" name="lopcodes.h" compile="0" resource="0" file="Source/lua-5.4.3/lopcodes.h"/>
+      <FILE id="aYMbUI" name="lopnames.h" compile="0" resource="0" file="Source/lua-5.4.3/lopnames.h"/>
+      <FILE id="LEXWI1" name="loslib.c" compile="1" resource="0" file="Source/lua-5.4.3/loslib.c"/>
+      <FILE id="LEfmyy" name="lparser.c" compile="1" resource="0" file="Source/lua-5.4.3/lparser.c"/>
+      <FILE id="uApjmy" name="lparser.h" compile="0" resource="0" file="Source/lua-5.4.3/lparser.h"/>
+      <FILE id="E23kN7" name="lprefix.h" compile="0" resource="0" file="Source/lua-5.4.3/lprefix.h"/>
+      <FILE id="ePCKlr" name="lstate.c" compile="1" resource="0" file="Source/lua-5.4.3/lstate.c"/>
+      <FILE id="WHwBGn" name="lstate.h" compile="0" resource="0" file="Source/lua-5.4.3/lstate.h"/>
+      <FILE id="ifaV66" name="lstring.c" compile="1" resource="0" file="Source/lua-5.4.3/lstring.c"/>
+      <FILE id="xYkiTY" name="lstring.h" compile="0" resource="0" file="Source/lua-5.4.3/lstring.h"/>
+      <FILE id="H7kdlG" name="lstrlib.c" compile="1" resource="0" file="Source/lua-5.4.3/lstrlib.c"/>
+      <FILE id="mpjyQy" name="ltable.c" compile="1" resource="0" file="Source/lua-5.4.3/ltable.c"/>
+      <FILE id="XJISdg" name="ltable.h" compile="0" resource="0" file="Source/lua-5.4.3/ltable.h"/>
+      <FILE id="qkQNTE" name="ltablib.c" compile="1" resource="0" file="Source/lua-5.4.3/ltablib.c"/>
+      <FILE id="ckxd7P" name="ltm.c" compile="1" resource="0" file="Source/lua-5.4.3/ltm.c"/>
+      <FILE id="ZC5ZRZ" name="ltm.h" compile="0" resource="0" file="Source/lua-5.4.3/ltm.h"/>
+      <FILE id="DbT6Wp" name="lua.c" compile="1" resource="0" file="Source/lua-5.4.3/lua.c"/>
+      <FILE id="uwQx05" name="lua.h" compile="0" resource="0" file="Source/lua-5.4.3/lua.h"/>
+      <FILE id="kVpTmQ" name="lua.hpp" compile="0" resource="0" file="Source/lua-5.4.3/lua.hpp"/>
+      <FILE id="yI4h2F" name="luac.c" compile="1" resource="0" file="Source/lua-5.4.3/luac.c"/>
+      <FILE id="JKU80L" name="luaconf.h" compile="0" resource="0" file="Source/lua-5.4.3/luaconf.h"/>
+      <FILE id="MQhzJN" name="lualib.h" compile="0" resource="0" file="Source/lua-5.4.3/lualib.h"/>
+      <FILE id="Ex2M2C" name="lundump.c" compile="1" resource="0" file="Source/lua-5.4.3/lundump.c"/>
+      <FILE id="n5HnG0" name="lundump.h" compile="0" resource="0" file="Source/lua-5.4.3/lundump.h"/>
+      <FILE id="RdVAGb" name="lutf8lib.c" compile="1" resource="0" file="Source/lua-5.4.3/lutf8lib.c"/>
+      <FILE id="tdZvsZ" name="lvm.c" compile="1" resource="0" file="Source/lua-5.4.3/lvm.c"/>
+      <FILE id="tdQkaL" name="lvm.h" compile="0" resource="0" file="Source/lua-5.4.3/lvm.h"/>
+      <FILE id="aKDSnM" name="lzio.c" compile="1" resource="0" file="Source/lua-5.4.3/lzio.c"/>
+      <FILE id="L2HcQQ" name="lzio.h" compile="0" resource="0" file="Source/lua-5.4.3/lzio.h"/>
+    </GROUP>
+    <FILE id="myaksY" name="txt.png" compile="0" resource="1" file="Source/txt.png"/>
+    <FILE id="FFQz3c" name="PluginProcessor.cpp" compile="1" resource="0"
+          file="Source/PluginProcessor.cpp"/>
+    <FILE id="Fc5Ucl" name="PluginProcessor.h" compile="0" resource="0"
+          file="Source/PluginProcessor.h"/>
+    <FILE id="HOHYCn" name="PluginEditor.cpp" compile="1" resource="0"
+          file="Source/PluginEditor.cpp"/>
+    <FILE id="wb44pV" name="PluginEditor.h" compile="0" resource="0" file="Source/PluginEditor.h"/>
+  </MAINGROUP>
+  <JUCEOPTIONS JUCE_STRICT_REFCOUNTEDPOINTER="1" JUCE_VST3_CAN_REPLACE_VST2="0"
+               JUCE_USE_CAMERA="1" JUCE_USE_FLAC="0" JUCE_USE_OGGVORBIS="0"
+               JUCE_USE_MP3AUDIOFORMAT="0" JUCE_USE_LAME_AUDIO_FORMAT="0" JUCE_USE_WINDOWS_MEDIA_FORMAT="0"
+               JUCE_USE_CURL="0" JUCE_LOAD_CURL_SYMBOLS_LAZILY="1" JUCE_WEB_BROWSER="0"
+               JUCE_USE_WIN_WEBVIEW2="0"/>
+  <EXPORTFORMATS>
+    <VS2019 targetFolder="Builds/VisualStudio2019">
+      <CONFIGURATIONS>
+        <CONFIGURATION isDebug="1" name="Debug" targetName="RedVJ"/>
+        <CONFIGURATION isDebug="0" name="Release" targetName="RedVJ"/>
+      </CONFIGURATIONS>
+      <MODULEPATHS>
+        <MODULEPATH id="juce_audio_basics" path="../../../../../../../../Program Files (x86)/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_devices" path="../../../../../../../../Program Files (x86)/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_formats" path="../../../../../../../../Program Files (x86)/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_plugin_client" path="../../../../../../../../Program Files (x86)/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_processors" path="../../../../../../../../Program Files (x86)/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_utils" path="../../../../../../../../Program Files (x86)/JUCE/modules"/>
+        <MODULEPATH id="juce_core" path="../../../../../../../../Program Files (x86)/JUCE/modules"/>
+        <MODULEPATH id="juce_data_structures" path="../../../../../../../../Program Files (x86)/JUCE/modules"/>
+        <MODULEPATH id="juce_dsp" path="../../../../../../../../Program Files (x86)/JUCE/modules"/>
+        <MODULEPATH id="juce_events" path="../../../../../../../../Program Files (x86)/JUCE/modules"/>
+        <MODULEPATH id="juce_graphics" path="../../../../../../../../Program Files (x86)/JUCE/modules"/>
+        <MODULEPATH id="juce_gui_basics" path="../../../../../../../../Program Files (x86)/JUCE/modules"/>
+        <MODULEPATH id="juce_gui_extra" path="../../../../../../../../Program Files (x86)/JUCE/modules"/>
+        <MODULEPATH id="juce_opengl" path="../../../../../../../../Program Files (x86)/JUCE/modules"/>
+        <MODULEPATH id="juce_video" path="../../../../../../../../Program Files (x86)/JUCE/modules"/>
+      </MODULEPATHS>
+    </VS2019>
+    <LINUX_MAKE targetFolder="Builds/LinuxMakefile">
+      <CONFIGURATIONS>
+        <CONFIGURATION isDebug="0" name="Release" linkTimeOptimisation="1"/>
+      </CONFIGURATIONS>
+      <MODULEPATHS>
+        <MODULEPATH id="juce_video"/>
+        <MODULEPATH id="juce_opengl"/>
+        <MODULEPATH id="juce_gui_extra"/>
+        <MODULEPATH id="juce_gui_basics"/>
+        <MODULEPATH id="juce_graphics"/>
+        <MODULEPATH id="juce_events"/>
+        <MODULEPATH id="juce_dsp"/>
+        <MODULEPATH id="juce_data_structures"/>
+        <MODULEPATH id="juce_core"/>
+        <MODULEPATH id="juce_audio_utils"/>
+        <MODULEPATH id="juce_audio_processors"/>
+        <MODULEPATH id="juce_audio_plugin_client"/>
+        <MODULEPATH id="juce_audio_formats"/>
+        <MODULEPATH id="juce_audio_devices"/>
+        <MODULEPATH id="juce_audio_basics"/>
+      </MODULEPATHS>
+    </LINUX_MAKE>
+    <CODEBLOCKS_LINUX targetFolder="Builds/CodeBlocksLinux">
+      <CONFIGURATIONS>
+        <CONFIGURATION isDebug="1" name="Debug"/>
+      </CONFIGURATIONS>
+      <MODULEPATHS>
+        <MODULEPATH id="juce_video"/>
+        <MODULEPATH id="juce_opengl"/>
+        <MODULEPATH id="juce_gui_extra"/>
+        <MODULEPATH id="juce_gui_basics"/>
+        <MODULEPATH id="juce_graphics"/>
+        <MODULEPATH id="juce_events"/>
+        <MODULEPATH id="juce_dsp"/>
+        <MODULEPATH id="juce_data_structures"/>
+        <MODULEPATH id="juce_core"/>
+        <MODULEPATH id="juce_audio_utils"/>
+        <MODULEPATH id="juce_audio_processors"/>
+        <MODULEPATH id="juce_audio_plugin_client"/>
+        <MODULEPATH id="juce_audio_formats"/>
+        <MODULEPATH id="juce_audio_devices"/>
+        <MODULEPATH id="juce_audio_basics"/>
+      </MODULEPATHS>
+    </CODEBLOCKS_LINUX>
+  </EXPORTFORMATS>
+  <MODULES>
+    <MODULE id="juce_audio_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_audio_devices" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_audio_formats" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_audio_plugin_client" showAllCode="1" useLocalCopy="0"
+            useGlobalPath="1"/>
+    <MODULE id="juce_audio_processors" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_audio_utils" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_core" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_data_structures" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_dsp" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_events" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_graphics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_gui_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_gui_extra" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_opengl" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_video" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+  </MODULES>
+  <LIVE_SETTINGS>
+    <WINDOWS/>
+  </LIVE_SETTINGS>
+</JUCERPROJECT>
