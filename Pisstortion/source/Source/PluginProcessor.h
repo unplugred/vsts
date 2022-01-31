@@ -8,7 +8,6 @@
 
 #pragma once
 #include <JuceHeader.h>
-using namespace juce;
 
 struct PluginPreset {
 	String name;
@@ -29,7 +28,6 @@ public:
 
 	void processBlock (AudioBuffer<float>&, MidiBuffer&) override;
 	float pisstortion(float source, int channel, float freq, float piss, float noise, float harm, float stereo, float gain);
-	void normalizegain();
 	void setoversampling(int factor);
 
 	AudioProcessorEditor* createEditor() override;
@@ -59,15 +57,15 @@ public:
 	Atomic<int> rmscount = 0;
 	Atomic<bool> updatevis;
 
-	int version = 0;
-	Atomic<float> freq = 0.17f, piss = 1.f, noise = .35f, harm = .31f, stereo = .1f, gain = 1.f, norm = 1.f;
+	int version = 1;
+	Atomic<float> freq = .17f, piss = 1.f, noise = .35f, harm = .31f, stereo = .1f, gain = 1.f;
 	Atomic<int> oversampling = 1;
 
 private:
-	float oldfreq = 0, oldpiss = 0, oldnoise = 0, oldharm = .5f, oldstereo = 0, oldgain = 1, oldnorm = 1;
+	float oldfreq = 0, oldpiss = 0, oldnoise = 0, oldharm = .5f, oldstereo = 0, oldgain = 1;
 
 	AudioProcessorValueTreeState::ParameterLayout createParameters();
-	PluginPreset presets[8];
+	PluginPreset presets[9];
 	int currentpreset = 0;
 	void timerCallback() override;
 	void lerpValue(StringRef, float&, float);

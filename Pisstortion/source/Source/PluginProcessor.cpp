@@ -8,7 +8,6 @@
 
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-using namespace juce;
 
 PisstortionAudioProcessor::PisstortionAudioProcessor() :
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -31,56 +30,63 @@ PisstortionAudioProcessor::PisstortionAudioProcessor() :
 	presets[0].harm = 0.31f;
 	presets[0].stereo = 0.1f;
 
-	presets[1].name = "Digital Driver";
-	presets[1].freq = 0.27f;
-	presets[1].piss = 0.25f;
-	presets[1].noise = 0.53f;
-	presets[1].harm = 0.0f;
+	presets[1].name = "Sand in Your Ear";
+	presets[1].freq = 0.3f;
+	presets[1].piss = 1.0f;
+	presets[1].noise = 1.0f;
+	presets[1].harm = 0.18f;
 	presets[1].stereo = 0.0f;
 
-	presets[2].name = "Noisy Bass Pumper";
-	presets[2].freq = 0.55f;
-	presets[2].piss = 1.0f;
-	presets[2].noise = 0.59f;
-	presets[2].harm = 0.77f;
+	presets[2].name = "Mega Drive";
+	presets[2].freq = 0.02f;
+	presets[2].piss = 0.42f;
+	presets[2].noise = 0.0f;
+	presets[2].harm = 1.0f;
 	presets[2].stereo = 0.0f;
 
-	presets[3].name = "Broken Earphone";
-	presets[3].freq = 0.19f;
-	presets[3].piss = 0.45f;
-	presets[3].noise = 1.0f;
-	presets[3].harm = 0.0f;
-	presets[3].stereo = 0.88f;
+	presets[3].name = "Easy to Destroy";
+	presets[3].freq = 0.32f;
+	presets[3].piss = 1.0f;
+	presets[3].noise = 0.13f;
+	presets[3].harm = 1.0f;
+	presets[3].stereo = 0.0f;
 
-	presets[4].name = "Fatass";
-	presets[4].freq = 0.62f;
-	presets[4].piss = 0.4f;
-	presets[4].noise = 1.0f;
-	presets[4].harm = 0.0f;
-	presets[4].stereo = 0.0f;
+	presets[4].name = "Screamy";
+	presets[4].freq = 0.58f;
+	presets[4].piss = 1.0f;
+	presets[4].noise = 0.0f;
+	presets[4].harm = 0.51f;
+	presets[4].stereo = 0.52f;
 
-	presets[5].name = "Screaming Alien";
-	presets[5].freq = 0.63f;
-	presets[5].piss = 0.6f;
-	presets[5].noise = 0.2f;
-	presets[5].harm = 0.0f;
-	presets[5].stereo = 0.0f;
+	presets[5].name = "I Love Piss";
+	presets[5].freq = 1.0f;
+	presets[5].piss = 1.0f;
+	presets[5].noise = 0.0f;
+	presets[5].harm = 1.0f;
+	presets[5].stereo = 0.25f;
 
-	presets[6].name = "Bad Connection";
-	presets[6].freq = 0.25f;
-	presets[6].piss = 0.4f;
-	presets[6].noise = 0.48f;
-	presets[6].harm = 0.0f;
+	presets[6].name = "You Broke It";
+	presets[6].freq = 0.09f;
+	presets[6].piss = 1.0f;
+	presets[6].noise = 0.0f;
+	presets[6].harm = 0.02f;
 	presets[6].stereo = 0.0f;
 
-	presets[7].name = "Ouch";
-	presets[7].freq = 0.9f;
-	presets[7].piss = 0.0f;
-	presets[7].noise = 0.0f;
-	presets[7].harm = 0.0f;
-	presets[7].stereo = 0.69f;
+	presets[7].name = "Splashing";
+	presets[7].freq = 1.0f;
+	presets[7].piss = 1.0f;
+	presets[7].noise = 0.39f;
+	presets[7].harm = 0.07f;
+	presets[7].stereo = 0.22f;
 
-	normalizegain();
+	presets[8].name = "PISS LASERS";
+	presets[8].freq = 0.39f;
+	presets[8].piss = 0.95f;
+	presets[8].noise = 0.36f;
+	presets[8].harm = 0.59f;
+	presets[8].stereo = 0.34f;
+
+	updatevis = true;
 }
 
 PisstortionAudioProcessor::~PisstortionAudioProcessor(){
@@ -100,7 +106,7 @@ bool PisstortionAudioProcessor::producesMidi() const { return false; }
 bool PisstortionAudioProcessor::isMidiEffect() const { return false; }
 double PisstortionAudioProcessor::getTailLengthSeconds() const { return 0.0; }
 
-int PisstortionAudioProcessor::getNumPrograms() { return 8; }
+int PisstortionAudioProcessor::getNumPrograms() { return 9; }
 int PisstortionAudioProcessor::getCurrentProgram() { return currentpreset; }
 void PisstortionAudioProcessor::setCurrentProgram (int index) {
 	if(!boot) return;
@@ -187,7 +193,6 @@ void PisstortionAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBu
 
 	float newfreq = freq.get(), newpiss = piss.get(), newnoise = noise.get(), newharm = harm.get(), newstereo = stereo.get(), newgain = gain.get(), prmsadd = rmsadd.get();
 	int prmscount = rmscount.get(), poversampling = oversampling.get();
-	float newnorm = norm.get();
 
 	dsp::AudioBlock<float> block(buffer);
 	dsp::AudioBlock<float> osblock(buffer);
@@ -221,8 +226,7 @@ void PisstortionAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBu
 				oldnoise *(1-mult)+newnoise *mult,
 				oldharm  *(1-mult)+newharm  *mult,
 				oldstereo*(1-mult)+newstereo*mult,
-				oldgain  *(1-mult)+newgain  *mult)*(
-				oldnorm  *(1-mult)+newnorm  *mult);
+				oldgain  *(1-mult)+newgain  *mult);
 			prmsadd += channelData[sample]*channelData[sample];
 			prmscount++;
 		}
@@ -236,7 +240,6 @@ void PisstortionAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBu
 	oldharm = newharm;
 	oldstereo = newstereo;
 	oldgain = newgain;
-	oldnorm = newnorm;
 	rmsadd = prmsadd;
 	rmscount = prmscount;
 
@@ -271,11 +274,6 @@ float PisstortionAudioProcessor::pisstortion(float source, int channel, float fr
 	}
 
 	return ((f*piss)+(source*(1-piss)))*gain;
-}
-
-void PisstortionAudioProcessor::normalizegain() {
-	norm = 1.f;
-	updatevis = true;
 }
 
 void PisstortionAudioProcessor::setoversampling(int factor) {
@@ -351,9 +349,9 @@ void PisstortionAudioProcessor::setStateInformation (const void* data, int sizeI
 	setoversampling(std::stoi(token)-1);
 	apvts.getParameter("oversampling")->setValueNotifyingHost((std::stoi(token)-1)/3.f);
 
-	normalizegain();
+	updatevis = true;
 
-	for(int i = 0; i < getNumPrograms(); i++) {
+	for(int i = 0; i < (saveversion == 0 ? 8 : getNumPrograms()); i++) {
 		std::getline(ss, token, '\n'); presets[i].name = token;
 		std::getline(ss, token, '\n'); presets[i].freq = std::stof(token);
 		std::getline(ss, token, '\n'); presets[i].piss = std::stof(token);
@@ -367,12 +365,10 @@ void PisstortionAudioProcessor::parameterChanged(const String& parameterID, floa
 		freq = newValue;
 	} else if(parameterID == "piss") {
 		piss = newValue;
-		normalizegain();
 	} else if(parameterID == "noise") {
 		noise = newValue;
 	} else if(parameterID == "harm") {
 		harm = newValue;
-		normalizegain();
 	} else if(parameterID == "stereo") {
 		stereo = newValue;
 	} else if(parameterID == "gain") {

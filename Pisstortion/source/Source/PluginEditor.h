@@ -10,16 +10,26 @@
 
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
-using namespace juce;
-
 
 struct knob {
 	int x = 0;
 	int y = 0;
-	float value = 0.5f;
-	int hoverstate = 0;
+	float value = .5f;
+	float lerpedvalue = .5f;
+	float hover = 0.f;
 	String id;
 	String name;
+};
+struct bubble {
+	float wiggleamount = 0;
+	float wigglespeed = 0;
+	float wiggleage = 0;
+	float moveamount = 0;
+	float movespeed = 0;
+	float moveoffset = 0;
+	float moveage = 0;
+	float yspeed = 0;
+	float xoffset = 0;
 };
 class PisstortionAudioProcessorEditor : public AudioProcessorEditor, public OpenGLRenderer, public AudioProcessorValueTreeState::Listener, private Timer
 {
@@ -45,6 +55,8 @@ public:
 	void mouseWheelMove(const MouseEvent& event, const MouseWheelDetails& wheel) override;
 	int recalchover(float x, float y);
 
+	void bubbleregen(int i);
+
 	knob knobs[6];
 	float visline[2][452];
 	bool isStereo = false;
@@ -55,7 +67,6 @@ private:
 	int initialdrag = 0;
 	int held = 0;
 	float initialvalue = 0;
-	int needtoupdate = 2;
 
 	OpenGLContext openGLContext;
 	unsigned int arraybuffer;
@@ -97,11 +108,13 @@ private:
 	String creditsfrag;
 
 	float rms = 0;
+	float rmslerped = 0;
 	OpenGLFrameBuffer framebuffer;
-	std::unique_ptr<OpenGLShaderProgram> ppshader;
-	String ppvert;
-	String ppfrag;
+	std::unique_ptr<OpenGLShaderProgram> circleshader;
+	String circlevert;
+	String circlefrag;
 
+	bubble bubbles[20];
 	Random random;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PisstortionAudioProcessorEditor)
