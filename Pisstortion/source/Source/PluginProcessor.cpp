@@ -251,14 +251,14 @@ float PisstortionAudioProcessor::pisstortion(float source, int channel, float fr
 
 	float f = sin(source*50*(freq+stereo*freq*((float)channel-.5f)));
 
-	if (harm == 1) {
+	if(harm >= 1) {
 		if(f > 0) f = 1;
 		else if(f < 0) f = -1;
-	} else if(harm == 0) {
+	} else if(harm <= 0) {
 		f = 0;
 	} else if(harm != .5) {
 		float h = harm;
-		if (h < .5)
+		if(h < .5)
 			h = h*2;
 		else
 			h = .5/(1-h);
@@ -268,10 +268,10 @@ float PisstortionAudioProcessor::pisstortion(float source, int channel, float fr
 		else
 			f = powf(f+1,h)-1;
 	}
-	
-	if (noise > 0) {
+	if(noise >= 1)
+		f *= fabs(source);
+	else if(noise > 0)
 		f *= 1-powf(1-fabs(source),1./noise);
-	}
 
 	return ((f*piss)+(source*(1-piss)))*gain;
 }
