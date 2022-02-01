@@ -268,12 +268,13 @@ float PisstortionAudioProcessor::pisstortion(float source, int channel, float fr
 		else
 			f = powf(f+1,h)-1;
 	}
+
 	if(noise >= 1)
 		f *= fabs(source);
 	else if(noise > 0)
 		f *= 1-powf(1-fabs(source),1./noise);
 
-	return ((f*piss)+(source*(1-piss)))*gain;
+	return fmax(fmin(((f*piss)+(source*(1-piss)))*gain,1),-1);
 }
 
 void PisstortionAudioProcessor::setoversampling(int factor) {
