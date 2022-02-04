@@ -7,6 +7,8 @@
               pluginAAXCategory="64" pluginRTASCategory="64" pluginVST3Category="Distortion">
   <MAINGROUP id="cwqzUg" name="Pisstortion">
     <GROUP id="{67EC23A0-031A-9AC5-CDDD-77F12247C5DB}" name="Source">
+      <FILE id="KLSHdL" name="DCFilter.cpp" compile="1" resource="0" file="Source/DCFilter.cpp"/>
+      <FILE id="ZDvQ09" name="DCFilter.h" compile="0" resource="0" file="Source/DCFilter.h"/>
       <FILE id="Jud1UJ" name="PluginProcessor.cpp" compile="1" resource="0"
             file="Source/PluginProcessor.cpp"/>
       <FILE id="p4M3r8" name="PluginProcessor.h" compile="0" resource="0"

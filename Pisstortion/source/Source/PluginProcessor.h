@@ -8,6 +8,7 @@
 
 #pragma once
 #include <JuceHeader.h>
+#include "DCFilter.h"
 
 struct PluginPreset {
 	String name;
@@ -27,7 +28,7 @@ public:
 #endif
 
 	void processBlock (AudioBuffer<float>&, MidiBuffer&) override;
-	float pisstortion(float source, int channel, float freq, float piss, float noise, float harm, float stereo, float gain);
+	float pisstortion(float source, int channel, float freq, float piss, float noise, float harm, float stereo, float gain, bool removedc);
 	void setoversampling(int factor);
 
 	AudioProcessorEditor* createEditor() override;
@@ -75,6 +76,7 @@ private:
 	bool preparedtoplay = false;
 
 	std::unique_ptr<dsp::Oversampling<float>> os[3];
+	DCFilter dcfilter;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PisstortionAudioProcessor)
 };

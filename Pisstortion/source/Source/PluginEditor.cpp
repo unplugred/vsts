@@ -433,7 +433,7 @@ void PisstortionAudioProcessorEditor::calcvis() {
 	for(int c = 0; c < (isStereo ? 2 : 1); c++) {
 		for(int i = 0; i < 226; i++) {
 			visline[c][i*2] = (i+8)/121.f-1;
-			visline[c][i*2+1] = 1-(48+audioProcessor.pisstortion(sin(i/35.8098621957f)*.8f,c,knobs[0].value,knobs[1].value,knobs[2].value,knobs[3].value,knobs[4].value,knobs[5].value)*38)/231.f;
+			visline[c][i*2+1] = 1-(48+audioProcessor.pisstortion(sin(i/35.8098621957f)*.8f,c,knobs[0].value,knobs[1].value,knobs[2].value,knobs[3].value,knobs[4].value,knobs[5].value,false)*38)/231.f;
 		}
 	}
 }
