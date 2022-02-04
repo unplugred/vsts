@@ -85,29 +85,6 @@
                JUCE_USE_CURL="0" JUCE_LOAD_CURL_SYMBOLS_LAZILY="1" JUCE_WEB_BROWSER="0"
                JUCE_USE_WIN_WEBVIEW2="0"/>
   <EXPORTFORMATS>
-    <VS2019 targetFolder="Builds/VisualStudio2019">
-      <CONFIGURATIONS>
-        <CONFIGURATION isDebug="1" name="Debug" targetName="RedVJ"/>
-        <CONFIGURATION isDebug="0" name="Release" targetName="RedVJ"/>
-      </CONFIGURATIONS>
-      <MODULEPATHS>
-        <MODULEPATH id="juce_audio_basics" path="../../../../../../../../Program Files (x86)/JUCE/modules"/>
-        <MODULEPATH id="juce_audio_devices" path="../../../../../../../../Program Files (x86)/JUCE/modules"/>
-        <MODULEPATH id="juce_audio_formats" path="../../../../../../../../Program Files (x86)/JUCE/modules"/>
-        <MODULEPATH id="juce_audio_plugin_client" path="../../../../../../../../Program Files (x86)/JUCE/modules"/>
-        <MODULEPATH id="juce_audio_processors" path="../../../../../../../../Program Files (x86)/JUCE/modules"/>
-        <MODULEPATH id="juce_audio_utils" path="../../../../../../../../Program Files (x86)/JUCE/modules"/>
-        <MODULEPATH id="juce_core" path="../../../../../../../../Program Files (x86)/JUCE/modules"/>
-        <MODULEPATH id="juce_data_structures" path="../../../../../../../../Program Files (x86)/JUCE/modules"/>
-        <MODULEPATH id="juce_dsp" path="../../../../../../../../Program Files (x86)/JUCE/modules"/>
-        <MODULEPATH id="juce_events" path="../../../../../../../../Program Files (x86)/JUCE/modules"/>
-        <MODULEPATH id="juce_graphics" path="../../../../../../../../Program Files (x86)/JUCE/modules"/>
-        <MODULEPATH id="juce_gui_basics" path="../../../../../../../../Program Files (x86)/JUCE/modules"/>
-        <MODULEPATH id="juce_gui_extra" path="../../../../../../../../Program Files (x86)/JUCE/modules"/>
-        <MODULEPATH id="juce_opengl" path="../../../../../../../../Program Files (x86)/JUCE/modules"/>
-        <MODULEPATH id="juce_video" path="../../../../../../../../Program Files (x86)/JUCE/modules"/>
-      </MODULEPATHS>
-    </VS2019>
     <LINUX_MAKE targetFolder="Builds/LinuxMakefile">
       <CONFIGURATIONS>
         <CONFIGURATION isDebug="0" name="Release" linkTimeOptimisation="1"/>
@@ -152,6 +129,32 @@
         <MODULEPATH id="juce_audio_basics"/>
       </MODULEPATHS>
     </CODEBLOCKS_LINUX>
+    <VS2022 targetFolder="Builds/VisualStudio2022">
+      <CONFIGURATIONS>
+        <CONFIGURATION isDebug="1" name="Debug" targetName="RedVJ (preview)"/>
+        <CONFIGURATION isDebug="0" name="FastBuild" linkTimeOptimisation="0" optimisation="1"
+                       enableIncrementalLinking="1" targetName="RedVJ (preview)"/>
+        <CONFIGURATION isDebug="0" name="Win32" winArchitecture="Win32"/>
+        <CONFIGURATION isDebug="0" name="Win64" winArchitecture="x64"/>
+      </CONFIGURATIONS>
+      <MODULEPATHS>
+        <MODULEPATH id="juce_audio_basics" path="C:\Program Files (x86)\JUCE\modules"/>
+        <MODULEPATH id="juce_audio_devices" path="C:\Program Files (x86)\JUCE\modules"/>
+        <MODULEPATH id="juce_audio_formats" path="C:\Program Files (x86)\JUCE\modules"/>
+        <MODULEPATH id="juce_audio_plugin_client" path="C:\Program Files (x86)\JUCE\modules"/>
+        <MODULEPATH id="juce_audio_processors" path="C:\Program Files (x86)\JUCE\modules"/>
+        <MODULEPATH id="juce_audio_utils" path="C:\Program Files (x86)\JUCE\modules"/>
+        <MODULEPATH id="juce_core" path="C:\Program Files (x86)\JUCE\modules"/>
+        <MODULEPATH id="juce_data_structures" path="C:\Program Files (x86)\JUCE\modules"/>
+        <MODULEPATH id="juce_dsp" path="C:\Program Files (x86)\JUCE\modules"/>
+        <MODULEPATH id="juce_events" path="C:\Program Files (x86)\JUCE\modules"/>
+        <MODULEPATH id="juce_graphics" path="C:\Program Files (x86)\JUCE\modules"/>
+        <MODULEPATH id="juce_gui_basics" path="C:\Program Files (x86)\JUCE\modules"/>
+        <MODULEPATH id="juce_gui_extra" path="C:\Program Files (x86)\JUCE\modules"/>
+        <MODULEPATH id="juce_opengl" path="C:\Program Files (x86)\JUCE\modules"/>
+        <MODULEPATH id="juce_video" path="C:\Program Files (x86)\JUCE\modules"/>
+      </MODULEPATHS>
+    </VS2022>
   </EXPORTFORMATS>
   <MODULES>
     <MODULE id="juce_audio_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
