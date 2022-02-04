@@ -71,6 +71,8 @@
     <VS2022 targetFolder="Builds/VisualStudio2022">
       <CONFIGURATIONS>
         <CONFIGURATION isDebug="1" name="Debug" targetName="PNCH (preview)"/>
+        <CONFIGURATION isDebug="0" name="FastBuild" winArchitecture="x64" linkTimeOptimisation="0"
+                       optimisation="1" enableIncrementalLinking="1" targetName="PNCH (preview)"/>
         <CONFIGURATION isDebug="0" name="Win32" winArchitecture="Win32"/>
         <CONFIGURATION isDebug="0" name="Win64" winArchitecture="x64"/>
       </CONFIGURATIONS>
