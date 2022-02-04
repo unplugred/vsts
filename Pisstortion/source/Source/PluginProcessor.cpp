@@ -160,6 +160,7 @@ void PisstortionAudioProcessor::changeProgramName (int index, const String& newN
 }
 
 void PisstortionAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {
+	dcfilter.init((int)sampleRate,getTotalNumInputChannels());
 	for(int i = 0; i < 3; i++) {
 		os[i].reset(new dsp::Oversampling<float>(getTotalNumInputChannels(),i+1,dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR));
 		os[i]->initProcessing(samplesPerBlock);
@@ -222,11 +223,11 @@ void PisstortionAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBu
 			mult = unit * sample;
 			channelData[sample] = pisstortion(channelData[sample], channel,
 				oldfreq  *(1-mult)+newfreq  *mult,
-				oldpiss*(1-mult)+newpiss*mult,
+				oldpiss  *(1-mult)+newpiss  *mult,
 				oldnoise *(1-mult)+newnoise *mult,
 				oldharm  *(1-mult)+newharm  *mult,
 				oldstereo*(1-mult)+newstereo*mult,
-				oldgain  *(1-mult)+newgain  *mult);
+				oldgain  *(1-mult)+newgain  *mult, true);
 			prmsadd += channelData[sample]*channelData[sample];
 			prmscount++;
 		}
@@ -246,10 +247,13 @@ void PisstortionAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBu
 	boot = true;
 }
 
-float PisstortionAudioProcessor::pisstortion(float source, int channel, float freq, float piss, float noise, float harm, float stereo, float gain) {
-	if(source == 0) return 0;
+float PisstortionAudioProcessor::pisstortion(float source, int channel, float freq, float piss, float noise, float harm, float stereo, float gain, bool removedc) {
+	if(source == 0) {
+		if(removedc) return fmax(fmin((dcfilter.process(0,channel)*piss+source*(1-piss))*gain,1),-1);
+		else return 0;
+	}
 
-	float f = sin(source*50*(freq+stereo*freq*((float)channel-.5f)));
+	float f = sin(source*50*(freq+stereo*freq*((float)channel-.5f)*(source>0?1:-1)));
 
 	if(harm >= 1) {
 		if(f > 0) f = 1;
@@ -274,7 +278,10 @@ float PisstortionAudioProcessor::pisstortion(float source, int channel, float fr
 	else if(noise > 0)
 		f *= 1-powf(1-fabs(source),1./noise);
 
-	return fmax(fmin(((f*piss)+(source*(1-piss)))*gain,1),-1);
+	f = fmax(fmin(f,1),-1);
+	if(removedc) f = dcfilter.process(f,channel);
+
+	return fmax(fmin((f*piss+source*(1-piss))*gain,1),-1);
 }
 
 void PisstortionAudioProcessor::setoversampling(int factor) {
