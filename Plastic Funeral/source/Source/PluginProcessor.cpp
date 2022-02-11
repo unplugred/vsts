@@ -154,24 +154,24 @@ void PFAudioProcessor::changeProgramName (int index, const String& newName) {
 }
 
 void PFAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {
+	samplesperblock = samplesPerBlock;
+	preparedtoplay = true;
+}
+void PFAudioProcessor::changechannelnum(int newchannelnum) {
+	channelnum = newchannelnum;
 	for(int i = 0; i < 3; i++) {
-		os[i].reset(new dsp::Oversampling<float>(getTotalNumInputChannels(),i+1,dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR));
-		os[i]->initProcessing(samplesPerBlock);
+		os[i].reset(new dsp::Oversampling<float>(channelnum,i+1,dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR));
+		os[i]->initProcessing(samplesperblock);
 		os[i]->setUsingIntegerLatency(true);
 	}
 	if(oversampling.get() == 0) setLatencySamples(0);
 	else setLatencySamples(os[oversampling.get()-1]->getLatencyInSamples());
-	preparedtoplay = true;
+	ospointerarray.resize(channelnum);
 }
-void PFAudioProcessor::releaseResources() {
-}
+void PFAudioProcessor::releaseResources() { }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
 bool PFAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const {
-	if (layouts.getMainOutputChannelSet() != AudioChannelSet::mono()
-	 && layouts.getMainOutputChannelSet() != AudioChannelSet::stereo())
-		return false;
-
 	if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
 		return false;
 
@@ -182,6 +182,10 @@ bool PFAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 void PFAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midiMessages) {
 	ScopedNoDenormals noDenormals;
 
+	if(buffer.getNumChannels() == 0) return;
+	if(buffer.getNumChannels() != channelnum)
+		changechannelnum(buffer.getNumChannels());
+
 	for (auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
 		buffer.clear (i, 0, buffer.getNumSamples());
 
@@ -191,29 +195,22 @@ void PFAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mid
 
 	dsp::AudioBlock<float> block(buffer);
 	dsp::AudioBlock<float> osblock(buffer);
-	AudioBuffer<float> osbuffer;
-	int numsamples = 0;
 	if(poversampling > 0) {
 		osblock = os[poversampling-1]->processSamplesUp(block);
-		if (getTotalNumInputChannels() == 1) {
-			float* ptrArray[] = {osblock.getChannelPointer(0)};
-			osbuffer = AudioBuffer<float>(ptrArray,1,static_cast<int>(osblock.getNumSamples()));
-		} else if(getTotalNumInputChannels() >= 2){
-			float* ptrArray[] = {osblock.getChannelPointer(0),osblock.getChannelPointer(1)};
-			osbuffer = AudioBuffer<float>(ptrArray,2,static_cast<int>(osblock.getNumSamples()));
-		}
-		numsamples = osbuffer.getNumSamples();
-	} else numsamples = buffer.getNumSamples();
+		for(int i = 0; i < channelnum; i++)
+			ospointerarray[i] = osblock.getChannelPointer(i);
+		osbuffer = AudioBuffer<float>(ospointerarray.data(), channelnum, static_cast<int>(osblock.getNumSamples()));
+	}
 
 	float unit = 0, mult = 0;
-	for (int channel = 0; channel < getTotalNumInputChannels(); ++channel)
+	for (int channel = 0; channel < channelnum; ++channel)
 	{
 		float* channelData;
-		if(poversampling > 0) channelData = osbuffer.getWritePointer (channel);
+		if(poversampling > 0) channelData = osbuffer.getWritePointer(channel);
 		else channelData = buffer.getWritePointer (channel);
 
-		unit = 1.f/numsamples;
-		for (int sample = 0; sample < numsamples; ++sample) {
+		unit = 1.f/samplesperblock;
+		for (int sample = 0; sample < samplesperblock; ++sample) {
 			mult = unit * sample;
 			channelData[sample] = plasticfuneral(channelData[sample], channel,
 				oldfreq  *(1-mult)+newfreq  *mult,

@@ -20,7 +20,8 @@ public:
 	PFAudioProcessor();
 	~PFAudioProcessor() override;
 
-	void prepareToPlay (double sampleRate, int samplesPerBlock) override;
+	void prepareToPlay(double sampleRate, int samplesPerBlock) override;
+	void changechannelnum(int newchannelnum);
 	void releaseResources() override;
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -77,6 +78,10 @@ private:
 	bool preparedtoplay = false;
 
 	std::unique_ptr<dsp::Oversampling<float>> os[3];
+	AudioBuffer<float> osbuffer;
+	int channelnum = 0;
+	int samplesperblock = 512;
+	std::vector<float*> ospointerarray;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PFAudioProcessor)
 };
