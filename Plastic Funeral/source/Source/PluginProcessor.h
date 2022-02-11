@@ -77,10 +77,11 @@ private:
 	bool boot = false;
 	bool preparedtoplay = false;
 
-	std::unique_ptr<dsp::Oversampling<float>> os[3];
+	std::unique_ptr<dsp::Oversampling<float>> os;
 	AudioBuffer<float> osbuffer;
 	int channelnum = 0;
 	int samplesperblock = 512;
+	bool changingoversampling = false;
 	std::vector<float*> ospointerarray;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PFAudioProcessor)

@@ -159,14 +159,8 @@ void PFAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {
 }
 void PFAudioProcessor::changechannelnum(int newchannelnum) {
 	channelnum = newchannelnum;
-	for(int i = 0; i < 3; i++) {
-		os[i].reset(new dsp::Oversampling<float>(channelnum,i+1,dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR));
-		os[i]->initProcessing(samplesperblock);
-		os[i]->setUsingIntegerLatency(true);
-	}
-	if(oversampling.get() == 0) setLatencySamples(0);
-	else setLatencySamples(os[oversampling.get()-1]->getLatencyInSamples());
 	ospointerarray.resize(channelnum);
+	setoversampling(oversampling.get());
 }
 void PFAudioProcessor::releaseResources() { }
 
@@ -182,7 +176,7 @@ bool PFAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 void PFAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midiMessages) {
 	ScopedNoDenormals noDenormals;
 
-	if(buffer.getNumChannels() == 0) return;
+	if(buffer.getNumChannels() == 0 || buffer.getNumSamples() == 0) return;
 	if(buffer.getNumChannels() != channelnum)
 		changechannelnum(buffer.getNumChannels());
 
@@ -190,13 +184,15 @@ void PFAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mid
 		buffer.clear (i, 0, buffer.getNumSamples());
 
 	float newfreq = freq.get(), newfat = fat.get(), newdrive = drive.get(), newdry = dry.get(), newstereo = stereo.get(), newgain = gain.get(), prmsadd = rmsadd.get();
-	int prmscount = rmscount.get(), poversampling = oversampling.get();
+	int prmscount = rmscount.get();
 	float newnorm = norm.get();
+	bool isoversampling = (!changingoversampling) && (oversampling.get() > 0);
+	int samplecount = fmin(samplesperblock,buffer.getNumSamples());
 
 	dsp::AudioBlock<float> block(buffer);
 	dsp::AudioBlock<float> osblock(buffer);
-	if(poversampling > 0) {
-		osblock = os[poversampling-1]->processSamplesUp(block);
+	if(isoversampling) {
+		osblock = os->processSamplesUp(block);
 		for(int i = 0; i < channelnum; i++)
 			ospointerarray[i] = osblock.getChannelPointer(i);
 		osbuffer = AudioBuffer<float>(ospointerarray.data(), channelnum, static_cast<int>(osblock.getNumSamples()));
@@ -206,7 +202,7 @@ void PFAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mid
 	for (int channel = 0; channel < channelnum; ++channel)
 	{
 		float* channelData;
-		if(poversampling > 0) channelData = osbuffer.getWritePointer(channel);
+		if(isoversampling) channelData = osbuffer.getWritePointer(channel);
 		else channelData = buffer.getWritePointer (channel);
 
 		unit = 1.f/samplesperblock;
@@ -225,7 +221,7 @@ void PFAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mid
 		}
 	}
 
-	if(poversampling > 0) os[poversampling-1]->processSamplesDown(block);
+	if(isoversampling) os->processSamplesDown(block);
 
 	oldfreq = newfreq;
 	oldfat = newfat;
@@ -259,12 +255,20 @@ void PFAudioProcessor::normalizegain() {
 }
 
 void PFAudioProcessor::setoversampling(int factor) {
+	changingoversampling = true;
 	oversampling = factor;
-	if(factor == 0) setLatencySamples(0);
-	else if(preparedtoplay) {
-		os[factor-1]->reset();
-		setLatencySamples(os[factor-1]->getLatencyInSamples());
+
+	if(preparedtoplay) {
+		if(factor == 0) {
+			setLatencySamples(0);
+		} else {
+			os.reset(new dsp::Oversampling<float>(channelnum,oversampling.get(), dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR));
+			os->initProcessing(samplesperblock);
+			os->setUsingIntegerLatency(true);
+			setLatencySamples(os->getLatencyInSamples());
+		}
 	}
+	changingoversampling = false;
 }
 
 bool PFAudioProcessor::hasEditor() const { return true; }
