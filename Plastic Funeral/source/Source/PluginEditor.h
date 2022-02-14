@@ -16,15 +16,24 @@ using namespace juce;
 struct knob {
 	int x = 0;
 	int y = 0;
-	float value = 0.5f;
+	float value = .5f;
 	int hoverstate = 0;
 	String id;
 	String name;
+	float minimumvalue = 0.f;
+	float maximumvalue = 1.f;
+	float defaultvalue = 0.f;
+	float normalize(float val) {
+		return (value-minimumvalue)/(maximumvalue-minimumvalue);
+	}
+	float inflate(float val) {
+		return value*(maximumvalue-minimumvalue)+minimumvalue;
+	}
 };
 class PFAudioProcessorEditor : public AudioProcessorEditor, public OpenGLRenderer, public AudioProcessorValueTreeState::Listener, private Timer
 {
 public:
-	PFAudioProcessorEditor (PFAudioProcessor&);
+	PFAudioProcessorEditor (PFAudioProcessor&, int paramcount, pluginpreset state, potentiometer pots[]);
 	~PFAudioProcessorEditor() override;
 
 	void newOpenGLContextCreated() override;
@@ -46,16 +55,11 @@ public:
 	int recalchover(float x, float y);
 
 	knob knobs[6];
+	int knobcount = 0;
 	float visline[2][452];
 	bool isStereo = false;
 private:
 	PFAudioProcessor& audioProcessor;
-
-	int hover = -1;
-	int initialdrag = 0;
-	int held = 0;
-	float initialvalue = 0;
-	int needtoupdate = 2;
 
 	OpenGLContext openGLContext;
 	unsigned int arraybuffer;
@@ -70,6 +74,11 @@ private:
 	String basevert;
 	String basefrag;
 
+	int hover = -1;
+	int initialdrag = 0;
+	int held = 0;
+	float initialvalue = 0;
+	int needtoupdate = 2;
 	bool finemode = false;
 	float valueoffset = 0;
 	Point<int> dragpos = Point<int>(0,0);

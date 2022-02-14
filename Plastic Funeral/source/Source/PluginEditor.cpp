@@ -11,36 +11,29 @@
 using namespace juce;
 using namespace gl;
 
-PFAudioProcessorEditor::PFAudioProcessorEditor (PFAudioProcessor& p)
+PFAudioProcessorEditor::PFAudioProcessorEditor (PFAudioProcessor& p, int paramcount, pluginpreset state, potentiometer pots[])
 	: AudioProcessorEditor (&p), audioProcessor (p)
 {
-	knobs[0].id = "freq";
-	knobs[0].name = "frequency";
-	knobs[0].value = audioProcessor.freq.get();
-	knobs[1].id = "fat";
-	knobs[1].name = "fatness";
-	knobs[1].value = audioProcessor.fat.get()*.025f+.5f;
-	knobs[2].id = "drive";
-	knobs[2].name = "drive";
-	knobs[2].value = audioProcessor.drive.get();
-	knobs[3].id = "dry";
-	knobs[3].name = "dry";
-	knobs[3].value = audioProcessor.dry.get();
-	knobs[4].id = "stereo";
-	knobs[4].name = "stereo";
-	knobs[4].value = audioProcessor.stereo.get();
-	knobs[5].id = "gain";
-	knobs[5].name = "gain";
-	knobs[5].value = audioProcessor.gain.get();
-	oversampling = audioProcessor.oversampling.get();
-	oversamplinglerped = oversampling;
-	for (int x = 0; x < 2; x++) {
-		for (int y = 0; y < 3; y++) {
-			knobs[x+y*2].x = x*106+68;
-			knobs[x+y*2].y = y*100+144;
-			audioProcessor.apvts.addParameterListener(knobs[x+y*2].id,this);
+	for(int x = 0; x < 2; x++) {
+		for(int y = 0; y < 3; y++) {
+			int i = x+y*2;
+			knobs[i].x = x*106+68;
+			knobs[i].y = y*100+144;
+			knobs[i].id = pots[i].id;
+			knobs[i].name = pots[i].name;
+			knobs[i].value = pots[i].normalize(state.values[i]);
+			knobs[i].minimumvalue = pots[i].minimumvalue;
+			knobs[i].maximumvalue = pots[i].maximumvalue;
+			knobs[i].defaultvalue = pots[i].defaultvalue;
+			knobcount++;
+			audioProcessor.apvts.addParameterListener(knobs[i].id,this);
 		}
 	}
+	for(int i = 0; i < paramcount; i++)
+		if(pots[i].id == "oversampling") {
+			oversampling = state.values[i];
+	}
+	oversamplinglerped = oversampling;
 	audioProcessor.apvts.addParameterListener("oversampling",this);
 	calcvis();
 
@@ -54,7 +47,7 @@ PFAudioProcessorEditor::PFAudioProcessorEditor (PFAudioProcessor& p)
 	startTimerHz(30);
 }
 PFAudioProcessorEditor::~PFAudioProcessorEditor() {
-	for (int i = 0; i < 6; i++) audioProcessor.apvts.removeParameterListener(knobs[i].id,this);
+	for(int i = 0; i < knobcount; i++) audioProcessor.apvts.removeParameterListener(knobs[i].id,this);
 	audioProcessor.apvts.removeParameterListener("oversampling",this);
 	stopTimer();
 	openGLContext.detach();
@@ -312,7 +305,7 @@ void PFAudioProcessorEditor::renderOpenGL() {
 		openGLContext.extensions.glEnableVertexAttribArray(coord);
 		openGLContext.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 		knobshader->setUniform("knobcolor",.2265625f);
-		for (int i = 0; i < 6; i++) {
+		for(int i = 0; i < knobcount; i++) {
 			if(i == 2) knobshader->setUniform("knobcolor",.61328125f);
 			knobshader->setUniform("knobpos",((float)knobs[i].x*2)/getWidth(),2-((float)knobs[i].y*2)/getHeight());
 			knobshader->setUniform("knobrot",(knobs[i].value-.5f)*.748f);
@@ -353,7 +346,7 @@ void PFAudioProcessorEditor::renderOpenGL() {
 			basetex.bind();
 			oversamplingshader->setUniform("basetex",0);
 			oversamplingshader->setUniform("alpha",osalpha);
-			oversamplingshader->setUniform("selection",-.3947368421f-1.5263157895f*oversamplinglerped);
+			oversamplingshader->setUniform("selection",-.3947368421f-1.5263157895f*(oversamplinglerped-1));
 			oversamplingshader->setUniform("texscale",242.f/basetex.getWidth(),462.f/basetex.getHeight());
 			openGLContext.extensions.glEnableVertexAttribArray(coord);
 			openGLContext.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
@@ -411,17 +404,20 @@ void PFAudioProcessorEditor::openGLContextClosing() {
 void PFAudioProcessorEditor::calcvis() {
 	float norm = audioProcessor.norm.get();
 	isStereo = knobs[4].value > 0 && knobs[3].value < 1 && knobs[5].value > 0;
+	pluginpreset pp;
+	for(int i = 0; i < knobcount; i++)
+		pp.values[i] = knobs[i].inflate(knobs[i].value);
 	for(int c = 0; c < (isStereo ? 2 : 1); c++) {
 		for(int i = 0; i < 226; i++) {
 			visline[c][i*2] = (i+8)/121.f-1;
-			visline[c][i*2+1] = 1-(48+audioProcessor.plasticfuneral(sin(i/35.8098621957f)*.8f,c,knobs[0].value,knobs[1].value*40-20,knobs[2].value,knobs[3].value,knobs[4].value,knobs[5].value)*norm*38)/231.f;
+			visline[c][i*2+1] = 1-(48+audioProcessor.plasticfuneral(sin(i/35.8098621957f)*.8f,c,2,pp)*norm*38)/231.f;
 		}
 	}
 }
 void PFAudioProcessorEditor::paint (Graphics& g) { }
 
 void PFAudioProcessorEditor::timerCallback() {
-	for(int i = 0; i < 6; i++) {
+	for(int i = 0; i < knobcount; i++) {
 		if(knobs[i].hoverstate < -1) {
 			needtoupdate = 2;
 			knobs[i].hoverstate++;
@@ -468,24 +464,10 @@ void PFAudioProcessorEditor::timerCallback() {
 }
 
 void PFAudioProcessorEditor::parameterChanged(const String& parameterID, float newValue) {
-	if(parameterID == "freq") {
-		knobs[0].value = newValue;
-		calcvis();
-	} else if(parameterID == "fat") {
-		knobs[1].value = newValue*.025f+.5f;
-	} else if(parameterID == "drive") {
-		knobs[2].value = newValue;
-		calcvis();
-	} else if(parameterID == "dry") {
-		knobs[3].value = newValue;
-	} else if(parameterID == "stereo") {
-		knobs[4].value = newValue;
-		calcvis();
-	} else if(parameterID == "gain") {
-		knobs[5].value = newValue;
-		calcvis();
-	} else if(parameterID == "oversampling") {
-		oversampling = newValue-1;
+	if(parameterID == "oversampling") {
+		oversampling = newValue;
+	} else for(int i = 0; i < knobcount; i++) if(knobs[i].id == parameterID) {
+		knobs[i].value = knobs[i].normalize(newValue);
 		calcvis();
 	}
 	needtoupdate = 2;
@@ -513,10 +495,10 @@ void PFAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		dragpos = event.getScreenPosition();
 		event.source.enableUnboundedMouseMovement(true);
 	} else if(hover < -4) {
-		oversampling = hover+8;
-		audioProcessor.apvts.getParameter("oversampling")->setValueNotifyingHost(oversampling/3.f);
+		oversampling = hover+9;
+		audioProcessor.apvts.getParameter("oversampling")->setValueNotifyingHost((oversampling-1)/3.f);
 		audioProcessor.undoManager.setCurrentTransactionName(
-			(String)("Set Over-Sampling to ") += (oversampling+1));
+			(String)("Set Over-Sampling to ") += oversampling);
 		audioProcessor.undoManager.beginNewTransaction();
 	}
 }
@@ -562,7 +544,7 @@ void PFAudioProcessorEditor::mouseDoubleClick(const MouseEvent& event) {
 	if(hover > -1) {
 		audioProcessor.undoManager.setCurrentTransactionName((String)"Reset " += knobs[hover].name);
 		audioProcessor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(
-			audioProcessor.apvts.getParameter(knobs[hover].id)->getDefaultValue());
+			knobs[hover].defaultvalue);
 		audioProcessor.undoManager.beginNewTransaction();
 	}
 }
@@ -584,7 +566,7 @@ int PFAudioProcessorEditor::recalchover(float x, float y) {
 		return -2;
 	}
 	float xx = 0, yy = 0;
-	for(int i = 0; i < 6; i++) {
+	for(int i = 0; i < knobcount; i++) {
 		xx = knobs[i].x-x;
 		yy = knobs[i].y-y;
 		if((xx*xx+yy*yy)<=576) return i;
