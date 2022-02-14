@@ -16,82 +16,31 @@ PFAudioProcessor::PFAudioProcessor() :
 #endif
 	apvts(*this, &undoManager, "Parameters", createParameters())
 {
-	apvts.addParameterListener("freq",this);
-	apvts.addParameterListener("fat",this);
-	apvts.addParameterListener("drive",this);
-	apvts.addParameterListener("dry",this);
-	apvts.addParameterListener("stereo",this);
-	apvts.addParameterListener("gain",this);
-	apvts.addParameterListener("oversampling",this);
 
-	presets[0].name = "Default";
-	presets[0].freq = 0.32f;
-	presets[0].fat = 0.0f;
-	presets[0].drive = 0.0f;
-	presets[0].dry = 0.0f;
-	presets[0].stereo = 0.37f;
+	presets[0] = pluginpreset("Default"				,0.32f	,0.0f	,0.0f	,0.0f	,0.37f	);
+	presets[1] = pluginpreset("Digital Driver"		,0.27f	,-11.36f,0.53f	,0.0f	,0.0f	);
+	presets[2] = pluginpreset("Noisy Bass Pumper"	,0.55f	,20.0f	,0.59f	,0.77f	,0.0f	);
+	presets[3] = pluginpreset("Broken Earphone"		,0.19f	,-1.92f	,1.0f	,0.0f	,0.88f	);
+	presets[4] = pluginpreset("Fatass"				,0.62f	,-5.28f	,1.0f	,0.0f	,0.0f	);
+	presets[5] = pluginpreset("Screaming Alien"		,0.63f	,5.6f	,0.2f	,0.0f	,0.0f	); 
+	presets[6] = pluginpreset("Bad Connection"		,0.25f	,-2.56f	,0.48f	,0.0f	,0.0f	);
+	presets[7] = pluginpreset("Ouch"				,0.9f	,-20.0f	,0.0f	,0.0f	,0.69f	);
 
-	presets[1].name = "Digital Driver";
-	presets[1].freq = 0.27f;
-	presets[1].fat = -11.36f;
-	presets[1].drive = 0.53f;
-	presets[1].dry = 0.0f;
-	presets[1].stereo = 0.0f;
+	pots[0] = potentiometer("Frequency"		,"freq"			,presets[0].values[0]	);
+	pots[1] = potentiometer("Fatness"		,"fat"			,presets[0].values[1]	,-20.f	,20.f	);
+	pots[2] = potentiometer("Drive"			,"drive"		,presets[0].values[2]	);
+	pots[3] = potentiometer("Dry"			,"dry"			,presets[0].values[3]	);
+	pots[4] = potentiometer("Stereo"		,"stereo"		,presets[0].values[4]	);
+	pots[5] = potentiometer("Out Gain"		,"gain"			,.4f					,0.f	,1.f	,false	);
+	pots[6] = potentiometer("Over-Sampling"	,"oversampling"	,2						,1		,4		,false	,potentiometer::ptype::inttype		);
 
-	presets[2].name = "Noisy Bass Pumper";
-	presets[2].freq = 0.55f;
-	presets[2].fat = 20.0f;
-	presets[2].drive = 0.59f;
-	presets[2].dry = 0.77f;
-	presets[2].stereo = 0.0f;
-
-	presets[3].name = "Broken Earphone";
-	presets[3].freq = 0.19f;
-	presets[3].fat = -1.92f;
-	presets[3].drive = 1.0f;
-	presets[3].dry = 0.0f;
-	presets[3].stereo = 0.88f;
-
-	presets[4].name = "Fatass";
-	presets[4].freq = 0.62f;
-	presets[4].fat = -5.28f;
-	presets[4].drive = 1.0f;
-	presets[4].dry = 0.0f;
-	presets[4].stereo = 0.0f;
-
-	presets[5].name = "Screaming Alien";
-	presets[5].freq = 0.63f;
-	presets[5].fat = 5.6f;
-	presets[5].drive = 0.2f;
-	presets[5].dry = 0.0f;
-	presets[5].stereo = 0.0f;
-
-	presets[6].name = "Bad Connection";
-	presets[6].freq = 0.25f;
-	presets[6].fat = -2.56f;
-	presets[6].drive = 0.48f;
-	presets[6].dry = 0.0f;
-	presets[6].stereo = 0.0f;
-
-	presets[7].name = "Ouch";
-	presets[7].freq = 0.9f;
-	presets[7].fat = -20.0f;
-	presets[7].drive = 0.0f;
-	presets[7].dry = 0.0f;
-	presets[7].stereo = 0.69f;
+	for(int i = 0; i < paramcount; i++) apvts.addParameterListener(pots[i].id, this);
 
 	normalizegain();
 }
 
 PFAudioProcessor::~PFAudioProcessor(){
-	apvts.removeParameterListener("freq",this);
-	apvts.removeParameterListener("fat",this);
-	apvts.removeParameterListener("drive",this);
-	apvts.removeParameterListener("dry",this);
-	apvts.removeParameterListener("stereo",this);
-	apvts.removeParameterListener("gain",this);
-	apvts.removeParameterListener("oversampling",this);
-
+	for(int i = 0; i < paramcount; i++) apvts.removeParameterListener(pots[i].id, this);
 }
 
 const String PFAudioProcessor::getName() const { return "Plastic Funeral"; }
@@ -107,11 +56,8 @@ void PFAudioProcessor::setCurrentProgram (int index) {
 
 	undoManager.beginNewTransaction((String)"Changed preset to " += presets[index].name);
 	currentpreset = index;
-	lerptable[0] = freq.get();
-	lerptable[1] = fat.get()*.025f + .5f;
-	lerptable[2] = drive.get();
-	lerptable[3] = dry.get();
-	lerptable[4] = stereo.get();
+	for(int i = 0; i < paramcount; i++) if(pots[i].savedinpreset)
+		lerptable[i] = pots[i].normalize(state.values[i]);
 
 	if(lerpstage <= 0) {
 		lerpstage = 1;
@@ -121,21 +67,15 @@ void PFAudioProcessor::setCurrentProgram (int index) {
 void PFAudioProcessor::timerCallback() {
 	lerpstage *= .64f;
 	if(lerpstage < .001) {
-		apvts.getParameter("freq")->setValueNotifyingHost(presets[currentpreset].freq);
-		apvts.getParameter("fat")->setValueNotifyingHost(presets[currentpreset].fat*.025f + .5f);
-		apvts.getParameter("drive")->setValueNotifyingHost(presets[currentpreset].drive);
-		apvts.getParameter("dry")->setValueNotifyingHost(presets[currentpreset].dry);
-		apvts.getParameter("stereo")->setValueNotifyingHost(presets[currentpreset].stereo);
+		for(int i = 0; i < paramcount; i++) if(pots[i].savedinpreset)
+			apvts.getParameter(pots[i].id)->setValueNotifyingHost(pots[i].normalize(presets[currentpreset].values[i]));
 		lerpstage = 0;
 		undoManager.beginNewTransaction();
 		stopTimer();
 		return;
 	}
-	lerpValue("freq", lerptable[0], presets[currentpreset].freq);
-	lerpValue("fat", lerptable[1], presets[currentpreset].fat*.025f + .5f);
-	lerpValue("drive", lerptable[2], presets[currentpreset].drive);
-	lerpValue("dry", lerptable[3], presets[currentpreset].dry);
-	lerpValue("stereo", lerptable[4], presets[currentpreset].stereo);
+	for(int i = 0; i < paramcount; i++) if(pots[i].savedinpreset)
+		lerpValue(pots[i].id, lerptable[0], pots[i].normalize(presets[currentpreset].values[i]));
 }
 void PFAudioProcessor::lerpValue(StringRef slider, float& oldval, float newval) {
 	oldval = (newval-oldval)*.36f+oldval;
@@ -146,11 +86,9 @@ const String PFAudioProcessor::getProgramName (int index) {
 }
 void PFAudioProcessor::changeProgramName (int index, const String& newName) {
 	presets[index].name = newName;
-	presets[index].freq = freq.get();
-	presets[index].fat = fat.get();
-	presets[index].drive = drive.get();
-	presets[index].dry = dry.get();
-	presets[index].stereo = stereo.get();
+	
+	for(int i = 0; i < paramcount; i++) if(pots[i].savedinpreset)
+		presets[index].values[i] = state.values[i];
 }
 
 void PFAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {
@@ -160,7 +98,7 @@ void PFAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {
 void PFAudioProcessor::changechannelnum(int newchannelnum) {
 	channelnum = newchannelnum;
 	ospointerarray.resize(channelnum);
-	setoversampling(oversampling.get());
+	setoversampling(state.values[6]);
 }
 void PFAudioProcessor::releaseResources() { }
 
@@ -183,11 +121,11 @@ void PFAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mid
 	for (auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
 		buffer.clear (i, 0, buffer.getNumSamples());
 
-	float newfreq = freq.get(), newfat = fat.get(), newdrive = drive.get(), newdry = dry.get(), newstereo = stereo.get(), newgain = gain.get(), prmsadd = rmsadd.get();
+	pluginpreset newstate = state;
+	pluginpreset curstate;
+	float prmsadd = rmsadd.get(), newnorm = norm.get();
 	int prmscount = rmscount.get();
-	float newnorm = norm.get();
-	bool isoversampling = (!changingoversampling) && (oversampling.get() > 0);
-	int samplecount = fmin(samplesperblock,buffer.getNumSamples());
+	bool isoversampling = (!changingoversampling) && (newstate.values[6] > 1);
 
 	dsp::AudioBlock<float> block(buffer);
 	dsp::AudioBlock<float> osblock(buffer);
@@ -205,17 +143,12 @@ void PFAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mid
 		if(isoversampling) channelData = osbuffer.getWritePointer(channel);
 		else channelData = buffer.getWritePointer (channel);
 
-		unit = 1.f/samplesperblock;
-		for (int sample = 0; sample < samplesperblock; ++sample) {
+		unit = 1.f/osblock.getNumSamples();
+		for (int sample = 0; sample < osblock.getNumSamples(); ++sample) {
 			mult = unit * sample;
-			channelData[sample] = plasticfuneral(channelData[sample], channel,
-				oldfreq  *(1-mult)+newfreq  *mult,
-				oldfat   *(1-mult)+newfat   *mult,
-				olddrive *(1-mult)+newdrive *mult,
-				olddry   *(1-mult)+newdry   *mult,
-				oldstereo*(1-mult)+newstereo*mult,
-				oldgain  *(1-mult)+newgain  *mult)*(
-				oldnorm  *(1-mult)+newnorm  *mult);
+			for(int i = 0; i < paramcount; i++)
+				curstate.values[i] = oldstate.values[i]*(1-mult)+newstate.values[i]*mult;
+			channelData[sample] = plasticfuneral(channelData[sample],channel,channelnum,curstate)*(oldnorm*(1-mult)+newnorm*mult);
 			prmsadd += channelData[sample]*channelData[sample];
 			prmscount++;
 		}
@@ -223,12 +156,7 @@ void PFAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mid
 
 	if(isoversampling) os->processSamplesDown(block);
 
-	oldfreq = newfreq;
-	oldfat = newfat;
-	olddrive = newdrive;
-	olddry = newdry;
-	oldstereo = newstereo;
-	oldgain = newgain;
+	oldstate = newstate;
 	oldnorm = newnorm;
 	rmsadd = prmsadd;
 	rmscount = prmscount;
@@ -236,18 +164,18 @@ void PFAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mid
 	boot = true;
 }
 
-float PFAudioProcessor::plasticfuneral(float source, int channel, float freq, float fat, float drive, float dry, float stereo, float gain) {
-	freq = fmax(fmin(freq + stereo * .2f * ((float)channel * 2 - 1), 1), 0);
+float PFAudioProcessor::plasticfuneral(float source, int channel, int channelcount, pluginpreset stt) {
+	float freq = fmax(fmin(stt.values[0] + stt.values[4] * .2f * (((float)channel / (channelcount - 1)) * 2 - 1), 1), 0);
 	float smpl = source * (100 - cos(freq * 1.5708f) * 99);
 	float pfreq = fmod(fabs(smpl), 4);
 	pfreq = (pfreq > 3 ? (pfreq - 4) : (pfreq > 1 ? (2 - pfreq) : pfreq)) * (smpl > 0 ? 1 : -1);
 	float pdrive = fmax(fmin(smpl, 1), -1);
-	smpl = pdrive * drive + pfreq * (1 - drive);
-	return ((smpl + (sin(smpl * 1.5708f) - smpl) * fat) * (1 - dry) + source * dry) * gain;
+	smpl = pdrive * stt.values[2] + pfreq * (1 - stt.values[2]);
+	return ((smpl + (sin(smpl * 1.5708f) - smpl) * stt.values[1]) * (1 - stt.values[3]) + source * stt.values[3]) * stt.values[5];
 }
 
 void PFAudioProcessor::normalizegain() {
-	float newnorm = 0.25f, newfat = fat.get(), newdry = dry.get();
+	float newnorm = 0.25f, newfat = state.values[1], newdry = state.values[3];
 	for (float i = 0; i <= 1; i += .005f)
 		newnorm = fmax(newnorm,fabs(i+(sin(i*1.5708f)-i)*newfat)*(1-newdry)+i*newdry);
 	norm = 1.f/newnorm;
@@ -256,13 +184,13 @@ void PFAudioProcessor::normalizegain() {
 
 void PFAudioProcessor::setoversampling(int factor) {
 	changingoversampling = true;
-	oversampling = factor;
+	state.values[6] = factor;//aaaaaaaaaaaaaaaaaa
 
 	if(preparedtoplay) {
-		if(factor == 0) {
+		if(factor == 1) {
 			setLatencySamples(0);
 		} else {
-			os.reset(new dsp::Oversampling<float>(channelnum,oversampling.get(), dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR));
+			os.reset(new dsp::Oversampling<float>(channelnum,factor-1, dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR));
 			os->initProcessing(samplesperblock);
 			os->setUsingIntegerLatency(true);
 			setLatencySamples(os->getLatencyInSamples());
@@ -272,28 +200,24 @@ void PFAudioProcessor::setoversampling(int factor) {
 }
 
 bool PFAudioProcessor::hasEditor() const { return true; }
-AudioProcessorEditor* PFAudioProcessor::createEditor() { return new PFAudioProcessorEditor (*this); }
+AudioProcessorEditor* PFAudioProcessor::createEditor() { return new PFAudioProcessorEditor(*this,paramcount,state,pots); }
 
 void PFAudioProcessor::getStateInformation (MemoryBlock& destData) {
 	const char linebreak = '\n';
 	std::ostringstream data;
+
 	data << version
-		<< linebreak << currentpreset
-		<< linebreak << freq.get()
-		<< linebreak << fat.get()
-		<< linebreak << drive.get()
-		<< linebreak << dry.get()
-		<< linebreak << stereo.get()
-		<< linebreak << gain.get()
-		<< linebreak << (oversampling.get()+1) << linebreak;
-	for (int i = 0; i < getNumPrograms(); i++) {
-		data << presets[i].name
-			<< linebreak << presets[i].freq
-			<< linebreak << presets[i].fat
-			<< linebreak << presets[i].drive
-			<< linebreak << presets[i].dry
-			<< linebreak << presets[i].stereo << linebreak;
+		<< linebreak << currentpreset << linebreak;
+
+	for(int i = 0; i < paramcount; i++)
+		data << state.values[i] << linebreak;
+
+	for(int i = 0; i < getNumPrograms(); i++) {
+		data << presets[i].name << linebreak;
+		for(int v = 0; v < paramcount; v++) if(pots[v].savedinpreset)
+			data << presets[i].values[v] << linebreak;
 	}
+
 	MemoryOutputStream stream(destData, false);
 	stream.writeString(data.str());
 }
@@ -307,65 +231,30 @@ void PFAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
 	std::getline(ss, token, '\n');
 	currentpreset = std::stoi(token);
 
-	std::getline(ss, token, '\n');
-	freq = std::stof(token);
-	apvts.getParameter("freq")->setValueNotifyingHost(std::stof(token));
-
-	std::getline(ss, token, '\n');
-	fat = std::stof(token);
-	apvts.getParameter("fat")->setValueNotifyingHost(std::stof(token)*.025 + .5);
-
-	std::getline(ss, token, '\n');
-	drive = std::stof(token);
-	apvts.getParameter("drive")->setValueNotifyingHost(std::stof(token));
-
-	std::getline(ss, token, '\n');
-	dry = std::stof(token);
-	apvts.getParameter("dry")->setValueNotifyingHost(std::stof(token));
-
-	std::getline(ss, token, '\n');
-	stereo = std::stof(token);
-	apvts.getParameter("stereo")->setValueNotifyingHost(std::stof(token));
-
-	std::getline(ss, token, '\n');
-	gain = std::stof(token);
-	apvts.getParameter("gain")->setValueNotifyingHost(std::stof(token));
-
-	if (saveversion > 1) {
-		std::getline(ss, token, '\n');
-		setoversampling(std::stoi(token)-1);
-		apvts.getParameter("oversampling")->setValueNotifyingHost((std::stoi(token)-1)/3.f);
+	for(int i = 0; i < paramcount; i++) {
+		if(saveversion > 1 || pots[i].id != "oversampling") {
+			std::getline(ss, token, '\n');
+			state.values[i] = std::stof(token);
+			apvts.getParameter(pots[i].id)->setValueNotifyingHost(pots[i].normalize(std::stof(token)));
+		}
 	}
 
 	normalizegain();
 
 	for(int i = 0; i < getNumPrograms(); i++) {
 		std::getline(ss, token, '\n'); presets[i].name = token;
-		std::getline(ss, token, '\n'); presets[i].freq = std::stof(token);
-		std::getline(ss, token, '\n'); presets[i].fat = std::stof(token);
-		std::getline(ss, token, '\n'); presets[i].drive = std::stof(token);
-		std::getline(ss, token, '\n'); presets[i].dry = std::stof(token);
-		std::getline(ss, token, '\n'); presets[i].stereo = std::stof(token);
+		for(int v = 0; v < paramcount; v++) if(pots[v].savedinpreset)
+			std::getline(ss, token, '\n'); presets[i].values[0] = std::stof(token);
 	}
 }
 void PFAudioProcessor::parameterChanged(const String& parameterID, float newValue) {
-	if(parameterID == "freq") {
-		freq = newValue;
-	} else if(parameterID == "fat") {
-		fat = newValue;
-		normalizegain();
-	} else if(parameterID == "drive") {
-		drive = newValue;
-	} else if(parameterID == "dry") {
-		dry = newValue;
-		normalizegain();
-	} else if(parameterID == "stereo") {
-		stereo = newValue;
-	} else if(parameterID == "gain") {
-		gain = newValue;
-	} else if(parameterID == "oversampling") {
-		setoversampling(newValue-1);
-		oversampling = newValue-1;
+	for(int i = 0; i < paramcount; i++) {
+		if(parameterID == "oversampling")
+			setoversampling(newValue-1);
+		else if(parameterID == pots[i].id)
+			state.values[i] = newValue;//aaaaaaaaaaaaaaaaaa
+		if(parameterID == "fat" || parameterID == "dry")
+			normalizegain();
 	}
 }
 
@@ -375,12 +264,12 @@ AudioProcessorValueTreeState::ParameterLayout
 	PFAudioProcessor::createParameters()
 {
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
-	parameters.push_back(std::make_unique<AudioParameterFloat>("freq","Frequency",0.0f,1.0f,0.32f));
-	parameters.push_back(std::make_unique<AudioParameterFloat>("fat","Fatness",-20.0f,20.0f,0.0f));
-	parameters.push_back(std::make_unique<AudioParameterFloat>("drive","Drive",0.0f,1.0f,0.0f));
-	parameters.push_back(std::make_unique<AudioParameterFloat>("dry","Dry",0.0f,1.0f,0.0f));
-	parameters.push_back(std::make_unique<AudioParameterFloat>("stereo","Stereo",0.0f,1.0f,0.37f));
-	parameters.push_back(std::make_unique<AudioParameterFloat>("gain","Out Gain",0.0f,1.0f,0.4f));
-	parameters.push_back(std::make_unique<AudioParameterInt>("oversampling","Over-Sampling",1,4,2));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>("freq"		,"Frequency"	,0.0f	,1.0f	,0.32f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>("fat"			,"Fatness"		,-20.0f	,20.0f	,0.0f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>("drive"		,"Drive"		,0.0f	,1.0f	,0.0f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>("dry"			,"Dry"			,0.0f	,1.0f	,0.0f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>("stereo"		,"Stereo"		,0.0f	,1.0f	,0.37f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>("gain"		,"Out Gain"		,0.0f	,1.0f	,0.4f	));
+	parameters.push_back(std::make_unique<AudioParameterInt		>("oversampling","Over-Sampling",1		,4		,2		));
 	return { parameters.begin(), parameters.end() };
 }
