@@ -44,7 +44,7 @@ public:
 struct pluginpreset {
 	String name = "";
 	float values[7];
-	pluginpreset(String pname = "", float val1 = 0.f, float val2 = 0.f, float val3 = 0.f, float val4 = 0.f, float val5 = 0.f, float val6 = 0.f, float val7 = 0.f) {
+	pluginpreset(String pname = "", float val1 = 0.f, float val2 = 0.f, float val3 = 0.f, float val4 = 0.f, float val5 = 0.f, float val6 = 0.f, float val7 = 1.f) {
 		name = pname;
 		values[0] = val1;
 		values[1] = val2;
@@ -94,6 +94,12 @@ public:
 	void setStateInformation (const void* data, int sizeInBytes) override;
 	virtual void parameterChanged(const String& parameterID, float newValue);
  
+	void debug(String str, bool timestamp = true);
+	String debuglist[16];
+	int debugreadpos = 0;
+	std::atomic<bool> debugupdated = false;
+	std::mutex debugmutex;
+
 	AudioProcessorValueTreeState apvts;
 	UndoManager undoManager;
 

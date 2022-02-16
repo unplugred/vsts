@@ -184,7 +184,7 @@ void PFAudioProcessor::normalizegain() {
 
 void PFAudioProcessor::setoversampling(int factor) {
 	changingoversampling = true;
-	state.values[6] = factor;//aaaaaaaaaaaaaaaaaa
+	state.values[6] = factor;
 
 	if(preparedtoplay) {
 		if(factor == 1) {
@@ -214,7 +214,7 @@ void PFAudioProcessor::getStateInformation (MemoryBlock& destData) {
 
 	for(int i = 0; i < getNumPrograms(); i++) {
 		data << presets[i].name << linebreak;
-		for(int v = 0; v < paramcount; v++) if(pots[v].savedinpreset)
+		for(int v = 0; v < paramcount; v++)
 			data << presets[i].values[v] << linebreak;
 	}
 
@@ -222,6 +222,7 @@ void PFAudioProcessor::getStateInformation (MemoryBlock& destData) {
 	stream.writeString(data.str());
 }
 void PFAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
+/*/
 	std::stringstream ss(String::createStringFromData(data, sizeInBytes).toRawUTF8());
 	std::string token;
 
@@ -246,13 +247,14 @@ void PFAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
 		for(int v = 0; v < paramcount; v++) if(pots[v].savedinpreset)
 			std::getline(ss, token, '\n'); presets[i].values[0] = std::stof(token);
 	}
+//*/
 }
 void PFAudioProcessor::parameterChanged(const String& parameterID, float newValue) {
 	for(int i = 0; i < paramcount; i++) {
 		if(parameterID == "oversampling")
 			setoversampling(newValue-1);
 		else if(parameterID == pots[i].id)
-			state.values[i] = newValue;//aaaaaaaaaaaaaaaaaa
+			state.values[i] = newValue;
 		if(parameterID == "fat" || parameterID == "dry")
 			normalizegain();
 	}
@@ -272,4 +274,14 @@ AudioProcessorValueTreeState::ParameterLayout
 	parameters.push_back(std::make_unique<AudioParameterFloat	>("gain"		,"Out Gain"		,0.0f	,1.0f	,0.4f	));
 	parameters.push_back(std::make_unique<AudioParameterInt		>("oversampling","Over-Sampling",1		,4		,2		));
 	return { parameters.begin(), parameters.end() };
+}
+
+void PFAudioProcessor::debug(String str, bool timestamp) {
+	std::lock_guard<std::mutex> guard(debugmutex);
+	if(timestamp)
+		debuglist[debugreadpos] = Time::getCurrentTime().toString(false,true,true,true) + " " + str;
+	else
+		debuglist[debugreadpos] = str;
+	debugreadpos = fmod(debugreadpos+1,16);
+	debugupdated = true;
 }

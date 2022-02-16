@@ -8,6 +8,8 @@
 
 #pragma once
 
+#define ENABLE_CONSOLE
+
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
 using namespace juce;
@@ -61,7 +63,7 @@ public:
 private:
 	PFAudioProcessor& audioProcessor;
 
-	OpenGLContext openGLContext;
+	OpenGLContext context;
 	unsigned int arraybuffer;
 	float square[8]{
 		0.f,0.f,
@@ -110,6 +112,15 @@ private:
 	std::unique_ptr<OpenGLShaderProgram> ppshader;
 	String ppvert;
 	String ppfrag;
+
+#ifdef ENABLE_CONSOLE
+	String debugtxt = "";
+	void drawstring(String txty, float x = .5, float y = .5, float xa = .5f, float ya = .5f);
+	OpenGLTexture texttex;
+	std::unique_ptr<OpenGLShaderProgram> textshader;
+	String textvert;
+	String textfrag;
+#endif
 
 	Random random;
 
