@@ -19,6 +19,7 @@
       <FILE id="aso9TN" name="base.png" compile="0" resource="1" file="Resources/base.png"/>
       <FILE id="DnIDOV" name="credits.png" compile="0" resource="1" file="Resources/credits.png"/>
       <FILE id="Efvgyp" name="knob.png" compile="0" resource="1" file="Resources/knob.png"/>
+      <FILE id="KYWinJ" name="txt.png" compile="0" resource="1" file="Resources/txt.png"/>
     </GROUP>
   </MAINGROUP>
   <JUCEOPTIONS JUCE_STRICT_REFCOUNTEDPOINTER="1" JUCE_VST3_CAN_REPLACE_VST2="0"
