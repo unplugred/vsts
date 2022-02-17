@@ -8,7 +8,7 @@
 
 #pragma once
 #include <JuceHeader.h>
-using namespace juce;
+#include "CoolLogger.h"
 
 struct potentiometer {
 public:
@@ -33,11 +33,11 @@ public:
 		savedinpreset = potsaved;
 		ttype = pottype;
 	}
-	float normalize(float value) {
-		return (value-minimumvalue)/(maximumvalue-minimumvalue);
+	float normalize(float val) {
+		return (val-minimumvalue)/(maximumvalue-minimumvalue);
 	}
-	float inflate(float value) {
-		return value*(maximumvalue-minimumvalue)+minimumvalue;
+	float inflate(float val) {
+		return val*(maximumvalue-minimumvalue)+minimumvalue;
 	}
 };
 
@@ -94,12 +94,6 @@ public:
 	void setStateInformation (const void* data, int sizeInBytes) override;
 	virtual void parameterChanged(const String& parameterID, float newValue);
  
-	void debug(String str, bool timestamp = true);
-	String debuglist[16];
-	int debugreadpos = 0;
-	std::atomic<bool> debugupdated = false;
-	std::mutex debugmutex;
-
 	AudioProcessorValueTreeState apvts;
 	UndoManager undoManager;
 
@@ -114,6 +108,7 @@ public:
 	pluginpreset state;
 	potentiometer pots[7];
 
+	CoolLogger logger;
 private:
 	float oldnorm = 1;
 
@@ -131,6 +126,7 @@ private:
 	std::unique_ptr<dsp::Oversampling<float>> os;
 	AudioBuffer<float> osbuffer;
 	int channelnum = 0;
+	int oschannelnum = 0;
 	int samplesperblock = 512;
 	bool changingoversampling = false;
 	std::vector<float*> ospointerarray;
