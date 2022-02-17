@@ -8,7 +8,6 @@
 
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-using namespace juce;
 
 PFAudioProcessor::PFAudioProcessor() :
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -16,6 +15,7 @@ PFAudioProcessor::PFAudioProcessor() :
 #endif
 	apvts(*this, &undoManager, "Parameters", createParameters())
 {
+	logger.debug("init");
 
 	presets[0] = pluginpreset("Default"				,0.32f	,0.0f	,0.0f	,0.0f	,0.37f	);
 	presets[1] = pluginpreset("Digital Driver"		,0.27f	,-11.36f,0.53f	,0.0f	,0.0f	);
@@ -34,7 +34,10 @@ PFAudioProcessor::PFAudioProcessor() :
 	pots[5] = potentiometer("Out Gain"		,"gain"			,.4f					,0.f	,1.f	,false	);
 	pots[6] = potentiometer("Over-Sampling"	,"oversampling"	,2						,1		,4		,false	,potentiometer::ptype::inttype		);
 
-	for(int i = 0; i < paramcount; i++) apvts.addParameterListener(pots[i].id, this);
+	for(int i = 0; i < paramcount; i++) {
+		state.values[i] = pots[i].inflate(apvts.getParameter(pots[i].id)->getValue());
+		apvts.addParameterListener(pots[i].id, this);
+	}
 
 	normalizegain();
 }
@@ -96,7 +99,9 @@ void PFAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {
 	preparedtoplay = true;
 }
 void PFAudioProcessor::changechannelnum(int newchannelnum) {
+	logger.debug("channelnum"+(String)newchannelnum);
 	channelnum = newchannelnum;
+	oschannelnum = channelnum;
 	ospointerarray.resize(channelnum);
 	setoversampling(state.values[6]);
 }
@@ -183,6 +188,7 @@ void PFAudioProcessor::normalizegain() {
 }
 
 void PFAudioProcessor::setoversampling(int factor) {
+	logger.debug("oversampling"+(String)factor);
 	changingoversampling = true;
 	state.values[6] = factor;
 
@@ -190,7 +196,9 @@ void PFAudioProcessor::setoversampling(int factor) {
 		if(factor == 1) {
 			setLatencySamples(0);
 		} else {
-			os.reset(new dsp::Oversampling<float>(channelnum,factor-1, dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR));
+			DBG(channelnum);
+			DBG(factor-1);
+			os.reset(new dsp::Oversampling<float>(oschannelnum,factor-1, dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR));
 			os->initProcessing(samplesperblock);
 			os->setUsingIntegerLatency(true);
 			setLatencySamples(os->getLatencyInSamples());
@@ -203,6 +211,8 @@ bool PFAudioProcessor::hasEditor() const { return true; }
 AudioProcessorEditor* PFAudioProcessor::createEditor() { return new PFAudioProcessorEditor(*this,paramcount,state,pots); }
 
 void PFAudioProcessor::getStateInformation (MemoryBlock& destData) {
+	logger.debug("savefile");
+
 	const char linebreak = '\n';
 	std::ostringstream data;
 
@@ -222,7 +232,8 @@ void PFAudioProcessor::getStateInformation (MemoryBlock& destData) {
 	stream.writeString(data.str());
 }
 void PFAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
-/*/
+	logger.debug("loadfile");
+
 	std::stringstream ss(String::createStringFromData(data, sizeInBytes).toRawUTF8());
 	std::string token;
 
@@ -247,13 +258,14 @@ void PFAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
 		for(int v = 0; v < paramcount; v++) if(pots[v].savedinpreset)
 			std::getline(ss, token, '\n'); presets[i].values[0] = std::stof(token);
 	}
-//*/
 }
 void PFAudioProcessor::parameterChanged(const String& parameterID, float newValue) {
-	for(int i = 0; i < paramcount; i++) {
-		if(parameterID == "oversampling")
-			setoversampling(newValue-1);
-		else if(parameterID == pots[i].id)
+	logger.debug("paramchanged"+(String)newValue);
+
+	if(parameterID == "oversampling")
+		setoversampling(newValue);
+	else for(int i = 0; i < paramcount; i++) {
+		if(parameterID == pots[i].id)
 			state.values[i] = newValue;
 		if(parameterID == "fat" || parameterID == "dry")
 			normalizegain();
@@ -274,14 +286,4 @@ AudioProcessorValueTreeState::ParameterLayout
 	parameters.push_back(std::make_unique<AudioParameterFloat	>("gain"		,"Out Gain"		,0.0f	,1.0f	,0.4f	));
 	parameters.push_back(std::make_unique<AudioParameterInt		>("oversampling","Over-Sampling",1		,4		,2		));
 	return { parameters.begin(), parameters.end() };
-}
-
-void PFAudioProcessor::debug(String str, bool timestamp) {
-	std::lock_guard<std::mutex> guard(debugmutex);
-	if(timestamp)
-		debuglist[debugreadpos] = Time::getCurrentTime().toString(false,true,true,true) + " " + str;
-	else
-		debuglist[debugreadpos] = str;
-	debugreadpos = fmod(debugreadpos+1,16);
-	debugupdated = true;
 }

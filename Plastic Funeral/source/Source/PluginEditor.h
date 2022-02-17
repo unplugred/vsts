@@ -8,12 +8,8 @@
 
 #pragma once
 
-#define ENABLE_CONSOLE
-
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
-using namespace juce;
-
 
 struct knob {
 	int x = 0;
@@ -26,10 +22,10 @@ struct knob {
 	float maximumvalue = 1.f;
 	float defaultvalue = 0.f;
 	float normalize(float val) {
-		return (value-minimumvalue)/(maximumvalue-minimumvalue);
+		return (val-minimumvalue)/(maximumvalue-minimumvalue);
 	}
 	float inflate(float val) {
-		return value*(maximumvalue-minimumvalue)+minimumvalue;
+		return val*(maximumvalue-minimumvalue)+minimumvalue;
 	}
 };
 class PFAudioProcessorEditor : public AudioProcessorEditor, public OpenGLRenderer, public AudioProcessorValueTreeState::Listener, private Timer
@@ -112,15 +108,6 @@ private:
 	std::unique_ptr<OpenGLShaderProgram> ppshader;
 	String ppvert;
 	String ppfrag;
-
-#ifdef ENABLE_CONSOLE
-	String debugtxt = "";
-	void drawstring(String txty, float x = .5, float y = .5, float xa = .5f, float ya = .5f);
-	OpenGLTexture texttex;
-	std::unique_ptr<OpenGLShaderProgram> textshader;
-	String textvert;
-	String textfrag;
-#endif
 
 	Random random;
 
