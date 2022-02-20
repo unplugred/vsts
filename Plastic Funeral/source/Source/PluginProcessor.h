@@ -70,9 +70,9 @@ public:
 #endif
 
 	void processBlock (AudioBuffer<float>&, MidiBuffer&) override;
-	float plasticfuneral(float source, int channel, int channelcount, pluginpreset stt);
+	float plasticfuneral(float source, int channel, int channelcount, pluginpreset stt, float nrm);
 	void normalizegain();
-	void setoversampling(int factor);
+	void setoversampling(bool toggle);
 
 	AudioProcessorEditor* createEditor() override;
 	bool hasEditor() const override;
@@ -110,11 +110,8 @@ public:
 
 	CoolLogger logger;
 private:
-	float oldnorm = 1;
-
 	AudioProcessorValueTreeState::ParameterLayout createParameters();
 	pluginpreset presets[8];
-	pluginpreset oldstate;
 	int currentpreset = 0;
 	void timerCallback() override;
 	void lerpValue(StringRef, float&, float);
@@ -128,7 +125,6 @@ private:
 	int channelnum = 0;
 	int oschannelnum = 0;
 	int samplesperblock = 512;
-	bool changingoversampling = false;
 	std::vector<float*> ospointerarray;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PFAudioProcessor)

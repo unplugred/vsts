@@ -91,7 +91,7 @@ private:
 
 	float oversamplingalpha = 0;
 	float oversamplinglerped = 1;
-	int oversampling = 1;
+	bool oversampling = true;
 	std::unique_ptr<OpenGLShaderProgram> oversamplingshader;
 	String oversamplingvert;
 	String oversamplingfrag;

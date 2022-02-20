@@ -21,6 +21,7 @@ public:
 	void debug(int str, bool timestamp = true);
 	void debug(float str, bool timestamp = true);
 	void debug(double str, bool timestamp = true);
+	void debug(bool str, bool timestamp = true);
 	void drawstring(String txty, float x = .5, float y = .5, float xa = .5f, float ya = .5f);
 	void drawlog();
 	void release();
