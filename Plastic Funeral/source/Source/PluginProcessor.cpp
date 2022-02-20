@@ -77,7 +77,7 @@ void PFAudioProcessor::timerCallback() {
 		return;
 	}
 	for(int i = 0; i < paramcount; i++) if(pots[i].savedinpreset)
-		lerpValue(pots[i].id, lerptable[0], pots[i].normalize(presets[currentpreset].values[i]));
+		lerpValue(pots[i].id, lerptable[i], pots[i].normalize(presets[currentpreset].values[i]));
 }
 void PFAudioProcessor::lerpValue(StringRef slider, float& oldval, float newval) {
 	oldval = (newval-oldval)*.36f+oldval;
@@ -208,7 +208,7 @@ void PFAudioProcessor::getStateInformation (MemoryBlock& destData) {
 
 	for(int i = 0; i < getNumPrograms(); i++) {
 		data << presets[i].name << linebreak;
-		for(int v = 0; v < paramcount; v++)
+		for(int v = 0; v < paramcount; v++) if(pots[v].savedinpreset)
 			data << presets[i].values[v] << linebreak;
 	}
 
@@ -237,8 +237,10 @@ void PFAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
 
 	for(int i = 0; i < getNumPrograms(); i++) {
 		std::getline(ss, token, '\n'); presets[i].name = token;
-		for(int v = 0; v < paramcount; v++) if(pots[v].savedinpreset)
-			std::getline(ss, token, '\n'); presets[i].values[0] = std::stof(token);
+		for(int v = 0; v < paramcount; v++) if(pots[v].savedinpreset) {
+			std::getline(ss, token, '\n');
+			presets[i].values[v] = std::stof(token);
+		}
 	}
 }
 void PFAudioProcessor::parameterChanged(const String& parameterID, float newValue) {
