@@ -15,8 +15,6 @@ PFAudioProcessor::PFAudioProcessor() :
 #endif
 	apvts(*this, &undoManager, "Parameters", createParameters())
 {
-	logger.debug("init");
-
 	presets[0] = pluginpreset("Default"				,0.32f	,0.0f	,0.0f	,0.0f	,0.37f	);
 	presets[1] = pluginpreset("Digital Driver"		,0.27f	,-11.36f,0.53f	,0.0f	,0.0f	);
 	presets[2] = pluginpreset("Noisy Bass Pumper"	,0.55f	,20.0f	,0.59f	,0.77f	,0.0f	);
@@ -32,12 +30,13 @@ PFAudioProcessor::PFAudioProcessor() :
 	pots[3] = potentiometer("Dry"			,"dry"			,presets[0].values[3]	);
 	pots[4] = potentiometer("Stereo"		,"stereo"		,presets[0].values[4]	);
 	pots[5] = potentiometer("Out Gain"		,"gain"			,.4f					,0.f	,1.f	,false	);
-	pots[6] = potentiometer("Over-Sampling"	,"oversampling"	,2						,1		,4		,false	,potentiometer::ptype::inttype		);
+	pots[6] = potentiometer("Over-Sampling"	,"oversampling"	,1						,0		,1		,false	,potentiometer::ptype::booltype);
 
 	for(int i = 0; i < paramcount; i++) {
 		state.values[i] = pots[i].inflate(apvts.getParameter(pots[i].id)->getValue());
 		apvts.addParameterListener(pots[i].id, this);
 	}
+		apvts.addParameterListener("oversampling", this);
 
 	normalizegain();
 }
@@ -99,11 +98,14 @@ void PFAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {
 	preparedtoplay = true;
 }
 void PFAudioProcessor::changechannelnum(int newchannelnum) {
-	logger.debug("channelnum"+(String)newchannelnum);
 	channelnum = newchannelnum;
 	oschannelnum = channelnum;
+
 	ospointerarray.resize(channelnum);
-	setoversampling(state.values[6]);
+	os.reset(new dsp::Oversampling<float>(oschannelnum,1,dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR));
+	os->initProcessing(samplesperblock);
+	os->setUsingIntegerLatency(true);
+	setoversampling(state.values[6] > .5);
 }
 void PFAudioProcessor::releaseResources() { }
 
@@ -126,11 +128,10 @@ void PFAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mid
 	for (auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
 		buffer.clear (i, 0, buffer.getNumSamples());
 
-	pluginpreset newstate = state;
-	pluginpreset curstate;
 	float prmsadd = rmsadd.get(), newnorm = norm.get();
 	int prmscount = rmscount.get();
-	bool isoversampling = (!changingoversampling) && (newstate.values[6] > 1);
+	bool isoversampling = (state.values[6] >= .5);
+	float curnorm = norm.get();
 
 	dsp::AudioBlock<float> block(buffer);
 	dsp::AudioBlock<float> osblock(buffer);
@@ -141,19 +142,14 @@ void PFAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mid
 		osbuffer = AudioBuffer<float>(ospointerarray.data(), channelnum, static_cast<int>(osblock.getNumSamples()));
 	}
 
-	float unit = 0, mult = 0;
 	for (int channel = 0; channel < channelnum; ++channel)
 	{
 		float* channelData;
 		if(isoversampling) channelData = osbuffer.getWritePointer(channel);
 		else channelData = buffer.getWritePointer (channel);
 
-		unit = 1.f/osblock.getNumSamples();
 		for (int sample = 0; sample < osblock.getNumSamples(); ++sample) {
-			mult = unit * sample;
-			for(int i = 0; i < paramcount; i++)
-				curstate.values[i] = oldstate.values[i]*(1-mult)+newstate.values[i]*mult;
-			channelData[sample] = plasticfuneral(channelData[sample],channel,channelnum,curstate)*(oldnorm*(1-mult)+newnorm*mult);
+			channelData[sample] = plasticfuneral(channelData[sample],channel,channelnum,state,curnorm);
 			prmsadd += channelData[sample]*channelData[sample];
 			prmscount++;
 		}
@@ -161,22 +157,20 @@ void PFAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mid
 
 	if(isoversampling) os->processSamplesDown(block);
 
-	oldstate = newstate;
-	oldnorm = newnorm;
 	rmsadd = prmsadd;
 	rmscount = prmscount;
 
 	boot = true;
 }
 
-float PFAudioProcessor::plasticfuneral(float source, int channel, int channelcount, pluginpreset stt) {
-	float freq = fmax(fmin(stt.values[0] + stt.values[4] * .2f * (((float)channel / (channelcount - 1)) * 2 - 1), 1), 0);
-	float smpl = source * (100 - cos(freq * 1.5708f) * 99);
-	float pfreq = fmod(fabs(smpl), 4);
+float PFAudioProcessor::plasticfuneral(float source, int channel, int channelcount, pluginpreset stt, float nrm) {
+	double freq = fmax(fmin(stt.values[0] + stt.values[4] * .2 * (((double)channel / (channelcount - 1)) * 2 - 1), 1), 0);
+	double smpl = source * (100 - cos(freq * 1.5708) * 99);
+	double pfreq = fmod(fabs(smpl), 4);
 	pfreq = (pfreq > 3 ? (pfreq - 4) : (pfreq > 1 ? (2 - pfreq) : pfreq)) * (smpl > 0 ? 1 : -1);
-	float pdrive = fmax(fmin(smpl, 1), -1);
+	double pdrive = fmax(fmin(smpl, 1), -1);
 	smpl = pdrive * stt.values[2] + pfreq * (1 - stt.values[2]);
-	return ((smpl + (sin(smpl * 1.5708f) - smpl) * stt.values[1]) * (1 - stt.values[3]) + source * stt.values[3]) * stt.values[5];
+	return (float)fmin(fmax(((smpl + (sin(smpl * 1.5708) - smpl) * stt.values[1]) * (1 - stt.values[3]) + source * stt.values[3]) * stt.values[5] * nrm,-1),1);
 }
 
 void PFAudioProcessor::normalizegain() {
@@ -187,32 +181,22 @@ void PFAudioProcessor::normalizegain() {
 	updatevis = true;
 }
 
-void PFAudioProcessor::setoversampling(int factor) {
-	logger.debug("oversampling"+(String)factor);
-	changingoversampling = true;
-	state.values[6] = factor;
-
+void PFAudioProcessor::setoversampling(bool toggle) {
+	state.values[6] = toggle?1:0;
 	if(preparedtoplay) {
-		if(factor == 1) {
-			setLatencySamples(0);
-		} else {
-			DBG(channelnum);
-			DBG(factor-1);
-			os.reset(new dsp::Oversampling<float>(oschannelnum,factor-1, dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR));
-			os->initProcessing(samplesperblock);
-			os->setUsingIntegerLatency(true);
+		if(toggle) {
+			os->reset();
 			setLatencySamples(os->getLatencyInSamples());
+		} else {
+			setLatencySamples(0);
 		}
 	}
-	changingoversampling = false;
 }
 
 bool PFAudioProcessor::hasEditor() const { return true; }
 AudioProcessorEditor* PFAudioProcessor::createEditor() { return new PFAudioProcessorEditor(*this,paramcount,state,pots); }
 
 void PFAudioProcessor::getStateInformation (MemoryBlock& destData) {
-	logger.debug("savefile");
-
 	const char linebreak = '\n';
 	std::ostringstream data;
 
@@ -232,8 +216,6 @@ void PFAudioProcessor::getStateInformation (MemoryBlock& destData) {
 	stream.writeString(data.str());
 }
 void PFAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
-	logger.debug("loadfile");
-
 	std::stringstream ss(String::createStringFromData(data, sizeInBytes).toRawUTF8());
 	std::string token;
 
@@ -260,10 +242,8 @@ void PFAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
 	}
 }
 void PFAudioProcessor::parameterChanged(const String& parameterID, float newValue) {
-	logger.debug("paramchanged"+(String)newValue);
-
 	if(parameterID == "oversampling")
-		setoversampling(newValue);
+		setoversampling(newValue > .5);
 	else for(int i = 0; i < paramcount; i++) {
 		if(parameterID == pots[i].id)
 			state.values[i] = newValue;
@@ -284,6 +264,6 @@ AudioProcessorValueTreeState::ParameterLayout
 	parameters.push_back(std::make_unique<AudioParameterFloat	>("dry"			,"Dry"			,0.0f	,1.0f	,0.0f	));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>("stereo"		,"Stereo"		,0.0f	,1.0f	,0.37f	));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>("gain"		,"Out Gain"		,0.0f	,1.0f	,0.4f	));
-	parameters.push_back(std::make_unique<AudioParameterInt		>("oversampling","Over-Sampling",1		,4		,2		));
+	parameters.push_back(std::make_unique<AudioParameterBool	>("oversampling","Over-Sampling",true	));
 	return { parameters.begin(), parameters.end() };
 }

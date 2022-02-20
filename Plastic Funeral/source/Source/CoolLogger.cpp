@@ -83,6 +83,11 @@ void CoolLogger::debug(double str, bool timestamp) {
 	debug((String)str,timestamp);
 #endif
 }
+void CoolLogger::debug(bool str, bool timestamp) {
+#ifdef ENABLE_CONSOLE
+	debug((String)(str?"true":"false"),timestamp);
+#endif
+}
 
 void CoolLogger::drawstring(String txty, float x, float y, float xa, float ya) {
 #ifdef ENABLE_CONSOLE

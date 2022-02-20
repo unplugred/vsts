@@ -43,8 +43,6 @@ PFAudioProcessorEditor::PFAudioProcessorEditor (PFAudioProcessor& p, int paramco
 	context.setRenderer(this);
 	context.attachTo(*this);
 
-	audioProcessor.logger.debug("editor");
-
 	startTimerHz(30);
 }
 PFAudioProcessorEditor::~PFAudioProcessorEditor() {
@@ -170,7 +168,7 @@ out vec2 highlightcoord;
 void main(){
 	gl_Position = vec4(aPos.x-.5,aPos.y*.2+.7,0,1);
 	basecoord = vec2((aPos.x+.5)*.5*texscale.x,1-(1.5-aPos.y)*.1*texscale.y);
-	highlightcoord = vec2(aPos.x*6.3684210526+selection,aPos.y*3.3-1.1642857143);
+	highlightcoord = vec2((aPos.x-selection)*4.3214285714,aPos.y*3.3-1.1642857143);
 })";
 	oversamplingfrag =
 R"(#version 330 core
@@ -349,7 +347,7 @@ void PFAudioProcessorEditor::renderOpenGL() {
 			basetex.bind();
 			oversamplingshader->setUniform("basetex",0);
 			oversamplingshader->setUniform("alpha",osalpha);
-			oversamplingshader->setUniform("selection",-.3947368421f-1.5263157895f*(oversamplinglerped-1));
+			oversamplingshader->setUniform("selection",.458677686f+oversamplinglerped*.2314049587f);
 			oversamplingshader->setUniform("texscale",242.f/basetex.getWidth(),462.f/basetex.getHeight());
 			context.extensions.glEnableVertexAttribArray(coord);
 			context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
@@ -417,7 +415,7 @@ void PFAudioProcessorEditor::calcvis() {
 	for(int c = 0; c < (isStereo ? 2 : 1); c++) {
 		for(int i = 0; i < 226; i++) {
 			visline[c][i*2] = (i+8)/121.f-1;
-			visline[c][i*2+1] = 1-(48+audioProcessor.plasticfuneral(sin(i/35.8098621957f)*.8f,c,2,pp)*norm*38)/231.f;
+			visline[c][i*2+1] = 1-(48+audioProcessor.plasticfuneral(sin(i/35.8098621957f)*.8f,c,2,pp,norm)*38)/231.f;
 		}
 	}
 }
@@ -437,10 +435,11 @@ void PFAudioProcessorEditor::timerCallback() {
 		needtoupdate = 2;
 	}
 
-	if (oversamplinglerped != oversampling) {
+	float os = oversampling?1:0;
+	if (oversamplinglerped != os?1:0) {
 		needtoupdate = 2;
-		if(fabs(oversamplinglerped-oversampling) <= .001f) oversamplinglerped = oversampling;
-		oversamplinglerped = oversamplinglerped*.75f+oversampling*.25f;
+		if(fabs(oversamplinglerped-os) <= .001f) oversamplinglerped = os;
+		oversamplinglerped = oversamplinglerped*.75f+os*.25f;
 	}
 
 	if(creditsalpha != ((hover<=-2&&hover>=-3)?1:0)) {
@@ -472,7 +471,7 @@ void PFAudioProcessorEditor::timerCallback() {
 
 void PFAudioProcessorEditor::parameterChanged(const String& parameterID, float newValue) {
 	if(parameterID == "oversampling") {
-		oversampling = newValue;
+		oversampling = newValue>.5f;
 	} else for(int i = 0; i < knobcount; i++) if(knobs[i].id == parameterID) {
 		knobs[i].value = knobs[i].normalize(newValue);
 		calcvis();
@@ -502,9 +501,8 @@ void PFAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		dragpos = event.getScreenPosition();
 		event.source.enableUnboundedMouseMovement(true);
 	} else if(hover < -4) {
-		oversampling = hover+9;
-		audioProcessor.logger.debug(oversampling);
-		audioProcessor.apvts.getParameter("oversampling")->setValueNotifyingHost((oversampling-1)/3.f);
+		oversampling = hover == -6;
+		audioProcessor.apvts.getParameter("oversampling")->setValueNotifyingHost(oversampling?1.f:0.f);
 		audioProcessor.undoManager.setCurrentTransactionName(
 			(String)("Set Over-Sampling to ") += oversampling);
 		audioProcessor.undoManager.beginNewTransaction();
@@ -564,10 +562,8 @@ void PFAudioProcessorEditor::mouseWheelMove(const MouseEvent& event, const Mouse
 int PFAudioProcessorEditor::recalchover(float x, float y) {
 	if (x >= 8 && x <= 234 && y >= 8 && y <= 87) {
 		if(y < 39 || y > 53) return -4;
-		if(x >= 68 && x <= 87) return -8;
-		if(x >= 97 && x <= 116) return -7;
-		if(x >= 126 && x <= 145) return -6;
-		if(x >= 155 && x <= 174) return -5;
+		if(x >= 115 && x <= 143) return -5;
+		if(x >= 144 && x <= 172) return -6;
 		return -4;
 	} else if(y >= 403) {
 		if(x >= 50 && x <= 196 && y >= 412 && y <= 456) return -3;
