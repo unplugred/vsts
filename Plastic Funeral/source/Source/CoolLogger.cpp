@@ -57,12 +57,12 @@ void CoolLogger::debug(String str, bool timestamp) {
 		debuglist[debugreadpos] = Time::getCurrentTime().toString(false,true,true,true) + " " + str;
 	else
 		debuglist[debugreadpos] = str;
-	debugreadpos = fmod(debugreadpos+1,16);
+	debugreadpos = fmod(debugreadpos+1,CONSOLE_LENGTH);
 
 	std::ostringstream console;
-	for (int i = 0; i < 16; i++) {
-		console << debuglist[(int)fmod(i+debugreadpos,16)].toStdString();
-		if(i < 15) console << "\n";
+	for (int i = 0; i < CONSOLE_LENGTH; i++) {
+		console << debuglist[(int)fmod(i+debugreadpos,CONSOLE_LENGTH)].toStdString();
+		if(i < (CONSOLE_LENGTH-1)) console << "\n";
 	}
 	std::lock_guard<std::mutex> guard(debugmutex);
 	debugtxt = (String)console.str();

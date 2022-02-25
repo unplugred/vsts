@@ -11,6 +11,7 @@
 #pragma once
 
 #define ENABLE_CONSOLE
+#define CONSOLE_LENGTH 20
 
 #include <JuceHeader.h>
 
@@ -28,7 +29,7 @@ public:
 
 private:
 #ifdef ENABLE_CONSOLE
-	String debuglist[16];
+	String debuglist[CONSOLE_LENGTH];
 	int debugreadpos = 0;
 	std::mutex debugmutex;
 	String debugtxt = "";
