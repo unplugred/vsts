@@ -100,6 +100,7 @@ void PFAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {
 void PFAudioProcessor::changechannelnum(int newchannelnum) {
 	channelnum = newchannelnum;
 	oschannelnum = channelnum;
+	if(channelnum <= 0) return;
 
 	ospointerarray.resize(channelnum);
 	os.reset(new dsp::Oversampling<float>(oschannelnum,1,dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR));
@@ -185,6 +186,7 @@ void PFAudioProcessor::setoversampling(bool toggle) {
 	state.values[6] = toggle?1:0;
 	if(preparedtoplay) {
 		if(toggle) {
+			if(channelnum <= 0) return;
 			os->reset();
 			setLatencySamples(os->getLatencyInSamples());
 		} else {
