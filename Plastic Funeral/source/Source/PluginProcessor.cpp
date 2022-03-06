@@ -36,9 +36,6 @@ PFAudioProcessor::PFAudioProcessor() :
 		state.values[i] = pots[i].inflate(apvts.getParameter(pots[i].id)->getValue());
 		apvts.addParameterListener(pots[i].id, this);
 	}
-		apvts.addParameterListener("oversampling", this);
-
-	normalizegain();
 }
 
 PFAudioProcessor::~PFAudioProcessor(){
@@ -94,16 +91,21 @@ void PFAudioProcessor::changeProgramName (int index, const String& newName) {
 }
 
 void PFAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {
+	fatsmooth.reset(100);
+	drysmooth.reset(100);
 	samplesperblock = samplesPerBlock;
 	preparedtoplay = true;
 }
 void PFAudioProcessor::changechannelnum(int newchannelnum) {
 	channelnum = newchannelnum;
-	oschannelnum = channelnum;
-	if(channelnum <= 0) return;
+	if(newchannelnum <= 0) return;
 
-	ospointerarray.resize(channelnum);
-	os.reset(new dsp::Oversampling<float>(oschannelnum,1,dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR));
+	channelData.clear();
+	for (int i = 0; i < getNumInputChannels(); i++)
+		channelData.push_back(nullptr);
+
+	ospointerarray.resize(newchannelnum);
+	os.reset(new dsp::Oversampling<float>(newchannelnum,1,dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR));
 	os->initProcessing(samplesperblock);
 	os->setUsingIntegerLatency(true);
 	setoversampling(state.values[6] > .5);
@@ -129,29 +131,38 @@ void PFAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mid
 	for (auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
 		buffer.clear (i, 0, buffer.getNumSamples());
 
-	float prmsadd = rmsadd.get(), newnorm = norm.get();
+	float prmsadd = rmsadd.get();
 	int prmscount = rmscount.get();
 	bool isoversampling = (state.values[6] >= .5);
-	float curnorm = norm.get();
 
+	int numsamples = buffer.getNumSamples();
 	dsp::AudioBlock<float> block(buffer);
-	dsp::AudioBlock<float> osblock(buffer);
 	if(isoversampling) {
-		osblock = os->processSamplesUp(block);
+		dsp::AudioBlock<float> osblock = os->processSamplesUp(block);
 		for(int i = 0; i < channelnum; i++)
 			ospointerarray[i] = osblock.getChannelPointer(i);
 		osbuffer = AudioBuffer<float>(ospointerarray.data(), channelnum, static_cast<int>(osblock.getNumSamples()));
+		numsamples = osbuffer.getNumSamples();
 	}
 
-	for (int channel = 0; channel < channelnum; ++channel)
-	{
-		float* channelData;
-		if(isoversampling) channelData = osbuffer.getWritePointer(channel);
-		else channelData = buffer.getWritePointer (channel);
+	for (int channel = 0; channel < channelnum; ++channel) {
+		if(isoversampling) channelData[channel] = osbuffer.getWritePointer(channel);
+		else channelData[channel] = buffer.getWritePointer(channel);
+	}
 
-		for (int sample = 0; sample < osblock.getNumSamples(); ++sample) {
-			channelData[sample] = plasticfuneral(channelData[sample],channel,channelnum,state,curnorm);
-			prmsadd += channelData[sample]*channelData[sample];
+	for (int sample = 0; sample < numsamples; ++sample) {
+		state.values[1] = fatsmooth.getNextValue();
+		state.values[3] = drysmooth.getNextValue();
+
+		if(curfat != state.values[1] || curdry != state.values[3]) {
+			curfat = state.values[1];
+			curdry = state.values[3];
+			curnorm = normalizegain(curfat,curdry);
+		}
+
+		for (int channel = 0; channel < channelnum; ++channel) {
+			channelData[channel][sample] = plasticfuneral(channelData[channel][sample],channel,channelnum,state,curnorm);
+			prmsadd += channelData[channel][sample]*channelData[channel][sample];
 			prmscount++;
 		}
 	}
@@ -174,16 +185,26 @@ float PFAudioProcessor::plasticfuneral(float source, int channel, int channelcou
 	return (float)fmin(fmax(((smpl + (sin(smpl * 1.5708) - smpl) * stt.values[1]) * (1 - stt.values[3]) + source * stt.values[3]) * stt.values[5] * nrm,-1),1);
 }
 
-void PFAudioProcessor::normalizegain() {
-	float newnorm = 0.25f, newfat = state.values[1], newdry = state.values[3];
-	for (float i = 0; i <= 1; i += .005f)
-		newnorm = fmax(newnorm,fabs(i+(sin(i*1.5708f)-i)*newfat)*(1-newdry)+i*newdry);
-	norm = 1.f/newnorm;
-	updatevis = true;
+float PFAudioProcessor::normalizegain(float fat, float dry) {
+	if(fat > 0 || dry == 0) {
+		double c = fat*dry-fat;
+		double x = (c+1)/(c*1.5708);
+		if(x > 0 && x < 1) {
+			x = acos(x)/1.5708;
+			return 1/fmax(fabs((fat*(sin(x*1.5708)-x)+x)*(1-dry)+x*dry),1);
+		}
+		return 1;
+	}
+	if (fat < -7.2f) {
+		double newnorm = 1;
+		for (double i = .4836f; i <= .71f; i += .005f)
+			newnorm = fmax(newnorm,fabs(i+(sin(i*1.5708)-i)*fat)*(1-dry)+i*dry);
+		return 1/newnorm;
+	}
+	return 1;
 }
 
 void PFAudioProcessor::setoversampling(bool toggle) {
-	state.values[6] = toggle?1:0;
 	if(preparedtoplay) {
 		if(toggle) {
 			if(channelnum <= 0) return;
@@ -205,8 +226,9 @@ void PFAudioProcessor::getStateInformation (MemoryBlock& destData) {
 	data << version
 		<< linebreak << currentpreset << linebreak;
 
+	pluginpreset newstate = state;
 	for(int i = 0; i < paramcount; i++)
-		data << state.values[i] << linebreak;
+		data << newstate.values[i] << linebreak;
 
 	for(int i = 0; i < getNumPrograms(); i++) {
 		data << presets[i].name << linebreak;
@@ -230,12 +252,9 @@ void PFAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
 	for(int i = 0; i < paramcount; i++) {
 		if(saveversion > 1 || pots[i].id != "oversampling") {
 			std::getline(ss, token, '\n');
-			state.values[i] = std::stof(token);
 			apvts.getParameter(pots[i].id)->setValueNotifyingHost(pots[i].normalize(std::stof(token)));
 		}
 	}
-
-	normalizegain();
 
 	for(int i = 0; i < getNumPrograms(); i++) {
 		std::getline(ss, token, '\n'); presets[i].name = token;
@@ -246,13 +265,18 @@ void PFAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
 	}
 }
 void PFAudioProcessor::parameterChanged(const String& parameterID, float newValue) {
-	if(parameterID == "oversampling")
+	if(parameterID == "oversampling") {
+		state.values[6] = newValue > .5 ? 1 : 0;
 		setoversampling(newValue > .5);
-	else for(int i = 0; i < paramcount; i++) {
-		if(parameterID == pots[i].id)
-			state.values[i] = newValue;
-		if(parameterID == "fat" || parameterID == "dry")
-			normalizegain();
+		return;
+	}
+	for(int i = 0; i < paramcount; i++) {
+		if(parameterID == pots[i].id) {
+			if(parameterID == "fat") fatsmooth.setTargetValue(newValue);
+			else if(parameterID == "dry") drysmooth.setTargetValue(newValue);
+			else state.values[i] = newValue;
+			return;
+		}
 	}
 }
 
