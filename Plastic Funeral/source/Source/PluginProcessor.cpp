@@ -240,28 +240,38 @@ void PFAudioProcessor::getStateInformation (MemoryBlock& destData) {
 	stream.writeString(data.str());
 }
 void PFAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
-	std::stringstream ss(String::createStringFromData(data, sizeInBytes).toRawUTF8());
-	std::string token;
+	try {
+		std::stringstream ss(String::createStringFromData(data, sizeInBytes).toRawUTF8());
+		std::string token;
 
-	std::getline(ss, token, '\n');
-	int saveversion = std::stoi(token);
+		std::getline(ss, token, '\n');
+		int saveversion = std::stoi(token);
 
-	std::getline(ss, token, '\n');
-	currentpreset = std::stoi(token);
+		std::getline(ss, token, '\n');
+		currentpreset = std::stoi(token);
 
-	for(int i = 0; i < paramcount; i++) {
-		if(saveversion > 1 || pots[i].id != "oversampling") {
-			std::getline(ss, token, '\n');
-			apvts.getParameter(pots[i].id)->setValueNotifyingHost(pots[i].normalize(std::stof(token)));
+		for(int i = 0; i < paramcount; i++) {
+			if(saveversion > 1 || pots[i].id != "oversampling") {
+				std::getline(ss, token, '\n');
+				apvts.getParameter(pots[i].id)->setValueNotifyingHost(pots[i].normalize(std::stof(token)));
+			}
 		}
-	}
 
-	for(int i = 0; i < getNumPrograms(); i++) {
-		std::getline(ss, token, '\n'); presets[i].name = token;
-		for(int v = 0; v < paramcount; v++) if(pots[v].savedinpreset) {
-			std::getline(ss, token, '\n');
-			presets[i].values[v] = std::stof(token);
+		for(int i = 0; i < getNumPrograms(); i++) {
+			std::getline(ss, token, '\n'); presets[i].name = token;
+			for(int v = 0; v < paramcount; v++) if(pots[v].savedinpreset) {
+				std::getline(ss, token, '\n');
+				presets[i].values[v] = std::stof(token);
+			}
 		}
+	} catch (const char* e) {
+		logger.debug((String)"Error loading saved data: "+(String)e);
+	} catch(String e) {
+		logger.debug((String)"Error loading saved data: "+e);
+	} catch(std::exception &e) {
+		logger.debug((String)"Error loading saved data: "+(String)e.what());
+	} catch(...) {
+		logger.debug((String)"Error loading saved data");
 	}
 }
 void PFAudioProcessor::parameterChanged(const String& parameterID, float newValue) {
