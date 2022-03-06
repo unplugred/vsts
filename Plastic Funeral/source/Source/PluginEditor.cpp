@@ -407,7 +407,6 @@ void PFAudioProcessorEditor::openGLContextClosing() {
 	context.extensions.glDeleteBuffers(1,&arraybuffer);
 }
 void PFAudioProcessorEditor::calcvis() {
-	float norm = audioProcessor.norm.get();
 	isStereo = knobs[4].value > 0 && knobs[3].value < 1 && knobs[5].value > 0;
 	pluginpreset pp;
 	for(int i = 0; i < knobcount; i++)
@@ -415,7 +414,7 @@ void PFAudioProcessorEditor::calcvis() {
 	for(int c = 0; c < (isStereo ? 2 : 1); c++) {
 		for(int i = 0; i < 226; i++) {
 			visline[c][i*2] = (i+8)/121.f-1;
-			visline[c][i*2+1] = 1-(48+audioProcessor.plasticfuneral(sin(i/35.8098621957f)*.8f,c,2,pp,norm)*38)/231.f;
+			visline[c][i*2+1] = 1-(48+audioProcessor.plasticfuneral(sin(i/35.8098621957f)*.8f,c,2,pp,audioProcessor.normalizegain(pp.values[1],pp.values[3])) * 38) / 231.f;
 		}
 	}
 }
@@ -459,12 +458,6 @@ void PFAudioProcessorEditor::timerCallback() {
 	}
 	audioProcessor.rmsadd = 0;
 	audioProcessor.rmscount = 0;
-
-	if (audioProcessor.updatevis.get()) {
-		calcvis();
-		audioProcessor.updatevis = false;
-		needtoupdate = 2;
-	}
 
 	context.triggerRepaint();
 }

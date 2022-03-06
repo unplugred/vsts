@@ -71,7 +71,7 @@ public:
 
 	void processBlock (AudioBuffer<float>&, MidiBuffer&) override;
 	float plasticfuneral(float source, int channel, int channelcount, pluginpreset stt, float nrm);
-	void normalizegain();
+	float normalizegain(float fat, float dry);
 	void setoversampling(bool toggle);
 
 	AudioProcessorEditor* createEditor() override;
@@ -99,10 +99,8 @@ public:
 
 	Atomic<float> rmsadd = 0;
 	Atomic<int> rmscount = 0;
-	Atomic<bool> updatevis;
 
 	int version = 2;
-	Atomic<float> norm = 1;
 	const int paramcount = 7;
 
 	pluginpreset state;
@@ -122,10 +120,17 @@ private:
 
 	std::unique_ptr<dsp::Oversampling<float>> os;
 	AudioBuffer<float> osbuffer;
-	int channelnum = 0;
-	int oschannelnum = 0;
-	int samplesperblock = 512;
 	std::vector<float*> ospointerarray;
+
+	int channelnum = 0;
+	int samplesperblock = 512;
+	std::vector<float*> channelData;
+
+	float curfat = -1000;
+	float curdry = -1000;
+	double curnorm = 1;
+	SmoothedValue<float,ValueSmoothingTypes::Linear> fatsmooth;
+	SmoothedValue<float,ValueSmoothingTypes::Linear> drysmooth;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PFAudioProcessor)
 };
