@@ -24,12 +24,16 @@ public:
 	float defaultvalue = 0;
 	bool savedinpreset = true;
 	ptype ttype = ptype::floattype;
-	potentiometer(String potname = "", String potid = "", float potdefault = 0.f, float potmin = 0.f, float potmax = 1.f, bool potsaved = true, ptype pottype = ptype::floattype) {
+	SmoothedValue<float,ValueSmoothingTypes::Linear> smooth;
+	float smoothtime = 0;
+	potentiometer(String potname = "", String potid = "", float smoothed = 0, float potdefault = 0.f, float potmin = 0.f, float potmax = 1.f, bool potsaved = true, ptype pottype = ptype::floattype) {
 		name = potname;
 		id = potid;
+		smoothtime = smoothed;
+		if(smoothed > 0) smooth.setCurrentAndTargetValue(defaultvalue);
+		defaultvalue = potdefault;
 		minimumvalue = potmin;
 		maximumvalue = potmax;
-		defaultvalue = potdefault;
 		savedinpreset = potsaved;
 		ttype = pottype;
 	}
@@ -124,13 +128,12 @@ private:
 
 	int channelnum = 0;
 	int samplesperblock = 512;
+	int samplerate = 44100;
 	std::vector<float*> channelData;
 
 	float curfat = -1000;
 	float curdry = -1000;
 	double curnorm = 1;
-	SmoothedValue<float,ValueSmoothingTypes::Linear> fatsmooth;
-	SmoothedValue<float,ValueSmoothingTypes::Linear> drysmooth;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PFAudioProcessor)
 };

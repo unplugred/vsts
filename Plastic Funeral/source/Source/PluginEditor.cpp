@@ -20,7 +20,10 @@ PFAudioProcessorEditor::PFAudioProcessorEditor (PFAudioProcessor& p, int paramco
 			knobs[i].y = y*100+144;
 			knobs[i].id = pots[i].id;
 			knobs[i].name = pots[i].name;
-			knobs[i].value = pots[i].normalize(state.values[i]);
+			if(pots[i].smoothtime > 0)
+				knobs[i].value = pots[i].normalize(pots[i].smooth.getTargetValue());
+			else
+				knobs[i].value = pots[i].normalize(state.values[i]);
 			knobs[i].minimumvalue = pots[i].minimumvalue;
 			knobs[i].maximumvalue = pots[i].maximumvalue;
 			knobs[i].defaultvalue = pots[i].defaultvalue;
