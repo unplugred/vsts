@@ -178,7 +178,9 @@ void PFAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mid
 }
 
 float PFAudioProcessor::plasticfuneral(float source, int channel, int channelcount, pluginpreset stt, float nrm) {
-	double freq = fmax(fmin(stt.values[0] + stt.values[4] * .2 * (((double)channel / (channelcount - 1)) * 2 - 1), 1), 0);
+	double channeloffset = 0;
+	if(channelcount > 1) channeloffset = (((double)channel / (channelcount - 1)) * 2 - 1);
+	double freq = fmax(fmin(stt.values[0] + stt.values[4] * .2 * channeloffset, 1), 0);
 	double smpl = source * (100 - cos(freq * 1.5708) * 99);
 	double pfreq = fmod(fabs(smpl), 4);
 	pfreq = (pfreq > 3 ? (pfreq - 4) : (pfreq > 1 ? (2 - pfreq) : pfreq)) * (smpl > 0 ? 1 : -1);
