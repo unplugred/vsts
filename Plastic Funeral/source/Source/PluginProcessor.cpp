@@ -268,6 +268,7 @@ void PFAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
 			if(saveversion > 1 || pots[i].id != "oversampling") {
 				std::getline(ss, token, '\n');
 				float val = std::stof(token);
+				if(saveversion <= 2 && pots[i].id == "oversampling") val = val > 1.5 ? 1 : 0;
 				apvts.getParameter(pots[i].id)->setValueNotifyingHost(pots[i].normalize(val));
 				if(pots[i].smoothtime > 0) {
 					pots[i].smooth.setCurrentAndTargetValue(val);
