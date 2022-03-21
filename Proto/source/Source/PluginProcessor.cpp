@@ -265,14 +265,12 @@ void ProtoAudioProcessor::setStateInformation (const void* data, int sizeInBytes
 		currentpreset = std::stoi(token);
 
 		for(int i = 0; i < paramcount; i++) {
-			if(saveversion > 1 || pots[i].id != "oversampling") {
-				std::getline(ss, token, '\n');
-				float val = std::stof(token);
-				apvts.getParameter(pots[i].id)->setValueNotifyingHost(pots[i].normalize(val));
-				if(pots[i].smoothtime > 0) {
-					pots[i].smooth.setCurrentAndTargetValue(val);
-					state.values[i] = val;
-				}
+			std::getline(ss, token, '\n');
+			float val = std::stof(token);
+			apvts.getParameter(pots[i].id)->setValueNotifyingHost(pots[i].normalize(val));
+			if(pots[i].smoothtime > 0) {
+				pots[i].smooth.setCurrentAndTargetValue(val);
+				state.values[i] = val;
 			}
 		}
 
