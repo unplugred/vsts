@@ -10,7 +10,6 @@
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
 #include "functions.h"
-using namespace juce;
 
 class VuAudioProcessorEditor : public AudioProcessorEditor, public OpenGLRenderer, public AudioProcessorValueTreeState::Listener, private Timer
 {
@@ -72,7 +71,7 @@ public:
 private:
 	VuAudioProcessor& audioProcessor;
 
-	OpenGLContext openGLContext;
+	OpenGLContext context;
 	unsigned int arraybuffer;
 	OpenGLTexture vutex;
 	OpenGLTexture mptex;

@@ -8,6 +8,7 @@
 
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+using namespace gl;
 
 VuAudioProcessorEditor::VuAudioProcessorEditor (VuAudioProcessor& p)
 	: AudioProcessorEditor (&p), audioProcessor (p) {
@@ -16,8 +17,8 @@ VuAudioProcessorEditor::VuAudioProcessorEditor (VuAudioProcessor& p)
 	multiplier = 1.f/Decibels::decibelsToGain((float)audioProcessor.nominal.get());
 	stereodamp = audioProcessor.stereo.get()?1:0;
 
-	openGLContext.setRenderer(this);
-	openGLContext.attachTo(*this);
+	context.setRenderer(this);
+	context.attachTo(*this);
 
 	setResizable(true,true);
 	int h = audioProcessor.height.get();
@@ -28,11 +29,12 @@ VuAudioProcessorEditor::VuAudioProcessorEditor (VuAudioProcessor& p)
 	//getConstrainer()->setFixedAspectRatio((audioProcessor.stereo?64.f:32.f)/19.f);
 
 	startTimerHz(30);
+	audioProcessor.logger.debug((String)"HI");
 }
 
 VuAudioProcessorEditor::~VuAudioProcessorEditor() {
 	stopTimer();
-	openGLContext.detach();
+	context.detach();
 	audioProcessor.apvts.removeParameterListener("nominal",this);
 }
 
@@ -58,6 +60,8 @@ void VuAudioProcessorEditor::resized() {
 }
 
 void VuAudioProcessorEditor::newOpenGLContextCreated() {
+	audioProcessor.logger.init(&context,getWidth(),getHeight());
+
 	vertshader =
 R"(#version 330 core
 in vec2 aPos;
@@ -171,7 +175,7 @@ void main(){
 	}
 })";
 
-	vushader.reset(new OpenGLShaderProgram(openGLContext));
+	vushader.reset(new OpenGLShaderProgram(context));
 	if(
 		!vushader->addVertexShader(vertshader) ||
 		!vushader->addFragmentShader(fragshader) ||
@@ -200,7 +204,7 @@ void main(){
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 
-	openGLContext.extensions.glGenBuffers(1, &arraybuffer);
+	context.extensions.glGenBuffers(1, &arraybuffer);
 }
 void VuAudioProcessorEditor::renderOpenGL() {
 	glDisable(GL_BLEND);
@@ -209,15 +213,15 @@ void VuAudioProcessorEditor::renderOpenGL() {
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_ALPHA_TEST);
 
-	openGLContext.extensions.glBindBuffer(GL_ARRAY_BUFFER, arraybuffer);
+	context.extensions.glBindBuffer(GL_ARRAY_BUFFER, arraybuffer);
 	vushader->use();
-	openGLContext.extensions.glActiveTexture(GL_TEXTURE0);
+	context.extensions.glActiveTexture(GL_TEXTURE0);
 	vutex.bind();
 	vushader->setUniform("vutex", 0);
-	openGLContext.extensions.glActiveTexture(GL_TEXTURE1);
+	context.extensions.glActiveTexture(GL_TEXTURE1);
 	mptex.bind();
 	vushader->setUniform("mptex", 1);
-	openGLContext.extensions.glActiveTexture(GL_TEXTURE2);
+	context.extensions.glActiveTexture(GL_TEXTURE2);
 	lgtex.bind();
 	vushader->setUniform("lgtex", 2);
 
@@ -239,10 +243,10 @@ void VuAudioProcessorEditor::renderOpenGL() {
 	vushader->setUniform("size", 800.f/vutex.getWidth(), 475.f/vutex.getHeight());
 	vushader->setUniform("txtsize", 384.f/vutex.getWidth(), 354.f/vutex.getHeight());
 
-	openGLContext.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
-	auto coord = openGLContext.extensions.glGetAttribLocation(vushader->getProgramID(),"aPos");
-	openGLContext.extensions.glEnableVertexAttribArray(coord);
-	openGLContext.extensions.glVertexAttribPointer(coord, 2, GL_FLOAT, GL_FALSE, 0, 0);
+	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
+	auto coord = context.extensions.glGetAttribLocation(vushader->getProgramID(),"aPos");
+	context.extensions.glEnableVertexAttribArray(coord);
+	context.extensions.glVertexAttribPointer(coord, 2, GL_FLOAT, GL_FALSE, 0, 0);
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
 	if (stereodamp > .001) {
@@ -252,19 +256,25 @@ void VuAudioProcessorEditor::renderOpenGL() {
 		vushader->setUniform("lgsize",
 			((float)getWidth())/lgtex.getWidth()*(1/(stereodamp+1)),
 			((float)getHeight())/lgtex.getHeight(),
-			164.f/lgtex.getWidth()-(stereodamp/152)*getHeight(),
+			164.f/lgtex.getWidth()-(stereodamp/152)*getHeight()*1.56f,
 			(62.f/lgtex.getHeight())*(1-settingsfade));
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 	}
 
-	openGLContext.extensions.glDisableVertexAttribArray(coord);
+	context.extensions.glDisableVertexAttribArray(coord);
+
+	audioProcessor.logger.drawlog();
 }
 void VuAudioProcessorEditor::openGLContextClosing() {
 	vushader->release();
+
 	vutex.release();
 	mptex.release();
 	lgtex.release();
-	openGLContext.extensions.glDeleteBuffers(1, &arraybuffer);
+
+	audioProcessor.logger.release();
+
+	context.extensions.glDeleteBuffers(1, &arraybuffer);
 }
 void VuAudioProcessorEditor::paint(Graphics& g) {}
 
@@ -315,6 +325,8 @@ void VuAudioProcessorEditor::timerCallback() {
 		audioProcessor.width = w;
 	} else w = audioProcessor.width.get();
 	setSize(w,h);
+	audioProcessor.logger.width = w;
+	audioProcessor.logger.height = h;
 	/*
 	if (displaycomp.stereodamp > .001 && displaycomp.stereodamp < .999) {
 		if(getConstrainer()->getFixedAspectRatio() != 0) getConstrainer()->setFixedAspectRatio(0);
@@ -328,7 +340,7 @@ void VuAudioProcessorEditor::timerCallback() {
 	}
 	*/
 
-	openGLContext.triggerRepaint();
+	context.triggerRepaint();
 }
 
 void VuAudioProcessorEditor::parameterChanged(const String& parameterID, float newValue) {

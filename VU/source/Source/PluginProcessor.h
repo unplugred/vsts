@@ -9,7 +9,7 @@
 #pragma once
 #include <JuceHeader.h>
 #include "functions.h"
-using namespace juce;
+#include "CoolLogger.h"
 
 class VuAudioProcessor	: public AudioProcessor, public AudioProcessorValueTreeState::Listener {
 public:
@@ -64,6 +64,7 @@ public:
 	UndoManager undoManager;
 	int version = 1;
 
+	CoolLogger logger;
 private:
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (VuAudioProcessor)
 };

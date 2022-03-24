@@ -122,23 +122,33 @@ void VuAudioProcessor::getStateInformation (MemoryBlock& destData) {
 	stream.writeString(data.str());
 }
 void VuAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
-	std::stringstream ss(String::createStringFromData(data, sizeInBytes).toRawUTF8());
-	std::string token;
+	try {
+		std::stringstream ss(String::createStringFromData(data, sizeInBytes).toRawUTF8());
+		std::string token;
 
-	std::getline(ss,token,'\n');
-	int saveversion = std::stoi(token);
+		std::getline(ss,token,'\n');
+		int saveversion = std::stoi(token);
 
-	std::getline(ss,token,'\n');
-	apvts.getParameter("nominal")->setValueNotifyingHost((std::stof(token)+24)/18);
-	
-	std::getline(ss,token,'\n');
-	apvts.getParameter("damping")->setValueNotifyingHost((std::stof(token)-1)/8);
+		std::getline(ss,token,'\n');
+		apvts.getParameter("nominal")->setValueNotifyingHost((std::stof(token)+24)/18);
+		
+		std::getline(ss,token,'\n');
+		apvts.getParameter("damping")->setValueNotifyingHost((std::stof(token)-1)/8);
 
-	std::getline(ss,token,'\n');
-	apvts.getParameter("stereo")->setValueNotifyingHost(std::stof(token));
+		std::getline(ss,token,'\n');
+		apvts.getParameter("stereo")->setValueNotifyingHost(std::stof(token));
 
-	std::getline(ss,token,'\n');
-	height = std::stoi(token);
+		std::getline(ss,token,'\n');
+		height = std::stoi(token);
+	} catch (const char* e) {
+		logger.debug((String)"Error loading saved data: "+(String)e);
+	} catch(String e) {
+		logger.debug((String)"Error loading saved data: "+e);
+	} catch(std::exception &e) {
+		logger.debug((String)"Error loading saved data: "+(String)e.what());
+	} catch(...) {
+		logger.debug((String)"Error loading saved data");
+	}
 }
 void VuAudioProcessor::parameterChanged(const String& parameterID, float newValue) {
 	if(parameterID == "nominal") nominal = newValue;
