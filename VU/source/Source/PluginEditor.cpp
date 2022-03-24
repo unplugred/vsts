@@ -29,7 +29,6 @@ VuAudioProcessorEditor::VuAudioProcessorEditor (VuAudioProcessor& p)
 	//getConstrainer()->setFixedAspectRatio((audioProcessor.stereo?64.f:32.f)/19.f);
 
 	startTimerHz(30);
-	audioProcessor.logger.debug((String)"HI");
 }
 
 VuAudioProcessorEditor::~VuAudioProcessorEditor() {
