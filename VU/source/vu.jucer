@@ -7,14 +7,8 @@
               pluginVST3Category="Analyzer" pluginVSTCategory="kPlugCategAnalysis">
   <MAINGROUP id="isef6D" name="VU">
     <GROUP id="{3068B69F-5E42-7C77-3299-EA5FEEFB2617}" name="Source">
-      <FILE id="tjf3pv" name="dbg_txt.png" compile="0" resource="1" file="Source/dbg_txt.png"/>
       <FILE id="C9C9Hb" name="CoolLogger.cpp" compile="1" resource="0" file="Source/CoolLogger.cpp"/>
       <FILE id="tZjlmO" name="CoolLogger.h" compile="0" resource="0" file="Source/CoolLogger.h"/>
-      <FILE id="bIlsp1" name="icon.png" compile="0" resource="1" file="Source/icon.png"/>
-      <FILE id="O1SWd7" name="map.png" compile="0" resource="1" file="Source/map.png"/>
-      <FILE id="H8wGZm" name="txtmap.png" compile="0" resource="1" file="Source/txtmap.png"/>
-      <FILE id="uo4zv1" name="genuine_soundware.png" compile="0" resource="1"
-            file="Source/genuine_soundware.png"/>
       <FILE id="plAKfE" name="functions.cpp" compile="1" resource="0" file="Source/functions.cpp"/>
       <FILE id="LD1s4J" name="functions.h" compile="0" resource="0" file="Source/functions.h"/>
       <FILE id="hvMk5X" name="PluginProcessor.cpp" compile="1" resource="0"
@@ -24,6 +18,14 @@
       <FILE id="Yza7uW" name="PluginEditor.cpp" compile="1" resource="0"
             file="Source/PluginEditor.cpp"/>
       <FILE id="x56Wge" name="PluginEditor.h" compile="0" resource="0" file="Source/PluginEditor.h"/>
+    </GROUP>
+    <GROUP id="{2741A37B-FE87-F160-B8F7-68C413721000}" name="Resources">
+      <FILE id="eN2wsd" name="dbg_txt.png" compile="0" resource="1" file="Resources/dbg_txt.png"/>
+      <FILE id="ajkZxv" name="genuine_soundware.png" compile="0" resource="1"
+            file="Resources/genuine_soundware.png"/>
+      <FILE id="KxiTpF" name="icon.png" compile="0" resource="1" file="Resources/icon.png"/>
+      <FILE id="x0KIWJ" name="map.png" compile="0" resource="1" file="Resources/map.png"/>
+      <FILE id="lyi6ia" name="txtmap.png" compile="0" resource="1" file="Resources/txtmap.png"/>
     </GROUP>
   </MAINGROUP>
   <JUCEOPTIONS JUCE_STRICT_REFCOUNTEDPOINTER="1" JUCE_VST3_CAN_REPLACE_VST2="0"
