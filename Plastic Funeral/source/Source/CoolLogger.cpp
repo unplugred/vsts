@@ -12,7 +12,7 @@
 using namespace gl;
 
 void CoolLogger::init(OpenGLContext* ctx, int w, int h) {
-#ifdef ENABLE_CONSOLE
+#ifdef ENABLE_TEXT
 	context = ctx;
 	width = w;
 	height = h;
@@ -32,7 +32,7 @@ R"(#version 330 core
 in vec2 texcoord;
 uniform sampler2D tex;
 void main(){
-	gl_FragColor = vec4(1)*texture2D(tex,texcoord).r;
+	gl_FragColor = vec4(texture2D(tex,texcoord).r);
 	gl_FragColor.a = 1-(1-gl_FragColor.a)*.5;
 })";
 	textshader.reset(new OpenGLShaderProgram(*context));
@@ -40,7 +40,7 @@ void main(){
 	textshader->addFragmentShader(textfrag);
 	textshader->link();
 
-	texttex.loadImage(ImageCache::getFromMemory(BinaryData::txt_png,BinaryData::txt_pngSize));
+	texttex.loadImage(ImageCache::getFromMemory(BinaryData::dbg_txt_png,BinaryData::dbg_txt_pngSize));
 	texttex.bind();
 	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
@@ -89,13 +89,15 @@ void CoolLogger::debug(bool str, bool timestamp) {
 #endif
 }
 
-void CoolLogger::drawstring(String txty, float x, float y, float xa, float ya) {
-#ifdef ENABLE_CONSOLE
-	textshader->use();
+void CoolLogger::drawstring(String txty, float x, float y, float xa, float ya, std::unique_ptr<OpenGLShaderProgram>* shader) {
+#ifdef ENABLE_TEXT
+	if(shader == nullptr) shader = &textshader;
+
+	(*shader)->use();
 	context->extensions.glActiveTexture(GL_TEXTURE0);
 	texttex.bind();
-	textshader->setUniform("tex",0);
-	float coord = context->extensions.glGetAttribLocation(textshader->getProgramID(),"aPos");
+	(*shader)->setUniform("tex",0);
+	float coord = context->extensions.glGetAttribLocation((*shader)->getProgramID(),"aPos");
 	context->extensions.glEnableVertexAttribArray(coord);
 	context->extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 
@@ -116,9 +118,9 @@ void CoolLogger::drawstring(String txty, float x, float y, float xa, float ya) {
 			l--; c = 0;
 			ll = linelength.front(); linelength.pop();
 		} else {
-			textshader->setUniform("size",c*2-ll,l*2,letterw,letterh);
-			textshader->setUniform("pos",x*2-1,y*2-1);
-			textshader->setUniform("letter",(float)((int)txt[i]));
+			(*shader)->setUniform("size",c*2-ll,l*2,letterw,letterh);
+			(*shader)->setUniform("pos",x*2-1,y*2-1);
+			(*shader)->setUniform("letter",(float)((int)txt[i]));
 			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 			c++;
 			if((c+2)*8 > width && txt[i+1] != '\n') {

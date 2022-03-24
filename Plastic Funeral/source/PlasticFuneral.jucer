@@ -20,8 +20,8 @@
     <GROUP id="{6F9A9B8E-4453-DEEB-953E-DAFA6974DF59}" name="Resources">
       <FILE id="aso9TN" name="base.png" compile="0" resource="1" file="Resources/base.png"/>
       <FILE id="DnIDOV" name="credits.png" compile="0" resource="1" file="Resources/credits.png"/>
+      <FILE id="bXi0Sm" name="dbg_txt.png" compile="0" resource="1" file="Resources/dbg_txt.png"/>
       <FILE id="Efvgyp" name="knob.png" compile="0" resource="1" file="Resources/knob.png"/>
-      <FILE id="KYWinJ" name="txt.png" compile="0" resource="1" file="Resources/txt.png"/>
     </GROUP>
   </MAINGROUP>
   <JUCEOPTIONS JUCE_STRICT_REFCOUNTEDPOINTER="1" JUCE_VST3_CAN_REPLACE_VST2="0"

@@ -40,7 +40,7 @@ void main(){
 	textshader->addFragmentShader(textfrag);
 	textshader->link();
 
-	texttex.loadImage(ImageCache::getFromMemory(BinaryData::txt_png,BinaryData::txt_pngSize));
+	texttex.loadImage(ImageCache::getFromMemory(BinaryData::dbg_txt_png,BinaryData::dbg_txt_pngSize));
 	texttex.bind();
 	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
