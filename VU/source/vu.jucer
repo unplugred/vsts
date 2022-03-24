@@ -1,12 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <JUCERPROJECT id="v6SFbz" name="VU" projectType="audioplug" useAppConfig="0"
-              addUsingNamespaceToJuceHeader="0" displaySplashScreen="0" jucerFormatVersion="1"
+              addUsingNamespaceToJuceHeader="1" displaySplashScreen="0" jucerFormatVersion="1"
               companyName="unplugred" companyWebsite="https://vst.unplug.red"
               companyEmail="arihanan@protonmail.com" pluginFormats="buildStandalone,buildVST"
               pluginVST3Category="Analyzer" pluginVSTCategory="kPlugCategAnalysis">
   <MAINGROUP id="isef6D" name="VU">
     <GROUP id="{3068B69F-5E42-7C77-3299-EA5FEEFB2617}" name="Source">
+      <FILE id="tjf3pv" name="dbg_txt.png" compile="0" resource="1" file="Source/dbg_txt.png"/>
+      <FILE id="C9C9Hb" name="CoolLogger.cpp" compile="1" resource="0" file="Source/CoolLogger.cpp"/>
+      <FILE id="tZjlmO" name="CoolLogger.h" compile="0" resource="0" file="Source/CoolLogger.h"/>
       <FILE id="bIlsp1" name="icon.png" compile="0" resource="1" file="Source/icon.png"/>
       <FILE id="O1SWd7" name="map.png" compile="0" resource="1" file="Source/map.png"/>
       <FILE id="H8wGZm" name="txtmap.png" compile="0" resource="1" file="Source/txtmap.png"/>
