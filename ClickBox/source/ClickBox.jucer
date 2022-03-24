@@ -4,18 +4,22 @@
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" pluginFormats="buildStandalone,buildVST"
               pluginManufacturer="unplugred" pluginVSTCategory="kPlugCategEffect">
   <MAINGROUP id="DkCz5r" name="ClickBox">
-    <FILE id="cOdupL" name="PluginEditor.h" compile="0" resource="0" file="Source/PluginEditor.h"/>
-    <FILE id="PxBi41" name="PluginEditor.cpp" compile="1" resource="0"
-          file="Source/PluginEditor.cpp"/>
-    <FILE id="kLQqPj" name="PluginProcessor.h" compile="0" resource="0"
-          file="Source/PluginProcessor.h"/>
-    <FILE id="Hzj8fo" name="PluginProcessor.cpp" compile="1" resource="0"
-          file="Source/PluginProcessor.cpp"/>
-    <FILE id="dkwY1w" name="perlin.cpp" compile="1" resource="0" file="Source/perlin.cpp"/>
-    <FILE id="aeYvAM" name="perlin.h" compile="0" resource="0" file="Source/perlin.h"/>
-    <FILE id="wXHGmk" name="tex.png" compile="0" resource="1" file="Source/tex.png"/>
-    <FILE id="DQSZMo" name="credits.png" compile="0" resource="1" file="Source/credits.png"/>
-    <FILE id="Xj0qIx" name="cursor.png" compile="0" resource="1" file="Source/cursor.png"/>
+    <GROUP id="{CE0A4298-FBD0-4519-A526-490181444434}" name="Source">
+      <FILE id="cOdupL" name="PluginEditor.h" compile="0" resource="0" file="Source/PluginEditor.h"/>
+      <FILE id="PxBi41" name="PluginEditor.cpp" compile="1" resource="0"
+            file="Source/PluginEditor.cpp"/>
+      <FILE id="kLQqPj" name="PluginProcessor.h" compile="0" resource="0"
+            file="Source/PluginProcessor.h"/>
+      <FILE id="Hzj8fo" name="PluginProcessor.cpp" compile="1" resource="0"
+            file="Source/PluginProcessor.cpp"/>
+      <FILE id="dkwY1w" name="perlin.cpp" compile="1" resource="0" file="Source/perlin.cpp"/>
+      <FILE id="aeYvAM" name="perlin.h" compile="0" resource="0" file="Source/perlin.h"/>
+    </GROUP>
+    <GROUP id="{CB17ED7C-2440-1865-87BC-42553263DEDB}" name="Resources">
+      <FILE id="dyEHZw" name="credits.png" compile="0" resource="1" file="Resources/credits.png"/>
+      <FILE id="ZyIEhV" name="cursor.png" compile="0" resource="1" file="Resources/cursor.png"/>
+      <FILE id="e1vJhR" name="tex.png" compile="0" resource="1" file="Resources/tex.png"/>
+    </GROUP>
   </MAINGROUP>
   <JUCEOPTIONS JUCE_STRICT_REFCOUNTEDPOINTER="1" JUCE_VST3_CAN_REPLACE_VST2="0"
                JUCE_USE_FLAC="0" JUCE_USE_OGGVORBIS="0" JUCE_USE_MP3AUDIOFORMAT="0"
