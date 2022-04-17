@@ -297,12 +297,10 @@ void ProtoAudioProcessor::parameterChanged(const String& parameterID, float newV
 		setoversampling(newValue > .5);
 		return;
 	}
-	for(int i = 0; i < paramcount; i++) {
-		if(parameterID == pots[i].id) {
-			if(pots[i].smoothtime > 0) pots[i].smooth.setTargetValue(newValue);
-			else state.values[i] = newValue;
-			return;
-		}
+	for(int i = 0; i < paramcount; i++) if(parameterID == pots[i].id) {
+		if(pots[i].smoothtime > 0) pots[i].smooth.setTargetValue(newValue);
+		else state.values[i] = newValue;
+		return;
 	}
 }
 
