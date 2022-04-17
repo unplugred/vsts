@@ -414,11 +414,15 @@ void ProtoAudioProcessorEditor::timerCallback() {
 void ProtoAudioProcessorEditor::parameterChanged(const String& parameterID, float newValue) {
 	if(parameterID == "oversampling") {
 		oversampling = newValue>.5f;
-	} else for(int i = 0; i < knobcount; i++) if(knobs[i].id == parameterID) {
+		needtoupdate = 2;
+		return;
+	}
+	for(int i = 0; i < knobcount; i++) if(knobs[i].id == parameterID) {
 		knobs[i].value = knobs[i].normalize(newValue);
 		calcvis();
+		needtoupdate = 2;
+		return;
 	}
-	needtoupdate = 2;
 }
 void ProtoAudioProcessorEditor::mouseMove(const MouseEvent& event) {
 	int prevhover = hover;

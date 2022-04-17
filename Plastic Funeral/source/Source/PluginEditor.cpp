@@ -468,11 +468,15 @@ void PFAudioProcessorEditor::timerCallback() {
 void PFAudioProcessorEditor::parameterChanged(const String& parameterID, float newValue) {
 	if(parameterID == "oversampling") {
 		oversampling = newValue>.5f;
-	} else for(int i = 0; i < knobcount; i++) if(knobs[i].id == parameterID) {
+		needtoupdate = 2;
+		return;
+	}
+	for(int i = 0; i < knobcount; i++) if(knobs[i].id == parameterID) {
 		knobs[i].value = knobs[i].normalize(newValue);
 		calcvis();
+		needtoupdate = 2;
+		return;
 	}
-	needtoupdate = 2;
 }
 void PFAudioProcessorEditor::mouseMove(const MouseEvent& event) {
 	int prevhover = hover;
