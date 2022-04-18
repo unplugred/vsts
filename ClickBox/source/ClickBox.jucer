@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <JUCERPROJECT id="poC928" name="ClickBox" projectType="audioplug" useAppConfig="0"
-              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" pluginFormats="buildStandalone,buildVST"
+              addUsingNamespaceToJuceHeader="1" jucerFormatVersion="1" pluginFormats="buildStandalone,buildVST"
               pluginManufacturer="unplugred" pluginVSTCategory="kPlugCategEffect">
   <MAINGROUP id="DkCz5r" name="ClickBox">
     <GROUP id="{CE0A4298-FBD0-4519-A526-490181444434}" name="Source">
+      <FILE id="jWVKt7" name="CoolLogger.cpp" compile="1" resource="0" file="Source/CoolLogger.cpp"/>
+      <FILE id="VZZvZE" name="CoolLogger.h" compile="0" resource="0" file="Source/CoolLogger.h"/>
       <FILE id="cOdupL" name="PluginEditor.h" compile="0" resource="0" file="Source/PluginEditor.h"/>
       <FILE id="PxBi41" name="PluginEditor.cpp" compile="1" resource="0"
             file="Source/PluginEditor.cpp"/>
@@ -18,6 +20,7 @@
     <GROUP id="{CB17ED7C-2440-1865-87BC-42553263DEDB}" name="Resources">
       <FILE id="dyEHZw" name="credits.png" compile="0" resource="1" file="Resources/credits.png"/>
       <FILE id="ZyIEhV" name="cursor.png" compile="0" resource="1" file="Resources/cursor.png"/>
+      <FILE id="DwI1q8" name="dbg_txt.png" compile="0" resource="1" file="Resources/dbg_txt.png"/>
       <FILE id="e1vJhR" name="tex.png" compile="0" resource="1" file="Resources/tex.png"/>
     </GROUP>
   </MAINGROUP>

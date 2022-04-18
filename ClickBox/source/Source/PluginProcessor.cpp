@@ -8,7 +8,6 @@
 
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-using namespace juce;
 
 ClickBoxAudioProcessor::ClickBoxAudioProcessor() :
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -16,27 +15,26 @@ ClickBoxAudioProcessor::ClickBoxAudioProcessor() :
 #endif
 	apvts(*this, &undoManager, "Parameters", createParameters())
 {
-	apvts.addParameterListener("x",this);
-	apvts.addParameterListener("y",this);
-	apvts.addParameterListener("intensity",this);
-	apvts.addParameterListener("amount",this);
-	apvts.addParameterListener("stereo",this);
-	apvts.addParameterListener("sidechain",this);
-	apvts.addParameterListener("dry",this);
-	apvts.addParameterListener("auto",this);
-	apvts.addParameterListener("override",this);
+	pots[0] = potentiometer("X"					,"x"		,.05f	,.5f	,0	,1	,false);
+	pots[1] = potentiometer("Y"					,"y"		,.05f	,.5f	,0	,1	,false);
+	pots[2] = potentiometer("Intensity"			,"intensity",0		,.5f	);
+	pots[3] = potentiometer("Amount"			,"amount"	,0		,.5f	);
+	pots[4] = potentiometer("Stereo"			,"stereo"	,0		,.28f	);
+	pots[5] = potentiometer("Side-chain to dry"	,"sidechain",0		,0		,0	,1	,false	,potentiometer::ptype::booltype);
+	pots[6] = potentiometer("Dry out"			,"dry"		,.001f	,1		,0	,1	,true	,potentiometer::ptype::booltype);
+	pots[7] = potentiometer("Auto"				,"auto"		,0		,0		);
+	pots[8] = potentiometer("Override"			,"override"	,0		,0		,0	,1	,false	,potentiometer::ptype::booltype);
+
+	for(int i = 0; i < paramcount; i++) {
+		state.values[i] = pots[i].inflate(apvts.getParameter(pots[i].id)->getValue());
+		if(pots[i].smoothtime > 0) pots[i].smooth.setCurrentAndTargetValue(state.values[i]);
+		apvts.addParameterListener(pots[i].id, this);
+	}
+
 	prlin.init();
 }
 ClickBoxAudioProcessor::~ClickBoxAudioProcessor() {
-	apvts.removeParameterListener("x", this);
-	apvts.removeParameterListener("y", this);
-	apvts.removeParameterListener("intensity", this);
-	apvts.removeParameterListener("amount", this);
-	apvts.removeParameterListener("stereo", this);
-	apvts.removeParameterListener("sidechain", this);
-	apvts.removeParameterListener("dry", this);
-	apvts.removeParameterListener("auto", this);
-	apvts.removeParameterListener("override", this);
+	for(int i = 0; i < paramcount; i++) apvts.removeParameterListener(pots[i].id, this);
 }
 
 const String ClickBoxAudioProcessor::getName() const { return "ClickBox"; }
@@ -50,12 +48,22 @@ void ClickBoxAudioProcessor::setCurrentProgram(int index) { }
 const String ClickBoxAudioProcessor::getProgramName(int index) { return ":)"; }
 void ClickBoxAudioProcessor::changeProgramName(int index, const String& newName) { }
 
-void ClickBoxAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) { }
+void ClickBoxAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
+	for(int i = 0; i < paramcount; i++) if(pots[i].smoothtime > 0)
+		pots[i].smooth.reset(sampleRate*(state.values[6]+1), pots[i].smoothtime);
+}
+void ClickBoxAudioProcessor::changechannelnum(int newchannelnum) {
+	channelnum = newchannelnum;
+	if(newchannelnum <= 0) return;
+
+	channelData.clear();
+	for (int i = 0; i < getNumInputChannels(); i++)
+		channelData.push_back(nullptr);
+}
 void ClickBoxAudioProcessor::releaseResources() { }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
-bool ClickBoxAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
-{
+bool ClickBoxAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const {
 	if (layouts.getMainOutputChannelSet() != AudioChannelSet::mono()
 		&& layouts.getMainOutputChannelSet() != AudioChannelSet::stereo())
 		return false;
@@ -67,168 +75,150 @@ bool ClickBoxAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) 
 }
 #endif
 
-void ClickBoxAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMessages)
-{
+void ClickBoxAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMessages) {
 	ScopedNoDenormals noDenormals;
-	auto totalNumInputChannels = getTotalNumInputChannels();
-	auto totalNumOutputChannels = getTotalNumOutputChannels();
-	for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-		buffer.clear(i, 0, buffer.getNumSamples());
 
-	float olddi = oldi.get();
+	if(buffer.getNumChannels() == 0 || buffer.getNumSamples() == 0) return;
+	if(buffer.getNumChannels() != channelnum)
+		changechannelnum(buffer.getNumChannels());
+	for (auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
+		buffer.clear (i, 0, buffer.getNumSamples());
 
-	time += buffer.getNumSamples() * .00001f;
-	float newx = xval, newy = yval;
-	float compensation = 0;
-	if (!overridee) {
-		newx = prlin.noise(time,0)*.5f+.5f;
-		newy = prlin.noise(0,time)*.5f+.5f;
-		compensation = fabs(oldautomod-automod)*sqrt((newx-xval)*(newx-xval)+(newy-yval)*(newy-yval));
-		newx = newx*automod+xval*(1-automod);
-		newy = newy*automod+yval*(1-automod);
-	}
+	for (int channel = 0; channel < channelnum; ++channel)
+		channelData[channel] = buffer.getWritePointer(channel);
 
-	float i = olddi;
-	if (overridee == oldoverride) {
-		float xdiff = fabs(x.get()-newx);
-		float ydiff = fabs(y.get()-newy);
-		i = (((sqrt(xdiff*xdiff+ydiff*ydiff)-compensation)*120)/buffer.getNumSamples())*amount*amount;
-	}
+	float ii = i.get();
+	for(int sample = 0; sample < buffer.getNumSamples(); ++sample) {
+		for(int i = 0; i < paramcount; i++) if(pots[i].smoothtime > 0)
+			state.values[i] = pots[i].smooth.getNextValue();
 
-	if(sidechain) {
-		if (totalNumInputChannels < 2)
-			i *= buffer.getRMSLevel(0,0,buffer.getNumSamples());
-		else {
-			float l = buffer.getRMSLevel(0,0,buffer.getNumSamples());
-			float r = buffer.getRMSLevel(1,0,buffer.getNumSamples());
-			i *= sqrt(l*l+r*r);
-		}
-		i *= 4;
-	}
-
-	float unit = 1.f/buffer.getNumSamples();
-	float* channelDataL = buffer.getWritePointer(0);
-	float* channelDataR;
-	if (totalNumInputChannels >= 2) channelDataR = buffer.getWritePointer(1);
-	for (int sample = 0; sample < buffer.getNumSamples(); ++sample) {
-		float mult = unit*sample;
-		float lerpi = olddi*(1-mult)+i*mult,
-			lerpintensity = (oldintensity*(1-mult)+intensity*mult)*2,
-			lerpstereo = oldstereo*(1-mult)+stereo*mult,
-			lerpdry = olddry*(1-mult)+dry*mult;
-		bool left = false;
-		bool right = false;
-
-		//click happened
-		if(random.nextFloat() < lerpi) {
-			//input is mono
-			if (totalNumInputChannels < 2) {
-				left = true;
-			//click is stereo
-			} else if(random.nextFloat() < lerpstereo) {
-				if(random.nextFloat() > .5f) left = true;
-				else right = true;
-			//click is mono
-			} else {
-				left = true;
-				right = true;
-			}
-
-			//create click
-			float ampp = generateclick();
-			if(lerpintensity < 1) {
-				ampp *= lerpintensity;
-				if(lerpdry > 0) {
-					if(left) channelDataL[sample] = ampp+lerpdry*channelDataL[sample]*(1-lerpintensity);
-					if(right) channelDataR[sample] = ampp+lerpdry*channelDataR[sample]*(1-lerpintensity);
-				} else {
-					if(left) channelDataL[sample] = ampp;
-					if(right) channelDataR[sample] = ampp;
-				}
-			} else {
-				ampp = ampp*(2-lerpintensity)+(ampp<0?-1:1)*(lerpintensity-1);
-				if(left) channelDataL[sample] = ampp;
-				if(right) channelDataR[sample] = ampp;
-			}
+		if(state.values[5]) {
+			float monoamp = 0;
+			for(int i = 0; i < channelnum; i++) monoamp += channelData[i][sample];
+			rms += (monoamp*monoamp)/channelnum;
 		}
 
-		//click did not happen
-		if(!left) channelDataL[sample] *= lerpdry;
-		if(totalNumInputChannels >= 2 && !right) channelDataR[sample] *= lerpdry;
-	}
+		//calculate click chance
+		samplessincelastperlin++;
+		if(samplessincelastperlin >= 512) {
+			oldi = ii;
 
-	oldi = i;
-	x = newx;
-	y = newy;
-	oldintensity = intensity;
-	oldstereo = stereo;
-	olddry = dry;
-	oldoverride = overridee;
-	oldautomod = automod;
-}
-float ClickBoxAudioProcessor::generateclick() {
-	return random.nextFloat()*2-1;
+			//calculate coordinates
+			time += samplessincelastperlin*.00001f;
+			float compensation = 0;
+			float newx = state.values[0], newy = state.values[1];
+			if(!state.values[8]) {
+				newx = prlin.noise(time,0)*.5f+.5f;
+				newy = prlin.noise(0,time)*.5f+.5f;
+				compensation = fabs(oldautomod-state.values[7])*sqrt((newx-state.values[0])*(newx-state.values[0])+(newy - state.values[1])*(newy-state.values[1]));
+				newx = newx*state.values[7]+state.values[0]*(1-state.values[7]);
+				newy = newy*state.values[7]+state.values[1]*(1-state.values[7]);
+			}
+			oldautomod = state.values[7];
+
+			//coordinate differentials
+			if(state.values[8] == oldoverride) {
+				float xdiff = fabs(x.get()-newx);
+				float ydiff = fabs(y.get()-newy);
+				ii = (((sqrt(xdiff*xdiff+ydiff*ydiff)-compensation)*120)/samplessincelastperlin)*state.values[3]*state.values[3];
+			}
+			oldoverride = state.values[8];
+			x = newx;
+			y = newy;
+
+			//sidechain to dry
+			if(state.values[5]) {
+				ii *= sqrt(rms)*4;
+				rms = 0;
+			}
+			i = ii;
+
+			samplessincelastperlin = 0;
+		}
+
+		//dry out
+		for(int i = 0; i < channelnum; i++) channelData[i][sample] *= state.values[6];
+
+		//generate click
+		float mult = samplessincelastperlin*.001953125f;
+		if(random.nextFloat() < (oldi*(1-mult)+ii*mult)) {
+			float ampp = random.nextFloat()*2-1;
+			if(state.values[2] < 1) ampp *= state.values[2];
+			else ampp = ampp*(2-state.values[2])+(ampp<0?-1:1)*(state.values[2]-1);
+
+			int clickchannel = (int)floorf(random.nextFloat()*channelnum);
+			for(int channel = 0; channel < channelnum; channel++) if(channel == clickchannel || random.nextFloat() >= state.values[4]) {
+				if(state.values[2] < 1 && state.values[6] > 0)
+					channelData[channel][sample] = fmax(fmin(ampp+state.values[6]*channelData[channel][sample]*(1-state.values[2]),1),0);
+				else
+					channelData[channel][sample] = fmax(fmin(ampp,1),0);
+			}
+		}
+	}
 }
 
 bool ClickBoxAudioProcessor::hasEditor() const { return true; }
-AudioProcessorEditor* ClickBoxAudioProcessor::createEditor() { return new ClickBoxAudioProcessorEditor (*this); }
+AudioProcessorEditor* ClickBoxAudioProcessor::createEditor() {
+	return new ClickBoxAudioProcessorEditor(*this,paramcount,state,pots);
+}
 
-void ClickBoxAudioProcessor::getStateInformation (MemoryBlock& destData) {
+void ClickBoxAudioProcessor::getStateInformation(MemoryBlock& destData) {
 	const char linebreak = '\n';
 	std::ostringstream data;
-	data << version
-		<< linebreak << x.get()
-		<< linebreak << y.get()
-		<< linebreak << intensity
-		<< linebreak << amount
-		<< linebreak << stereo
-		<< linebreak << (sidechain?1:0)
-		<< linebreak << (dry?1:0)
-		<< linebreak << automod;
+	data << version << linebreak;
+
+	pluginpreset newstate = state;
+	for(int i = 0; i < paramcount; i++) if(pots[i].id != "override") {
+		if(pots[i].smoothtime > 0)
+			data << pots[i].smooth.getTargetValue() << linebreak;
+		else
+			data << newstate.values[i] << linebreak;
+	}
+
 	MemoryOutputStream stream(destData, false);
 	stream.writeString(data.str());
 }
 void ClickBoxAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
-	std::stringstream ss(String::createStringFromData(data,sizeInBytes).toRawUTF8());
-	std::string token;
+	try {
+		std::stringstream ss(String::createStringFromData(data,sizeInBytes).toRawUTF8());
+		std::string token;
 
-	std::getline(ss,token,'\n');
-	int saveversion = stoi(token);
+		std::getline(ss,token,'\n');
+		int saveversion = stoi(token);
 
-	std::getline(ss,token,'\n');
-	apvts.getParameter("x")->setValueNotifyingHost(stof(token));
-
-	std::getline(ss,token,'\n');
-	apvts.getParameter("y")->setValueNotifyingHost(stof(token));
-
-	std::getline(ss,token,'\n');
-	apvts.getParameter("intensity")->setValueNotifyingHost(stof(token));
-
-	std::getline(ss,token,'\n');
-	apvts.getParameter("amount")->setValueNotifyingHost(stof(token));
-
-	std::getline(ss,token,'\n');
-	apvts.getParameter("stereo")->setValueNotifyingHost(stof(token));
-
-	std::getline(ss,token,'\n');
-	apvts.getParameter("sidechain")->setValueNotifyingHost(stof(token));
-
-	std::getline(ss,token,'\n');
-	apvts.getParameter("dry")->setValueNotifyingHost(stof(token));
-
-	std::getline(ss,token,'\n');
-	apvts.getParameter("auto")->setValueNotifyingHost(stof(token));
+		for(int i = 0; i < paramcount; i++) if(pots[i].id != "override") {
+			std::getline(ss, token, '\n');
+			float val = std::stof(token);
+			apvts.getParameter(pots[i].id)->setValueNotifyingHost(pots[i].normalize(val));
+			if(pots[i].smoothtime > 0) {
+				pots[i].smooth.setCurrentAndTargetValue(val);
+				state.values[i] = val;
+			}
+		}
+	} catch(const char* e) {
+		logger.debug((String)"Error loading saved data: "+(String)e);
+	} catch(String e) {
+		logger.debug((String)"Error loading saved data: "+e);
+	} catch(std::exception &e) {
+		logger.debug((String)"Error loading saved data: "+(String)e.what());
+	} catch(...) {
+		logger.debug((String)"Error loading saved data");
+	}
 }
 void ClickBoxAudioProcessor::parameterChanged(const String& parameterID, float newValue) {
-	if(parameterID == "x") xval = newValue;
-	else if(parameterID == "y") yval = newValue;
-	else if(parameterID == "intensity") intensity = newValue;
-	else if(parameterID == "amount") amount = newValue;
-	else if(parameterID == "stereo") stereo = newValue;
-	else if(parameterID == "sidechain") sidechain = newValue>.5;
-	else if(parameterID == "dry") dry = newValue>.5;
-	else if(parameterID == "auto") automod = newValue;
-	else if(parameterID == "override") overridee = newValue>.5;
+	for(int i = 0; i < paramcount; i++) if(parameterID == pots[i].id) {
+		if(pots[i].smoothtime > 0) pots[i].smooth.setTargetValue(newValue);
+		else state.values[i] = newValue;
+		if(parameterID == "override" && newValue > .5) {
+			pots[0].smooth.setCurrentAndTargetValue(pots[0].smooth.getTargetValue());
+			pots[1].smooth.setCurrentAndTargetValue(pots[1].smooth.getTargetValue());
+			state.values[0] = pots[0].smooth.getTargetValue();
+			state.values[1] = pots[1].smooth.getTargetValue();
+			x = state.values[0];
+			y = state.values[1];
+		}
+		return;
+	}
 }
 
 AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new ClickBoxAudioProcessor(); }

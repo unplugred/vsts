@@ -9,7 +9,6 @@
 #pragma once
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
-using namespace juce;
 
 struct slider {
 	float x=0,y=0,w=1,h=.13671875f;
@@ -20,6 +19,15 @@ struct slider {
 	bool isslider = true;
 	float r=1,g=0,b=0;
 	float coloffset=0;
+	float minimumvalue = 0.f;
+	float maximumvalue = 1.f;
+	float defaultvalue = 0.f;
+	float normalize(float val) {
+		return (val-minimumvalue)/(maximumvalue-minimumvalue);
+	}
+	float inflate(float val) {
+		return val*(maximumvalue-minimumvalue)+minimumvalue;
+	}
 };
 struct mousepos {
 	float x = -1000;
@@ -29,7 +37,7 @@ struct mousepos {
 };
 class ClickBoxAudioProcessorEditor	: public AudioProcessorEditor, public OpenGLRenderer, public AudioProcessorValueTreeState::Listener, private Timer {
 public:
-	ClickBoxAudioProcessorEditor (ClickBoxAudioProcessor&);
+	ClickBoxAudioProcessorEditor (ClickBoxAudioProcessor&, int paramcount, pluginpreset state, potentiometer pots[]);
 	~ClickBoxAudioProcessorEditor() override;
 
 	void newOpenGLContextCreated() override;
@@ -71,7 +79,7 @@ private:
 	int initialdrag = 0;
 	float initialvalue = 0;
 
-	OpenGLContext openGLContext;
+	OpenGLContext context;
 	unsigned int arraybuffer;
 	float square[8]{
 		0.f,0.f,
@@ -83,8 +91,10 @@ private:
 	String clearvert;
 	String clearfrag;
 
-	Point<int> dragpos;
+	int slidercount = 0;
 	slider sliders[6];
+	
+	Point<int> dragpos;
 	OpenGLTexture slidertex;
 	std::unique_ptr<OpenGLShaderProgram> slidershader;
 	String slidervert;
