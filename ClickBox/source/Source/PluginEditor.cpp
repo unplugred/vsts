@@ -8,31 +8,19 @@
 
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-using namespace juce;
+using namespace gl;
 
-ClickBoxAudioProcessorEditor::ClickBoxAudioProcessorEditor (ClickBoxAudioProcessor& p) : AudioProcessorEditor (&p), audioProcessor (p) {
-	audioProcessor.apvts.addParameterListener("intensity",this);
-	sliders[0].id = "intensity";
-	sliders[0].name = "Intensity";
-	sliders[0].value = audioProcessor.apvts.getParameter("intensity")->getValue();
+ClickBoxAudioProcessorEditor::ClickBoxAudioProcessorEditor (ClickBoxAudioProcessor& p, int paramcount, pluginpreset state, potentiometer pots[]) : AudioProcessorEditor (&p), audioProcessor (p) {
 	sliders[0].hy = 116;
 	sliders[0].hh = 146;
 	sliders[0].y = .4453125f;
 
-	audioProcessor.apvts.addParameterListener("amount",this);
-	sliders[1].id = "amount";
-	sliders[1].name = "Amount";
-	sliders[1].value = audioProcessor.apvts.getParameter("amount")->getValue();
 	sliders[1].hy = 151;
 	sliders[1].hw = 126;
 	sliders[1].hh = 181;
 	sliders[1].y = .58203125f;
 	sliders[1].w = .5;
 
-	audioProcessor.apvts.addParameterListener("stereo",this);
-	sliders[2].id = "stereo";
-	sliders[2].name = "Stereo";
-	sliders[2].value = audioProcessor.apvts.getParameter("stereo")->getValue();
 	sliders[2].hx = 130;
 	sliders[2].hy = 151;
 	sliders[2].hh = 181;
@@ -40,19 +28,11 @@ ClickBoxAudioProcessorEditor::ClickBoxAudioProcessorEditor (ClickBoxAudioProcess
 	sliders[2].y = .58203125f;
 	sliders[2].w = .5;
 
-	audioProcessor.apvts.addParameterListener("sidechain",this);
-	sliders[3].id = "sidechain";
-	sliders[3].name = "Side-chain to dry";
-	sliders[3].value = audioProcessor.apvts.getParameter("sidechain")->getValue();
 	sliders[3].isslider = false;
 	sliders[3].hy = 186;
 	sliders[3].hh = 216;
 	sliders[3].y = .71875f;
 
-	audioProcessor.apvts.addParameterListener("dry",this);
-	sliders[4].id = "dry";
-	sliders[4].name = "Dry out";
-	sliders[4].value = audioProcessor.apvts.getParameter("dry")->getValue();
 	sliders[4].isslider = false;
 	sliders[4].hy = 221;
 	sliders[4].hw = 126;
@@ -61,10 +41,6 @@ ClickBoxAudioProcessorEditor::ClickBoxAudioProcessorEditor (ClickBoxAudioProcess
 	sliders[4].h = .14453125f;
 	sliders[4].w = .5;
 
-	audioProcessor.apvts.addParameterListener("auto",this);
-	sliders[5].id = "auto";
-	sliders[5].name = "Auto";
-	sliders[5].value = audioProcessor.apvts.getParameter("auto")->getValue();
 	sliders[5].hx = 130;
 	sliders[5].hy = 221;
 	sliders[5].hh = 251;
@@ -74,6 +50,18 @@ ClickBoxAudioProcessorEditor::ClickBoxAudioProcessorEditor (ClickBoxAudioProcess
 	sliders[5].h = .14453125f;
 
 	for(int i = 0; i < 6; i++) {
+		sliders[i].id = pots[i+2].id;
+		sliders[i].name = pots[i+2].name;
+		if(pots[i+2].smoothtime > 0)
+			sliders[i].value = pots[i+2].normalize(pots[i+2].smooth.getTargetValue());
+		else
+			sliders[i].value = pots[i+2].normalize(state.values[i+2]);
+		sliders[i].minimumvalue = pots[i+2].minimumvalue;
+		sliders[i].maximumvalue = pots[i+2].maximumvalue;
+		sliders[i].defaultvalue = pots[i+2].defaultvalue;
+		slidercount++;
+		audioProcessor.apvts.addParameterListener(sliders[i].id, this);
+	
 		if(sliders[i].isslider) sliders[i].coloffset = random.nextFloat();
 		float r = sliders[i].isslider?(sliders[i].value*3*sliders[i].w+sliders[i].coloffset):random.nextFloat();
 		sliders[i].r = getr(r);
@@ -89,23 +77,20 @@ ClickBoxAudioProcessorEditor::ClickBoxAudioProcessorEditor (ClickBoxAudioProcess
 	setSize (256, 256);
 	setResizable(false,false);
 
-	openGLContext.setRenderer(this);
-	openGLContext.attachTo(*this);
+	context.setRenderer(this);
+	context.attachTo(*this);
 
 	startTimerHz(30);
 }
 ClickBoxAudioProcessorEditor::~ClickBoxAudioProcessorEditor() {
-	audioProcessor.apvts.removeParameterListener("intensity",this);
-	audioProcessor.apvts.removeParameterListener("amount",this);
-	audioProcessor.apvts.removeParameterListener("stereo",this);
-	audioProcessor.apvts.removeParameterListener("sidechain",this);
-	audioProcessor.apvts.removeParameterListener("dry",this);
-	audioProcessor.apvts.removeParameterListener("auto",this);
+	for(int i = 0; i < slidercount; i++) audioProcessor.apvts.removeParameterListener(sliders[i].id,this);
 	stopTimer();
-	openGLContext.detach();
+	context.detach();
 }
 
 void ClickBoxAudioProcessorEditor::newOpenGLContextCreated() {
+	audioProcessor.logger.init(&context,getWidth(),getHeight());
+
 	clearvert =
 R"(#version 330 core
 in vec2 aPos;
@@ -117,7 +102,7 @@ R"(#version 330 core
 void main() {
 	gl_FragColor = vec4(.10546875,.10546875,.10546875,.15);
 })";
-	clearshader.reset(new OpenGLShaderProgram(openGLContext));
+	clearshader.reset(new OpenGLShaderProgram(context));
 	clearshader->addVertexShader(clearvert);
 	clearshader->addFragmentShader(clearfrag);
 	clearshader->link();
@@ -156,7 +141,7 @@ void main() {
 
 	gl_FragColor = vec4(color,alpha);
 })";
-	slidershader.reset(new OpenGLShaderProgram(openGLContext));
+	slidershader.reset(new OpenGLShaderProgram(context));
 	slidershader->addVertexShader(slidervert);
 	slidershader->addFragmentShader(sliderfrag);
 	slidershader->link();
@@ -216,7 +201,7 @@ void main() {
 		}
 	} else gl_FragColor = vec4(0);
 })";
-	creditsshader.reset(new OpenGLShaderProgram(openGLContext));
+	creditsshader.reset(new OpenGLShaderProgram(context));
 	creditsshader->addVertexShader(creditsvert);
 	creditsshader->addFragmentShader(creditsfrag);
 	creditsshader->link();
@@ -262,7 +247,7 @@ void main() {
 
 	gl_FragColor = vec4(col.rgb*col.a+.10546875*(1-col.a),1);
 })";
-	ppshader.reset(new OpenGLShaderProgram(openGLContext));
+	ppshader.reset(new OpenGLShaderProgram(context));
 	ppshader->addVertexShader(ppvert);
 	ppshader->addFragmentShader(ppfrag);
 	ppshader->link();
@@ -295,7 +280,7 @@ void main() {
 		gl_FragColor = vec4(texx.g>.5?col:(clamp<.5?(col+.8):vec3(.10546875)),texx.r>.5?1:0);
 	}
 })";
-	cursorshader.reset(new OpenGLShaderProgram(openGLContext));
+	cursorshader.reset(new OpenGLShaderProgram(context));
 	cursorshader->addVertexShader(cursorvert);
 	cursorshader->addFragmentShader(cursorfrag);
 	cursorshader->link();
@@ -314,7 +299,7 @@ void main() {
 	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
 
-	framebuffer.initialise(openGLContext,getWidth(),getHeight());
+	framebuffer.initialise(context,getWidth(),getHeight());
 	glBindTexture(GL_TEXTURE_2D, framebuffer.getTextureID());
 	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
@@ -326,7 +311,7 @@ void main() {
 	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
 
-	openGLContext.extensions.glGenBuffers(1,&arraybuffer);
+	context.extensions.glGenBuffers(1,&arraybuffer);
 }
 void ClickBoxAudioProcessorEditor::renderOpenGL() {
 	glEnable(GL_BLEND);
@@ -334,19 +319,19 @@ void ClickBoxAudioProcessorEditor::renderOpenGL() {
 	glDisable(GL_LIGHTING);
 	glDisable(GL_DEPTH_TEST);
 
-	openGLContext.extensions.glBindBuffer(GL_ARRAY_BUFFER,arraybuffer);
+	context.extensions.glBindBuffer(GL_ARRAY_BUFFER,arraybuffer);
 	glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
 	framebuffer.makeCurrentRenderingTarget();
-	auto coord = openGLContext.extensions.glGetAttribLocation(clearshader->getProgramID(),"aPos");
-	openGLContext.extensions.glBufferData(GL_ARRAY_BUFFER,sizeof(float)*8,square,GL_DYNAMIC_DRAW);
+	auto coord = context.extensions.glGetAttribLocation(clearshader->getProgramID(),"aPos");
+	context.extensions.glBufferData(GL_ARRAY_BUFFER,sizeof(float)*8,square,GL_DYNAMIC_DRAW);
 	clearshader->use();
-	openGLContext.extensions.glEnableVertexAttribArray(coord);
-	openGLContext.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+	context.extensions.glEnableVertexAttribArray(coord);
+	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
-	openGLContext.extensions.glDisableVertexAttribArray(coord);
+	context.extensions.glDisableVertexAttribArray(coord);
 
 	slidershader->use();
-	openGLContext.extensions.glActiveTexture(GL_TEXTURE0);
+	context.extensions.glActiveTexture(GL_TEXTURE0);
 	slidertex.bind();
 	slidershader->setUniform("tex",0);
 	slidershader->setUniform("value",0.f);
@@ -354,13 +339,13 @@ void ClickBoxAudioProcessorEditor::renderOpenGL() {
 	slidershader->setUniform("col",.23828125f,.23828125f,.23828125f);
 	slidershader->setUniform("margin",0.f);
 	slidershader->setUniform("hover",0.f);
-	coord = openGLContext.extensions.glGetAttribLocation(slidershader->getProgramID(),"aPos");
-	openGLContext.extensions.glEnableVertexAttribArray(coord);
-	openGLContext.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+	coord = context.extensions.glGetAttribLocation(slidershader->getProgramID(),"aPos");
+	context.extensions.glEnableVertexAttribArray(coord);
+	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 
 	if(!credits) {
-		for(int i = 0; i < 6; i++) {
+		for(int i = 0; i < slidercount; i++) {
 			slidershader->setUniform("texscale",sliders[i].x,sliders[i].y,sliders[i].w,sliders[i].h);
 			slidershader->setUniform("col",sliders[i].r,sliders[i].g,sliders[i].b);
 			slidershader->setUniform("value",sliders[i].value);
@@ -375,10 +360,10 @@ void ClickBoxAudioProcessorEditor::renderOpenGL() {
 			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 		}
 	} else {
-		openGLContext.extensions.glDisableVertexAttribArray(coord);
+		context.extensions.glDisableVertexAttribArray(coord);
 
 		creditsshader->use();
-		openGLContext.extensions.glActiveTexture(GL_TEXTURE0);
+		context.extensions.glActiveTexture(GL_TEXTURE0);
 		creditstex.bind();
 		creditsshader->setUniform("tex",0);
 		creditsshader->setUniform("texscale",.5546875f);
@@ -391,45 +376,44 @@ void ClickBoxAudioProcessorEditor::renderOpenGL() {
 		creditsshader->setUniform("color",getr(shadertime*.02f),getg(shadertime*.02f),getb(shadertime*.02f));
 		creditsshader->setUniform("htback",hover==-4?.8f:0.f);
 
-		coord = openGLContext.extensions.glGetAttribLocation(creditsshader->getProgramID(),"aPos");
-		openGLContext.extensions.glEnableVertexAttribArray(coord);
-		openGLContext.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+		coord = context.extensions.glGetAttribLocation(creditsshader->getProgramID(),"aPos");
+		context.extensions.glEnableVertexAttribArray(coord);
+		context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
-		openGLContext.extensions.glDisableVertexAttribArray(coord);
+		context.extensions.glDisableVertexAttribArray(coord);
 	}
-	openGLContext.extensions.glDisableVertexAttribArray(coord);
+	context.extensions.glDisableVertexAttribArray(coord);
 
-	openGLContext.extensions.glBindFramebuffer (GL_FRAMEBUFFER, openGLContext.getFrameBufferID());
+	context.extensions.glBindFramebuffer (GL_FRAMEBUFFER, context.getFrameBufferID());
 
 	ppshader->use();
-	openGLContext.extensions.glActiveTexture(GL_TEXTURE0);
+	context.extensions.glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D,framebuffer.getTextureID());
 	ppshader->setUniform("tex",0);
-	openGLContext.extensions.glActiveTexture(GL_TEXTURE1);
+	context.extensions.glActiveTexture(GL_TEXTURE1);
 	slidertex.bind();
 	ppshader->setUniform("noisetex",1);
 	ppshader->setUniform("intensity",ppamount);
 	ppshader->setUniform("randomsone",randoms[0],randoms[1],randoms[2],randoms[3]);
 	ppshader->setUniform("randomstwo",randoms[4],randoms[5],randoms[6],randoms[7]);
 	ppshader->setUniform("randomsblend",randomsblend);
-	coord = openGLContext.extensions.glGetAttribLocation(ppshader->getProgramID(),"aPos");
-	openGLContext.extensions.glEnableVertexAttribArray(coord);
-	openGLContext.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+	coord = context.extensions.glGetAttribLocation(ppshader->getProgramID(),"aPos");
+	context.extensions.glEnableVertexAttribArray(coord);
+	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
-	openGLContext.extensions.glDisableVertexAttribArray(coord);
+	context.extensions.glDisableVertexAttribArray(coord);
 
 	cursorshader->use();
-	openGLContext.extensions.glActiveTexture(GL_TEXTURE0);
+	context.extensions.glActiveTexture(GL_TEXTURE0);
 	cursortex.bind();
 	cursorshader->setUniform("tex",0);
-	openGLContext.extensions.glActiveTexture(GL_TEXTURE1);
+	context.extensions.glActiveTexture(GL_TEXTURE1);
 	slidertex.bind();
 	cursorshader->setUniform("base",1);
 	cursorshader->setUniform("clamp",1.f);
-	coord = openGLContext.extensions.glGetAttribLocation(cursorshader->getProgramID(),"aPos");
-	openGLContext.extensions.glEnableVertexAttribArray(coord);
-	openGLContext.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
-
+	coord = context.extensions.glGetAttribLocation(cursorshader->getProgramID(),"aPos");
+	context.extensions.glEnableVertexAttribArray(coord);
+	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	for(int i = 6; i >= 0; i--) if(prevpos[i].x > -100 && (i != 6 || prevpos[i].automated)) {
 		cursorshader->setUniform("col",colors[prevpos[i].col*3],colors[prevpos[i].col*3+1],colors[prevpos[i].col*3+2]);
 		cursorshader->setUniform("pos",prevpos[i].x*2,prevpos[i].y*2);
@@ -437,8 +421,9 @@ void ClickBoxAudioProcessorEditor::renderOpenGL() {
 		if(i == 0) cursorshader->setUniform("clamp",0.f);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	}
+	context.extensions.glDisableVertexAttribArray(coord);
 
-	openGLContext.extensions.glDisableVertexAttribArray(coord);
+	audioProcessor.logger.drawlog();
 }
 void ClickBoxAudioProcessorEditor::openGLContextClosing() {
 	slidershader->release();
@@ -451,7 +436,9 @@ void ClickBoxAudioProcessorEditor::openGLContextClosing() {
 	creditstex.release();
 	framebuffer.release();
 
-	openGLContext.extensions.glDeleteBuffers(1,&arraybuffer);
+	audioProcessor.logger.release();
+
+	context.extensions.glDeleteBuffers(1,&arraybuffer);
 }
 void ClickBoxAudioProcessorEditor::paint (Graphics& g) {}
 void ClickBoxAudioProcessorEditor::resized() {}
@@ -471,7 +458,7 @@ void ClickBoxAudioProcessorEditor::timerCallback() {
 		randoms[6] = random.nextFloat();
 		randoms[7] = random.nextFloat();
 	}
-	ppamount = ppamount*.7f + .3f*fmin(sqrt(sqrt(audioProcessor.oldi.get()*20)),.4f);
+	ppamount = ppamount*.7f + .3f*fmin(sqrt(sqrt(audioProcessor.i.get()*20)),.4f);
 
 	if(!overridee) {
 		prevpos[1].x = floor(audioProcessor.x.get()*246+5)/256.f;
@@ -489,9 +476,9 @@ void ClickBoxAudioProcessorEditor::timerCallback() {
 		prevpos[0].col = mousecolor;
 	}
 
-	openGLContext.triggerRepaint();
+	context.triggerRepaint();
 
-	for (int i = 6; i > 0; i--) {
+	for(int i = 6; i > 0; i--) {
 		prevpos[i].x = prevpos[i-1].x;
 		prevpos[i].y = prevpos[i-1].y;
 		prevpos[i].automated = prevpos[i-1].automated;
@@ -500,20 +487,14 @@ void ClickBoxAudioProcessorEditor::timerCallback() {
 }
 
 void ClickBoxAudioProcessorEditor::parameterChanged(const String& parameterID, float newValue) {
-	int i = -1;
-	if(parameterID=="intensity")i=0;
-	else if(parameterID=="amount")i=1;
-	else if(parameterID=="stereo")i=2;
-	else if(parameterID=="sidechain")i=3;
-	else if(parameterID=="dry")i=4;
-	else if(parameterID=="auto")i=5;
-	else return;
-	sliders[i].value = newValue;
-
-	float r = sliders[i].isslider?(sliders[i].value*3*sliders[i].w+sliders[i].coloffset):random.nextFloat();
-	sliders[i].r = getr(r);
-	sliders[i].g = getg(r);
-	sliders[i].b = getb(r);
+	for(int i = 0; i < slidercount; i++) if(sliders[i].id == parameterID) {
+		sliders[i].value = sliders[i].normalize(newValue);
+		float r = sliders[i].isslider?(sliders[i].value*3*sliders[i].w+sliders[i].coloffset):random.nextFloat();
+		sliders[i].r = getr(r);
+		sliders[i].g = getg(r);
+		sliders[i].b = getb(r);
+		return;
+	}
 }
 void ClickBoxAudioProcessorEditor::mouseMove(const MouseEvent& event) {
 	prevpos[0].x = event.x*.00390625f;
@@ -548,9 +529,9 @@ void ClickBoxAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 	} else if(hover == -2) {
 		audioProcessor.undoManager.beginNewTransaction();
 		overridee = true;
-		audioProcessor.apvts.getParameter("override")->setValueNotifyingHost(1.f);
 		audioProcessor.apvts.getParameter("x")->setValueNotifyingHost((event.x-5)*.0040650407f);
 		audioProcessor.apvts.getParameter("y")->setValueNotifyingHost((event.y-5)*.0094339623f);
+		audioProcessor.apvts.getParameter("override")->setValueNotifyingHost(1.f);
 		mousecolor = prevpos[0].col;
 	}
 }
@@ -614,7 +595,7 @@ int ClickBoxAudioProcessorEditor::recalchover(float x, float y) {
 	if (credits) {
 		if(x>=55 && x<=201 && y>=161 && y<=205) return -3;
 		if(x>=189 && x<=253 && y>=240 && y<=253) return -4;
-	} else for(int i = 0; i < 6; i++) {
+	} else for(int i = 0; i < slidercount; i++) {
 		if( x >= sliders[i].hx &&
 			x <= sliders[i].hw &&
 			y >= sliders[i].hy &&
