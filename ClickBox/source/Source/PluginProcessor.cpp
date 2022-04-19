@@ -64,10 +64,6 @@ void ClickBoxAudioProcessor::releaseResources() { }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
 bool ClickBoxAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const {
-	if (layouts.getMainOutputChannelSet() != AudioChannelSet::mono()
-		&& layouts.getMainOutputChannelSet() != AudioChannelSet::stereo())
-		return false;
-
 	if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
 		return false;
 
