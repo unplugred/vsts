@@ -145,9 +145,9 @@ void ClickBoxAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer
 			int clickchannel = (int)floorf(random.nextFloat()*channelnum);
 			for(int channel = 0; channel < channelnum; channel++) if(channel == clickchannel || random.nextFloat() >= state.values[4]) {
 				if(state.values[2] < 1 && state.values[6] > 0)
-					channelData[channel][sample] = fmax(fmin(ampp+state.values[6]*channelData[channel][sample]*(1-state.values[2]),1),0);
+					channelData[channel][sample] = fmax(fmin(ampp+state.values[6]*channelData[channel][sample]*(1-state.values[2]),1),-1);
 				else
-					channelData[channel][sample] = fmax(fmin(ampp,1),0);
+					channelData[channel][sample] = fmax(fmin(ampp,1),-1);
 			}
 		}
 	}
