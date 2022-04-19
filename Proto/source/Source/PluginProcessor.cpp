@@ -103,7 +103,7 @@ void ProtoAudioProcessor::changechannelnum(int newchannelnum) {
 	if(newchannelnum <= 0) return;
 
 	channelData.clear();
-	for (int i = 0; i < getNumInputChannels(); i++)
+	for (int i = 0; i < channelnum; i++)
 		channelData.push_back(nullptr);
 
 	ospointerarray.resize(newchannelnum);
