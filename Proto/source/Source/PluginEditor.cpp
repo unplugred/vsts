@@ -496,8 +496,7 @@ void ProtoAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 void ProtoAudioProcessorEditor::mouseDoubleClick(const MouseEvent& event) {
 	if(hover > -1) {
 		audioProcessor.undoManager.setCurrentTransactionName((String)"Reset " += knobs[hover].name);
-		audioProcessor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(
-			knobs[hover].defaultvalue);
+		audioProcessor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(knobs[hover].defaultvalue);
 		audioProcessor.undoManager.beginNewTransaction();
 	}
 }
