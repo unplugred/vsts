@@ -7,7 +7,6 @@
 */
 
 #pragma once
-
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
 
@@ -19,6 +18,15 @@ struct knob {
 	float hover = 0.f;
 	String id;
 	String name;
+	float minimumvalue = 0.f;
+	float maximumvalue = 1.f;
+	float defaultvalue = 0.f;
+	float normalize(float val) {
+		return (val-minimumvalue)/(maximumvalue-minimumvalue);
+	}
+	float inflate(float val) {
+		return val*(maximumvalue-minimumvalue)+minimumvalue;
+	}
 };
 struct bubble {
 	float wiggleamount = 0;
@@ -34,7 +42,7 @@ struct bubble {
 class PisstortionAudioProcessorEditor : public AudioProcessorEditor, public OpenGLRenderer, public AudioProcessorValueTreeState::Listener, private Timer
 {
 public:
-	PisstortionAudioProcessorEditor (PisstortionAudioProcessor&);
+	PisstortionAudioProcessorEditor (PisstortionAudioProcessor&, int paramcount, pluginpreset state, potentiometer pots[]);
 	~PisstortionAudioProcessorEditor() override;
 
 	void newOpenGLContextCreated() override;
@@ -58,6 +66,7 @@ public:
 	void bubbleregen(int i);
 
 	knob knobs[6];
+	int knobcount = 0;
 	float visline[2][452];
 	bool isStereo = false;
 private:
@@ -68,7 +77,7 @@ private:
 	int held = 0;
 	float initialvalue = 0;
 
-	OpenGLContext openGLContext;
+	OpenGLContext context;
 	unsigned int arraybuffer;
 	float square[8]{
 		0.f,0.f,

@@ -22,9 +22,9 @@ void DCFilter::init(int samplerate, int channels) {
 	}
 }
 
-float DCFilter::process(float in, int channel) {
+double DCFilter::process(double in, int channel) {
 	if(channel > (previn.size()-1)) DBG("HEYYYYYYYY");
-	float out = in-previn[channel]+prevout[channel]*R;
+	double out = in-previn[channel]+prevout[channel]*R;
 	previn[channel] = in;
 	prevout[channel] = out;
 	return out;
