@@ -579,8 +579,7 @@ void ClickBoxAudioProcessorEditor::mouseDoubleClick(const MouseEvent& event) {
 	if(hover <= -1) return;
 	if(!sliders[hover].isslider) return;
 	audioProcessor.undoManager.setCurrentTransactionName((String)"Reset " += sliders[hover].name);
-	audioProcessor.apvts.getParameter(sliders[hover].id)->setValueNotifyingHost(
-		audioProcessor.apvts.getParameter(sliders[hover].id)->getDefaultValue());
+	audioProcessor.apvts.getParameter(sliders[hover].id)->setValueNotifyingHost(sliders[hover].defaultvalue);
 	audioProcessor.undoManager.beginNewTransaction();
 }
 void ClickBoxAudioProcessorEditor::mouseWheelMove(const MouseEvent& event, const MouseWheelDetails& wheel) {
@@ -588,7 +587,6 @@ void ClickBoxAudioProcessorEditor::mouseWheelMove(const MouseEvent& event, const
 	if(!sliders[hover].isslider) return;
 	audioProcessor.apvts.getParameter(sliders[hover].id)->setValueNotifyingHost(
 		sliders[hover].value+wheel.deltaY*((event.mods.isShiftDown() || event.mods.isAltDown())?.03f:.2f));
-
 }
 int ClickBoxAudioProcessorEditor::recalchover(float x, float y) {
 	if(x>=5 && x<=251 && y>=5 && y<=111) return -2;

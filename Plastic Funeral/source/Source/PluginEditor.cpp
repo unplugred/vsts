@@ -438,7 +438,7 @@ void PFAudioProcessorEditor::timerCallback() {
 	}
 
 	float os = oversampling?1:0;
-	if (oversamplinglerped != os?1:0) {
+	if(oversamplinglerped != os?1:0) {
 		needtoupdate = 2;
 		if(fabs(oversamplinglerped-os) <= .001f) oversamplinglerped = os;
 		oversamplinglerped = oversamplinglerped*.75f+os*.25f;
@@ -549,8 +549,7 @@ void PFAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 void PFAudioProcessorEditor::mouseDoubleClick(const MouseEvent& event) {
 	if(hover > -1) {
 		audioProcessor.undoManager.setCurrentTransactionName((String)"Reset " += knobs[hover].name);
-		audioProcessor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(
-			knobs[hover].defaultvalue);
+		audioProcessor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(knobs[hover].defaultvalue);
 		audioProcessor.undoManager.beginNewTransaction();
 	}
 }
