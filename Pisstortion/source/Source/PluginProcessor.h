@@ -9,10 +9,56 @@
 #pragma once
 #include <JuceHeader.h>
 #include "DCFilter.h"
+#include "CoolLogger.h"
 
-struct PluginPreset {
-	String name;
-	float freq, piss, noise, harm, stereo;
+struct potentiometer {
+public:
+	enum ptype {
+		floattype = 0,
+		inttype = 1,
+		booltype = 2
+	};
+	String name = "";
+	String id = "";
+	float minimumvalue = 0;
+	float maximumvalue = 1;
+	float defaultvalue = 0;
+	bool savedinpreset = true;
+	ptype ttype = ptype::floattype;
+	SmoothedValue<float,ValueSmoothingTypes::Linear> smooth;
+	float smoothtime = 0;
+	potentiometer(String potname = "", String potid = "", float smoothed = 0, float potdefault = 0.f, float potmin = 0.f, float potmax = 1.f, bool potsaved = true, ptype pottype = ptype::floattype) {
+		name = potname;
+		id = potid;
+		smoothtime = smoothed;
+		if(smoothed > 0) smooth.setCurrentAndTargetValue(defaultvalue);
+		defaultvalue = potdefault;
+		minimumvalue = potmin;
+		maximumvalue = potmax;
+		savedinpreset = potsaved;
+		ttype = pottype;
+	}
+	float normalize(float val) {
+		return (val-minimumvalue)/(maximumvalue-minimumvalue);
+	}
+	float inflate(float val) {
+		return val*(maximumvalue-minimumvalue)+minimumvalue;
+	}
+};
+
+struct pluginpreset {
+	String name = "";
+	float values[7];
+	pluginpreset(String pname = "", float val1 = 0.f, float val2 = 0.f, float val3 = 0.f, float val4 = 0.f, float val5 = 0.f, float val6 = 0.f, float val7 = 1.f) {
+		name = pname;
+		values[0] = val1;
+		values[1] = val2;
+		values[2] = val3;
+		values[3] = val4;
+		values[4] = val5;
+		values[5] = val6;
+		values[6] = val7;
+	}
 };
 
 class PisstortionAudioProcessor : public AudioProcessor, public AudioProcessorValueTreeState::Listener, private Timer {
@@ -21,6 +67,7 @@ public:
 	~PisstortionAudioProcessor() override;
 
 	void prepareToPlay (double sampleRate, int samplesPerBlock) override;
+	void changechannelnum(int newchannelnum);
 	void releaseResources() override;
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -28,8 +75,8 @@ public:
 #endif
 
 	void processBlock (AudioBuffer<float>&, MidiBuffer&) override;
-	float pisstortion(float source, int channel, float freq, float piss, float noise, float harm, float stereo, float gain, bool removedc);
-	void setoversampling(int factor);
+	float pisstortion(float source, int channel, int channelcount, pluginpreset stt, bool removedc);
+	void setoversampling(bool toggle);
 
 	AudioProcessorEditor* createEditor() override;
 	bool hasEditor() const override;
@@ -58,15 +105,16 @@ public:
 	Atomic<int> rmscount = 0;
 	Atomic<bool> updatevis;
 
-	int version = 1;
-	Atomic<float> freq = .17f, piss = 1.f, noise = .35f, harm = .31f, stereo = .1f, gain = 1.f;
-	Atomic<int> oversampling = 1;
+	int version = 2;
+	const int paramcount = 7;
 
+	pluginpreset state;
+	potentiometer pots[7];
+
+	CoolLogger logger;
 private:
-	float oldfreq = 0, oldpiss = 0, oldnoise = 0, oldharm = .5f, oldstereo = 0, oldgain = 1;
-
 	AudioProcessorValueTreeState::ParameterLayout createParameters();
-	PluginPreset presets[9];
+	pluginpreset presets[9];
 	int currentpreset = 0;
 	void timerCallback() override;
 	void lerpValue(StringRef, float&, float);
@@ -75,8 +123,16 @@ private:
 	bool boot = false;
 	bool preparedtoplay = false;
 
-	std::unique_ptr<dsp::Oversampling<float>> os[3];
+	std::unique_ptr<dsp::Oversampling<float>> os;
+	AudioBuffer<float> osbuffer;
+	std::vector<float*> ospointerarray;
+
 	DCFilter dcfilter;
+
+	int channelnum = 0;
+	int samplesperblock = 512;
+	int samplerate = 44100;
+	std::vector<float*> channelData;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PisstortionAudioProcessor)
 };

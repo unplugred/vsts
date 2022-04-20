@@ -10,37 +10,32 @@
 #include "PluginEditor.h"
 using namespace gl;
 
-PisstortionAudioProcessorEditor::PisstortionAudioProcessorEditor (PisstortionAudioProcessor& p)
+PisstortionAudioProcessorEditor::PisstortionAudioProcessorEditor (PisstortionAudioProcessor& p, int paramcount, pluginpreset state, potentiometer pots[])
 	: AudioProcessorEditor (&p), audioProcessor (p)
 {
-	knobs[0].id = "freq";
-	knobs[0].name = "frequency";
-	knobs[0].value = audioProcessor.freq.get();
-	knobs[1].id = "piss";
-	knobs[1].name = "piss";
-	knobs[1].value = audioProcessor.piss.get();
-	knobs[2].id = "noise";
-	knobs[2].name = "noise reduction";
-	knobs[2].value = audioProcessor.noise.get();
-	knobs[3].id = "harm";
-	knobs[3].name = "harmonics";
-	knobs[3].value = audioProcessor.harm.get();
-	knobs[4].id = "stereo";
-	knobs[4].name = "stereo";
-	knobs[4].value = audioProcessor.stereo.get();
-	knobs[5].id = "gain";
-	knobs[5].name = "gain";
-	knobs[5].value = audioProcessor.gain.get();
-	oversampling = audioProcessor.oversampling.get();
-	oversamplinglerped = oversampling;
-	for (int x = 0; x < 2; x++) {
-		for (int y = 0; y < 3; y++) {
-			knobs[x+y*2].lerpedvalue = knobs[x+y*2].value;
-			knobs[x+y*2].x = x*106+68;
-			knobs[x+y*2].y = y*100+144;
-			audioProcessor.apvts.addParameterListener(knobs[x+y*2].id,this);
+	for(int x = 0; x < 2; x++) {
+		for(int y = 0; y < 3; y++) {
+			int i = x+y*2;
+			knobs[i].x = x*106+68;
+			knobs[i].y = y*100+144;
+			knobs[i].id = pots[i].id;
+			knobs[i].name = pots[i].name;
+			if(pots[i].smoothtime > 0)
+				knobs[i].value = pots[i].normalize(pots[i].smooth.getTargetValue());
+			else
+				knobs[i].value = pots[i].normalize(state.values[i]);
+			knobs[i].minimumvalue = pots[i].minimumvalue;
+			knobs[i].maximumvalue = pots[i].maximumvalue;
+			knobs[i].defaultvalue = pots[i].defaultvalue;
+			knobcount++;
+			audioProcessor.apvts.addParameterListener(knobs[i].id,this);
 		}
 	}
+	for(int i = 0; i < paramcount; i++)
+		if(pots[i].id == "oversampling") {
+			oversampling = state.values[i];
+	}
+	oversamplinglerped = oversampling;
 	audioProcessor.apvts.addParameterListener("oversampling",this);
 	calcvis();
 
@@ -54,8 +49,8 @@ PisstortionAudioProcessorEditor::PisstortionAudioProcessorEditor (PisstortionAud
 	setResizable(false, false);
 
 	setOpaque(true);
-	openGLContext.setRenderer(this);
-	openGLContext.attachTo(*this);
+	context.setRenderer(this);
+	context.attachTo(*this);
 
 	startTimerHz(30);
 }
@@ -63,7 +58,7 @@ PisstortionAudioProcessorEditor::~PisstortionAudioProcessorEditor() {
 	for (int i = 0; i < 6; i++) audioProcessor.apvts.removeParameterListener(knobs[i].id,this);
 	audioProcessor.apvts.removeParameterListener("oversampling",this);
 	stopTimer();
-	openGLContext.detach();
+	context.detach();
 }
 
 void PisstortionAudioProcessorEditor::newOpenGLContextCreated() {
@@ -95,7 +90,7 @@ void main(){
 	float grayscale = c.g*.95+c.b*.85+(1-c.r-c.g-c.b)*.05;
 	gl_FragColor = vec4(vec3(grayscale)+c.r*gradient+c.r*(1-gradient)*vec3(0.984,0.879,0.426),1);
 })";
-	baseshader.reset(new OpenGLShaderProgram(openGLContext));
+	baseshader.reset(new OpenGLShaderProgram(context));
 	baseshader->addVertexShader(basevert);
 	baseshader->addFragmentShader(basefrag);
 	baseshader->link();
@@ -137,7 +132,7 @@ void main(){
 		gl_FragColor = vec4(vec3(col),c.r);
 	} else gl_FragColor = vec4(0);
 })";
-	knobshader.reset(new OpenGLShaderProgram(openGLContext));
+	knobshader.reset(new OpenGLShaderProgram(context));
 	knobshader->addVertexShader(knobvert);
 	knobshader->addFragmentShader(knobfrag);
 	knobshader->link();
@@ -160,7 +155,7 @@ void main(){
 	float base = texture2D(basetex,basecoord).r;
 	gl_FragColor = vec4(.05,.05,.05,base <= 0 ? alpha : 0);
 })";
-	visshader.reset(new OpenGLShaderProgram(openGLContext));
+	visshader.reset(new OpenGLShaderProgram(context));
 	visshader->addVertexShader(visvert);
 	visshader->addFragmentShader(visfrag);
 	visshader->link();
@@ -175,7 +170,7 @@ out vec2 highlightcoord;
 void main(){
 	gl_Position = vec4(aPos.x-.5,aPos.y*.2+.7,0,1);
 	basecoord = vec2((aPos.x+.5)*.5*texscale.x,1-(1.5-aPos.y)*.1*texscale.y);
-	highlightcoord = vec2(aPos.x*6.3684210526+selection,aPos.y*3.3-1.1642857143);
+	highlightcoord = vec2((aPos.x-selection)*4.3214285714,aPos.y*3.3-1.1642857143);
 })";
 	oversamplingfrag =
 R"(#version 330 core
@@ -193,7 +188,7 @@ void main(){
 		gl_FragColor = vec4(0);
 	}
 })";
-	oversamplingshader.reset(new OpenGLShaderProgram(openGLContext));
+	oversamplingshader.reset(new OpenGLShaderProgram(context));
 	oversamplingshader->addVertexShader(oversamplingvert);
 	oversamplingshader->addFragmentShader(oversamplingfrag);
 	oversamplingshader->link();
@@ -234,7 +229,7 @@ void main(){
 	}
 	gl_FragColor = vec4(vec3(.05+shine*.8),creditols);
 })";
-	creditsshader.reset(new OpenGLShaderProgram(openGLContext));
+	creditsshader.reset(new OpenGLShaderProgram(context));
 	creditsshader->addVertexShader(creditsvert);
 	creditsshader->addFragmentShader(creditsfrag);
 	creditsshader->link();
@@ -258,12 +253,12 @@ void main(){
 	float f = .5;
 	gl_FragColor = vec4(1,1,1,(x>(1-(1-f)*.5)?(1-x):(x-f))*100);
 })";
-	circleshader.reset(new OpenGLShaderProgram(openGLContext));
+	circleshader.reset(new OpenGLShaderProgram(context));
 	circleshader->addVertexShader(circlevert);
 	circleshader->addFragmentShader(circlefrag);
 	circleshader->link();
 
-	framebuffer.initialise(openGLContext, getWidth(), getHeight());
+	framebuffer.initialise(context, getWidth(), getHeight());
 	glBindTexture(GL_TEXTURE_2D, framebuffer.getTextureID());
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -289,7 +284,9 @@ void main(){
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 
-	openGLContext.extensions.glGenBuffers(1, &arraybuffer);
+	context.extensions.glGenBuffers(1, &arraybuffer);
+
+	audioProcessor.logger.init(&context,getWidth(),getHeight());
 }
 void PisstortionAudioProcessorEditor::renderOpenGL() {
 	glEnable(GL_BLEND);
@@ -298,18 +295,18 @@ void PisstortionAudioProcessorEditor::renderOpenGL() {
 	glDisable(GL_DEPTH_TEST);
 	glEnable(GL_LINE_SMOOTH);
 
-	openGLContext.extensions.glBindBuffer(GL_ARRAY_BUFFER, arraybuffer);
-	auto coord = openGLContext.extensions.glGetAttribLocation(baseshader->getProgramID(),"aPos");
-	openGLContext.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
+	context.extensions.glBindBuffer(GL_ARRAY_BUFFER, arraybuffer);
+	auto coord = context.extensions.glGetAttribLocation(baseshader->getProgramID(),"aPos");
+	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	framebuffer.makeCurrentRenderingTarget();
 	OpenGLHelpers::clear(Colour::fromRGB(0,0,0));
 	circleshader->use();
 	circleshader->setUniform("ratio",((float)getWidth())/getHeight());
-	coord = openGLContext.extensions.glGetAttribLocation(circleshader->getProgramID(),"aPos");
-	openGLContext.extensions.glEnableVertexAttribArray(coord);
-	openGLContext.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+	coord = context.extensions.glGetAttribLocation(circleshader->getProgramID(),"aPos");
+	context.extensions.glEnableVertexAttribArray(coord);
+	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	for(int i = 0; i < 20; i++) {
 		circleshader->setUniform("pos",bubbles[i].xoffset+
 			sin(bubbles[i].moveage*bubbles[i].movespeed+bubbles[i].moveoffset)*bubbles[i].moveamount+
@@ -317,44 +314,44 @@ void PisstortionAudioProcessorEditor::renderOpenGL() {
 			bubbles[i].moveage+.05f);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	}
-	openGLContext.extensions.glDisableVertexAttribArray(coord);
+	context.extensions.glDisableVertexAttribArray(coord);
 	framebuffer.releaseAsRenderingTarget();
 
 	baseshader->use();
-	openGLContext.extensions.glActiveTexture(GL_TEXTURE0);
+	context.extensions.glActiveTexture(GL_TEXTURE0);
 	basetex.bind();
 	baseshader->setUniform("basetex",0);
-	openGLContext.extensions.glActiveTexture(GL_TEXTURE1);
+	context.extensions.glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, framebuffer.getTextureID());
 	baseshader->setUniform("circletex",1);
 	baseshader->setUniform("texscale",242.f/basetex.getWidth(),462.f/basetex.getHeight());
 	baseshader->setUniform("circlescale",((float)getWidth())/framebuffer.getWidth(),((float)getHeight())/framebuffer.getHeight());
-	openGLContext.extensions.glEnableVertexAttribArray(coord);
-	openGLContext.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+	context.extensions.glEnableVertexAttribArray(coord);
+	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
-	openGLContext.extensions.glDisableVertexAttribArray(coord);
+	context.extensions.glDisableVertexAttribArray(coord);
 
 	knobshader->use();
-	openGLContext.extensions.glActiveTexture(GL_TEXTURE0);
+	context.extensions.glActiveTexture(GL_TEXTURE0);
 	knobtex.bind();
 	knobshader->setUniform("knobtex",0);
-	openGLContext.extensions.glActiveTexture(GL_TEXTURE1);
+	context.extensions.glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, framebuffer.getTextureID());
 	knobshader->setUniform("circletex",1);
 	knobshader->setUniform("texscale",54.f/knobtex.getWidth(),54.f/knobtex.getHeight());
 	knobshader->setUniform("knobscale",54.f/getWidth(),54.f/getHeight());
 	knobshader->setUniform("circlescale",242.f/basetex.getWidth(),462.f/basetex.getHeight());
 	knobshader->setUniform("ratio",((float)getHeight())/getWidth());
-	coord = openGLContext.extensions.glGetAttribLocation(knobshader->getProgramID(),"aPos");
-	openGLContext.extensions.glEnableVertexAttribArray(coord);
-	openGLContext.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+	coord = context.extensions.glGetAttribLocation(knobshader->getProgramID(),"aPos");
+	context.extensions.glEnableVertexAttribArray(coord);
+	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	for (int i = 0; i < 6; i++) {
 		knobshader->setUniform("knobpos",((float)knobs[i].x*2)/getWidth(),2-((float)knobs[i].y*2)/getHeight());
 		knobshader->setUniform("knobrot",(knobs[i].lerpedvalue-.5f)*.748f);
 		knobshader->setUniform("hover",knobs[i].hover<0.5?4*knobs[i].hover*knobs[i].hover*knobs[i].hover:1-(float)pow(-2*knobs[i].hover+2,3)/2);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	}
-	openGLContext.extensions.glDisableVertexAttribArray(coord);
+	context.extensions.glDisableVertexAttribArray(coord);
 
 	float osalpha = oversamplingalpha;
 	if(oversamplingalpha < 1) {
@@ -362,43 +359,43 @@ void PisstortionAudioProcessorEditor::renderOpenGL() {
 			osalpha = oversamplingalpha<0.5?4*oversamplingalpha*oversamplingalpha*oversamplingalpha:1-(float)pow(-2*oversamplingalpha+2,3)/2;
 		glLineWidth(1.3);
 		visshader->use();
-		coord = openGLContext.extensions.glGetAttribLocation(visshader->getProgramID(),"aPos");
-		openGLContext.extensions.glActiveTexture(GL_TEXTURE0);
+		coord = context.extensions.glGetAttribLocation(visshader->getProgramID(),"aPos");
+		context.extensions.glActiveTexture(GL_TEXTURE0);
 		basetex.bind();
 		visshader->setUniform("basetex",0);
 		visshader->setUniform("alpha",1-osalpha);
 		visshader->setUniform("texscale",242.f/basetex.getWidth(),462.f/basetex.getHeight());
-		openGLContext.extensions.glEnableVertexAttribArray(coord);
-		openGLContext.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
-		openGLContext.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*452, visline[0], GL_DYNAMIC_DRAW);
+		context.extensions.glEnableVertexAttribArray(coord);
+		context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+		context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*452, visline[0], GL_DYNAMIC_DRAW);
 		glDrawArrays(GL_LINE_STRIP,0,226);
 		if(isStereo) {
-			openGLContext.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*452, visline[1], GL_DYNAMIC_DRAW);
+			context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*452, visline[1], GL_DYNAMIC_DRAW);
 			glDrawArrays(GL_LINE_STRIP,0,226);
 		}
-		openGLContext.extensions.glDisableVertexAttribArray(coord);
-		openGLContext.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
+		context.extensions.glDisableVertexAttribArray(coord);
+		context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
 	}
 
 	if(oversamplingalpha > 0) {
 		oversamplingshader->use();
-		coord = openGLContext.extensions.glGetAttribLocation(oversamplingshader->getProgramID(),"aPos");
-		openGLContext.extensions.glActiveTexture(GL_TEXTURE0);
+		coord = context.extensions.glGetAttribLocation(oversamplingshader->getProgramID(),"aPos");
+		context.extensions.glActiveTexture(GL_TEXTURE0);
 		basetex.bind();
 		oversamplingshader->setUniform("basetex",0);
 		oversamplingshader->setUniform("alpha",osalpha);
-		oversamplingshader->setUniform("selection",-.3947368421f-1.5263157895f*oversamplinglerped);
+		oversamplingshader->setUniform("selection",.458677686f+oversamplinglerped*.2314049587f);
 		oversamplingshader->setUniform("texscale",242.f/basetex.getWidth(),462.f/basetex.getHeight());
-		openGLContext.extensions.glEnableVertexAttribArray(coord);
-		openGLContext.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+		context.extensions.glEnableVertexAttribArray(coord);
+		context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
-		openGLContext.extensions.glDisableVertexAttribArray(coord);
+		context.extensions.glDisableVertexAttribArray(coord);
 	}
 
 	creditsshader->use();
-	openGLContext.extensions.glActiveTexture(GL_TEXTURE0);
+	context.extensions.glActiveTexture(GL_TEXTURE0);
 	basetex.bind();
-	openGLContext.extensions.glActiveTexture(GL_TEXTURE1);
+	context.extensions.glActiveTexture(GL_TEXTURE1);
 	creditstex.bind();
 	creditsshader->setUniform("basetex",0);
 	creditsshader->setUniform("basescale",242.f/basetex.getWidth(),462.f/basetex.getHeight());
@@ -406,11 +403,13 @@ void PisstortionAudioProcessorEditor::renderOpenGL() {
 	creditsshader->setUniform("texscale",242.f/creditstex.getWidth(),48.f/creditstex.getHeight());
 	creditsshader->setUniform("alpha",creditsalpha<0.5?4*creditsalpha*creditsalpha*creditsalpha:1-(float)pow(-2*creditsalpha+2,3)/2);
 	creditsshader->setUniform("shineprog",websiteht);
-	coord = openGLContext.extensions.glGetAttribLocation(creditsshader->getProgramID(),"aPos");
-	openGLContext.extensions.glEnableVertexAttribArray(coord);
-	openGLContext.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+	coord = context.extensions.glGetAttribLocation(creditsshader->getProgramID(),"aPos");
+	context.extensions.glEnableVertexAttribArray(coord);
+	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
-	openGLContext.extensions.glDisableVertexAttribArray(coord);
+	context.extensions.glDisableVertexAttribArray(coord);
+
+	audioProcessor.logger.drawlog();
 }
 void PisstortionAudioProcessorEditor::openGLContextClosing() {
 	circleshader->release();
@@ -426,14 +425,19 @@ void PisstortionAudioProcessorEditor::openGLContextClosing() {
 
 	framebuffer.release();
 
-	openGLContext.extensions.glDeleteBuffers(1,&arraybuffer);
+	audioProcessor.logger.release();
+
+	context.extensions.glDeleteBuffers(1,&arraybuffer);
 }
 void PisstortionAudioProcessorEditor::calcvis() {
 	isStereo = knobs[4].value > 0 && knobs[1].value > 0 && knobs[5].value > 0;
+	pluginpreset pp;
+	for(int i = 0; i < knobcount; i++)
+		pp.values[i] = knobs[i].inflate(knobs[i].value);
 	for(int c = 0; c < (isStereo ? 2 : 1); c++) {
 		for(int i = 0; i < 226; i++) {
 			visline[c][i*2] = (i+8)/121.f-1;
-			visline[c][i*2+1] = 1-(48+audioProcessor.pisstortion(sin(i/35.8098621957f)*.8f,c,knobs[0].value,knobs[1].value,knobs[2].value,knobs[3].value,knobs[4].value,knobs[5].value,false)*38)/231.f;
+			visline[c][i*2+1] = 1-(48+audioProcessor.pisstortion(sin(i/35.8098621957f)*.8f,c,2,pp,false)*38)/231.f;
 		}
 	}
 }
@@ -450,9 +454,10 @@ void PisstortionAudioProcessorEditor::timerCallback() {
 	if(oversamplingalpha != (hover<=-4?1:0))
 		oversamplingalpha = fmax(fmin(oversamplingalpha+(hover<=-4?.07f:-.07f),1),0);
 
-	if (oversamplinglerped != oversampling) {
-		if(fabs(oversamplinglerped-oversampling) <= .001f) oversamplinglerped = oversampling;
-		oversamplinglerped = oversamplinglerped*.75f+oversampling*.25f;
+	float os = oversampling?1:0;
+	if(oversamplinglerped != os?1:0) {
+		if(fabs(oversamplinglerped-os) <= .001f) oversamplinglerped = os;
+		oversamplinglerped = oversamplinglerped*.75f+os*.25f;
 	}
 
 	if(creditsalpha != ((hover<=-2&&hover>=-3)?1:0))
@@ -482,7 +487,7 @@ void PisstortionAudioProcessorEditor::timerCallback() {
 		audioProcessor.updatevis = false;
 	}
 
-	openGLContext.triggerRepaint();
+	context.triggerRepaint();
 }
 void PisstortionAudioProcessorEditor::bubbleregen(int i) {
 	float tradeoff = random.nextFloat();
@@ -498,14 +503,15 @@ void PisstortionAudioProcessorEditor::bubbleregen(int i) {
 }
 
 void PisstortionAudioProcessorEditor::parameterChanged(const String& parameterID, float newValue) {
-	     if(parameterID == "freq"        ) knobs[0].value = newValue;
-	else if(parameterID == "piss"        ) knobs[1].value = newValue;
-	else if(parameterID == "noise"       ) knobs[2].value = newValue;
-	else if(parameterID == "harm"        ) knobs[3].value = newValue;
-	else if(parameterID == "stereo"      ) knobs[4].value = newValue;
-	else if(parameterID == "gain"        ) knobs[5].value = newValue;
-	else if(parameterID == "oversampling") oversampling = newValue-1;
-	calcvis();
+	if(parameterID == "oversampling") {
+		oversampling = newValue>.5f;
+		return;
+	}
+	for(int i = 0; i < knobcount; i++) if(knobs[i].id == parameterID) {
+		knobs[i].value = knobs[i].normalize(newValue);
+		calcvis();
+		return;
+	}
 }
 void PisstortionAudioProcessorEditor::mouseMove(const MouseEvent& event) {
 	int prevhover = hover;
@@ -526,10 +532,10 @@ void PisstortionAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		dragpos = event.getScreenPosition();
 		event.source.enableUnboundedMouseMovement(true);
 	} else if(hover < -4) {
-		oversampling = hover+8;
-		audioProcessor.apvts.getParameter("oversampling")->setValueNotifyingHost(oversampling/3.f);
+		oversampling = hover == -6;
+		audioProcessor.apvts.getParameter("oversampling")->setValueNotifyingHost(oversampling?1.f:0.f);
 		audioProcessor.undoManager.setCurrentTransactionName(
-			(String)("Set Over-Sampling to ") += (oversampling+1));
+			(String)("Set Over-Sampling to ") += oversampling);
 		audioProcessor.undoManager.beginNewTransaction();
 	}
 }
@@ -574,7 +580,7 @@ void PisstortionAudioProcessorEditor::mouseDoubleClick(const MouseEvent& event) 
 	if(hover > -1) {
 		audioProcessor.undoManager.setCurrentTransactionName((String)"Reset " += knobs[hover].name);
 		audioProcessor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(
-			audioProcessor.apvts.getParameter(knobs[hover].id)->getDefaultValue());
+			knobs[hover].defaultvalue);
 		audioProcessor.undoManager.beginNewTransaction();
 	}
 }
@@ -586,10 +592,8 @@ void PisstortionAudioProcessorEditor::mouseWheelMove(const MouseEvent& event, co
 int PisstortionAudioProcessorEditor::recalchover(float x, float y) {
 	if (x >= 8 && x <= 234 && y >= 8 && y <= 87) {
 		if(y < 39 || y > 53) return -4;
-		if(x >= 68 && x <= 87) return -8;
-		if(x >= 97 && x <= 116) return -7;
-		if(x >= 126 && x <= 145) return -6;
-		if(x >= 155 && x <= 174) return -5;
+		if(x >= 115 && x <= 143) return -5;
+		if(x >= 144 && x <= 172) return -6;
 		return -4;
 	} else if(y >= 403) {
 		if(x >= 50 && x <= 196 && y >= 412 && y <= 456) return -3;
