@@ -14,7 +14,7 @@
 class PNCHAudioProcessorEditor : public AudioProcessorEditor, public OpenGLRenderer, public AudioProcessorValueTreeState::Listener, private Timer
 {
 public:
-	PNCHAudioProcessorEditor (PNCHAudioProcessor&);
+	PNCHAudioProcessorEditor (PNCHAudioProcessor&, float amount);
 	~PNCHAudioProcessorEditor() override;
 
 	void newOpenGLContextCreated() override;
@@ -37,7 +37,7 @@ public:
 private:
 	PNCHAudioProcessor& audioProcessor;
 
-	OpenGLContext openGLContext;
+	OpenGLContext context;
 	unsigned int arraybuffer;
 	float square[8]{
 		0.f,0.f,

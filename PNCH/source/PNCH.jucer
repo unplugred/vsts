@@ -7,6 +7,8 @@
               pluginAAXCategory="64" pluginRTASCategory="64" pluginVST3Category="Distortion">
   <MAINGROUP id="cwqzUg" name="PNCH">
     <GROUP id="{67EC23A0-031A-9AC5-CDDD-77F12247C5DB}" name="Source">
+      <FILE id="s7ATZC" name="CoolLogger.cpp" compile="1" resource="0" file="Source/CoolLogger.cpp"/>
+      <FILE id="KPPyIS" name="CoolLogger.h" compile="0" resource="0" file="Source/CoolLogger.h"/>
       <FILE id="Jud1UJ" name="PluginProcessor.cpp" compile="1" resource="0"
             file="Source/PluginProcessor.cpp"/>
       <FILE id="p4M3r8" name="PluginProcessor.h" compile="0" resource="0"
@@ -18,6 +20,7 @@
     <GROUP id="{6F9A9B8E-4453-DEEB-953E-DAFA6974DF59}" name="Resources">
       <FILE id="aso9TN" name="base.png" compile="0" resource="1" file="Resources/base.png"/>
       <FILE id="DnIDOV" name="credits.png" compile="0" resource="1" file="Resources/credits.png"/>
+      <FILE id="KgcABU" name="dbg_txt.png" compile="0" resource="1" file="Resources/dbg_txt.png"/>
     </GROUP>
   </MAINGROUP>
   <JUCEOPTIONS JUCE_STRICT_REFCOUNTEDPOINTER="1" JUCE_VST3_CAN_REPLACE_VST2="0"

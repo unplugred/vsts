@@ -10,10 +10,10 @@
 #include "PluginEditor.h"
 using namespace gl;
 
-PNCHAudioProcessorEditor::PNCHAudioProcessorEditor (PNCHAudioProcessor& p)
+PNCHAudioProcessorEditor::PNCHAudioProcessorEditor (PNCHAudioProcessor& p, float amountt)
 	: AudioProcessorEditor (&p), audioProcessor (p)
 {
-	amount = audioProcessor.amount.get();
+	amount = amountt;
 	audioProcessor.apvts.addParameterListener("amount",this);
 
 	float hue = random.nextFloat();
@@ -25,15 +25,15 @@ PNCHAudioProcessorEditor::PNCHAudioProcessorEditor (PNCHAudioProcessor& p)
 	setResizable(false, false);
 
 	setOpaque(true);
-	openGLContext.setRenderer(this);
-	openGLContext.attachTo(*this);
+	context.setRenderer(this);
+	context.attachTo(*this);
 
 	startTimerHz(30);
 }
 PNCHAudioProcessorEditor::~PNCHAudioProcessorEditor() {
 	audioProcessor.apvts.removeParameterListener("amount",this);
 	stopTimer();
-	openGLContext.detach();
+	context.detach();
 }
 
 void PNCHAudioProcessorEditor::newOpenGLContextCreated() {
@@ -67,7 +67,7 @@ void main(){
 		gl_FragColor = vec4(o*colone+(1-o)*coltwo,1);
 	}
 })";
-	baseshader.reset(new OpenGLShaderProgram(openGLContext));
+	baseshader.reset(new OpenGLShaderProgram(context));
 	baseshader->addVertexShader(basevert);
 	baseshader->addFragmentShader(basefrag);
 	baseshader->link();
@@ -81,7 +81,7 @@ uniform vec2 shake;
 out vec2 uv;
 out vec2 balluv;
 void main(){
-	gl_Position = vec4((aPos+.00793651)*vec2(1.96875,1.702703)+shake-1,0,1);
+	gl_Position = vec4(aPos*2-1+shake,0,1);
 	uv = vec2(aPos.x*texscale.x,1-(1-aPos.y)*texscale.y);
 	balluv = vec2(aPos.x*texscale.x,1-(1-aPos.y)*texscale.y)-knobrot;
 })";
@@ -98,7 +98,7 @@ void main(){
 	float o = (c.r==c.g?1:0)+(ball.r>.5&&ball.g<.5?1:0);
 	gl_FragColor = vec4(o*colone+(1-o)*coltwo,((c.r+c.g)>.5)?1:0);
 })";
-	knobshader.reset(new OpenGLShaderProgram(openGLContext));
+	knobshader.reset(new OpenGLShaderProgram(context));
 	knobshader->addVertexShader(knobvert);
 	knobshader->addFragmentShader(knobfrag);
 	knobshader->link();
@@ -124,7 +124,7 @@ void main(){
 	float o = (hover==1?c.r:0)+c.g+(hover==2?c.b:0);
 	gl_FragColor = vec4(o*colone+(1-o)*coltwo,1);
 })";
-	creditsshader.reset(new OpenGLShaderProgram(openGLContext));
+	creditsshader.reset(new OpenGLShaderProgram(context));
 	creditsshader->addVertexShader(creditsvert);
 	creditsshader->addFragmentShader(creditsfrag);
 	creditsshader->link();
@@ -143,7 +143,9 @@ void main(){
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 
-	openGLContext.extensions.glGenBuffers(1, &arraybuffer);
+	context.extensions.glGenBuffers(1, &arraybuffer);
+
+	audioProcessor.logger.init(&context,getWidth(),getHeight());
 }
 void PNCHAudioProcessorEditor::renderOpenGL() {
 	glEnable(GL_BLEND);
@@ -152,13 +154,13 @@ void PNCHAudioProcessorEditor::renderOpenGL() {
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_LINE_SMOOTH);
 
-	openGLContext.extensions.glBindBuffer(GL_ARRAY_BUFFER, arraybuffer);
-	auto coord = openGLContext.extensions.glGetAttribLocation(baseshader->getProgramID(),"aPos");
-	openGLContext.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
+	context.extensions.glBindBuffer(GL_ARRAY_BUFFER, arraybuffer);
+	auto coord = context.extensions.glGetAttribLocation(baseshader->getProgramID(),"aPos");
+	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	baseshader->use();
-	openGLContext.extensions.glActiveTexture(GL_TEXTURE0);
+	context.extensions.glActiveTexture(GL_TEXTURE0);
 	basetex.bind();
 	baseshader->setUniform("tex",0);
 	baseshader->setUniform("texscale",25.f/basetex.getWidth(),21.f/basetex.getHeight());
@@ -166,38 +168,40 @@ void PNCHAudioProcessorEditor::renderOpenGL() {
 	baseshader->setUniform("amount",floor(amount*31));
 	baseshader->setUniform("colone",c1.getFloatRed(),c1.getFloatGreen(),c1.getFloatBlue());
 	baseshader->setUniform("coltwo",c2.getFloatRed(),c2.getFloatGreen(),c2.getFloatBlue());
-	openGLContext.extensions.glEnableVertexAttribArray(coord);
-	openGLContext.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+	context.extensions.glEnableVertexAttribArray(coord);
+	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
-	openGLContext.extensions.glDisableVertexAttribArray(coord);
+	context.extensions.glDisableVertexAttribArray(coord);
 
 	if(credits){
 		creditsshader->use();
-		openGLContext.extensions.glActiveTexture(GL_TEXTURE0);
+		context.extensions.glActiveTexture(GL_TEXTURE0);
 		creditstex.bind();
 		creditsshader->setUniform("creditstex",0);
 		creditsshader->setUniform("texscale",119.f/creditstex.getWidth(),140.f/creditstex.getHeight());
 		creditsshader->setUniform("hover",(float)hover);
 		creditsshader->setUniform("colone",c1.getFloatRed(),c1.getFloatGreen(),c1.getFloatBlue());
 		creditsshader->setUniform("coltwo",c2.getFloatRed(),c2.getFloatGreen(),c2.getFloatBlue());
-		coord = openGLContext.extensions.glGetAttribLocation(creditsshader->getProgramID(),"aPos");
+		coord = context.extensions.glGetAttribLocation(creditsshader->getProgramID(),"aPos");
 	} else {
 		knobshader->use();
-		openGLContext.extensions.glActiveTexture(GL_TEXTURE0);
+		context.extensions.glActiveTexture(GL_TEXTURE0);
 		basetex.bind();
 		knobshader->setUniform("tex",0);
-		knobshader->setUniform("texscale",126.f/basetex.getWidth(),126.f/basetex.getHeight());
+		knobshader->setUniform("texscale",128.f/basetex.getWidth(),148.f/basetex.getHeight());
 		float rotato = (amount-.5f)*5.f;
-		knobshader->setUniform("knobrot",round(sin(rotato)*44)/126.f,round(cos(rotato)*44)/126.f);
+		knobshader->setUniform("knobrot",round(sin(rotato)*38)/128.f,round(cos(rotato)*38)/148.f);
 		knobshader->setUniform("shake",.03125f*(random.nextFloat()-.5f)*10.f*rms,.027027f*(random.nextFloat()-.5f)*10.f*rms);
 		knobshader->setUniform("colone",c1.getFloatRed(),c1.getFloatGreen(),c1.getFloatBlue());
 		knobshader->setUniform("coltwo",c2.getFloatRed(),c2.getFloatGreen(),c2.getFloatBlue());
-		coord = openGLContext.extensions.glGetAttribLocation(knobshader->getProgramID(),"aPos");
+		coord = context.extensions.glGetAttribLocation(knobshader->getProgramID(),"aPos");
 	}
-	openGLContext.extensions.glEnableVertexAttribArray(coord);
-	openGLContext.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+	context.extensions.glEnableVertexAttribArray(coord);
+	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
-	openGLContext.extensions.glDisableVertexAttribArray(coord);
+	context.extensions.glDisableVertexAttribArray(coord);
+
+	audioProcessor.logger.drawlog();
 }
 void PNCHAudioProcessorEditor::openGLContextClosing() {
 	baseshader->release();
@@ -207,7 +211,9 @@ void PNCHAudioProcessorEditor::openGLContextClosing() {
 	basetex.release();
 	creditstex.release();
 
-	openGLContext.extensions.glDeleteBuffers(1,&arraybuffer);
+	audioProcessor.logger.release();
+
+	context.extensions.glDeleteBuffers(1,&arraybuffer);
 }
 void PNCHAudioProcessorEditor::paint (Graphics& g) { }
 
@@ -218,7 +224,7 @@ void PNCHAudioProcessorEditor::timerCallback() {
 	audioProcessor.rmsadd = 0;
 	audioProcessor.rmscount = 0;
 
-	openGLContext.triggerRepaint();
+	context.triggerRepaint();
 }
 
 void PNCHAudioProcessorEditor::parameterChanged(const String& parameterID, float newValue) {
