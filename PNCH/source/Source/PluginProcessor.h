@@ -8,6 +8,7 @@
 
 #pragma once
 #include <JuceHeader.h>
+#include "CoolLogger.h"
 
 class PNCHAudioProcessor : public AudioProcessor, public AudioProcessorValueTreeState::Listener {
 public:
@@ -22,10 +23,11 @@ public:
 #endif
 
 	void processBlock (AudioBuffer<float>&, MidiBuffer&) override;
-	float pnch(float source, float amount);
-	void setoversampling(int factor);
+	float pnch(float source, float amountt);
+	void setoversampling(bool toggle);
 
 	AudioProcessorEditor* createEditor() override;
+	void changechannelnum(int newchannelnum);
 	bool hasEditor() const override;
 
 	const String getName() const override;
@@ -51,18 +53,24 @@ public:
 	Atomic<float> rmsadd = 0;
 	Atomic<int> rmscount = 0;
 
-	int version = 1;
-	Atomic<float> amount = 0.f;
-	Atomic<int> oversampling = 1;
+	int version = 2;
+	float amount = 0.f;
+	Atomic<bool> oversampling = 1;
 
+	CoolLogger logger;
 private:
-	float oldamount = 0.f;
-
 	AudioProcessorValueTreeState::ParameterLayout createParameters();
 	bool preparedtoplay = false;
 	bool saved = false;
 
-	std::unique_ptr<dsp::Oversampling<float>> os[3];
+	std::unique_ptr<dsp::Oversampling<float>> os;
+	AudioBuffer<float> osbuffer;
+	std::vector<float*> ospointerarray;
+
+	int channelnum = 0;
+	int samplesperblock = 512;
+	int samplerate = 44100;
+	std::vector<float*> channelData;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PNCHAudioProcessor)
 };
