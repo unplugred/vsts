@@ -209,18 +209,17 @@ float ProtoAudioProcessor::normalizegain(float fat, float dry) {
 }
 
 void ProtoAudioProcessor::setoversampling(bool toggle) {
-	if(preparedtoplay) {
-		if(toggle) {
-			if(channelnum <= 0) return;
-			os->reset();
-			setLatencySamples(os->getLatencyInSamples());
-			for(int i = 0; i < paramcount; i++) if(pots[i].smoothtime > 0)
-				pots[i].smooth.reset(samplerate*2, pots[i].smoothtime);
-		} else {
-			setLatencySamples(0);
-			for(int i = 0; i < paramcount; i++) if(pots[i].smoothtime > 0)
-				pots[i].smooth.reset(samplerate, pots[i].smoothtime);
-		}
+	if(!preparedtoplay) return;
+	if(toggle) {
+		if(channelnum <= 0) return;
+		os->reset();
+		setLatencySamples(os->getLatencyInSamples());
+		for(int i = 0; i < paramcount; i++) if(pots[i].smoothtime > 0)
+			pots[i].smooth.reset(samplerate*2, pots[i].smoothtime);
+	} else {
+		setLatencySamples(0);
+		for(int i = 0; i < paramcount; i++) if(pots[i].smoothtime > 0)
+			pots[i].smooth.reset(samplerate, pots[i].smoothtime);
 	}
 }
 
