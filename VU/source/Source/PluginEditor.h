@@ -64,6 +64,8 @@ public:
 	float websiteht = 0;
 	Point<int> dragpos;
 
+	int bypassdetection = 0;
+
 	void timerCallback() override;
 
 	int prevh = 0;
