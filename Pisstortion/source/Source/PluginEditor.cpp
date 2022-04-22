@@ -55,7 +55,7 @@ PisstortionAudioProcessorEditor::PisstortionAudioProcessorEditor (PisstortionAud
 	startTimerHz(30);
 }
 PisstortionAudioProcessorEditor::~PisstortionAudioProcessorEditor() {
-	for (int i = 0; i < 6; i++) audioProcessor.apvts.removeParameterListener(knobs[i].id,this);
+	for (int i = 0; i < knobcount; i++) audioProcessor.apvts.removeParameterListener(knobs[i].id,this);
 	audioProcessor.apvts.removeParameterListener("oversampling",this);
 	stopTimer();
 	context.detach();
@@ -345,7 +345,7 @@ void PisstortionAudioProcessorEditor::renderOpenGL() {
 	coord = context.extensions.glGetAttribLocation(knobshader->getProgramID(),"aPos");
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
-	for (int i = 0; i < 6; i++) {
+	for (int i = 0; i < knobcount; i++) {
 		knobshader->setUniform("knobpos",((float)knobs[i].x*2)/getWidth(),2-((float)knobs[i].y*2)/getHeight());
 		knobshader->setUniform("knobrot",(knobs[i].lerpedvalue-.5f)*.748f);
 		knobshader->setUniform("hover",knobs[i].hover<0.5?4*knobs[i].hover*knobs[i].hover*knobs[i].hover:1-(float)pow(-2*knobs[i].hover+2,3)/2);
@@ -444,7 +444,7 @@ void PisstortionAudioProcessorEditor::calcvis() {
 void PisstortionAudioProcessorEditor::paint (Graphics& g) { }
 
 void PisstortionAudioProcessorEditor::timerCallback() {
-	for(int i = 0; i < 6; i++) {
+	for(int i = 0; i < knobcount; i++) {
 		knobs[i].lerpedvalue = knobs[i].lerpedvalue*.6f+knobs[i].value*.4;
 		if(knobs[i].hover != (hover==i?1:0))
 			knobs[i].hover = fmax(fmin(knobs[i].hover+(hover==i?.07f:-.07f), 1), 0);
@@ -599,7 +599,7 @@ int PisstortionAudioProcessorEditor::recalchover(float x, float y) {
 		return -2;
 	}
 	float xx = 0, yy = 0;
-	for(int i = 0; i < 6; i++) {
+	for(int i = 0; i < knobcount; i++) {
 		xx = knobs[i].x-x;
 		yy = knobs[i].y-y;
 		if((xx*xx+yy*yy)<=576) return i;
