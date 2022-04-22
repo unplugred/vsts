@@ -458,9 +458,9 @@ void PFAudioProcessorEditor::timerCallback() {
 		rms = sqrt(audioProcessor.rmsadd.get()/audioProcessor.rmscount.get());
 		if(knobs[5].value > .4f) rms = rms/knobs[5].value;
 		else rms *= 2.5f;
-	}
-	audioProcessor.rmsadd = 0;
-	audioProcessor.rmscount = 0;
+		audioProcessor.rmsadd = 0;
+		audioProcessor.rmscount = 0;
+	} else rms *= .9f;
 
 	context.triggerRepaint();
 }

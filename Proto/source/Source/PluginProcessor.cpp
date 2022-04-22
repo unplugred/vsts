@@ -164,8 +164,10 @@ void ProtoAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 
 		for (int channel = 0; channel < channelnum; ++channel) {
 			channelData[channel][sample] = plasticfuneral(channelData[channel][sample],channel,channelnum,state,curnorm);
-			prmsadd += channelData[channel][sample]*channelData[channel][sample];
-			prmscount++;
+			if(prmscount < samplerate*2) {
+				prmsadd += channelData[channel][sample]*channelData[channel][sample];
+				prmscount++;
+			}
 		}
 	}
 

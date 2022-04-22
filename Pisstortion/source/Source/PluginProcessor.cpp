@@ -160,8 +160,10 @@ void PisstortionAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBu
 
 		for (int channel = 0; channel < channelnum; ++channel) {
 			channelData[channel][sample] = pisstortion(channelData[channel][sample],channel,channelnum,state,true);
-			prmsadd += channelData[channel][sample]*channelData[channel][sample];
-			prmscount++;
+			if(prmscount < samplerate*2) {
+				prmsadd += channelData[channel][sample]*channelData[channel][sample];
+				prmscount++;
+			}
 		}
 	}
 
