@@ -158,8 +158,7 @@ void VuAudioProcessor::parameterChanged(const String& parameterID, float newValu
 
 AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new VuAudioProcessor(); }
 
-AudioProcessorValueTreeState::ParameterLayout
-	VuAudioProcessor::createParameters() {
+AudioProcessorValueTreeState::ParameterLayout VuAudioProcessor::createParameters() {
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
 	parameters.push_back(std::make_unique<AudioParameterInt>("nominal","Nominal",-24,-6,-18));
 	parameters.push_back(std::make_unique<AudioParameterInt>("damping","Damping",1,9,5));

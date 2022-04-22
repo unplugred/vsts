@@ -313,9 +313,7 @@ void PisstortionAudioProcessor::parameterChanged(const String& parameterID, floa
 
 AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new PisstortionAudioProcessor(); }
 
-AudioProcessorValueTreeState::ParameterLayout
-	PisstortionAudioProcessor::createParameters()
-{
+AudioProcessorValueTreeState::ParameterLayout PisstortionAudioProcessor::createParameters() {
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
 	parameters.push_back(std::make_unique<AudioParameterFloat	>("freq"		,"Frequency"		,0.0f	,1.0f	,0.17f	));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>("piss"		,"Piss"				,0.0f	,1.0f	,1.0f	));

@@ -305,9 +305,7 @@ void ProtoAudioProcessor::parameterChanged(const String& parameterID, float newV
 
 AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new ProtoAudioProcessor(); }
 
-AudioProcessorValueTreeState::ParameterLayout
-	ProtoAudioProcessor::createParameters()
-{
+AudioProcessorValueTreeState::ParameterLayout ProtoAudioProcessor::createParameters() {
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
 	parameters.push_back(std::make_unique<AudioParameterFloat	>("freq"		,"Frequency"	,0.0f	,1.0f	,0.32f	));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>("fat"			,"Fatness"		,-20.0f	,20.0f	,0.0f	));
