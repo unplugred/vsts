@@ -294,7 +294,14 @@ void VuAudioProcessorEditor::timerCallback() {
 			rightpeak = true;
 			audioProcessor.rightpeak = false;
 		}
-	}
+
+		bypassdetection = 0;
+	} else if(bypassdetection > 5) {
+		leftrms = 0;
+		rightrms = 0;
+		leftpeak = false;
+		rightpeak = false;
+	} else bypassdetection++;
 
 	float damping = audioProcessor.damping.get()*.05f;
 	bool stereo = audioProcessor.stereo.get();
