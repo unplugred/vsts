@@ -359,7 +359,7 @@ void VuAudioProcessorEditor::mouseMove(const MouseEvent& event) {
 	settingstimer = fmax(settingstimer,60);
 	int prevhover = hover;
 	hover = recalchover(event.x,event.y);
-	if(hover == 4 && prevhover != 4 && websiteht < -.6) websiteht = 0.6f;
+	if(hover == 4 && prevhover != 4 && websiteht < -.6) websiteht = 1.0f;
 }
 void VuAudioProcessorEditor::mouseExit(const MouseEvent& event) {
 	if(!held) settingstimer = 0;
