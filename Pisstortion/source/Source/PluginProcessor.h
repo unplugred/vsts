@@ -68,6 +68,7 @@ public:
 
 	void prepareToPlay (double sampleRate, int samplesPerBlock) override;
 	void changechannelnum(int newchannelnum);
+	void resetoversampling();
 	void releaseResources() override;
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -130,7 +131,7 @@ private:
 	DCFilter dcfilter;
 
 	int channelnum = 0;
-	int samplesperblock = 512;
+	int samplesperblock = 0;
 	int samplerate = 44100;
 	std::vector<float*> channelData;
 

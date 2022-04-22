@@ -50,6 +50,7 @@ void PNCHAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) 
 	saved = true;
 	samplesperblock = samplesPerBlock;
 	samplerate = sampleRate;
+	resetoversampling();
 	preparedtoplay = true;
 }
 void PNCHAudioProcessor::changechannelnum(int newchannelnum) {
@@ -60,8 +61,13 @@ void PNCHAudioProcessor::changechannelnum(int newchannelnum) {
 	for (int i = 0; i < channelnum; i++)
 		channelData.push_back(nullptr);
 
-	ospointerarray.resize(newchannelnum);
-	os.reset(new dsp::Oversampling<float>(newchannelnum,1,dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR));
+	resetoversampling();
+}
+void PNCHAudioProcessor::resetoversampling() {
+	if(channelnum <= 0 || samplesperblock <= 0) return;
+
+	ospointerarray.resize(channelnum);
+	os.reset(new dsp::Oversampling<float>(channelnum,1,dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR));
 	os->initProcessing(samplesperblock);
 	os->setUsingIntegerLatency(true);
 	setoversampling(oversampling.get());
