@@ -109,8 +109,10 @@ void PNCHAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& m
 	for (int sample = 0; sample < numsamples; ++sample) {
 		for (int channel = 0; channel < channelnum; ++channel) {
 			channelData[channel][sample] = pnch(channelData[channel][sample],amount);
-			prmsadd += channelData[channel][sample]*channelData[channel][sample];
-			prmscount++;
+			if(prmscount < samplerate*2) {
+				prmsadd += channelData[channel][sample]*channelData[channel][sample];
+				prmscount++;
+			}
 		}
 	}
 

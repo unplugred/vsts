@@ -220,9 +220,9 @@ void PNCHAudioProcessorEditor::paint (Graphics& g) { }
 void PNCHAudioProcessorEditor::timerCallback() {
 	if(audioProcessor.rmscount.get() > 0) {
 		rms = sqrt(audioProcessor.rmsadd.get()/audioProcessor.rmscount.get());
-	}
-	audioProcessor.rmsadd = 0;
-	audioProcessor.rmscount = 0;
+		audioProcessor.rmsadd = 0;
+		audioProcessor.rmscount = 0;
+	} else rms *= .9f;
 
 	context.triggerRepaint();
 }

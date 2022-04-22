@@ -469,10 +469,10 @@ void PisstortionAudioProcessorEditor::timerCallback() {
 		rms = sqrt(audioProcessor.rmsadd.get()/audioProcessor.rmscount.get());
 		if(knobs[5].value > .4f) rms = rms/knobs[5].value;
 		else rms *= 2.5f;
-	}
+		audioProcessor.rmsadd = 0;
+		audioProcessor.rmscount = 0;
+	} else rms *= .9f
 	rmslerped = rmslerped*.6f+rms*.4f;
-	audioProcessor.rmsadd = 0;
-	audioProcessor.rmscount = 0;
 
 	for(int i = 0; i < 20; i++) {
 		bubbles[i].moveage += bubbles[i].yspeed*(1+rmslerped*30);
