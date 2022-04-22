@@ -178,7 +178,7 @@ void PNCHAudioProcessorEditor::renderOpenGL() {
 		context.extensions.glActiveTexture(GL_TEXTURE0);
 		creditstex.bind();
 		creditsshader->setUniform("creditstex",0);
-		creditsshader->setUniform("texscale",119.f/creditstex.getWidth(),140.f/creditstex.getHeight());
+		creditsshader->setUniform("texscale",120.f/creditstex.getWidth(),140.f/creditstex.getHeight());
 		creditsshader->setUniform("hover",(float)hover);
 		creditsshader->setUniform("colone",c1.getFloatRed(),c1.getFloatGreen(),c1.getFloatBlue());
 		creditsshader->setUniform("coltwo",c2.getFloatRed(),c2.getFloatGreen(),c2.getFloatBlue());
@@ -299,9 +299,9 @@ int PNCHAudioProcessorEditor::recalchover(float x, float y) {
 		if(x >= 69 && x <= 97 && y >= 93 && y <= 117) return 1;
 		if(x >= 8 && x <= 59 && y >= 112 && y <= 132) return 2;
 	} else {
-		float xx = 64-x;
-		float yy = 84-y;
-		if(xx*xx+yy*yy<=3364) return 0;
+		float xx = 60-x;
+		float yy = 88-y;
+		if(xx*xx+yy*yy<=2601) return 0;
 	}
 	return -1;
 }
