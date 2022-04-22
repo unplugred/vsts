@@ -3,8 +3,8 @@
 <JUCERPROJECT id="vctzEm" name="PNCH" projectType="audioplug" useAppConfig="0"
               displaySplashScreen="0" jucerFormatVersion="1" companyName="unplugred"
               companyWebsite="https://unplug.red" companyEmail="arihanan@protonmail.com"
-              pluginFormats="buildStandalone,buildVST,buildVST3" pluginChannelConfigs="{1,1},{2,2}"
-              pluginAAXCategory="64" pluginRTASCategory="64" pluginVST3Category="Distortion">
+              pluginFormats="buildStandalone,buildVST,buildVST3" pluginAAXCategory="64"
+              pluginRTASCategory="64" pluginVST3Category="Distortion">
   <MAINGROUP id="cwqzUg" name="PNCH">
     <GROUP id="{67EC23A0-031A-9AC5-CDDD-77F12247C5DB}" name="Source">
       <FILE id="s7ATZC" name="CoolLogger.cpp" compile="1" resource="0" file="Source/CoolLogger.cpp"/>

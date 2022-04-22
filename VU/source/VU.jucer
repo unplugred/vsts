@@ -4,7 +4,8 @@
               addUsingNamespaceToJuceHeader="1" displaySplashScreen="0" jucerFormatVersion="1"
               companyName="unplugred" companyWebsite="https://vst.unplug.red"
               companyEmail="arihanan@protonmail.com" pluginFormats="buildStandalone,buildVST"
-              pluginVST3Category="Analyzer" pluginVSTCategory="kPlugCategAnalysis">
+              pluginVST3Category="Analyzer" pluginVSTCategory="kPlugCategAnalysis"
+              pluginChannelConfigs="{1,1},{2,2}">
   <MAINGROUP id="isef6D" name="VU">
     <GROUP id="{3068B69F-5E42-7C77-3299-EA5FEEFB2617}" name="Source">
       <FILE id="C9C9Hb" name="CoolLogger.cpp" compile="1" resource="0" file="Source/CoolLogger.cpp"/>
