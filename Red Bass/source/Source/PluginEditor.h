@@ -17,11 +17,20 @@ struct knob {
 	float value = 0.5f;
 	String id;
 	String name;
+	float minimumvalue = 0.f;
+	float maximumvalue = 1.f;
+	float defaultvalue = 0.f;
+	float normalize(float val) {
+		return (val-minimumvalue)/(maximumvalue-minimumvalue);
+	}
+	float inflate(float val) {
+		return val*(maximumvalue-minimumvalue)+minimumvalue;
+	}
 };
 class RedBassAudioProcessorEditor : public AudioProcessorEditor, public OpenGLRenderer, public AudioProcessorValueTreeState::Listener, private Timer
 {
 public:
-	RedBassAudioProcessorEditor (RedBassAudioProcessor&);
+	RedBassAudioProcessorEditor (RedBassAudioProcessor&, int paramcount, pluginpreset state, potentiometer pots[]);
 	~RedBassAudioProcessorEditor() override;
 
 	void newOpenGLContextCreated() override;
@@ -42,10 +51,11 @@ public:
 	int recalchover(float x, float y);
 
 	knob knobs[8];
+	int knobcount = 0;
 private:
 	RedBassAudioProcessor& audioProcessor;
 
-	OpenGLContext openGLContext;
+	OpenGLContext context;
 	unsigned int arraybuffer;
 	float square[8]{
 		0.f,0.f,
