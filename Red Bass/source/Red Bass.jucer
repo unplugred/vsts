@@ -7,6 +7,8 @@
               pluginAAXCategory="64" pluginRTASCategory="64" pluginVST3Category="Distortion">
   <MAINGROUP id="cwqzUg" name="Red Bass">
     <GROUP id="{67EC23A0-031A-9AC5-CDDD-77F12247C5DB}" name="Source">
+      <FILE id="fSMpXs" name="CoolLogger.cpp" compile="1" resource="0" file="Source/CoolLogger.cpp"/>
+      <FILE id="DS4VF0" name="CoolLogger.h" compile="0" resource="0" file="Source/CoolLogger.h"/>
       <FILE id="wKXsHD" name="envelopefollower.cpp" compile="1" resource="0"
             file="Source/envelopefollower.cpp"/>
       <FILE id="pPyzDg" name="envelopefollower.h" compile="0" resource="0"
@@ -21,6 +23,7 @@
     </GROUP>
     <GROUP id="{6F9A9B8E-4453-DEEB-953E-DAFA6974DF59}" name="Resources">
       <FILE id="aso9TN" name="base.png" compile="0" resource="1" file="Resources/base.png"/>
+      <FILE id="qpiDY1" name="dbg_txt.png" compile="0" resource="1" file="Resources/dbg_txt.png"/>
       <FILE id="Rv9VFd" name="txt.png" compile="0" resource="1" file="Resources/txt.png"/>
     </GROUP>
   </MAINGROUP>

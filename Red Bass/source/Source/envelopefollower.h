@@ -13,17 +13,17 @@
 
 class EnvelopeFollower {
 public:
-	float envelope = 0;
+	double envelope = 0;
 
-	float process(float in);
-	void setattack(float atk, float samplerate);
-	void setrelease(float rls, float samplerate);
-	void setthreshold(float thrsh, float samplerate);
+	double process(double in);
+	void setattack(double atk, int samplerate);
+	void setrelease(double rls, int samplerate);
+	void setthreshold(double thrsh, int samplerate);
 private:
-	float attack = .9896117715f;
-	float attackms = 50;
-	float release = .9997911706f;
-	float releasems = 100;
-	float m = 1;
-	float threshold = 0;
+	double attack = .9896117715;
+	double attackms = 50;
+	double release = .9997911706;
+	double releasems = 100;
+	double m = 1;
+	double threshold = 0;
 };
