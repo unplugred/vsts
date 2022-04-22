@@ -22,7 +22,7 @@ RedBassAudioProcessor::RedBassAudioProcessor() :
 	pots[4] = potentiometer("Sidechain lowpass"	,"lowpass"	,0		,0		);
 	pots[5] = potentiometer("Monitor sidechain"	,"monitor"	,.01f	,0		,0.f	,1.f	,false	,potentiometer::ptype::booltype);
 	pots[6] = potentiometer("Dry"				,"dry"		,.001f	,1		);
-	pots[7] = potentiometer("Wet"				,"wet"		,.001f	,0.18f	);
+	pots[7] = potentiometer("Wet"				,"wet"		,.01f	,0.18f	);
 
 	for(int i = 0; i < paramcount; i++) {
 		state.values[i] = pots[i].inflate(apvts.getParameter(pots[i].id)->getValue());
