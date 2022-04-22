@@ -308,9 +308,7 @@ void PFAudioProcessor::parameterChanged(const String& parameterID, float newValu
 
 AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new PFAudioProcessor(); }
 
-AudioProcessorValueTreeState::ParameterLayout
-	PFAudioProcessor::createParameters()
-{
+AudioProcessorValueTreeState::ParameterLayout PFAudioProcessor::createParameters() {
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
 	parameters.push_back(std::make_unique<AudioParameterFloat	>("freq"		,"Frequency"	,0.0f	,1.0f	,0.32f	));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>("fat"			,"Fatness"		,-20.0f	,20.0f	,0.0f	));
