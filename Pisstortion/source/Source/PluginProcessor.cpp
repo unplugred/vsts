@@ -23,7 +23,7 @@ PisstortionAudioProcessor::PisstortionAudioProcessor() :
 	presets[5] = pluginpreset("I Love Piss"			,1.0f	,1.0f	,0.0f	,1.0f	,0.25f	);
 	presets[6] = pluginpreset("You Broke It"		,0.09f	,1.0f	,0.0f	,0.02f	,0.0f	);
 	presets[7] = pluginpreset("Splashing"			,1.0f	,1.0f	,0.39f	,0.07f	,0.22f	);
-	presets[7] = pluginpreset("PISS LASERS"			,0.39f	,0.95f	,0.36f	,0.59f	,0.34f	);
+	presets[8] = pluginpreset("PISS LASERS"			,0.39f	,0.95f	,0.36f	,0.59f	,0.34f	);
 
 	pots[0] = potentiometer("Frequency"			,"freq"			,0		,presets[0].values[0]	);
 	pots[1] = potentiometer("Piss"				,"piss"			,.001f	,presets[0].values[1]	);
