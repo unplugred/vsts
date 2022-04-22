@@ -16,6 +16,8 @@ public:
 	~PNCHAudioProcessor() override;
 
 	void prepareToPlay (double sampleRate, int samplesPerBlock) override;
+	void changechannelnum(int newchannelnum);
+	void resetoversampling();
 	void releaseResources() override;
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -27,7 +29,6 @@ public:
 	void setoversampling(bool toggle);
 
 	AudioProcessorEditor* createEditor() override;
-	void changechannelnum(int newchannelnum);
 	bool hasEditor() const override;
 
 	const String getName() const override;
@@ -68,7 +69,7 @@ private:
 	std::vector<float*> ospointerarray;
 
 	int channelnum = 0;
-	int samplesperblock = 512;
+	int samplesperblock = 0;
 	int samplerate = 44100;
 	std::vector<float*> channelData;
 
