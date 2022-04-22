@@ -18,13 +18,7 @@ VuAudioProcessor::VuAudioProcessor() :
 	apvts.addParameterListener("nominal", this);
 	apvts.addParameterListener("damping", this);
 	apvts.addParameterListener("stereo", this);
-	//SystemStats::setApplicationCrashHandler(crashhandler);
 }
-/*
-void VuAudioProcessor::crashhandler(void*) {
-	File::getCurrentWorkingDirectory().getChildFile("digital_tombstone.txt").replaceWithText(SystemStats::getStackBacktrace());
-}
-*/
 VuAudioProcessor::~VuAudioProcessor() {
 	apvts.removeParameterListener("nominal",this);
 	apvts.removeParameterListener("damping",this);
@@ -47,11 +41,8 @@ void VuAudioProcessor::releaseResources() {}
 
 #ifndef JucePlugin_PreferredChannelConfigurations
 bool VuAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const {
-	if (layouts.getMainOutputChannelSet() != AudioChannelSet::mono()
-	 && layouts.getMainOutputChannelSet() != AudioChannelSet::stereo())
-		return false;
-
-	if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
+	if (layouts.getMainInputChannelSet() != AudioChannelSet::mono()
+	 && layouts.getMainInputChannelSet() != AudioChannelSet::stereo())
 		return false;
 
 	return true;
@@ -60,16 +51,14 @@ bool VuAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 
 void VuAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midiMessages) {
 	ScopedNoDenormals noDenormals;
-	auto totalNumInputChannels	= getTotalNumInputChannels();
-	auto totalNumOutputChannels = getTotalNumOutputChannels();
 
-	for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-		buffer.clear (i, 0, buffer.getNumSamples());
+	if(buffer.getNumChannels() == 0 || buffer.getNumSamples() == 0) return;
+	int channelnum = getTotalNumInputChannels();
 
 	float leftrms = 0, rightrms = 0, newleftpeak = leftpeak.get(), newrightpeak = rightpeak.get();
-	for (int channel = 0; channel < fmin(totalNumInputChannels,2); ++channel)
+	for (int channel = 0; channel < fmin(channelnum,2); ++channel)
 	{
-		auto* channelData = buffer.getWritePointer (channel);
+		const float* channelData = buffer.getReadPointer(channel);
 		for (int sample = 0; sample < buffer.getNumSamples(); ++sample) {
 			float data = channelData[sample];
 			data *= data;
@@ -80,15 +69,20 @@ void VuAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mid
 				rightrms += data;
 				newrightpeak = newrightpeak || fabs(channelData[sample]) >= .999;
 			}
-			if(JUCEApplication::isStandaloneApp()) channelData[sample] = 0;
 		}
 		if(channel == 0)
 			leftrms = std::sqrt(leftrms/buffer.getNumSamples());
 		else
 			rightrms = std::sqrt(rightrms/buffer.getNumSamples());
 	}
+
+	if(JUCEApplication::isStandaloneApp()) buffer.clear();
+	else for (auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
+		buffer.clear(i, 0, buffer.getNumSamples());
+
 	buffercount = buffercount.get()+1;
-	if(totalNumInputChannels == 1) {
+
+	if(channelnum == 1) {
 		float output = leftvu.get()+leftrms*leftrms;
 		leftvu = output;
 		rightvu = output;
