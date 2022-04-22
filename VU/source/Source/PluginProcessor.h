@@ -14,7 +14,6 @@
 class VuAudioProcessor	: public AudioProcessor, public AudioProcessorValueTreeState::Listener {
 public:
 	VuAudioProcessor();
-	//static void crashhandler(void*);
 	~VuAudioProcessor() override;
 
 	void prepareToPlay (double sampleRate, int samplesPerBlock) override;
