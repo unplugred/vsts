@@ -471,7 +471,7 @@ void PisstortionAudioProcessorEditor::timerCallback() {
 		else rms *= 2.5f;
 		audioProcessor.rmsadd = 0;
 		audioProcessor.rmscount = 0;
-	} else rms *= .9f
+	} else rms *= .9f;
 	rmslerped = rmslerped*.6f+rms*.4f;
 
 	for(int i = 0; i < 20; i++) {
