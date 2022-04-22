@@ -2,7 +2,9 @@
 
 <JUCERPROJECT id="poC928" name="ClickBox" projectType="audioplug" useAppConfig="0"
               addUsingNamespaceToJuceHeader="1" jucerFormatVersion="1" pluginFormats="buildStandalone,buildVST"
-              pluginManufacturer="unplugred" pluginVSTCategory="kPlugCategEffect">
+              pluginManufacturer="unplugred" pluginVSTCategory="kPlugCategEffect"
+              companyName="unplugred" companyWebsite="https://vst.unplug.red"
+              companyEmail="arihanan@protonmail.com">
   <MAINGROUP id="DkCz5r" name="ClickBox">
     <GROUP id="{CE0A4298-FBD0-4519-A526-490181444434}" name="Source">
       <FILE id="jWVKt7" name="CoolLogger.cpp" compile="1" resource="0" file="Source/CoolLogger.cpp"/>
