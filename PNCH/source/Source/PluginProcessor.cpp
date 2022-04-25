@@ -15,6 +15,7 @@ PNCHAudioProcessor::PNCHAudioProcessor() :
 #endif
 	apvts(*this, &undoManager, "Parameters", createParameters())
 {
+	amount.setCurrentAndTargetValue(apvts.getParameter("amount")->getValue());
 	apvts.addParameterListener("amount",this);
 	apvts.addParameterListener("oversampling",this);
 }
@@ -37,7 +38,7 @@ void PNCHAudioProcessor::setCurrentProgram (int index) { }
 const String PNCHAudioProcessor::getProgramName (int index) {
 	std::ostringstream presetname;
 	presetname << "P";
-	int num = ((int)floor(amount*31));
+	int num = ((int)floor(amount.getTargetValue()*31));
 	for(int i = 0; i < num; i++) presetname << "U";
 	presetname << "NCH";
 	if(num == 0) presetname << ".";
@@ -51,6 +52,7 @@ void PNCHAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) 
 	samplesperblock = samplesPerBlock;
 	samplerate = sampleRate;
 	resetoversampling();
+	amount.reset(samplerate*(oversampling.get()?2:1),.001f);
 	preparedtoplay = true;
 }
 void PNCHAudioProcessor::changechannelnum(int newchannelnum) {
@@ -114,7 +116,7 @@ void PNCHAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& m
 
 	for (int sample = 0; sample < numsamples; ++sample) {
 		for (int channel = 0; channel < channelnum; ++channel) {
-			channelData[channel][sample] = pnch(channelData[channel][sample],amount);
+			channelData[channel][sample] = pnch(channelData[channel][sample],amount.getNextValue());
 			if(prmscount < samplerate*2) {
 				prmsadd += channelData[channel][sample]*channelData[channel][sample];
 				prmscount++;
@@ -167,14 +169,14 @@ void PNCHAudioProcessor::setoversampling(bool toggle) {
 
 bool PNCHAudioProcessor::hasEditor() const { return true; }
 AudioProcessorEditor* PNCHAudioProcessor::createEditor() {
-	return new PNCHAudioProcessorEditor(*this,amount);
+	return new PNCHAudioProcessorEditor(*this,amount.getTargetValue());
 }
 
 void PNCHAudioProcessor::getStateInformation (MemoryBlock& destData) {
 	const char linebreak = '\n';
 	std::ostringstream data;
 	data << version
-		<< linebreak << amount
+		<< linebreak << amount.getTargetValue()
 		<< linebreak << (oversampling.get()?1:0) << linebreak;
 	MemoryOutputStream stream(destData, false);
 	stream.writeString(data.str());
@@ -190,9 +192,9 @@ void PNCHAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 		int saveversion = std::stoi(token);
 
 		std::getline(ss, token, '\n');
-		amount = std::stof(token);
-		if(saveversion <= 1) amount = 1-(3/(3+(5*amount)));
-		apvts.getParameter("amount")->setValueNotifyingHost(amount);
+		float a = std::stof(token);
+		if(saveversion <= 1) a = 1-(3/(3+(5*a)));
+		apvts.getParameter("amount")->setValueNotifyingHost(a);
 
 		std::getline(ss, token, '\n');
 		setoversampling(std::stoi(token)-1);
@@ -209,7 +211,7 @@ void PNCHAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 	}
 }
 void PNCHAudioProcessor::parameterChanged(const String& parameterID, float newValue) {
-	if(parameterID == "amount") amount = newValue;
+	if(parameterID == "amount") amount.setTargetValue(newValue);
 	else if(parameterID == "oversampling") {
 		oversampling = newValue > .5;
 		setoversampling(newValue > .5);

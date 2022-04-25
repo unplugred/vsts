@@ -17,11 +17,11 @@ ClickBoxAudioProcessor::ClickBoxAudioProcessor() :
 {
 	pots[0] = potentiometer("X"					,"x"		,.05f	,.5f	,0	,1	,false);
 	pots[1] = potentiometer("Y"					,"y"		,.05f	,.5f	,0	,1	,false);
-	pots[2] = potentiometer("Intensity"			,"intensity",0		,.5f	);
+	pots[2] = potentiometer("Intensity"			,"intensity",.001f	,.5f	);
 	pots[3] = potentiometer("Amount"			,"amount"	,0		,.5f	);
-	pots[4] = potentiometer("Stereo"			,"stereo"	,0		,.28f	);
-	pots[5] = potentiometer("Side-chain to dry"	,"sidechain",0		,0		,0	,1	,false	,potentiometer::ptype::booltype);
-	pots[6] = potentiometer("Dry out"			,"dry"		,.001f	,1		,0	,1	,true	,potentiometer::ptype::booltype);
+	pots[4] = potentiometer("Stereo"			,"stereo"	,.001f	,.28f	);
+	pots[5] = potentiometer("Side-chain to dry"	,"sidechain",0		,0	,1	,false	,potentiometer::ptype::booltype);
+	pots[6] = potentiometer("Dry out"			,"dry"		,.002f	,1		,0	,1	,true	,potentiometer::ptype::booltype);
 	pots[7] = potentiometer("Auto"				,"auto"		,0		,0		);
 	pots[8] = potentiometer("Override"			,"override"	,0		,0		,0	,1	,false	,potentiometer::ptype::booltype);
 
