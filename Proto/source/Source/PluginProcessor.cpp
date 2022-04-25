@@ -24,12 +24,12 @@ ProtoAudioProcessor::ProtoAudioProcessor() :
 	presets[6] = pluginpreset("Bad Connection"		,0.25f	,-2.56f	,0.48f	,0.0f	,0.0f	);
 	presets[7] = pluginpreset("Ouch"				,0.9f	,-20.0f	,0.0f	,0.0f	,0.69f	);
 
-	pots[0] = potentiometer("Frequency"		,"freq"			,0		,presets[0].values[0]	);
-	pots[1] = potentiometer("Fatness"		,"fat"			,.001f	,presets[0].values[1]	,-20.f	,20.f	);
-	pots[2] = potentiometer("Drive"			,"drive"		,0		,presets[0].values[2]	);
-	pots[3] = potentiometer("Dry"			,"dry"			,.001f	,presets[0].values[3]	);
-	pots[4] = potentiometer("Stereo"		,"stereo"		,0		,presets[0].values[4]	);
-	pots[5] = potentiometer("Out Gain"		,"gain"			,.001f	,.4f					,0.f	,1.f	,false	);
+	pots[0] = potentiometer("Frequency"		,"freq"			,.001f	,presets[0].values[0]	);
+	pots[1] = potentiometer("Fatness"		,"fat"			,.002f	,presets[0].values[1]	,-20.f	,20.f	);
+	pots[2] = potentiometer("Drive"			,"drive"		,.001f	,presets[0].values[2]	);
+	pots[3] = potentiometer("Dry"			,"dry"			,.002f	,presets[0].values[3]	);
+	pots[4] = potentiometer("Stereo"		,"stereo"		,.001f	,presets[0].values[4]	);
+	pots[5] = potentiometer("Out Gain"		,"gain"			,.002f	,.4f					,0.f	,1.f	,false	);
 	pots[6] = potentiometer("Over-Sampling"	,"oversampling"	,0		,1						,0		,1		,false	,potentiometer::ptype::booltype);
 
 	for(int i = 0; i < paramcount; i++) {

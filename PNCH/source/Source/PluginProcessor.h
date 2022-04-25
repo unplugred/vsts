@@ -55,7 +55,7 @@ public:
 	Atomic<int> rmscount = 0;
 
 	int version = 2;
-	float amount = 0.f;
+	SmoothedValue<float,ValueSmoothingTypes::Linear> amount;
 	Atomic<bool> oversampling = 1;
 
 	CoolLogger logger;

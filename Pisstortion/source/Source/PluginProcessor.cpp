@@ -25,12 +25,12 @@ PisstortionAudioProcessor::PisstortionAudioProcessor() :
 	presets[7] = pluginpreset("Splashing"			,1.0f	,1.0f	,0.39f	,0.07f	,0.22f	);
 	presets[8] = pluginpreset("PISS LASERS"			,0.39f	,0.95f	,0.36f	,0.59f	,0.34f	);
 
-	pots[0] = potentiometer("Frequency"			,"freq"			,0		,presets[0].values[0]	);
-	pots[1] = potentiometer("Piss"				,"piss"			,.001f	,presets[0].values[1]	);
-	pots[2] = potentiometer("Noise Reduction"	,"noise"		,.001f	,presets[0].values[2]	);
-	pots[3] = potentiometer("Harmonics"			,"harm"			,0		,presets[0].values[3]	);
-	pots[4] = potentiometer("Stereo"			,"stereo"		,0		,presets[0].values[4]	);
-	pots[5] = potentiometer("Out Gain"			,"gain"			,.001f	,1.0f					,0.f	,1.f	,false	);
+	pots[0] = potentiometer("Frequency"			,"freq"			,.001f		,presets[0].values[0]	);
+	pots[1] = potentiometer("Piss"				,"piss"			,.002f	,presets[0].values[1]	);
+	pots[2] = potentiometer("Noise Reduction"	,"noise"		,.002f	,presets[0].values[2]	);
+	pots[3] = potentiometer("Harmonics"			,"harm"			,.001f	,presets[0].values[3]	);
+	pots[4] = potentiometer("Stereo"			,"stereo"		,.001f	,presets[0].values[4]	);
+	pots[5] = potentiometer("Out Gain"			,"gain"			,.002f	,1.0f					,0.f	,1.f	,false	);
 	pots[6] = potentiometer("Over-Sampling"		,"oversampling"	,0		,1						,0		,1		,false	,potentiometer::ptype::booltype);
 
 	for(int i = 0; i < paramcount; i++) {
