@@ -50,7 +50,7 @@ void ClickBoxAudioProcessor::changeProgramName(int index, const String& newName)
 
 void ClickBoxAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
 	for(int i = 0; i < paramcount; i++) if(pots[i].smoothtime > 0)
-		pots[i].smooth.reset(sampleRate*(state.values[6]+1), pots[i].smoothtime);
+		pots[i].smooth.reset(sampleRate, pots[i].smoothtime);
 }
 void ClickBoxAudioProcessor::changechannelnum(int newchannelnum) {
 	channelnum = newchannelnum;
