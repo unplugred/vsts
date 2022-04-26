@@ -165,7 +165,7 @@ void PNCHAudioProcessorEditor::renderOpenGL() {
 	baseshader->setUniform("tex",0);
 	baseshader->setUniform("texscale",25.f/basetex.getWidth(),21.f/basetex.getHeight());
 	baseshader->setUniform("letterscale",getWidth()/25.f,getHeight()/21.f);
-	baseshader->setUniform("amount",floor(amount*31));
+	baseshader->setUniform("amount",(float)floor(amount*31));
 	baseshader->setUniform("colone",c1.getFloatRed(),c1.getFloatGreen(),c1.getFloatBlue());
 	baseshader->setUniform("coltwo",c2.getFloatRed(),c2.getFloatGreen(),c2.getFloatBlue());
 	context.extensions.glEnableVertexAttribArray(coord);
