@@ -117,7 +117,7 @@ private:
 	std::vector<float*> channelData;
 
 	float oldautomod = 0;
-	bool oldoverride = true;
+	float oldoverride = 1;
 
 	Random random;
 	perlin prlin;

@@ -20,7 +20,7 @@ ClickBoxAudioProcessor::ClickBoxAudioProcessor() :
 	pots[2] = potentiometer("Intensity"			,"intensity",.001f	,.5f	);
 	pots[3] = potentiometer("Amount"			,"amount"	,0		,.5f	);
 	pots[4] = potentiometer("Stereo"			,"stereo"	,.001f	,.28f	);
-	pots[5] = potentiometer("Side-chain to dry"	,"sidechain",0		,0	,1	,false	,potentiometer::ptype::booltype);
+	pots[5] = potentiometer("Side-chain to dry"	,"sidechain",0		,0		,0	,1	,true	,potentiometer::ptype::booltype);
 	pots[6] = potentiometer("Dry out"			,"dry"		,.002f	,1		,0	,1	,true	,potentiometer::ptype::booltype);
 	pots[7] = potentiometer("Auto"				,"auto"		,0		,0		);
 	pots[8] = potentiometer("Override"			,"override"	,0		,0		,0	,1	,false	,potentiometer::ptype::booltype);
@@ -88,7 +88,7 @@ void ClickBoxAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer
 		for(int i = 0; i < paramcount; i++) if(pots[i].smoothtime > 0)
 			state.values[i] = pots[i].smooth.getNextValue();
 
-		if(state.values[5]) {
+		if(state.values[5] > .5) {
 			float monoamp = 0;
 			for(int i = 0; i < channelnum; i++) monoamp += channelData[i][sample];
 			rms += (monoamp*monoamp)/channelnum;
@@ -103,7 +103,7 @@ void ClickBoxAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer
 			time += samplessincelastperlin*.00001f;
 			float compensation = 0;
 			float newx = state.values[0], newy = state.values[1];
-			if(!state.values[8]) {
+			if(state.values[8] < .5) {
 				newx = prlin.noise(time,0)*.5f+.5f;
 				newy = prlin.noise(0,time)*.5f+.5f;
 				compensation = fabs(oldautomod-state.values[7])*sqrt((newx-state.values[0])*(newx-state.values[0])+(newy - state.values[1])*(newy-state.values[1]));
@@ -123,7 +123,7 @@ void ClickBoxAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer
 			y = newy;
 
 			//sidechain to dry
-			if(state.values[5]) {
+			if(state.values[5] > .5) {
 				ii *= sqrt(rms)*4;
 				rms = 0;
 			}
