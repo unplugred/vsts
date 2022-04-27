@@ -3,7 +3,7 @@
 <JUCERPROJECT id="v6SFbz" name="VU" projectType="audioplug" useAppConfig="0"
               addUsingNamespaceToJuceHeader="1" displaySplashScreen="0" jucerFormatVersion="1"
               companyName="unplugred" companyWebsite="https://vst.unplug.red"
-              companyEmail="arihanan@protonmail.com" pluginFormats="buildStandalone,buildVST"
+              companyEmail="arihanan@protonmail.com" pluginFormats="buildStandalone,buildVST,buildVST3"
               pluginVST3Category="Analyzer" pluginVSTCategory="kPlugCategAnalysis"
               pluginChannelConfigs="{1,1},{2,2}">
   <MAINGROUP id="isef6D" name="VU">
