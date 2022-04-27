@@ -9,12 +9,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-RedBassAudioProcessor::RedBassAudioProcessor() :
-#ifndef JucePlugin_PreferredChannelConfigurations
-	AudioProcessor(BusesProperties().withInput("Input",AudioChannelSet::stereo(),true).withOutput("Output",AudioChannelSet::stereo(),true)),
-#endif
-	apvts(*this, &undoManager, "Parameters", createParameters())
-{
+RedBassAudioProcessor::RedBassAudioProcessor() : apvts(*this, &undoManager, "Parameters", createParameters()) {
 	pots[0] = potentiometer("Frequency"			,"freq"		,.001f	,0.48f	);
 	pots[1] = potentiometer("Threshold"			,"threshold",0		,0.02f	);
 	pots[2] = potentiometer("Attack"			,"attack"	,0		,0.17f	);

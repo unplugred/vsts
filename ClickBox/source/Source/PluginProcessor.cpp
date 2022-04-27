@@ -9,12 +9,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-ClickBoxAudioProcessor::ClickBoxAudioProcessor() :
-#ifndef JucePlugin_PreferredChannelConfigurations
-	AudioProcessor (BusesProperties().withInput("Input",AudioChannelSet::stereo(),true).withOutput("Output",AudioChannelSet::stereo(),true)),
-#endif
-	apvts(*this, &undoManager, "Parameters", createParameters())
-{
+ClickBoxAudioProcessor::ClickBoxAudioProcessor() : apvts(*this, &undoManager, "Parameters", createParameters()) {
 	pots[0] = potentiometer("X"					,"x"		,.05f	,.5f	,0	,1	,false);
 	pots[1] = potentiometer("Y"					,"y"		,.05f	,.5f	,0	,1	,false);
 	pots[2] = potentiometer("Intensity"			,"intensity",.001f	,.5f	);
