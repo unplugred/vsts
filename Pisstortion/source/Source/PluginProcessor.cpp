@@ -9,12 +9,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-PisstortionAudioProcessor::PisstortionAudioProcessor() :
-#ifndef JucePlugin_PreferredChannelConfigurations
-	AudioProcessor(BusesProperties().withInput("Input",AudioChannelSet::stereo(),true).withOutput("Output",AudioChannelSet::stereo(),true)),
-#endif
-	apvts(*this, &undoManager, "Parameters", createParameters())
-{
+PisstortionAudioProcessor::PisstortionAudioProcessor() : apvts(*this, &undoManager, "Parameters", createParameters()) {
 	presets[0] = pluginpreset("Default"				,0.17f	,1.0f	,0.35f	,0.31f	,0.1f	);
 	presets[1] = pluginpreset("Sand in Your Ear"	,0.3f	,1.0f	,1.0f	,0.18f	,0.0f	);
 	presets[2] = pluginpreset("Mega Drive"			,0.02f	,0.42f	,0.0f	,1.0f	,0.0f	);

@@ -9,12 +9,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-ProtoAudioProcessor::ProtoAudioProcessor() :
-#ifndef JucePlugin_PreferredChannelConfigurations
-	AudioProcessor(BusesProperties().withInput("Input",AudioChannelSet::stereo(),true).withOutput("Output",AudioChannelSet::stereo(),true)),
-#endif
-	apvts(*this, &undoManager, "Parameters", createParameters())
-{
+ProtoAudioProcessor::ProtoAudioProcessor() : apvts(*this, &undoManager, "Parameters", createParameters()) {
 	presets[0] = pluginpreset("Default"				,0.32f	,0.0f	,0.0f	,0.0f	,0.37f	);
 	presets[1] = pluginpreset("Digital Driver"		,0.27f	,-11.36f,0.53f	,0.0f	,0.0f	);
 	presets[2] = pluginpreset("Noisy Bass Pumper"	,0.55f	,20.0f	,0.59f	,0.77f	,0.0f	);

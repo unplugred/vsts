@@ -9,12 +9,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-PNCHAudioProcessor::PNCHAudioProcessor() :
-#ifndef JucePlugin_PreferredChannelConfigurations
-	AudioProcessor(BusesProperties().withInput("Input",AudioChannelSet::stereo(),true).withOutput("Output",AudioChannelSet::stereo(),true)),
-#endif
-	apvts(*this, &undoManager, "Parameters", createParameters())
-{
+PNCHAudioProcessor::PNCHAudioProcessor() : apvts(*this, &undoManager, "Parameters", createParameters()) {
 	amount.setCurrentAndTargetValue(apvts.getParameter("amount")->getValue());
 	apvts.addParameterListener("amount",this);
 	apvts.addParameterListener("oversampling",this);
