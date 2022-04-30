@@ -10,9 +10,7 @@
 #include "PluginEditor.h"
 
 VuAudioProcessor::VuAudioProcessor() :
-#ifndef JucePlugin_PreferredChannelConfigurations
 	AudioProcessor(BusesProperties().withInput("Input",AudioChannelSet::stereo(),true).withOutput("Output",AudioChannelSet::stereo(),true)),
-#endif
 	apvts(*this, &undoManager, "Parameters", createParameters())
 {
 	apvts.addParameterListener("nominal", this);
@@ -39,15 +37,13 @@ void VuAudioProcessor::changeProgramName (int index, const String& newName) {}
 void VuAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {}
 void VuAudioProcessor::releaseResources() {}
 
-#ifndef JucePlugin_PreferredChannelConfigurations
 bool VuAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const {
-	if (layouts.getMainInputChannelSet() != AudioChannelSet::mono()
-	 && layouts.getMainInputChannelSet() != AudioChannelSet::stereo())
+	if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
 		return false;
 
-	return true;
+	int numChannels = layouts.getMainInputChannels();
+	return (numChannels > 0 && numChannels <= 2);
 }
-#endif
 
 void VuAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midiMessages) {
 	ScopedNoDenormals noDenormals;

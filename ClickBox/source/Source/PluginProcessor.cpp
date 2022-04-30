@@ -9,7 +9,10 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-ClickBoxAudioProcessor::ClickBoxAudioProcessor() : apvts(*this, &undoManager, "Parameters", createParameters()) {
+ClickBoxAudioProcessor::ClickBoxAudioProcessor() :
+	AudioProcessor(BusesProperties().withInput("Input",AudioChannelSet::stereo(),true).withOutput("Output",AudioChannelSet::stereo(),true)),
+	apvts(*this, &undoManager, "Parameters", createParameters())
+{
 	pots[0] = potentiometer("X"					,"x"		,.05f	,.5f	,0	,1	,false);
 	pots[1] = potentiometer("Y"					,"y"		,.05f	,.5f	,0	,1	,false);
 	pots[2] = potentiometer("Intensity"			,"intensity",.001f	,.5f	);
@@ -57,14 +60,12 @@ void ClickBoxAudioProcessor::changechannelnum(int newchannelnum) {
 }
 void ClickBoxAudioProcessor::releaseResources() { }
 
-#ifndef JucePlugin_PreferredChannelConfigurations
 bool ClickBoxAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const {
 	if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
 		return false;
 
-	return true;
+	return (layouts.getMainInputChannels() > 0);
 }
-#endif
 
 void ClickBoxAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMessages) {
 	ScopedNoDenormals noDenormals;

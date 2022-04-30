@@ -9,7 +9,10 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-ProtoAudioProcessor::ProtoAudioProcessor() : apvts(*this, &undoManager, "Parameters", createParameters()) {
+ProtoAudioProcessor::ProtoAudioProcessor() :
+	AudioProcessor(BusesProperties().withInput("Input",AudioChannelSet::stereo(),true).withOutput("Output",AudioChannelSet::stereo(),true)),
+	apvts(*this, &undoManager, "Parameters", createParameters())
+{
 	presets[0] = pluginpreset("Default"				,0.32f	,0.0f	,0.0f	,0.0f	,0.37f	);
 	presets[1] = pluginpreset("Digital Driver"		,0.27f	,-11.36f,0.53f	,0.0f	,0.0f	);
 	presets[2] = pluginpreset("Noisy Bass Pumper"	,0.55f	,20.0f	,0.59f	,0.77f	,0.0f	);
@@ -115,14 +118,12 @@ void ProtoAudioProcessor::resetoversampling() {
 }
 void ProtoAudioProcessor::releaseResources() { }
 
-#ifndef JucePlugin_PreferredChannelConfigurations
 bool ProtoAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const {
 	if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
 		return false;
 
-	return true;
+	return (layouts.getMainInputChannels() > 0);
 }
-#endif
 
 void ProtoAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midiMessages) {
 	ScopedNoDenormals noDenormals;
