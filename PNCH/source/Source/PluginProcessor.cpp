@@ -9,7 +9,10 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-PNCHAudioProcessor::PNCHAudioProcessor() : apvts(*this, &undoManager, "Parameters", createParameters()) {
+PNCHAudioProcessor::PNCHAudioProcessor() :
+	AudioProcessor(BusesProperties().withInput("Input",AudioChannelSet::stereo(),true).withOutput("Output",AudioChannelSet::stereo(),true)),
+	apvts(*this, &undoManager, "Parameters", createParameters())
+{
 	amount.setCurrentAndTargetValue(apvts.getParameter("amount")->getValue());
 	apvts.addParameterListener("amount",this);
 	apvts.addParameterListener("oversampling",this);
@@ -71,14 +74,12 @@ void PNCHAudioProcessor::resetoversampling() {
 }
 void PNCHAudioProcessor::releaseResources() { }
 
-#ifndef JucePlugin_PreferredChannelConfigurations
 bool PNCHAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const {
 	if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
 		return false;
 
-	return true;
+	return (layouts.getMainInputChannels() > 0);
 }
-#endif
 
 void PNCHAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midiMessages) {
 	ScopedNoDenormals noDenormals;

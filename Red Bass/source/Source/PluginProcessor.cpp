@@ -9,7 +9,10 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-RedBassAudioProcessor::RedBassAudioProcessor() : apvts(*this, &undoManager, "Parameters", createParameters()) {
+RedBassAudioProcessor::RedBassAudioProcessor() :
+	AudioProcessor(BusesProperties().withInput("Input",AudioChannelSet::stereo(),true).withOutput("Output",AudioChannelSet::stereo(),true)),
+	apvts(*this, &undoManager, "Parameters", createParameters())
+{
 	pots[0] = potentiometer("Frequency"			,"freq"		,.001f	,0.48f	);
 	pots[1] = potentiometer("Threshold"			,"threshold",0		,0.02f	);
 	pots[2] = potentiometer("Attack"			,"attack"	,0		,0.17f	);
@@ -74,14 +77,12 @@ void RedBassAudioProcessor::resetfilter() {
 }
 void RedBassAudioProcessor::releaseResources() { }
 
-#ifndef JucePlugin_PreferredChannelConfigurations
 bool RedBassAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const {
 	if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
 		return false;
 
-	return true;
+	return (layouts.getMainInputChannels() > 0);
 }
-#endif
 
 void RedBassAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midiMessages) {
 	ScopedNoDenormals noDenormals;
