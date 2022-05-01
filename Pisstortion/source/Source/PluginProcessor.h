@@ -1,11 +1,3 @@
-/*
-  ==============================================================================
-
-	This file contains the basic framework code for a JUCE plugin processor.
-
-  ==============================================================================
-*/
-
 #pragma once
 #include <JuceHeader.h>
 #include "DCFilter.h"
@@ -71,9 +63,7 @@ public:
 	void resetoversampling();
 	void releaseResources() override;
 
-#ifndef JucePlugin_PreferredChannelConfigurations
 	bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
-#endif
 
 	void processBlock (AudioBuffer<float>&, MidiBuffer&) override;
 	float pisstortion(float source, int channel, int channelcount, pluginpreset stt, bool removedc);

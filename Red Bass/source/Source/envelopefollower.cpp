@@ -1,12 +1,3 @@
-/*
-  ==============================================================================
-
-	envelopefollower.cpp
-	Created: 5 Feb 2022 1:01:20pm
-	Author: unplugred 
-
-  ==============================================================================
-*/
 //adapted from github.com/arkogelul/pizmidi
 #include "envelopefollower.h"
 

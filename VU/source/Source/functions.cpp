@@ -1,13 +1,3 @@
-/*
-  ==============================================================================
-
-    functions.cpp
-    Created: 8 Jul 2021 4:43:14pm
-    Author:  thevoid stared back
-
-  ==============================================================================
-*/
-
 #include "functions.h"
 
 float functions::smoothdamp(float current, float target, float* currentvelocity, float smoothtime, float maxspeed, float deltatime)

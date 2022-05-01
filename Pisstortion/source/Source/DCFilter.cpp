@@ -1,11 +1,3 @@
-/* ==============================================================================
-
-	DCFilter.cpp
-	Created: 4 Feb 2022 9:10:54am
-	Author:	 red
-
-  ==============================================================================
-*/
 //adapted from https://musicdsp.org/en/latest/Filters/135-dc-filter.html
 #include "DCFilter.h"
 

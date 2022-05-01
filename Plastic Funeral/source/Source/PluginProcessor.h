@@ -1,11 +1,3 @@
-/*
-  ==============================================================================
-
-	This file contains the basic framework code for a JUCE plugin processor.
-
-  ==============================================================================
-*/
-
 #pragma once
 #include <JuceHeader.h>
 #include "CoolLogger.h"
@@ -70,9 +62,7 @@ public:
 	void resetoversampling();
 	void releaseResources() override;
 
-#ifndef JucePlugin_PreferredChannelConfigurations
-	bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
-#endif
+	bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
 
 	void processBlock (AudioBuffer<float>&, MidiBuffer&) override;
 	float plasticfuneral(float source, int channel, int channelcount, pluginpreset stt, float nrm);
@@ -92,15 +82,16 @@ public:
 	int getNumPrograms() override;
 	int getCurrentProgram() override;
 	void setCurrentProgram (int index) override;
-	const String getProgramName (int index) override;
-	void changeProgramName (int index, const String& newName) override;
+	const String getProgramName(int index) override;
+	void changeProgramName(int index, const String& newName) override;
 
-	void getStateInformation (MemoryBlock& destData) override;
-	void setStateInformation (const void* data, int sizeInBytes) override;
+	void getStateInformation(MemoryBlock& destData) override;
+	void setStateInformation(const void* data, int sizeInBytes) override;
 	virtual void parameterChanged(const String& parameterID, float newValue);
  
 	AudioProcessorValueTreeState apvts;
 	UndoManager undoManager;
+	CoolLogger logger;
 
 	Atomic<float> rmsadd = 0;
 	Atomic<int> rmscount = 0;
@@ -111,7 +102,6 @@ public:
 	pluginpreset state;
 	potentiometer pots[7];
 
-	CoolLogger logger;
 private:
 	AudioProcessorValueTreeState::ParameterLayout createParameters();
 	pluginpreset presets[8];
@@ -130,7 +120,6 @@ private:
 	int channelnum = 0;
 	int samplesperblock = 0;
 	int samplerate = 44100;
-	std::vector<float*> channelData;
 
 	float curfat = -1000;
 	float curdry = -1000;

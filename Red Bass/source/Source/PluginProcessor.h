@@ -1,11 +1,3 @@
-/*
-  ==============================================================================
-
-	This file contains the basic framework code for a JUCE plugin processor.
-
-  ==============================================================================
-*/
-
 #pragma once
 #include <JuceHeader.h>
 #include "envelopefollower.h"
@@ -72,9 +64,7 @@ public:
 	void resetfilter();
 	void releaseResources() override;
 
-#ifndef JucePlugin_PreferredChannelConfigurations
 	bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
-#endif
 
 	void processBlock (AudioBuffer<float>&, MidiBuffer&) override;
 

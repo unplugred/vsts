@@ -1,11 +1,3 @@
-/*
-  ==============================================================================
-
-	This file contains the basic framework code for a JUCE plugin processor.
-
-  ==============================================================================
-*/
-
 #pragma once
 #include <JuceHeader.h>
 #include "CoolLogger.h"
@@ -20,9 +12,7 @@ public:
 	void resetoversampling();
 	void releaseResources() override;
 
-#ifndef JucePlugin_PreferredChannelConfigurations
-	bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
-#endif
+	bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
 
 	void processBlock (AudioBuffer<float>&, MidiBuffer&) override;
 	float pnch(float source, float amountt);
