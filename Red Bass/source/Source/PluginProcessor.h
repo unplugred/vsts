@@ -117,7 +117,6 @@ private:
 	int channelnum = 0;
 	int samplesperblock = 0;
 	float samplerate = 44100;
-	std::vector<float*> channelData;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (RedBassAudioProcessor)
 };

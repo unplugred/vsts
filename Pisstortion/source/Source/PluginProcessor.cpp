@@ -95,10 +95,6 @@ void PisstortionAudioProcessor::changechannelnum(int newchannelnum) {
 	channelnum = newchannelnum;
 	if(newchannelnum <= 0) return;
 
-	channelData.clear();
-	for (int i = 0; i < channelnum; i++)
-		channelData.push_back(nullptr);
-
 	resetoversampling();
 }
 void PisstortionAudioProcessor::resetoversampling() {
@@ -143,10 +139,9 @@ void PisstortionAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBu
 		numsamples = osbuffer.getNumSamples();
 	}
 
-	for (int channel = 0; channel < channelnum; ++channel) {
-		if(isoversampling) channelData[channel] = osbuffer.getWritePointer(channel);
-		else channelData[channel] = buffer.getWritePointer(channel);
-	}
+	float** channelData;
+	if(isoversampling) channelData = osbuffer.getArrayOfWritePointers();
+	else channelData = buffer.getArrayOfWritePointers();
 
 	for (int sample = 0; sample < numsamples; ++sample) {
 		for(int i = 0; i < paramcount; i++) if(pots[i].smoothtime > 0)

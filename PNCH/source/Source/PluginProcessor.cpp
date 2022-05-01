@@ -49,10 +49,6 @@ void PNCHAudioProcessor::changechannelnum(int newchannelnum) {
 	channelnum = newchannelnum;
 	if(newchannelnum <= 0) return;
 
-	channelData.clear();
-	for (int i = 0; i < channelnum; i++)
-		channelData.push_back(nullptr);
-
 	resetoversampling();
 }
 void PNCHAudioProcessor::resetoversampling() {
@@ -97,10 +93,9 @@ void PNCHAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& m
 		numsamples = osbuffer.getNumSamples();
 	}
 
-	for (int channel = 0; channel < channelnum; ++channel) {
-		if(isoversampling) channelData[channel] = osbuffer.getWritePointer(channel);
-		else channelData[channel] = buffer.getWritePointer(channel);
-	}
+	float** channelData;
+	if(isoversampling) channelData = osbuffer.getArrayOfWritePointers();
+	else channelData = buffer.getArrayOfWritePointers();
 
 	for (int sample = 0; sample < numsamples; ++sample) {
 		for (int channel = 0; channel < channelnum; ++channel) {

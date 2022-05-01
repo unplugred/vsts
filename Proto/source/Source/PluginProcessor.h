@@ -120,7 +120,6 @@ private:
 	int channelnum = 0;
 	int samplesperblock = 0;
 	int samplerate = 44100;
-	std::vector<float*> channelData;
 
 	float curfat = -1000;
 	float curdry = -1000;
