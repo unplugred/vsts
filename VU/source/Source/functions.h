@@ -1,13 +1,3 @@
-/*
-  ==============================================================================
-
-    functions.h
-    Created: 8 Jul 2021 4:43:14pm
-    Author:  thevoid stared back
-
-  ==============================================================================
-*/
-
 #pragma once
 #include <JuceHeader.h>
 using namespace juce;

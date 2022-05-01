@@ -1,19 +1,9 @@
-/*
-  ==============================================================================
-
-	Logger.h
-	Created: 17 Feb 2022 3:09:02pm
-	Author: unplugred
-
-  ==============================================================================
-*/
+/* cool logger created by me, unplugred.  */
 
 #pragma once
-
 #define ENABLE_CONSOLE
 #define ENABLE_TEXT
 #define CONSOLE_LENGTH 20
-
 #include <JuceHeader.h>
 
 class CoolLogger {
