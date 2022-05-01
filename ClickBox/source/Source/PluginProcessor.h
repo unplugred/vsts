@@ -61,7 +61,6 @@ public:
 	~ClickBoxAudioProcessor() override;
 
 	void prepareToPlay(double sampleRate, int samplesPerBlock) override;
-	void changechannelnum(int newchannelnum);
 	void releaseResources() override;
 
 	bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
@@ -102,10 +101,8 @@ public:
 	potentiometer pots[9];
 
 	CoolLogger logger;
-private:
-	int channelnum = 0;
-	std::vector<float*> channelData;
 
+private:
 	float oldautomod = 0;
 	float oldoverride = 1;
 

@@ -42,14 +42,6 @@ void ClickBoxAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBloc
 	for(int i = 0; i < paramcount; i++) if(pots[i].smoothtime > 0)
 		pots[i].smooth.reset(sampleRate, pots[i].smoothtime);
 }
-void ClickBoxAudioProcessor::changechannelnum(int newchannelnum) {
-	channelnum = newchannelnum;
-	if(newchannelnum <= 0) return;
-
-	channelData.clear();
-	for (int i = 0; i < getNumInputChannels(); i++)
-		channelData.push_back(nullptr);
-}
 void ClickBoxAudioProcessor::releaseResources() { }
 
 bool ClickBoxAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const {
@@ -63,13 +55,11 @@ void ClickBoxAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer
 	ScopedNoDenormals noDenormals;
 
 	if(buffer.getNumChannels() == 0 || buffer.getNumSamples() == 0) return;
-	if(buffer.getNumChannels() != channelnum)
-		changechannelnum(buffer.getNumChannels());
 	for (auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
 		buffer.clear (i, 0, buffer.getNumSamples());
 
-	for (int channel = 0; channel < channelnum; ++channel)
-		channelData[channel] = buffer.getWritePointer(channel);
+	float** channelData = buffer.getArrayOfWritePointers();
+	int channelnum = buffer.getNumChannels();
 
 	float ii = i.get();
 	for(int sample = 0; sample < buffer.getNumSamples(); ++sample) {

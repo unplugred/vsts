@@ -46,14 +46,14 @@ void RedBassAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBloc
 	envelopefollower.setattack(calculateattack(state.values[2]), sampleRate);
 	envelopefollower.setrelease(calculaterelease(state.values[3]), sampleRate);
 	envelopefollower.setthreshold(calculatethreshold(state.values[1]), sampleRate);
+
+	resetfilter();
 }
 void RedBassAudioProcessor::changechannelnum(int newchannelnum) {
 	channelnum = newchannelnum;
 	if(newchannelnum <= 0) return;
 
-	channelData.clear();
-	for (int i = 0; i < channelnum; i++)
-		channelData.push_back(nullptr);
+	resetfilter();
 }
 void RedBassAudioProcessor::resetfilter() {
 	if(channelnum <= 0 || samplesperblock <= 0) return;
@@ -61,7 +61,7 @@ void RedBassAudioProcessor::resetfilter() {
 	dsp::ProcessSpec spec;
 	spec.sampleRate = samplerate;
 	spec.maximumBlockSize = samplesperblock;
-	spec.numChannels = getNumInputChannels();
+	spec.numChannels = channelnum;
 	filter.reset();
 	(*filter.parameters.get()).setCutOffFrequency(samplerate,calculatelowpass(state.values[4]));
 	(*filter.parameters.get()).type = dsp::StateVariableFilter::Parameters<float>::Type::lowPass;
@@ -92,8 +92,7 @@ void RedBassAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer
 	int numsamples = buffer.getNumSamples();
 	dsp::AudioBlock<float> block(buffer);
 
-	for (int channel = 0; channel < channelnum; ++channel)
-		channelData[channel] = buffer.getWritePointer(channel);
+	float** channelData = buffer.getArrayOfWritePointers();
 
 	double sidechain = 0;
 	double osc = 0;
