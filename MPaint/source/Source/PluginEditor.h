@@ -5,7 +5,7 @@
 class MPaintAudioProcessorEditor : public AudioProcessorEditor, public OpenGLRenderer, public AudioProcessorValueTreeState::Listener, private Timer
 {
 public:
-	MPaintAudioProcessorEditor(MPaintAudioProcessor&, unsigned char soundd, bool errorr);
+	MPaintAudioProcessorEditor(MPaintAudioProcessor&, unsigned char soundd);
 	~MPaintAudioProcessorEditor() override;
 
 	void newOpenGLContextCreated() override;
@@ -41,6 +41,7 @@ private:
 	String vert;
 	String frag;
 
+	bool loaded = false;
 	bool error = false;
 	bool errorhover = false;
 

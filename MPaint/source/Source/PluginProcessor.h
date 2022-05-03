@@ -1,6 +1,7 @@
 #pragma once
 #include <JuceHeader.h>
 #include "CoolLogger.h"
+#include <future>
 
 class MPaintAudioProcessor : public AudioProcessor, public AudioProcessorValueTreeState::Listener {
 public:
@@ -42,7 +43,8 @@ public:
 	Atomic<unsigned char> sound = 0;
 	Atomic<bool> limit = true;
 
-	bool error = false;
+	Atomic<bool> error = false;
+	Atomic<bool> loaded = false;
 
 private:
 	AudioProcessorValueTreeState::ParameterLayout createParameters();
@@ -61,6 +63,8 @@ private:
 
 	int samplesperblock = 0;
 	int samplerate = 44100;
+
+	std::future<void> futurevoid;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MPaintAudioProcessor)
 };

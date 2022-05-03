@@ -2,16 +2,17 @@
 #include "PluginEditor.h"
 using namespace gl;
 
-MPaintAudioProcessorEditor::MPaintAudioProcessorEditor(MPaintAudioProcessor& p, unsigned char soundd, bool errorr)
+MPaintAudioProcessorEditor::MPaintAudioProcessorEditor(MPaintAudioProcessor& p, unsigned char soundd)
 	: AudioProcessorEditor(&p), audioProcessor(p)
 {
-	setSize(468, errorr?180:40);
+	audioProcessor.apvts.addParameterListener("sound",this);
+	sound = soundd;
+	error = audioProcessor.error.get();
+	loaded = error ? true : audioProcessor.loaded.get();
+
+	setSize(468, error?180:40);
 	setResizable(false, false);
 	setOpaque(true);
-
-	sound = soundd;
-	error = errorr;
-	audioProcessor.apvts.addParameterListener("sound",this);
 
 	context.setRenderer(this);
 	context.attachTo(*this);
@@ -136,6 +137,17 @@ void MPaintAudioProcessorEditor::openGLContextClosing() {
 void MPaintAudioProcessorEditor::paint (Graphics& g) { }
 
 void MPaintAudioProcessorEditor::timerCallback() {
+	if(!loaded) {
+		error = audioProcessor.error.get();
+		if(error) {
+			loaded = true;
+			setSize(468, 180);
+			audioProcessor.logger.height = 180;
+			needtoupdate = 2;
+		} else {
+			loaded = audioProcessor.loaded.get();
+		}
+	}
 	context.triggerRepaint();
 }
 

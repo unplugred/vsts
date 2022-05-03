@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include <future>
 
 MPaintAudioProcessor::MPaintAudioProcessor() :
 	AudioProcessor(BusesProperties().withOutput("Output", AudioChannelSet::stereo(), true)),
@@ -17,27 +18,35 @@ MPaintAudioProcessor::MPaintAudioProcessor() :
 
 		for(int v = 0; v < numvoices; v++)
 			synth[i].addVoice(new SamplerVoice());
-
-		for(int n = 59; n <= 79; n++) {
-			File dir = File::getSpecialLocation(File::currentApplicationFile);
-			if(!dir.isDirectory()) dir = dir.getParentDirectory();
-			File file = dir.getChildFile("MPaint/" + ((String)i).paddedLeft('0',2) + "_" + ((String)n).paddedLeft('0',2) + ".wav");
-			if(!file.existsAsFile()) file = dir.getChildFile(((String)i).paddedLeft('0',2) + "_" + ((String)n).paddedLeft('0',2) + ".wav");
-			if(file.existsAsFile()) {
-
-				std::unique_ptr<AudioFormatReader> formatreader(formatmanager.createReaderFor(file));
-				if(formatreader == nullptr) error = true;
-				else {
-					BigInteger range;
-					range.setRange(n,1,true);
-					synth[i].addSound(new SamplerSound((String)n, *formatreader, range, n, 0, 0.008f, 1));
-				}
-			} else error = true;
-		}
 	}
+
+	futurevoid = std::async(std::launch::async, [this] {
+		for(int i = 0; i < 15; i++) {
+			for(int n = 59; n <= 79; n++) {
+				if(loaded.get()) return;
+
+				File dir = File::getSpecialLocation(File::currentApplicationFile);
+				if(!dir.isDirectory()) dir = dir.getParentDirectory();
+				File file = dir.getChildFile("MPaint/" + ((String)i).paddedLeft('0',2) + "_" + ((String)n).paddedLeft('0',2) + ".wav");
+				if(!file.existsAsFile()) file = dir.getChildFile(((String)i).paddedLeft('0',2) + "_" + ((String)n).paddedLeft('0',2) + ".wav");
+				if(file.existsAsFile()) {
+
+					std::unique_ptr<AudioFormatReader> formatreader(formatmanager.createReaderFor(file));
+					if(formatreader != nullptr){
+						BigInteger range;
+						range.setRange(n,1,true);
+						synth[i].addSound(new SamplerSound((String)n, *formatreader, range, n, 0, 0.008f, 1));
+
+					} else error = true;
+				} else error = true;
+			}
+		}
+		loaded = true;
+	});
 }
 
 MPaintAudioProcessor::~MPaintAudioProcessor() {
+	loaded = true;
 	apvts.removeParameterListener("sound", this);
 	apvts.removeParameterListener("limit", this);
 }
@@ -140,50 +149,6 @@ void MPaintAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 			voicecycle[currentvoice] = message.getNoteNumber();
 			prevtime = time;
 
-			/*
-			situation 1: monophonic (first note) small buffer size
-			time till note play below zero;
-			time since last event large;
-			enters monophonic mode. all notes off sent;
-			time offset set to 0 as no notes played previously;
-			note is played immediately;
-			 
-			situation 2: monophobic (cutoff) small buffer size
-			time till note play blow zero;
-			time since last event event in about half a second;
-			enters monophonic mode;
-			all notes off sent;
-			time offset is set to about 10 milliseconds;
-			note time set to after the buffer size;
-			time till note play is set to note time;
-			note is played at a 19ms delay;
-
-			sutuation 3: monophonic (first note) large buffer size
-			same as 1;
-
-			situation 4: monophonic (cutoff) large buffer size
-			time till note play blow zero;
-			time since last event event in about half a second;
-			enters monophonic mode;
-			all notes off sent;
-			time offset is set to about 10 milliseconds;
-			note time set to before the buffer size;
-			note is played at a 19ms delay;
-
-
-			situation 5: polyphonic (first note) small buffer size
-			
-			situation 6: polyphobic (more notes) small buffer size
-
-			situation 7: polyphobic (out of voices) small buffer size
-
-
-			sutuation 8: polyphonic (first note) large buffer size
-
-			situation 9: polyphonic (more notes) large buffer size
-
-			situation 9: polyphonic (out of voices) large buffer size
-			*/
 		} else if(message.isNoteOff() && !limit.get()) {
 			message.setVelocity(1.f);
 			message.setChannel(1);
@@ -202,7 +167,7 @@ void MPaintAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 
 bool MPaintAudioProcessor::hasEditor() const { return true; }
 AudioProcessorEditor* MPaintAudioProcessor::createEditor() {
-	return new MPaintAudioProcessorEditor(*this, sound.get(), error);
+	return new MPaintAudioProcessorEditor(*this, sound.get());
 }
 
 void MPaintAudioProcessor::getStateInformation(MemoryBlock& destData) {
