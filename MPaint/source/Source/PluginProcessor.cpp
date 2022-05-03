@@ -11,15 +11,28 @@ MPaintAudioProcessor::MPaintAudioProcessor() :
 	apvts.addParameterListener("limit", this);
 
 	formatmanager.registerBasicFormats();
+	error = false;
 	for(int i = 0; i < 15; i++) {
+		synth[i].setNoteStealingEnabled(true);
+
 		for(int v = 0; v < numvoices; v++)
 			synth[i].addVoice(new SamplerVoice());
 
 		for(int n = 59; n <= 79; n++) {
-			formatreader = formatmanager.createReaderFor(File::getCurrentWorkingDirectory().getChildFile("MPaint/" + ((String)i).paddedLeft('0',2) + "_" + ((String)n).paddedLeft('0',2) + ".wav"));
-			BigInteger range;
-			range.setRange(n,1,true);
-			synth[i].addSound(new SamplerSound((String)n, *formatreader, range, n, 0, 0, 10));
+			File dir = File::getSpecialLocation(File::currentApplicationFile);
+			if(!dir.isDirectory()) dir = dir.getParentDirectory();
+			File file = dir.getChildFile("MPaint/" + ((String)i).paddedLeft('0',2) + "_" + ((String)n).paddedLeft('0',2) + ".wav");
+			if(!file.existsAsFile()) file = dir.getChildFile(((String)i).paddedLeft('0',2) + "_" + ((String)n).paddedLeft('0',2) + ".wav");
+			if(file.existsAsFile()) {
+
+				std::unique_ptr<AudioFormatReader> formatreader(formatmanager.createReaderFor(file));
+				if(formatreader == nullptr) error = true;
+				else {
+					BigInteger range;
+					range.setRange(n,1,true);
+					synth[i].addSound(new SamplerSound((String)n, *formatreader, range, n, 0, 0.008f, 1));
+				}
+			} else error = true;
 		}
 	}
 }
@@ -27,8 +40,6 @@ MPaintAudioProcessor::MPaintAudioProcessor() :
 MPaintAudioProcessor::~MPaintAudioProcessor() {
 	apvts.removeParameterListener("sound", this);
 	apvts.removeParameterListener("limit", this);
-
-	formatreader = nullptr;
 }
 
 const String MPaintAudioProcessor::getName() const { return "MPaint"; }
@@ -37,10 +48,15 @@ bool MPaintAudioProcessor::producesMidi() const { return false; }
 bool MPaintAudioProcessor::isMidiEffect() const { return false; }
 double MPaintAudioProcessor::getTailLengthSeconds() const { return 0.0; }
 
-int MPaintAudioProcessor::getNumPrograms() { return 1; }
-int MPaintAudioProcessor::getCurrentProgram() { return 0; }
-void MPaintAudioProcessor::setCurrentProgram(int index) { }
-const String MPaintAudioProcessor::getProgramName(int index) { return "Hi :)"; }
+int MPaintAudioProcessor::getNumPrograms() { return 15; }
+int MPaintAudioProcessor::getCurrentProgram() { return sound.get(); }
+void MPaintAudioProcessor::setCurrentProgram(int index) {
+	apvts.getParameter("sound")->setValueNotifyingHost(index/14.f);
+}
+const String MPaintAudioProcessor::getProgramName(int index) {
+	const char* g[15] = {"Mario","Mushroom","Yoshi","Star","Flower","Gameboy","Dog","Cat","Pig","Swan","Face","Plane","Boat","Car","Heart"};
+	return g[index];
+}
 void MPaintAudioProcessor::changeProgramName(int index, const String& newName) { }
 
 void MPaintAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
@@ -49,14 +65,6 @@ void MPaintAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 
 	for(int i = 0; i < 15; i++)
 		synth[i].setCurrentPlaybackSampleRate(samplerate);
-}
-void MPaintAudioProcessor::changechannelnum(int newchannelnum) {
-	channelnum = newchannelnum;
-	if(newchannelnum <= 0) return;
-
-	channelData.clear();
-	for (int i = 0; i < channelnum; i++)
-		channelData.push_back(nullptr);
 }
 void MPaintAudioProcessor::releaseResources() { }
 
@@ -72,27 +80,129 @@ void MPaintAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 	ScopedNoDenormals noDenormals;
 
 	if(buffer.getNumChannels() == 0 || buffer.getNumSamples() == 0) return;
-	if(buffer.getNumChannels() != channelnum)
-		changechannelnum(buffer.getNumChannels());
-
 	buffer.clear();
 
-	int numsamples = buffer.getNumSamples();
-	for(int channel = 0; channel < channelnum; ++channel)
-		channelData[channel] = buffer.getWritePointer(channel);
+	MidiBuffer coolerbuffer;
+	timetillnoteplay -= samplesperblock;
+	if(timetillnoteplay >= 0 && timetillnoteplay < samplesperblock)
+		for(int v = 0; v < 3; v++)
+			if(voicecycle[v] > 10 && voiceheld[v])
+				coolerbuffer.addEvent(MidiMessage::noteOn(1,voicecycle[v], 1.f), timetillnoteplay);
 
-	synth[sound.get()].renderNextBlock(buffer, midiMessages, 0, numsamples);
-	/*
-	for(int sample = 0; sample < numsamples; ++sample) {
-		for(int channel = 0; channel < channelnum; ++channel) {
+	MidiBuffer prevsoundbuffer;
+	MidiMessage message(0xf0);
+	MidiBuffer::Iterator i(midiMessages);
+	int time = 0;
+	while(i.getNextEvent(message, time)) {
+		if(message.isNoteOn() && message.getNoteNumber() >= 59 && message.getNoteNumber() <= 79) {
+			currentvoice = (currentvoice+1)%3;
+
+			int timeoffset = 0;
+			if(limit.get()) {
+				int timesincelastevent = time-prevtime;
+				if(timesincelastevent > (samplerate*.1f)) { //monophonic
+					timeoffset = time-(int)round(samplerate*.019);
+					coolerbuffer.addEvent(MidiMessage::allNotesOff(1),fmax(timeoffset,0));
+					prevsoundbuffer.addEvent(MidiMessage::allNotesOff(1),fmax(timeoffset, 0));
+					for(int v = 0; v < 3; v++) {
+						voicecycle[v] = 0;
+						voiceheld[v] = false;
+					}
+					//if(timesincelastevent > samplerate) timeoffset = 0;
+					timeoffset = fmin(timeoffset,0);
+
+				} else if(voicecycle[currentvoice] > 10) { //3 voice poly
+					timeoffset = fmax(time-(int)round(samplerate*.019),0);
+					if(voiceheld[currentvoice] && timetillnoteplay > timeoffset && timetillnoteplay < time) timeoffset = timetillnoteplay+1;
+					if(!voiceheld[currentvoice] || timetillnoteplay < timeoffset) {
+						MidiMessage hi = MidiMessage::noteOff(1,voicecycle[currentvoice]);
+						coolerbuffer.addEvent(hi,timeoffset);
+						prevsoundbuffer.addEvent(hi,timeoffset);
+						voiceheld[currentvoice] = false;
+					}
+					timeoffset = 0;
+				}
+
+			}
+
+			int notetime = fmax(timetillnoteplay, time-timeoffset);
+			if(notetime >= samplesperblock) {
+				if(timetillnoteplay < notetime) {
+					for(int v = 0; v < 3; v++) voiceheld[v] = false;
+					timetillnoteplay = notetime;
+				}
+				voiceheld[currentvoice] = true;
+			} else {
+				coolerbuffer.addEvent(MidiMessage::noteOn(1,message.getNoteNumber(),1.f),notetime);
+				voiceheld[currentvoice] = false;
+			}
+
+			voicecycle[currentvoice] = message.getNoteNumber();
+			prevtime = time;
+
+			/*
+			situation 1: monophonic (first note) small buffer size
+			time till note play below zero;
+			time since last event large;
+			enters monophonic mode. all notes off sent;
+			time offset set to 0 as no notes played previously;
+			note is played immediately;
+			 
+			situation 2: monophobic (cutoff) small buffer size
+			time till note play blow zero;
+			time since last event event in about half a second;
+			enters monophonic mode;
+			all notes off sent;
+			time offset is set to about 10 milliseconds;
+			note time set to after the buffer size;
+			time till note play is set to note time;
+			note is played at a 19ms delay;
+
+			sutuation 3: monophonic (first note) large buffer size
+			same as 1;
+
+			situation 4: monophonic (cutoff) large buffer size
+			time till note play blow zero;
+			time since last event event in about half a second;
+			enters monophonic mode;
+			all notes off sent;
+			time offset is set to about 10 milliseconds;
+			note time set to before the buffer size;
+			note is played at a 19ms delay;
+
+
+			situation 5: polyphonic (first note) small buffer size
+			
+			situation 6: polyphobic (more notes) small buffer size
+
+			situation 7: polyphobic (out of voices) small buffer size
+
+
+			sutuation 8: polyphonic (first note) large buffer size
+
+			situation 9: polyphonic (more notes) large buffer size
+
+			situation 9: polyphonic (out of voices) large buffer size
+			*/
+		} else if(message.isNoteOff() && !limit.get()) {
+			message.setVelocity(1.f);
+			message.setChannel(1);
+			coolerbuffer.addEvent(message,time);
+			prevsoundbuffer.addEvent(message,time);
 		}
 	}
-	*/
+	prevtime -= samplesperblock;
+
+	if(timesincesoundswitch > 0) {
+		synth[prevsound].renderNextBlock(buffer, prevsoundbuffer, 0, fmin(samplesperblock,timesincesoundswitch));
+		timesincesoundswitch -= samplesperblock;
+	}
+	synth[sound.get()].renderNextBlock(buffer, coolerbuffer, 0, samplesperblock);
 }
 
 bool MPaintAudioProcessor::hasEditor() const { return true; }
 AudioProcessorEditor* MPaintAudioProcessor::createEditor() {
-	return new MPaintAudioProcessorEditor(*this, sound.get());
+	return new MPaintAudioProcessorEditor(*this, sound.get(), error);
 }
 
 void MPaintAudioProcessor::getStateInformation(MemoryBlock& destData) {
@@ -129,8 +239,11 @@ void MPaintAudioProcessor::setStateInformation(const void* data, int sizeInBytes
 	}
 }
 void MPaintAudioProcessor::parameterChanged(const String& parameterID, float newValue) {
-	if(parameterID == "sound") sound = newValue;
-	else if(parameterID == "limit") limit = newValue > .5;
+	if(parameterID == "sound") {
+		prevsound = sound.get();
+		sound = newValue;
+		timesincesoundswitch = samplerate;
+	} else if(parameterID == "limit") limit = newValue > .5;
 }
 
 AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new MPaintAudioProcessor(); }

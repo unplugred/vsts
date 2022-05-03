@@ -8,7 +8,6 @@ public:
 	~MPaintAudioProcessor() override;
 
 	void prepareToPlay(double sampleRate, int samplesPerBlock) override;
-	void changechannelnum(int newchannelnum);
 	void releaseResources() override;
 
 	bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
@@ -43,18 +42,25 @@ public:
 	Atomic<unsigned char> sound = 0;
 	Atomic<bool> limit = true;
 
+	bool error = false;
+
 private:
 	AudioProcessorValueTreeState::ParameterLayout createParameters();
 
 	Synthesiser synth[15];
-	const int numvoices = 3;
+	const int numvoices = 8;
 	AudioFormatManager formatmanager;
-	AudioFormatReader* formatreader = nullptr;
 
-	int channelnum = 0;
+	int prevtime = -100000;
+	int voicecycle[3] {0,0,0};
+	bool voiceheld[3] {false,false,false};
+	int currentvoice = 0;
+	unsigned char prevsound = 0;
+	int timesincesoundswitch = -100000;
+	int timetillnoteplay = -100000;
+
 	int samplesperblock = 0;
 	int samplerate = 44100;
-	std::vector<float*> channelData;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MPaintAudioProcessor)
 };

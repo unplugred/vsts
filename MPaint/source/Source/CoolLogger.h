@@ -23,14 +23,14 @@ public:
 #ifdef ENABLE_TEXT
 	String textvert;
 	String textfrag;
+	int width = 100;
+	int height = 100;
 #endif
 private:
 #ifdef ENABLE_TEXT
 	OpenGLTexture texttex;
 	std::unique_ptr<OpenGLShaderProgram> textshader;
 	OpenGLContext* context;
-	int width = 100;
-	int height = 100;
 #endif
 #ifdef ENABLE_CONSOLE
 	String debuglist[CONSOLE_LENGTH];
