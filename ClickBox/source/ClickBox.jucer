@@ -5,7 +5,7 @@
               pluginManufacturer="unplugred" pluginVSTCategory="kPlugCategEffect"
               companyName="unplugred" companyWebsite="https://vst.unplug.red"
               companyEmail="arihanan@protonmail.com" pluginVST3Category="Generator"
-              pluginCode="Poc9" pluginManufacturerCode="Manu">
+              pluginCode="Poc9" pluginManufacturerCode="Ured">
   <MAINGROUP id="DkCz5r" name="ClickBox">
     <GROUP id="{CE0A4298-FBD0-4519-A526-490181444434}" name="Source">
       <FILE id="jWVKt7" name="CoolLogger.cpp" compile="1" resource="0" file="Source/CoolLogger.cpp"/>

@@ -5,7 +5,7 @@
               companyName="unplugred" companyWebsite="https://vst.unplug.red"
               companyEmail="arihanan@protonmail.com" pluginFormats="buildStandalone,buildVST,buildVST3"
               pluginVST3Category="Analyzer" pluginVSTCategory="kPlugCategAnalysis"
-              pluginCode="V6sf" pluginManufacturerCode="Manu">
+              pluginCode="V6sf" pluginManufacturerCode="Ured">
   <MAINGROUP id="isef6D" name="VU">
     <GROUP id="{3068B69F-5E42-7C77-3299-EA5FEEFB2617}" name="Source">
       <FILE id="C9C9Hb" name="CoolLogger.cpp" compile="1" resource="0" file="Source/CoolLogger.cpp"/>

@@ -5,7 +5,7 @@
               companyWebsite="https://vst.unplug.red" companyEmail="arihanan@protonmail.com"
               pluginFormats="buildStandalone,buildVST,buildVST3" pluginAAXCategory="64"
               pluginRTASCategory="64" pluginVST3Category="Distortion" pluginCode="Piss"
-              pluginManufacturerCode="Manu">
+              pluginManufacturerCode="Ured">
   <MAINGROUP id="cwqzUg" name="Pisstortion">
     <GROUP id="{67EC23A0-031A-9AC5-CDDD-77F12247C5DB}" name="Source">
       <FILE id="lvwhu9" name="CoolLogger.cpp" compile="1" resource="0" file="Source/CoolLogger.cpp"/>
