@@ -6,6 +6,7 @@ PNCHAudioProcessor::PNCHAudioProcessor() :
 	apvts(*this, &undoManager, "Parameters", createParameters())
 {
 	amount.setCurrentAndTargetValue(apvts.getParameter("amount")->getValue());
+	oversampling = apvts.getParameter("oversampling")->getValue();
 	apvts.addParameterListener("amount",this);
 	apvts.addParameterListener("oversampling",this);
 }
