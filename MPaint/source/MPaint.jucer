@@ -5,7 +5,7 @@
               companyName="unplugred" companyWebsite="https://vst.unplug.red"
               companyEmail="arihanan@protonmail.com" pluginFormats="buildStandalone,buildVST,buildVST3"
               pluginVST3Category="Sampler" pluginCharacteristicsValue="pluginIsSynth,pluginWantsMidiIn"
-              pluginCode="Mpnt" pluginManufacturerCode="Manu">
+              pluginCode="Mpnt" pluginManufacturerCode="Ured">
   <MAINGROUP id="cwqzUg" name="MPaint">
     <GROUP id="{67EC23A0-031A-9AC5-CDDD-77F12247C5DB}" name="Source">
       <FILE id="Lm6bkq" name="CoolLogger.cpp" compile="1" resource="0" file="Source/CoolLogger.cpp"/>
