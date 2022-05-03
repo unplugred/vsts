@@ -20,6 +20,7 @@
     </GROUP>
     <GROUP id="{6F9A9B8E-4453-DEEB-953E-DAFA6974DF59}" name="Resources">
       <FILE id="H3WQ67" name="dbg_txt.png" compile="0" resource="1" file="Resources/dbg_txt.png"/>
+      <FILE id="gfArw2" name="error.png" compile="0" resource="1" file="Resources/error.png"/>
       <FILE id="TsoPfR" name="largeicon.png" compile="0" resource="1" file="Resources/largeicon.png"/>
       <FILE id="semgjb" name="ruler.png" compile="0" resource="1" file="Resources/ruler.png"/>
     </GROUP>
