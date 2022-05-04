@@ -69,7 +69,6 @@ const String MPaintAudioProcessor::getProgramName(int index) {
 void MPaintAudioProcessor::changeProgramName(int index, const String& newName) { }
 
 void MPaintAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
-	samplesperblock = samplesPerBlock;
 	samplerate = sampleRate;
 
 	for(int i = 0; i < 15; i++)
@@ -92,8 +91,7 @@ void MPaintAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 	buffer.clear();
 
 	MidiBuffer coolerbuffer;
-	timetillnoteplay -= samplesperblock;
-	if(timetillnoteplay >= 0 && timetillnoteplay < samplesperblock)
+	if(timetillnoteplay >= 0 && timetillnoteplay < buffer.getNumSamples())
 		for(int v = 0; v < 3; v++)
 			if(voicecycle[v] > 10 && voiceheld[v])
 				coolerbuffer.addEvent(MidiMessage::noteOn(1,voicecycle[v], 1.f), timetillnoteplay);
@@ -135,7 +133,7 @@ void MPaintAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 			}
 
 			int notetime = fmax(timetillnoteplay, time-timeoffset);
-			if(notetime >= samplesperblock) {
+			if(notetime >= buffer.getNumSamples()) {
 				if(timetillnoteplay < notetime) {
 					for(int v = 0; v < 3; v++) voiceheld[v] = false;
 					timetillnoteplay = notetime;
@@ -156,13 +154,14 @@ void MPaintAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 			prevsoundbuffer.addEvent(message,time);
 		}
 	}
-	prevtime -= samplesperblock;
+	prevtime -= buffer.getNumSamples();
+	timetillnoteplay -= buffer.getNumSamples();
 
 	if(timesincesoundswitch > 0) {
-		synth[prevsound].renderNextBlock(buffer, prevsoundbuffer, 0, fmin(samplesperblock,timesincesoundswitch));
-		timesincesoundswitch -= samplesperblock;
+		synth[prevsound].renderNextBlock(buffer, prevsoundbuffer, 0, fmin(buffer.getNumSamples(),timesincesoundswitch));
+		timesincesoundswitch -= buffer.getNumSamples();
 	}
-	synth[sound.get()].renderNextBlock(buffer, coolerbuffer, 0, samplesperblock);
+	synth[sound.get()].renderNextBlock(buffer, coolerbuffer, 0, buffer.getNumSamples());
 }
 
 bool MPaintAudioProcessor::hasEditor() const { return true; }
