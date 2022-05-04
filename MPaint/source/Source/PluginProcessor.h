@@ -61,7 +61,6 @@ private:
 	int timesincesoundswitch = -100000;
 	int timetillnoteplay = -100000;
 
-	int samplesperblock = 0;
 	int samplerate = 44100;
 
 	std::future<void> futurevoid;
