@@ -23,16 +23,19 @@ bool PNCHAudioProcessor::producesMidi() const { return false; }
 bool PNCHAudioProcessor::isMidiEffect() const { return false; }
 double PNCHAudioProcessor::getTailLengthSeconds() const { return 0.0; }
 
-int PNCHAudioProcessor::getNumPrograms() { return 1; }
-int PNCHAudioProcessor::getCurrentProgram() { return 0; }
-void PNCHAudioProcessor::setCurrentProgram (int index) { }
+int PNCHAudioProcessor::getNumPrograms() { return 31; }
+int PNCHAudioProcessor::getCurrentProgram() {
+	return (int)floor(amount.getTargetValue()*31);
+}
+void PNCHAudioProcessor::setCurrentProgram (int index) {
+	apvts.getParameter("amount")->setValueNotifyingHost(index/30.f);
+}
 const String PNCHAudioProcessor::getProgramName (int index) {
 	std::ostringstream presetname;
 	presetname << "P";
-	int num = ((int)floor(amount.getTargetValue()*31));
-	for(int i = 0; i < num; i++) presetname << "U";
+	for(int i = 0; i < index; i++) presetname << "U";
 	presetname << "NCH";
-	if(num == 0) presetname << ".";
+	if(index == 0) presetname << ".";
 	return { presetname.str() };
 }
 void PNCHAudioProcessor::changeProgramName (int index, const String& newName) { }
