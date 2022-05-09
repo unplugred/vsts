@@ -16,6 +16,7 @@ PisstortionAudioProcessorEditor::PisstortionAudioProcessorEditor (PisstortionAud
 				knobs[i].value = pots[i].normalize(pots[i].smooth.getTargetValue());
 			else
 				knobs[i].value = pots[i].normalize(state.values[i]);
+			knobs[i].lerpedvalue = knobs[i].value;
 			knobs[i].minimumvalue = pots[i].minimumvalue;
 			knobs[i].maximumvalue = pots[i].maximumvalue;
 			knobs[i].defaultvalue = pots[i].defaultvalue;
@@ -24,9 +25,8 @@ PisstortionAudioProcessorEditor::PisstortionAudioProcessorEditor (PisstortionAud
 		}
 	}
 	for(int i = 0; i < paramcount; i++)
-		if(pots[i].id == "oversampling") {
+		if(pots[i].id == "oversampling")
 			oversampling = state.values[i];
-	}
 	oversamplinglerped = oversampling;
 	audioProcessor.apvts.addParameterListener("oversampling",this);
 	calcvis();
