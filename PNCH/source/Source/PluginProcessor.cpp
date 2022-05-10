@@ -184,7 +184,7 @@ void PNCHAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 		apvts.getParameter("amount")->setValueNotifyingHost(a);
 
 		std::getline(ss, token, '\n');
-		setoversampling(std::stoi(token)-1);
+		setoversampling(std::stoi(token)>.5);
 		apvts.getParameter("oversampling")->setValueNotifyingHost(std::stof(token));
 
 	} catch(const char* e) {
