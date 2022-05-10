@@ -41,8 +41,10 @@ const String PNCHAudioProcessor::getProgramName (int index) {
 void PNCHAudioProcessor::changeProgramName (int index, const String& newName) { }
 
 void PNCHAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {
-	//if(!saved && sampleRate > 60000) setoversampling(0);
-	saved = true;
+	if(!saved && sampleRate > 60000) {
+		setoversampling(0);
+		apvts.getParameter("oversampling")->setValueNotifyingHost(0);
+	}
 	samplesperblock = samplesPerBlock;
 	samplerate = sampleRate;
 	resetoversampling();
@@ -79,6 +81,7 @@ void PNCHAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& m
 	if(buffer.getNumChannels() == 0 || buffer.getNumSamples() == 0) return;
 	if(buffer.getNumChannels() != channelnum)
 		changechannelnum(buffer.getNumChannels());
+	saved = true;
 
 	for (auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
 		buffer.clear (i, 0, buffer.getNumSamples());
@@ -169,9 +172,8 @@ void PNCHAudioProcessor::getStateInformation (MemoryBlock& destData) {
 	stream.writeString(data.str());
 }
 void PNCHAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
+	saved = true;
 	try {
-		saved = true;
-
 		std::stringstream ss(String::createStringFromData(data, sizeInBytes).toRawUTF8());
 		std::string token;
 

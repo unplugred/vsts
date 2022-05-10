@@ -112,6 +112,7 @@ private:
 	float lerpstage = 0;
 	bool boot = false;
 	bool preparedtoplay = false;
+	bool saved = false;
 
 	std::unique_ptr<dsp::Oversampling<float>> os;
 	AudioBuffer<float> osbuffer;

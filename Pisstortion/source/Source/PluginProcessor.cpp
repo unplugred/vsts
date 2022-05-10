@@ -83,6 +83,10 @@ void PisstortionAudioProcessor::changeProgramName (int index, const String& newN
 }
 
 void PisstortionAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {
+	if(!saved && sampleRate > 60000) {
+		setoversampling(0);
+		apvts.getParameter("oversampling")->setValueNotifyingHost(0);
+	}
 	dcfilter.init((int)sampleRate,getTotalNumInputChannels());
 	for(int i = 0; i < paramcount; i++) if(pots[i].smoothtime > 0)
 		pots[i].smooth.reset(sampleRate*(state.values[6]+1), pots[i].smoothtime);
@@ -121,6 +125,7 @@ void PisstortionAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBu
 	if(buffer.getNumChannels() == 0 || buffer.getNumSamples() == 0) return;
 	if(buffer.getNumChannels() != channelnum)
 		changechannelnum(buffer.getNumChannels());
+	saved = true;
 
 	for (auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
 		buffer.clear (i, 0, buffer.getNumSamples());
@@ -248,6 +253,7 @@ void PisstortionAudioProcessor::getStateInformation (MemoryBlock& destData) {
 	stream.writeString(data.str());
 }
 void PisstortionAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
+	saved = true;
 	try {
 		std::stringstream ss(String::createStringFromData(data, sizeInBytes).toRawUTF8());
 		std::string token;

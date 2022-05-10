@@ -82,6 +82,10 @@ void ProtoAudioProcessor::changeProgramName (int index, const String& newName) {
 }
 
 void ProtoAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {
+	if(!saved && sampleRate > 60000) {
+		setoversampling(0);
+		apvts.getParameter("oversampling")->setValueNotifyingHost(0);
+	}
 	for(int i = 0; i < paramcount; i++) if(pots[i].smoothtime > 0)
 		pots[i].smooth.reset(sampleRate*(state.values[6]+1), pots[i].smoothtime);
 	samplesperblock = samplesPerBlock;
@@ -119,6 +123,7 @@ void ProtoAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 	if(buffer.getNumChannels() == 0 || buffer.getNumSamples() == 0) return;
 	if(buffer.getNumChannels() != channelnum)
 		changechannelnum(buffer.getNumChannels());
+	saved = true;
 
 	for (auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
 		buffer.clear (i, 0, buffer.getNumSamples());
@@ -244,6 +249,7 @@ void ProtoAudioProcessor::getStateInformation (MemoryBlock& destData) {
 	stream.writeString(data.str());
 }
 void ProtoAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
+	saved = true;
 	try {
 		std::stringstream ss(String::createStringFromData(data, sizeInBytes).toRawUTF8());
 		std::string token;
