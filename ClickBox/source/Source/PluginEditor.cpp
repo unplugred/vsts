@@ -50,7 +50,7 @@ ClickBoxAudioProcessorEditor::ClickBoxAudioProcessorEditor (ClickBoxAudioProcess
 			sliders[i].value = pots[i+2].normalize(state.values[i+2]);
 		sliders[i].minimumvalue = pots[i+2].minimumvalue;
 		sliders[i].maximumvalue = pots[i+2].maximumvalue;
-		sliders[i].defaultvalue = pots[i+2].defaultvalue;
+		sliders[i].defaultvalue = pots[i+2].normalize(pots[i+2].defaultvalue);
 		slidercount++;
 		audioProcessor.apvts.addParameterListener(sliders[i].id, this);
 	

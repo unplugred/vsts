@@ -18,7 +18,7 @@ PFAudioProcessorEditor::PFAudioProcessorEditor (PFAudioProcessor& p, int paramco
 				knobs[i].value = pots[i].normalize(state.values[i]);
 			knobs[i].minimumvalue = pots[i].minimumvalue;
 			knobs[i].maximumvalue = pots[i].maximumvalue;
-			knobs[i].defaultvalue = pots[i].defaultvalue;
+			knobs[i].defaultvalue = pots[i].normalize(pots[i].defaultvalue);
 			knobcount++;
 			audioProcessor.apvts.addParameterListener(knobs[i].id,this);
 		}
