@@ -61,7 +61,7 @@ void RedBassAudioProcessor::resetfilter() {
 	dsp::ProcessSpec spec;
 	spec.sampleRate = samplerate;
 	spec.maximumBlockSize = samplesperblock;
-	spec.numChannels = channelnum;
+	spec.numChannels = 1;
 	filter.reset();
 	(*filter.parameters.get()).setCutOffFrequency(samplerate,calculatelowpass(state.values[4]));
 	(*filter.parameters.get()).type = dsp::StateVariableFilter::Parameters<float>::Type::lowPass;
