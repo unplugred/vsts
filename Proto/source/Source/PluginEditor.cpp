@@ -8,6 +8,7 @@ ProtoAudioProcessorEditor::ProtoAudioProcessorEditor (ProtoAudioProcessor& p, in
 	for(int x = 0; x < 2; x++) {
 		for(int y = 0; y < 3; y++) {
 			int i = x+y*2;
+			if(i >= (paramcount-1)) break;
 			knobs[i].x = x*106+68;
 			knobs[i].y = y*100+144;
 			knobs[i].id = pots[i].id;
@@ -30,7 +31,7 @@ ProtoAudioProcessorEditor::ProtoAudioProcessorEditor (ProtoAudioProcessor& p, in
 	oversamplinglerped = oversampling;
 	audioProcessor.apvts.addParameterListener("oversampling",this);
 
-	setSize(242, 462);
+	setSize(30+106*2,162+100*3);
 	setResizable(false, false);
 	calcvis();
 
@@ -149,10 +150,11 @@ R"(#version 330 core
 in vec2 aPos;
 uniform vec2 texscale;
 uniform float selection;
+uniform vec4 pos;
 out vec2 uv;
 out vec2 highlightcoord;
 void main(){
-	gl_Position = vec4(aPos.x-.5,aPos.y*.2+.632,0,1);
+	gl_Position = vec4(aPos*pos.zw+pos.xy,0,1);
 	uv = aPos*texscale;
 	highlightcoord = vec2((aPos.x-selection)*4.3214285714,aPos.y*3.3-1.1642857143);
 })";
@@ -268,7 +270,7 @@ void ProtoAudioProcessorEditor::renderOpenGL() {
 
 	blackshader->use();
 	coord = context.extensions.glGetAttribLocation(blackshader->getProgramID(),"aPos");
-	blackshader->setUniform("pos",8/(getWidth()*.5f)-1,1-22/(getHeight()*.5f),226/(getWidth()*.5f),-80/(getHeight()*.5f));
+	blackshader->setUniform("pos",(16.f/getWidth())-1,1-(44.f/getHeight()),2-(32.f/getWidth()),-160.f/getHeight());
 	blackshader->setUniform("hoverstate",hover<=-4?1:0);
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
@@ -298,7 +300,8 @@ void ProtoAudioProcessorEditor::renderOpenGL() {
 		oversamplingtex.bind();
 		oversamplingshader->setUniform("ostex",0);
 		oversamplingshader->setUniform("selection",.458677686f+oversamplinglerped*.2314049587f);
-		oversamplingshader->setUniform("texscale",122.f/oversamplingtex.getWidth(),46.f/oversamplingtex.getHeight());
+		oversamplingshader->setUniform("texscale",121.f/oversamplingtex.getWidth(),46.f/oversamplingtex.getHeight());
+		oversamplingshader->setUniform("pos",-120.f/getWidth(),1-(170.f/getHeight()),242.f/getWidth(),92.f/getHeight());
 		context.extensions.glEnableVertexAttribArray(coord);
 		context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
@@ -312,14 +315,14 @@ void ProtoAudioProcessorEditor::renderOpenGL() {
 		creditsshader->setUniform("creditstex",0);
 		creditsshader->setUniform("texscale",148.f/creditstex.getWidth(),46.f/creditstex.getHeight());
 		creditsshader->setUniform("shineprog",websiteht);
-		blackshader->setUniform("pos",((float)-148)/getWidth(),2/(getHeight()*.5f)-1,148/(getWidth()*.5f), 46/(getHeight()*.5f));
+		creditsshader->setUniform("pos",((float)-148)/getWidth(),2/(getHeight()*.5f)-1,148/(getWidth()*.5f), 46/(getHeight()*.5f));
 		coord = context.extensions.glGetAttribLocation(creditsshader->getProgramID(),"aPos");
 		context.extensions.glEnableVertexAttribArray(coord);
 		context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 		context.extensions.glDisableVertexAttribArray(coord);
 	}
-	
+
 	else if(creditsalpha <= 0)
 		audioProcessor.logger.drawstring((String)"Temporary user interface!\nThe look of this VST is \nsubject to change.",0,0,0,1,&textshader);
 
@@ -352,7 +355,7 @@ void ProtoAudioProcessorEditor::calcvis() {
 		pp.values[i] = knobs[i].inflate(knobs[i].value);
 	for(int c = 0; c < (isStereo ? 2 : 1); c++) {
 		for(int i = 0; i < 226; i++) {
-			visline[c][i*2] = (i+8)/(getWidth()*.5f) - 1;
+			visline[c][i*2] = (i/112.5f)*(1-(16.f/getWidth()))+(16.f/getWidth())-1;
 			visline[c][i*2+1] = 1-(62+audioProcessor.plasticfuneral(sin(i/35.8098621957f)*.8f,c,2,pp,audioProcessor.normalizegain(pp.values[1],pp.values[3]))*38)/(getHeight()*.5f);
 		}
 	}
@@ -461,7 +464,7 @@ void ProtoAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 		float value = initialvalue-(event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*(finemode?.0005f:.005f);
 		audioProcessor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(value-valueoffset);
 
-		valueoffset = fmax(fmin(valueoffset,value+.1),value-1.1);
+		valueoffset = fmax(fmin(valueoffset,value+.1f),value-1.1f);
 	} else if (initialdrag == -3) {
 		int prevhover = hover;
 		hover = recalchover(event.x,event.y)==-3?-3:-2;
@@ -498,13 +501,14 @@ void ProtoAudioProcessorEditor::mouseWheelMove(const MouseEvent& event, const Mo
 			knobs[hover].value+wheel.deltaY*((event.mods.isShiftDown() || event.mods.isAltDown())?.03f:.2f));
 }
 int ProtoAudioProcessorEditor::recalchover(float x, float y) {
-	if (x >= 8 && x <= 234 && y >= 22 && y <= 102) {
+	if (x >= 8 && x <= (getWidth()-8) && y >= 22 && y <= 102) {
 		if(y < 53 || y > 67) return -4;
-		if(x >= 115 && x <= 143) return -5;
-		if(x >= 144 && x <= 172) return -6;
+		float midx = x-(getWidth()*.5);
+		if(midx >= -6 && midx <= 22) return -5;
+		if(midx >= 23 && midx <= 51) return -6;
 		return -4;
-	} else if(y >= 414) {
-		if(x >= 50 && x <= 196 && y >= 414 && y <= 458) return -3;
+	} else if(y >= (getHeight()-48)) {
+		if(x >= (getWidth()*.5-74) && x <= (getWidth()*.5+73) && y <= (getHeight()-4)) return -3;
 		return -2;
 	}
 	float xx = 0, yy = 0;
