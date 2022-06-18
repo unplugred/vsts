@@ -122,6 +122,7 @@ void PNCHAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& m
 
 float PNCHAudioProcessor::pnch(float source, float amount) {
 	if(source == 0 || amount >= 1) return 0;
+	if(amount <= 0) return source;
 
 	/*
 	float f = source;
@@ -145,7 +146,9 @@ float PNCHAudioProcessor::pnch(float source, float amount) {
 	return fmax(fmin(f*wet+source*(1-wet),1),-1);
 	*/
 
-	return (float)fmax(fmin(((double)source)*pow(1-pow(1-abs((double)source),12.5),(3/(1-amount))-3),1),-1);
+	double cropmount = pow((double)amount,10);
+	double sinkedsource = ((double)source-fmin(fmax((double)source,-cropmount),cropmount))/(1-cropmount);
+	return sinkedsource*pow(1-pow(1-abs(sinkedsource),12.5),(3/(1-amount*.98))-3);
 }
 
 void PNCHAudioProcessor::setoversampling(bool toggle) {
