@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<JUCERPROJECT id="vctzEm" name="CRMBL" projectType="audioplug" useAppConfig="0"
+              addUsingNamespaceToJuceHeader="1" displaySplashScreen="0" jucerFormatVersion="1"
+              companyName="unplugred" companyWebsite="https://vst.unplug.red"
+              companyEmail="arihanan@protonmail.com" pluginFormats="buildStandalone,buildVST,buildVST3"
+              pluginAAXCategory="16" pluginVST3Category="Delay" pluginCode="Crmb"
+              pluginManufacturerCode="Ured" pluginRTASCategory="16">
+  <MAINGROUP id="cwqzUg" name="CRMBL">
+    <GROUP id="{67EC23A0-031A-9AC5-CDDD-77F12247C5DB}" name="Source">
+      <FILE id="jPrQvI" name="DCFilter.cpp" compile="1" resource="0" file="Source/DCFilter.cpp"/>
+      <FILE id="rdS84T" name="DCFilter.h" compile="0" resource="0" file="Source/DCFilter.h"/>
+      <FILE id="mtgj2g" name="functions.cpp" compile="1" resource="0" file="Source/functions.cpp"/>
+      <FILE id="xzopfv" name="functions.h" compile="0" resource="0" file="Source/functions.h"/>
+      <FILE id="Lm6bkq" name="CoolLogger.cpp" compile="1" resource="0" file="Source/CoolLogger.cpp"/>
+      <FILE id="aQWv6I" name="CoolLogger.h" compile="0" resource="0" file="Source/CoolLogger.h"/>
+      <FILE id="Jud1UJ" name="PluginProcessor.cpp" compile="1" resource="0"
+            file="Source/PluginProcessor.cpp"/>
+      <FILE id="p4M3r8" name="PluginProcessor.h" compile="0" resource="0"
+            file="Source/PluginProcessor.h"/>
+      <FILE id="KtWD4Z" name="PluginEditor.cpp" compile="1" resource="0"
+            file="Source/PluginEditor.cpp"/>
+      <FILE id="s7s3Is" name="PluginEditor.h" compile="0" resource="0" file="Source/PluginEditor.h"/>
+    </GROUP>
+    <GROUP id="{6F9A9B8E-4453-DEEB-953E-DAFA6974DF59}" name="Resources">
+      <FILE id="aso9TN" name="base.png" compile="0" resource="1" file="Resources/base.png"/>
+      <FILE id="DnIDOV" name="credits.png" compile="0" resource="1" file="Resources/credits.png"/>
+      <FILE id="n1kIdJ" name="dbg_txt.png" compile="0" resource="1" file="Resources/dbg_txt.png"/>
+      <FILE id="KZU0gL" name="oversampling.png" compile="0" resource="1"
+            file="Resources/oversampling.png"/>
+    </GROUP>
+  </MAINGROUP>
+  <JUCEOPTIONS JUCE_STRICT_REFCOUNTEDPOINTER="1" JUCE_VST3_CAN_REPLACE_VST2="0"
+               JUCE_USE_FLAC="0" JUCE_USE_OGGVORBIS="0" JUCE_USE_MP3AUDIOFORMAT="0"
+               JUCE_USE_LAME_AUDIO_FORMAT="0" JUCE_USE_WINDOWS_MEDIA_FORMAT="0"
+               JUCE_USE_CURL="0" JUCE_LOAD_CURL_SYMBOLS_LAZILY="1" JUCE_WEB_BROWSER="0"
+               JUCE_USE_WIN_WEBVIEW2="0"/>
+  <EXPORTFORMATS>
+    <LINUX_MAKE targetFolder="Builds/LinuxMakefile" vstLegacyFolder="../../../vstsdk2.4">
+      <CONFIGURATIONS>
+        <CONFIGURATION isDebug="0" name="Release" linkTimeOptimisation="1" enablePluginBinaryCopyStep="0"/>
+      </CONFIGURATIONS>
+      <MODULEPATHS>
+        <MODULEPATH id="juce_gui_extra" path="../../juce"/>
+        <MODULEPATH id="juce_gui_basics" path="../../juce"/>
+        <MODULEPATH id="juce_graphics" path="../../juce"/>
+        <MODULEPATH id="juce_events" path="../../juce"/>
+        <MODULEPATH id="juce_data_structures" path="../../juce"/>
+        <MODULEPATH id="juce_core" path="../../juce"/>
+        <MODULEPATH id="juce_audio_utils" path="../../juce"/>
+        <MODULEPATH id="juce_audio_processors" path="../../juce"/>
+        <MODULEPATH id="juce_audio_plugin_client" path="../../juce"/>
+        <MODULEPATH id="juce_audio_formats" path="../../juce"/>
+        <MODULEPATH id="juce_audio_devices" path="../../juce"/>
+        <MODULEPATH id="juce_audio_basics" path="../../juce"/>
+        <MODULEPATH id="juce_opengl" path="../../../../../../Program Files (x86)/JUCE/modules"/>
+        <MODULEPATH id="juce_dsp" path="../../../../../../Program Files (x86)/JUCE/modules"/>
+        <MODULEPATH id="ea_soundtouch" path="../../../../modules/JUCE_SoundTouch-main"/>
+      </MODULEPATHS>
+    </LINUX_MAKE>
+    <CODEBLOCKS_LINUX targetFolder="Builds/CodeBlocksLinux">
+      <CONFIGURATIONS>
+        <CONFIGURATION isDebug="1" name="Debug"/>
+      </CONFIGURATIONS>
+      <MODULEPATHS>
+        <MODULEPATH id="juce_gui_extra"/>
+        <MODULEPATH id="juce_gui_basics"/>
+        <MODULEPATH id="juce_graphics"/>
+        <MODULEPATH id="juce_events"/>
+        <MODULEPATH id="juce_data_structures"/>
+        <MODULEPATH id="juce_core"/>
+        <MODULEPATH id="juce_audio_utils"/>
+        <MODULEPATH id="juce_audio_processors"/>
+        <MODULEPATH id="juce_audio_plugin_client"/>
+        <MODULEPATH id="juce_audio_formats"/>
+        <MODULEPATH id="juce_audio_devices"/>
+        <MODULEPATH id="juce_audio_basics"/>
+        <MODULEPATH id="juce_opengl" path="../../../../../../Program Files (x86)/JUCE/modules"/>
+        <MODULEPATH id="juce_dsp" path="../../../../../../Program Files (x86)/JUCE/modules"/>
+        <MODULEPATH id="ea_soundtouch" path="../../../../modules/JUCE_SoundTouch-main"/>
+      </MODULEPATHS>
+    </CODEBLOCKS_LINUX>
+    <VS2022 targetFolder="Builds/VisualStudio2022">
+      <CONFIGURATIONS>
+        <CONFIGURATION isDebug="1" name="Debug" targetName="CRMBL (preview)"/>
+        <CONFIGURATION isDebug="0" name="FastBuild" linkTimeOptimisation="0" optimisation="1"
+                       enableIncrementalLinking="1" targetName="CRMBL (preview)"/>
+        <CONFIGURATION isDebug="0" name="Win32" winArchitecture="Win32"/>
+        <CONFIGURATION isDebug="0" name="Win64" winArchitecture="x64"/>
+      </CONFIGURATIONS>
+      <MODULEPATHS>
+        <MODULEPATH id="juce_audio_basics" path="C:\Program Files (x86)\JUCE\modules"/>
+        <MODULEPATH id="juce_audio_devices" path="C:\Program Files (x86)\JUCE\modules"/>
+        <MODULEPATH id="juce_audio_formats" path="C:\Program Files (x86)\JUCE\modules"/>
+        <MODULEPATH id="juce_audio_plugin_client" path="C:\Program Files (x86)\JUCE\modules"/>
+        <MODULEPATH id="juce_audio_processors" path="C:\Program Files (x86)\JUCE\modules"/>
+        <MODULEPATH id="juce_audio_utils" path="C:\Program Files (x86)\JUCE\modules"/>
+        <MODULEPATH id="juce_core" path="C:\Program Files (x86)\JUCE\modules"/>
+        <MODULEPATH id="juce_data_structures" path="C:\Program Files (x86)\JUCE\modules"/>
+        <MODULEPATH id="juce_dsp" path="C:\Program Files (x86)\JUCE\modules"/>
+        <MODULEPATH id="juce_events" path="C:\Program Files (x86)\JUCE\modules"/>
+        <MODULEPATH id="juce_graphics" path="C:\Program Files (x86)\JUCE\modules"/>
+        <MODULEPATH id="juce_gui_basics" path="C:\Program Files (x86)\JUCE\modules"/>
+        <MODULEPATH id="juce_gui_extra" path="C:\Program Files (x86)\JUCE\modules"/>
+        <MODULEPATH id="juce_opengl" path="C:\Program Files (x86)\JUCE\modules"/>
+        <MODULEPATH id="ea_soundtouch" path="../../../../modules/JUCE_SoundTouch-main"/>
+      </MODULEPATHS>
+    </VS2022>
+  </EXPORTFORMATS>
+  <MODULES>
+    <MODULE id="ea_soundtouch" showAllCode="1" useLocalCopy="0" useGlobalPath="0"/>
+    <MODULE id="juce_audio_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_audio_devices" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_audio_formats" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_audio_plugin_client" showAllCode="1" useLocalCopy="0"
+            useGlobalPath="1"/>
+    <MODULE id="juce_audio_processors" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_audio_utils" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_core" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_data_structures" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_dsp" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_events" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_graphics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_gui_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_gui_extra" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_opengl" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+  </MODULES>
+  <LIVE_SETTINGS>
+    <WINDOWS/>
+    <LINUX/>
+  </LIVE_SETTINGS>
+</JUCERPROJECT>
