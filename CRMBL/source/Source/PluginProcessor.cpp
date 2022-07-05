@@ -226,12 +226,12 @@ void CRMBLAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 			else osc = 0;
 
 			for (int channel = 0; channel < channelnum; ++channel) {
-				double channelval = 0;
-				if(state.values[5] < 1 && state.values[4] != 0) {
+				double channelval = 1-time;
+				if(state.values[5] < 1 && state.values[4] != 0 && channelnum > 1) {
 					channelval = (double)channel/(channelnum-1);
 					if(state.values[4] < 0) channelval--;
 					channelval = 1-time*(1-(state.values[4]*(1-state.values[5])*channelval));
-				} else channelval = 1-time;
+				}
 				double setdelaytime = (round((1-channelval)*((MAX_DLY-MIN_DLY)*samplerate)+MIN_DLY*samplerate)-MIN_DLY*samplerate)/((MAX_DLY-MIN_DLY)*samplerate);
 				if(resetdampenings && sample == 0) dampdelaytime.v_current[channel] = setdelaytime;
 				delaytimelerpData[channel][sample] = dampdelaytime.nextvalue(setdelaytime,channel)*(1-dampmodamp)+osc;
@@ -333,7 +333,7 @@ void CRMBLAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 
 			for (int channel = 0; channel < channelnum; ++channel) {
 				double channeloffset = 1;
-				if(state.values[5] > 0) {
+				if(state.values[5] > 0 && state.values[4] != 0 && channelnum > 1) {
 					channeloffset = ((double)channel)/(channelnum-1);
 					if(state.values[4] < 0) channeloffset--;
 					channeloffset = 1-state.values[4]*state.values[5]*channeloffset;
@@ -485,7 +485,7 @@ void CRMBLAudioProcessor::parameterChanged(const String& parameterID, float newV
 		state.values[13] = newValue > .5 ? 1 : 0;
 		setoversampling(newValue > .5);
 		return;
-	} else if(parameterID == "pingpostfeedback") {
+	} else if(parameterID == "pingpostfeedback" && channelnum > 1) {
 		for(int i = 0; i < channelnum; i++) reversecounter[i] = state.values[4] > 0 ? reversecounter[0] : reversecounter[channelnum-1];
 	//} else if (parameterID == "randomize") {
 		//return randomize();
