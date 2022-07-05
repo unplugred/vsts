@@ -133,10 +133,10 @@ private:
 	AudioBuffer<float> delayprocessbuffer;
 	std::vector<float*> delaypointerarray;
 	AudioBuffer<float> delaytimelerp;
-		functions::dampendvalue dampdelaytime;
-		functions::dampendvalue dampchanneloffset;
-		functions::dampendvalue dampamp;
-		functions::dampendvalue damplimiter;
+	functions::dampendvalue dampdelaytime;
+	functions::dampendvalue dampchanneloffset;
+	functions::dampendvalue dampamp;
+	functions::dampendvalue damplimiter;
 	functions::dampendvalue damppitchlatency;
 	std::vector<int> prevclear;
 	double crntsmpl = 0;
@@ -145,6 +145,7 @@ private:
 	std::vector<double> prevfilter;
 	std::vector<int> reversecounter;
 	bool resetdampenings = true;
+	bool prevpitchbypass = true;
 
 	int channelnum = 0;
 	int samplesperblock = 0;
