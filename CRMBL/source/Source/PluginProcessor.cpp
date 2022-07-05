@@ -115,7 +115,7 @@ void CRMBLAudioProcessor::reseteverything() {
 	blocksizething = samplesperblock>=(MIN_DLY*samplerate)?512:samplesperblock;
 	delaytimelerp.setSize(channelnum,blocksizething,false,false,false);
 	dampdelaytime.reset(state.values[0],1.,-1,samplerate,channelnum);
-	dampchanneloffset.reset(0,.5,-1,samplerate,channelnum);
+	dampchanneloffset.reset(0,.3,-1,samplerate,channelnum);
 	dampamp.reset(0,.5,-1,samplerate,1);
 	damplimiter.reset(1,.1,-1,samplerate,channelnum);
 	damppitchlatency.reset(0,.01,-1,samplerate,2);
@@ -142,7 +142,7 @@ void CRMBLAudioProcessor::reseteverything() {
 	pitchprocessbuffer.resize(samplerate*blocksizething*(state.values[13]>=.5?2:1));
 
 	//delay buffer
-	delaybuffer.setSize(channelnum,samplerate*MAX_DLY+blocksizething+1,true,true,false);
+	delaybuffer.setSize(channelnum,samplerate*MAX_DLY+blocksizething+257,true,true,false);
 	delayprocessbuffer.setSize(channelnum,blocksizething,true,true,false);
 	delaypointerarray.resize(channelnum);
 
@@ -187,6 +187,15 @@ void CRMBLAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 		bpm = cpi.bpm;
 	}
 
+	int pitchlatency = 0;
+	bool ispitchbypassed = state.values[9] >= -.005 && state.values[9] <= .005f && prevpitch >= -.005 && prevpitch <= .005f;
+	if(!ispitchbypassed) pitchlatency = pitchshift.getSetting(SETTING_NOMINAL_INPUT_SEQUENCE);
+	if(prevpitchbypass != ispitchbypassed) {
+		damppitchlatency.v_current[0] = pitchlatency;
+		damppitchlatency.v_current[1] = pitchlatency;
+		prevpitchbypass = ispitchbypassed;
+	}
+
 	int startread = 0;
 	while(true) {
 		int numsamples = fmin(buffer.getNumSamples()-startread,blocksizething); // GOOD SHIT
@@ -196,8 +205,6 @@ void CRMBLAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 			prevpitch = state.values[9];
 			pitchshift.setPitchSemiTones(state.values[9]);
 		}
-		int pitchlatency = 0;
-		if(state.values[9] != 0) pitchlatency = pitchshift.getSetting(SETTING_NOMINAL_INPUT_SEQUENCE);
 
 		double osc = 0;
 		//----delay time calculous----
@@ -286,7 +293,7 @@ void CRMBLAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 			}
 		}
 		//pitch
-		if(state.values[9] < -.005 || state.values[9] > .005f) {
+		if(!ispitchbypassed) {
 			AudioDataConverters::interleaveSamples(delayprocessbufferpointer->getArrayOfReadPointers(),pitchprocessbuffer.data(),upsamplednumsamples,channelnum);
 			pitchshift.putSamples(pitchprocessbuffer.data(), upsamplednumsamples);
 			pitchshift.receiveSamples(pitchprocessbuffer.data(), upsamplednumsamples);
@@ -353,7 +360,7 @@ void CRMBLAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 					forward = interpolatesamples(delayData[channel],delaybufferindex-dlytime+delaybuffernumsamples,delaybuffernumsamples);
 				}
 				//dry wet
-				channelData[channel][sample+startread] = channelData[channel][sample+startread]*(1-state.values[11])+(forward*(1-state.values[7])+reverse*state.values[7])*state.values[11];
+				channelData[channel][sample+startread] = channelData[channel][sample+startread]*(1-state.values[11])+(forward*sqrt(1-state.values[7])+reverse*sqrt(state.values[7]))*state.values[11];
 				//update delay buffer
 				delayData[channel][delaybufferindex] = delayProcessData[channel][sample];
 				//vis
