@@ -340,8 +340,13 @@ void CRMBLAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 					double dlytime = (delaytimelerpData[channel][sample]*(MAX_DLY-MIN_DLY)+MIN_DLY)*samplerate;
 					reversecounter[channel] += 2;
 					if(reversecounter[channel] >= dlytime) reversecounter[channel] = 0;
-					dlytime = fmod(reversecounter[channel]-dampchanneloffsetval*dlytime+dlytime,dlytime);
-					reverse = interpolatesamples(delayData[channel],delaybufferindex-dlytime+delaybuffernumsamples,delaybuffernumsamples);
+					double calccounter = fmod(reversecounter[channel]-dampchanneloffsetval*dlytime+dlytime,dlytime);
+					reverse = interpolatesamples(delayData[channel],delaybufferindex-calccounter+delaybuffernumsamples,delaybuffernumsamples);
+					if(calccounter <= 256) {
+						double lerpamount = calccounter*.00390625;
+						calccounter += dlytime;
+						reverse = reverse*sqrt(lerpamount)+interpolatesamples(delayData[channel],delaybufferindex-calccounter+delaybuffernumsamples,delaybuffernumsamples)*sqrt(1-lerpamount);
+					}
 				}
 				if(state.values[7] < 1) {
 					double dlytime = fmax((delaytimelerpData[channel][sample]*dampchanneloffsetval*(MAX_DLY-MIN_DLY)+MIN_DLY)*samplerate-damppitchlatency.v_current[1], 512);
