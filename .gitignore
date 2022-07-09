@@ -1,5 +1,7 @@
 **/.DS_Store
 Builds
+build
+.vscode
 JuceLibraryCode
 !JuceLibraryCode/AppData.h
 !JuceLibraryCode/BinaryData.*
