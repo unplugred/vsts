@@ -5,7 +5,7 @@ CRMBLAudioProcessor::CRMBLAudioProcessor() :
 	AudioProcessor(BusesProperties().withInput("Input",AudioChannelSet::stereo(),true).withOutput("Output",AudioChannelSet::stereo(),true)),
 	apvts(*this, &undoManager, "Parameters", createParameters())
 {
-	//												,time	,sync	,modamp	,modfreq,pingpon,pingpos,feedbac,reverse,crmbl	,pitch	,lowpass,wet	,
+	//												,time	,sync	,modamp	,modfreq,pingpon,pingpos,feedbac,reverse,chew	,pitch	,lowpass,wet	,
 	presets[0] = pluginpreset("Default"				,0.32f	,0.0f	,0.15f	,0.5f	,0.0f	,0.0f	,0.5f	,0.0f	,0.0f	,0.0f	,0.3f	,0.4	);
 	presets[1] = pluginpreset("Digital Driver"		,0.27f	,-11.36f,0.53f	,0.0f	,0.0f	);
 	presets[2] = pluginpreset("Noisy Bass Pumper"	,0.55f	,20.0f	,0.59f	,0.77f	,0.0f	);
@@ -23,7 +23,7 @@ CRMBLAudioProcessor::CRMBLAudioProcessor() :
 	pots[5] = potentiometer("Ping Post Feedback"	,"pingpostfeedback"	,.001f	,presets[0].values[5]	,0		,1		,true	,potentiometer::booltype);
 	pots[6] = potentiometer("Feedback"				,"feedback"			,.002f	,presets[0].values[6]	);
 	pots[7] = potentiometer("Reverse"				,"reverse"			,.002f	,presets[0].values[7]	);
-	pots[8] = potentiometer("Crmbl"					,"crmbl"			,.001f	,presets[0].values[8]	);
+	pots[8] = potentiometer("Chew"					,"chew"			,.001f	,presets[0].values[8]	);
 	pots[9] = potentiometer("Pitch"					,"pitch"			,0		,presets[0].values[9]	,-24.f	,24.f	);
 	pots[10] = potentiometer("Lowpass"				,"lowpass"			,.001f	,presets[0].values[10]	);
 	pots[11] = potentiometer("Dry/Wet"				,"wet"				,.002f	,presets[0].values[11]	);
@@ -292,7 +292,7 @@ void CRMBLAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 					damplimiter.v_smoothtime = .1;
 				delayProcessData[channel][sample] = fmax(fmin(delayProcessData[channel][sample]*damplimiter.nextvalue(thresh,channel),1.f),-1.f);
 
-				//crmbl
+				//chew
 				if(state.values[8] > 0)
 					delayProcessData[channel][sample] = fmax(fmin(pnch(delayProcessData[channel][sample],state.values[8]),1.f),-1.f);
 			}
@@ -532,7 +532,7 @@ void CRMBLAudioProcessor::randomize() {
 
 	if(random.nextFloat() < .3) val = 0;
 	else val = pow(random.nextFloat(),2);
-	apvts.getParameter("crmbl")->setValueNotifyingHost(val);
+	apvts.getParameter("chew")->setValueNotifyingHost(val);
 
 	if(random.nextFloat() < .7) val = 0;
 	else {
@@ -566,7 +566,7 @@ AudioProcessorValueTreeState::ParameterLayout CRMBLAudioProcessor::createParamet
 	parameters.push_back(std::make_unique<AudioParameterBool	>("pingpostfeedback","Ping Post Feedback"	,true	));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>("feedback"		,"Feedback"				,0.0f	,1.0f	,0.5f	));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>("reverse"			,"Reverse"				,0.0f	,1.0f	,0.0f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("crmbl"			,"Crmbl"				,0.0f	,1.0f	,0.0f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>("chew"			,"Chew"				,0.0f	,1.0f	,0.0f	));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>("pitch"			,"Pitch"				,-24.0f	,24.0f	,0.0f	));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>("lowpass"			,"Lowpass"				,0.0f	,1.0f	,0.3f	));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>("wet"				,"Dry/Wet"				,0.0f	,1.0f	,0.4f	));
