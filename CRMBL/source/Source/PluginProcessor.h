@@ -4,7 +4,7 @@
 #include "functions.h"
 #include "DCFilter.h"
 
-#define MAX_DLY 2.0
+#define MAX_DLY 6.0
 #define MIN_DLY 0.02
 
 struct potentiometer {
@@ -106,6 +106,7 @@ public:
 	AudioProcessorValueTreeState apvts;
 	UndoManager undoManager;
 
+	Atomic<bool> outofrange = false;
 	Atomic<float> rmsadd = 0;
 	Atomic<int> rmscount = 0;
 
@@ -155,8 +156,6 @@ private:
 	soundtouch::SoundTouch pitchshift;
 	DCFilter dcfilter;
 	std::unique_ptr<dsp::Oversampling<float>> os;
-
-	//Random random;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (CRMBLAudioProcessor)
 };
