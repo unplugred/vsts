@@ -6,7 +6,7 @@ CRMBLAudioProcessor::CRMBLAudioProcessor() :
 	apvts(*this, &undoManager, "Parameters", createParameters())
 {
 	//												,time	,sync	,modamp	,modfreq,pingpon,pingpos,feedbac,reverse,crmbl	,pitch	,lowpass,wet	,
-	presets[0] = pluginpreset("Default"				,0.32f	,0.0f	,0.0f	,0.5f	,0.0f	,0.0f	,0.5f	,0.0f	,0.0f	,0.0f	,0.3f	,0.4	);
+	presets[0] = pluginpreset("Default"				,0.32f	,0.0f	,0.15f	,0.5f	,0.0f	,0.0f	,0.5f	,0.0f	,0.0f	,0.0f	,0.3f	,0.4	);
 	presets[1] = pluginpreset("Digital Driver"		,0.27f	,-11.36f,0.53f	,0.0f	,0.0f	);
 	presets[2] = pluginpreset("Noisy Bass Pumper"	,0.55f	,20.0f	,0.59f	,0.77f	,0.0f	);
 	presets[3] = pluginpreset("Broken Earphone"		,0.19f	,-1.92f	,1.0f	,0.0f	,0.88f	);
@@ -114,7 +114,7 @@ void CRMBLAudioProcessor::reseteverything() {
 
 	blocksizething = samplesperblock>=(MIN_DLY*samplerate)?512:samplesperblock;
 	delaytimelerp.setSize(channelnum,blocksizething,false,false,false);
-	dampdelaytime.reset(state.values[0],1.,-1,samplerate,channelnum);
+	dampdelaytime.reset(0,1.,-1,samplerate,channelnum);
 	dampchanneloffset.reset(0,.3,-1,samplerate,channelnum);
 	dampamp.reset(0,.5,-1,samplerate,1);
 	damplimiter.reset(1,.1,-1,samplerate,channelnum);
@@ -198,7 +198,7 @@ void CRMBLAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 
 	int startread = 0;
 	while(true) {
-		int numsamples = fmin(buffer.getNumSamples()-startread,blocksizething); // GOOD SHIT
+		int numsamples = fmin(buffer.getNumSamples()-startread,blocksizething);
 		if(numsamples <= 0) break;
 
 		if(prevpitch != state.values[9]) {
@@ -214,9 +214,14 @@ void CRMBLAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 			state.values[4] = pots[4].smooth.getNextValue();
 			state.values[5] = pots[5].smooth.getNextValue();
 
-			double time = state.values[0];
-			if(state.values[1] > 0) time = ((30.*state.values[1])/bpm-MIN_DLY)/(MAX_DLY-MIN_DLY);
-			if(time > 1) time = 1; //also display a warning here
+			double time = pow(state.values[0],2);
+			if(state.values[1] > 0) {
+				time = ((30.*state.values[1])/bpm-MIN_DLY)/(MAX_DLY-MIN_DLY);
+				if(time > 1) {
+					time = 1;
+					outofrange = true;
+				} else outofrange = false;
+			}
 
 			if(resetdampenings && sample == 0) dampamp.v_current[0] = state.values[2];
 			double dampmodamp = pow(dampamp.nextvalue(state.values[2]),4)*.18;
@@ -555,7 +560,7 @@ AudioProcessorValueTreeState::ParameterLayout CRMBLAudioProcessor::createParamet
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
 	parameters.push_back(std::make_unique<AudioParameterFloat	>("time"			,"Time (MS)"			,0.0f	,1.0f	,0.32f	));
 	parameters.push_back(std::make_unique<AudioParameterInt		>("sync"			,"Time (Eighth note)"	,0.0f	,16.0f	,0.0f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("modamp"			,"Mod Amount"			,0.0f	,1.0f	,0.0f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>("modamp"			,"Mod Amount"			,0.0f	,1.0f	,0.15f	));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>("modfreq"			,"Mod Frequency"		,0.0f	,1.0f	,0.5f	));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>("pingpong"		,"Ping Pong"			,-1.0f	,1.0f	,0.0f	));
 	parameters.push_back(std::make_unique<AudioParameterBool	>("pingpostfeedback","Ping Post Feedback"	,true	));
