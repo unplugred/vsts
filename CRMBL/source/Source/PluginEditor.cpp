@@ -129,6 +129,9 @@ CRMBLAudioProcessorEditor::CRMBLAudioProcessorEditor (CRMBLAudioProcessor& p, in
 	context.setRenderer(this);
 	context.attachTo(*this);
 
+	rmsdamp.reset(0,.9,-1,30,1);
+	for(int i = 0; i < 32; i++) damparray[i] = 0;
+
 	startTimerHz(30);
 }
 CRMBLAudioProcessorEditor::~CRMBLAudioProcessorEditor() {
@@ -145,9 +148,10 @@ void CRMBLAudioProcessorEditor::newOpenGLContextCreated() {
 R"(#version 330 core
 in vec2 aPos;
 uniform vec2 texscale;
+uniform float offset;
 out vec2 uv;
 void main(){
-	gl_Position = vec4(aPos*2-1,0,1);
+	gl_Position = vec4(aPos*2-1-vec2(0,offset),0,1);
 	uv = vec2(aPos.x*texscale.x,1-(1-aPos.y)*texscale.y);
 })";
 	basefrag =
@@ -219,6 +223,7 @@ uniform float thickness;
 uniform float lineheight;
 uniform vec2 knobscale;
 uniform float circle;
+uniform float bright;
 void main(){
 	float d = 0;
 	if(circle > .5) {
@@ -234,7 +239,7 @@ void main(){
 		if(y > 0) y = max(y-lineheight,0);
 		gl_FragColor = vec4(1,1,1,min(max(1-sqrt(y*y+uv.x*uv.x)*2/(1-thickness),0)*2.5,1));
 	}
-	//gl_FragColor *= vec4(1,0,0,.5);
+	gl_FragColor = vec4(vec3(1-(1-gl_FragColor.r)*bright),gl_FragColor.a);
 })";
 	knobshader.reset(new OpenGLShaderProgram(context));
 	knobshader->addVertexShader(knobvert);
@@ -268,8 +273,8 @@ void main(){
 
 	basetex.loadImage(ImageCache::getFromMemory(BinaryData::map_png, BinaryData::map_pngSize));
 	basetex.bind();
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 
@@ -307,9 +312,11 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 	for(int i = 0; i < knobcount; i++) {
 		if(i != 1 && i != 2 && i != 4) {
 			baseshader->setUniform("r",knobs[i].r);
+			baseshader->setUniform("offset",getvis(knobs[i].r)*.1f);
 			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 		}
 	}
+	baseshader->setUniform("offset",0.f);
 	baseshader->setUniform("gb",hold?0.f:1.f);
 	baseshader->setUniform("r",.75f);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
@@ -336,7 +343,9 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	knobshader->setUniform("circle",1.f);
+	float rmsout = 0;
 	for(int i = 0; i < knobcount; i++) {
+		rmsout = getvis(knobs[i].r);
 		if(i == 1 || i == 3) {
 			context.extensions.glDisableVertexAttribArray(coord);
 
@@ -349,11 +358,14 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 			context.extensions.glEnableVertexAttribArray(coord);
 			context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 			if(i == 1) {
+				baseshader->setUniform("offset",getvis(knobs[1].r)*.1f);
 				baseshader->setUniform("r",knobs[1].r);
 				glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+				baseshader->setUniform("offset",getvis(knobs[2].r)*.1f);
 				baseshader->setUniform("r",knobs[2].r);
 				glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 			} else {
+				baseshader->setUniform("offset",getvis(knobs[4].r)*.1f);
 				baseshader->setUniform("r",knobs[4].r);
 				glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 			}
@@ -368,7 +380,8 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 		knobshader->setUniform("thickness",1-knobs[i].linewidth*2.8f);
 		knobshader->setUniform("lineheight",knobs[i].lineheight);
 		knobshader->setUniform("knobscale",knobs[i].radius*ratio*2.f,knobs[i].radius*2.f);
-		knobshader->setUniform("knobpos",knobs[i].x*2-1,1-knobs[i].y*2);
+		knobshader->setUniform("bright",1-rmsout*.2f);
+		knobshader->setUniform("knobpos",knobs[i].x*2-1,1-knobs[i].y*2-rmsout*.1f);
 		knobshader->setUniform("hoverstate",hover==i?1:0);
 		if(i == 0) {
 			Time time = Time::getCurrentTime();
@@ -398,21 +411,23 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 	numbershader->setUniform("size",l,32.f/getHeight());
 	numbershader->setUniform("length",1);
 	numbershader->setUniform("col",1,1,1);
+	rmsout = getvis(knobs[7].r);
 	for(int i = 0; i < pitchnum[0]; i++) {
-		numbershader->setUniform("pos",knobs[7].x*2-1+knobs[7].radius*ratio+(i-pitchnum[0]*.5f)*l,1-knobs[7].y*2+knobs[7].radius*.5f-l);
+		numbershader->setUniform("pos",knobs[7].x*2-1+knobs[7].radius*ratio+(i-pitchnum[0]*.5f)*l,1-knobs[7].y*2+knobs[7].radius*.5f-l-rmsout*.1f);
 		numbershader->setUniform("index",pitchnum[i+1],1);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	}
+	rmsout = getvis(knobs[2].r);
 	n = timenum[0]==-1;
 	for(int i = 0; i < timenum[0]; i++) {
-		numbershader->setUniform("pos",knobs[2].x*2-1+knobs[2].radius*ratio+(i-timenum[0]*.5f)*l,1-knobs[2].y*2+knobs[2].radius*.6f-l);
+		numbershader->setUniform("pos",knobs[2].x*2-1+knobs[2].radius*ratio+(i-timenum[0]*.5f)*l,1-knobs[2].y*2+knobs[2].radius*.6f-l-rmsout*.1f);
 		numbershader->setUniform("index",timenum[i+1],1);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	}
 	if(audioProcessor.outofrange.get()) {
 		numbershader->setUniform("length",13);
 		numbershader->setUniform("col",1,0,0);
-		numbershader->setUniform("pos",knobs[2].x*2-1+knobs[2].radius*ratio-6.5f*l,1-knobs[2].y*2+knobs[2].radius*.6f+l);
+		numbershader->setUniform("pos",knobs[2].x*2-1+knobs[2].radius*ratio-6.5f*l,1-knobs[2].y*2+knobs[2].radius*.6f+l-rmsout*.1f);
 		numbershader->setUniform("index",0.f,0.f);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	}
@@ -453,8 +468,13 @@ void CRMBLAudioProcessorEditor::timerCallback() {
 		audioProcessor.rmscount = 0;
 	} else rms *= .9f;
 
+	dampreadpos = (dampreadpos+1)%32;
+	damparray[dampreadpos] = rmsdamp.nextvalue(rms,0);
 
 	context.triggerRepaint();
+}
+float CRMBLAudioProcessorEditor::getvis(float r) {
+	return damparray[((int)round(33+dampreadpos-r*16))%32];
 }
 
 void CRMBLAudioProcessorEditor::parameterChanged(const String& parameterID, float newValue) {
@@ -636,7 +656,7 @@ int CRMBLAudioProcessorEditor::recalchover(float x, float y) {
 		else if(x <= 119 && y >= 382 && y <= 402) return -3;
 		else if(y >= 406) return -5;
 		return -1;
-	} else if(x >= 336 && x <= 381 && y >= 390 && y <= 411) return -2;
+	} else if(x >= 336 && x <= 381 && y >= 390 && y <= 421) return -2;
 	float r = 0, xx = 0, yy = 0;
 	for(int i = knobcount-1; i >= 1; i--) {
 		r = knobs[i].radius*getHeight()*.5;

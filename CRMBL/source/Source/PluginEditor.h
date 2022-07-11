@@ -38,6 +38,7 @@ public:
 	void paint(Graphics&) override;
 
 	void timerCallback() override;
+	float getvis(float r);
 
 	virtual void parameterChanged(const String& parameterID, float newValue);
 	void recalclabels();
@@ -99,6 +100,9 @@ private:
 	bool hold = false;
 
 	float rms = 0;
+	functions::inertiadampened rmsdamp;
+	float damparray[32];
+	int dampreadpos = 0;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(CRMBLAudioProcessorEditor)
 };
