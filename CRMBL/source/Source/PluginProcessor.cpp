@@ -337,6 +337,12 @@ void CRMBLAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 			damppitchlatency.nextvalue(pitchlatency,1);
 
 			for (int channel = 0; channel < channelnum; ++channel) {
+				//vis
+				if(prmscount < samplerate*2) {
+					prmsadd += channelData[channel][sample+startread]*channelData[channel][sample+startread];
+					prmscount++;
+				}
+				//channel offset
 				double channeloffset = 1;
 				if(state.values[5] > 0 && state.values[4] != 0 && channelnum > 1) {
 					channeloffset = ((double)channel)/(channelnum-1);
@@ -368,11 +374,6 @@ void CRMBLAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 				channelData[channel][sample+startread] = channelData[channel][sample+startread]*(1-state.values[11])+(forward*sqrt(1-state.values[7])+reverse*sqrt(state.values[7]))*state.values[11];
 				//update delay buffer
 				delayData[channel][delaybufferindex] = delayProcessData[channel][sample];
-				//vis
-				if(prmscount < samplerate*2) {
-					prmsadd += channelData[channel][sample+startread]*channelData[channel][sample+startread];
-					prmscount++;
-				}
 			}
 			delaybufferindex = (delaybufferindex+1)%delaybuffernumsamples;
 		}
