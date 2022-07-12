@@ -252,8 +252,10 @@ R"(#version 330 core
 in vec2 aPos;
 uniform float pitch;
 out vec2 uv;
+out vec2 ruv;
 void main(){
 	gl_Position = vec4(aPos*2-1,0,1);
+	ruv = aPos;
 	uv = vec2(
 		(aPos.x-.5)*cos(pitch)-(aPos.y-.5)*sin(pitch),
 		(aPos.x-.5)*sin(pitch)+(aPos.y-.5)*cos(pitch))+.5;
@@ -261,6 +263,7 @@ void main(){
 	feedbackfrag =
 R"(#version 330 core
 in vec2 uv;
+in vec2 ruv;
 uniform sampler2D feedbacktex;
 uniform sampler2D maintex;
 uniform vec4 time;
@@ -287,7 +290,7 @@ float noise(in vec2 p){
 }
 void main(){
 	vec2 nuv = uv;
-	if(chew > 0) nuv += vec2(noise(nuv*4),noise((nuv+2)*4))*chew;
+	if(chew > 0) nuv += vec2(noise(ruv*4),noise((ruv+2)*4))*chew;
 	if(nuv.x < 0 || nuv.x > 1 || nuv.y < 0 || nuv.y > 1) gl_FragColor = vec4(0,0,0,1);
 	else {
 		vec2 col1 = texture2D(maintex,nuv+vec2(time.x*ratio,time.x)).rg;
