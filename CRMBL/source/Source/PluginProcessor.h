@@ -109,6 +109,8 @@ public:
 	Atomic<bool> outofrange = false;
 	Atomic<float> rmsadd = 0;
 	Atomic<int> rmscount = 0;
+	Atomic<float> lastosc = 0;
+	Atomic<float> lastmodamp = 0;
 
 	int version = 0;
 	const int paramcount = 14;
