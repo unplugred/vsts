@@ -197,6 +197,8 @@ void CRMBLAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 	}
 
 	int startread = 0;
+	double osc = 0;
+	double dampmodamp = 0;
 	while(true) {
 		int numsamples = fmin(buffer.getNumSamples()-startread,blocksizething);
 		if(numsamples <= 0) break;
@@ -206,7 +208,6 @@ void CRMBLAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 			pitchshift.setPitchSemiTones(state.values[9]);
 		}
 
-		double osc = 0;
 		//----delay time calculous----
 		for(int sample = 0; sample < numsamples; ++sample) {
 			state.values[0] = pots[0].smooth.getNextValue();
@@ -224,10 +225,10 @@ void CRMBLAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 			}
 
 			if(resetdampenings && sample == 0) dampamp.v_current[0] = state.values[2];
-			double dampmodamp = pow(dampamp.nextvalue(state.values[2]),4)*.18;
+			double dampmodamp = pow(dampamp.nextvalue(state.values[2]),4)*.36;
 			double frqpow = state.values[3]*1.4+.15;
 			crntsmpl = fmod(crntsmpl+((frqpow*frqpow)/samplerate),1);
-			if(dampmodamp > 0) osc = sin(crntsmpl*MathConstants<double>::twoPi)*dampmodamp;
+			if(dampmodamp > 0) osc = (sin(crntsmpl*MathConstants<double>::twoPi)*.5+.5)*dampmodamp;
 			else osc = 0;
 
 			for (int channel = 0; channel < channelnum; ++channel) {
@@ -385,6 +386,8 @@ void CRMBLAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 
 	rmsadd = prmsadd;
 	rmscount = prmscount;
+	lastosc = osc;
+	lastmodamp = dampmodamp;
 
 	boot = true;
 }

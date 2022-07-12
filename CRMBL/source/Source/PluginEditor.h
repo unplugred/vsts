@@ -104,5 +104,15 @@ private:
 	float damparray[32];
 	int dampreadpos = 0;
 
+	OpenGLFrameBuffer feedbackbuffer;
+	std::unique_ptr<OpenGLShaderProgram> feedbackshader;
+	String feedbackvert;
+	String feedbackfrag;
+
+	OpenGLFrameBuffer mainbuffer;
+	std::unique_ptr<OpenGLShaderProgram> buffershader;
+	String buffervert;
+	String bufferfrag;
+
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(CRMBLAudioProcessorEditor)
 };

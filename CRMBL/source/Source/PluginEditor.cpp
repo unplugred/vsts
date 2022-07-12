@@ -166,9 +166,10 @@ void main(){
 	gl_FragColor = vec4(0);
 	if(col.r <= (r+.033)) {
 		if(col.r >= (r-.03))
-			gl_FragColor = vec4(vec3(gb>.5?col.g:col.b),col.a);
+			gl_FragColor = vec4(gb>.5?col.g:col.b,0,1,col.a);
 		else if(col.r >= (r-.031))
-			gl_FragColor = vec4(0,0,0,col.a);
+			gl_FragColor = vec4(0,0,1,col.a);
+		if(col.r >= .7) gl_FragColor.g = gl_FragColor.r;
 	}
 })";
 	baseshader.reset(new OpenGLShaderProgram(context));
@@ -195,13 +196,13 @@ void main(){
 	col.r /= col.a;
 	gl_FragColor = vec4(0);
 	if(col.r >= .85)
-		gl_FragColor = vec4(vec3(col.g*(1-texture2D(basetex,vec2(min(uv.x+websiteht,.3),uv.y)).b*.5)),col.a);
+		gl_FragColor = vec4(vec2(col.g*(1-texture2D(basetex,vec2(min(uv.x+websiteht,.3),uv.y)).b*.5)),1,col.a);
 })";
 	logoshader.reset(new OpenGLShaderProgram(context));
 	logoshader->addVertexShader(logovert);
 	logoshader->addFragmentShader(logofrag);
 	logoshader->link();
-	
+
 	knobvert =
 R"(#version 330 core
 in vec2 aPos;
@@ -232,19 +233,106 @@ void main(){
 			float y = uv.y;
 			if(y > 0) y = max(y-lineheight,0);
 			d = max(d-thickness,0)*100*knobscale.y+max(1-sqrt(y*y+uv.x*uv.x)*2/(1-thickness),0)*2.5;
-			gl_FragColor = vec4(vec3(min(d,1)),1);
+			gl_FragColor = vec4(min(d,1),1,1,1);
 		} else gl_FragColor = vec4(1,1,1,min((1-d)*100*knobscale.y,1));
 	} else {
 		float y = uv.y;
 		if(y > 0) y = max(y-lineheight,0);
 		gl_FragColor = vec4(1,1,1,min(max(1-sqrt(y*y+uv.x*uv.x)*2/(1-thickness),0)*2.5,1));
 	}
-	gl_FragColor = vec4(vec3(1-(1-gl_FragColor.r)*bright),gl_FragColor.a);
+	gl_FragColor.r = 1-(1-gl_FragColor.r)*bright;
 })";
 	knobshader.reset(new OpenGLShaderProgram(context));
 	knobshader->addVertexShader(knobvert);
 	knobshader->addFragmentShader(knobfrag);
 	knobshader->link();
+
+	feedbackvert =
+R"(#version 330 core
+in vec2 aPos;
+uniform float pitch;
+out vec2 uv;
+void main(){
+	gl_Position = vec4(aPos*2-1,0,1);
+	uv = vec2(
+		(aPos.x-.5)*cos(pitch)-(aPos.y-.5)*sin(pitch),
+		(aPos.x-.5)*sin(pitch)+(aPos.y-.5)*cos(pitch))+.5;
+})";
+	feedbackfrag =
+R"(#version 330 core
+in vec2 uv;
+uniform sampler2D feedbacktex;
+uniform sampler2D maintex;
+uniform vec4 time;
+uniform float feedback;
+uniform float lowpass;
+uniform float chew;
+uniform float ratio;
+uniform vec2 res;
+vec2 hash(vec2 x) {
+	const vec2 k = vec2(0.3183099, 0.3678794);
+	x = x*k + k.yx;
+	return -1.0 + 2.0*fract(16.0*k*fract(x.x*x.y*(x.x+x.y)));
+}
+float noise(in vec2 p){
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+
+	vec2 u = f*f*(3.0 - 2.0*f);
+
+	return mix(mix(dot(hash(i + vec2(0.0,0.0)), f - vec2(0.0,0.0)),
+				   dot(hash(i + vec2(1.0,0.0)), f - vec2(1.0,0.0)), u.x),
+			   mix(dot(hash(i + vec2(0.0,1.0)), f - vec2(0.0,1.0)),
+				   dot(hash(i + vec2(1.0,1.0)), f - vec2(1.0,1.0)), u.x), u.y);
+}
+void main(){
+	vec2 nuv = uv;
+	if(chew > 0) nuv += vec2(noise(nuv*4),noise((nuv+2)*4))*chew;
+	if(nuv.x < 0 || nuv.x > 1 || nuv.y < 0 || nuv.y > 1) gl_FragColor = vec4(0,0,0,1);
+	else {
+		vec2 col1 = texture2D(maintex,nuv+vec2(time.x*ratio,time.x)).rg;
+		vec2 col2 = texture2D(maintex,nuv+vec2(time.y*ratio,time.y)).rg;
+		gl_FragColor   = texture2D(feedbacktex,nuv+vec2(time.z*ratio,time.z));
+		gl_FragColor.g = texture2D(feedbacktex,nuv+vec2((time.w-.004*lowpass)*ratio,time.w)).g;
+		if(lowpass > 0) {
+			gl_FragColor.r = gl_FragColor.r*.5+texture2D(feedbacktex,nuv+vec2((time.z+.008*lowpass)*ratio,time.z)).r*.5;
+			gl_FragColor.g = gl_FragColor.g*.5+texture2D(feedbacktex,nuv+vec2((time.w+.004*lowpass)*ratio,time.w)).g*.5;
+			gl_FragColor.b = gl_FragColor.b*.5+texture2D(feedbacktex,nuv+vec2((time.z-.008*lowpass)*ratio,time.z)).b*.5;
+		}
+		gl_FragColor   = vec4((vec3(col1.r,col2.r,col1.r)*vec3(col1.g,col2.g,col1.g)+(1-vec3(col1.g,col2.g,col1.g))*feedback*gl_FragColor)*min(nuv.x*res.x,1)*min(nuv.y*res.y,1)*min((1-nuv.x)*res.x,1)*min((1-nuv.y)*res.y,1),1);
+	}
+})";
+	feedbackshader.reset(new OpenGLShaderProgram(context));
+	feedbackshader->addVertexShader(feedbackvert);
+	feedbackshader->addFragmentShader(feedbackfrag);
+	feedbackshader->link();
+
+	buffervert =
+R"(#version 330 core
+in vec2 aPos;
+out vec2 uv;
+void main(){
+	gl_Position = vec4(aPos*2-1,0,1);
+	uv = aPos;
+})";
+	bufferfrag =
+R"(#version 330 core
+in vec2 uv;
+uniform sampler2D feedbacktex;
+uniform sampler2D maintex;
+uniform float wet;
+uniform float reverse;
+void main(){
+	vec4 col = texture2D(maintex,uv);
+	gl_FragColor = vec4(vec3(col.r),1);
+	if(col.g < 1)
+		gl_FragColor = gl_FragColor*col.b+texture2D(feedbacktex,uv)*vec4(vec3(wet),1)*(1-col.b);
+	gl_FragColor = vec4(abs(gl_FragColor.rgb*gl_FragColor.a-vec3(pow(reverse,.5),reverse,pow(reverse,2.))),1);
+})";
+	buffershader.reset(new OpenGLShaderProgram(context));
+	buffershader->addVertexShader(buffervert);
+	buffershader->addFragmentShader(bufferfrag);
+	buffershader->link();
 
 	numbervert =
 R"(#version 330 core
@@ -285,6 +373,16 @@ void main(){
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 
+	feedbackbuffer.initialise(context, getWidth(), getHeight());
+	glBindTexture(GL_TEXTURE_2D, feedbackbuffer.getTextureID());
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	mainbuffer.initialise(context, getWidth(), getHeight());
+	glBindTexture(GL_TEXTURE_2D, mainbuffer.getTextureID());
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
 	context.extensions.glGenBuffers(1, &arraybuffer);
 }
 void CRMBLAudioProcessorEditor::renderOpenGL() {
@@ -294,11 +392,12 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_LINE_SMOOTH);
 
-	OpenGLHelpers::clear(Colour::fromRGB(100,100,100));
-
 	context.extensions.glBindBuffer(GL_ARRAY_BUFFER, arraybuffer);
 	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	mainbuffer.makeCurrentRenderingTarget();
+	OpenGLHelpers::clear(Colour::fromRGB(0,0,0));
 
 	baseshader->use();
 	auto coord = context.extensions.glGetAttribLocation(baseshader->getProgramID(),"aPos");
@@ -399,6 +498,60 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 	}
 	context.extensions.glDisableVertexAttribArray(coord);
 
+	mainbuffer.releaseAsRenderingTarget();
+	feedbackbuffer.makeCurrentRenderingTarget();
+
+	feedbackshader->use();
+	coord = context.extensions.glGetAttribLocation(feedbackshader->getProgramID(),"aPos");
+	context.extensions.glEnableVertexAttribArray(coord);
+	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+	context.extensions.glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, feedbackbuffer.getTextureID());
+	feedbackshader->setUniform("feedbacktex",0);
+	context.extensions.glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, mainbuffer.getTextureID());
+	feedbackshader->setUniform("maintex",1);
+	float osc = audioProcessor.lastosc.get();
+	float dampmodamp = audioProcessor.lastmodamp.get();
+	float time1 = (knobs[2].value*knobs[2].value*(1-dampmodamp)+osc)*.25f+.005f;
+	float time2 = time1;
+	float time3 = time1;
+	float time4 = time1;
+	if(knobs[6].value > .5)
+		time2 = (knobs[2].value*knobs[2].value+osc)*(2-knobs[6].value*2)*(1-dampmodamp)*.25f+.0025f;
+	else if(knobs[6].value < .5)
+		time1 = (knobs[2].value*knobs[2].value+osc)*(  knobs[6].value*2)*(1-dampmodamp)*.25f+.0025f;
+	if(!postfb) {
+		time3 = time1;
+		time4 = time2;
+	}
+	feedbackshader->setUniform("time",time1,time2,time3,time4);//mod + modfreq
+	feedbackshader->setUniform("pitch",(knobs[7].value-.5f)*3.14159f);
+	feedbackshader->setUniform("chew",knobs[8].value*knobs[8].value);
+	feedbackshader->setUniform("feedback",knobs[1].value);
+	feedbackshader->setUniform("lowpass",knobs[10].value);
+	feedbackshader->setUniform("ratio",((float)getHeight())/getWidth());
+	feedbackshader->setUniform("res",getHeight(),getWidth());
+	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+	context.extensions.glDisableVertexAttribArray(coord);
+
+	feedbackbuffer.releaseAsRenderingTarget();
+
+	buffershader->use();
+	coord = context.extensions.glGetAttribLocation(buffershader->getProgramID(),"aPos");
+	context.extensions.glEnableVertexAttribArray(coord);
+	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+	context.extensions.glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, feedbackbuffer.getTextureID());
+	buffershader->setUniform("feedbacktex",0);
+	context.extensions.glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, mainbuffer.getTextureID());
+	buffershader->setUniform("maintex",1);
+	buffershader->setUniform("wet",knobs[5].value);
+	buffershader->setUniform("reverse",knobs[9].value);
+	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+	context.extensions.glDisableVertexAttribArray(coord);
+
 	numbershader->use();
 	coord = context.extensions.glGetAttribLocation(numbershader->getProgramID(),"aPos");
 	context.extensions.glEnableVertexAttribArray(coord);
@@ -410,7 +563,7 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 	bool n = pitchnum[0]==-1;
 	numbershader->setUniform("size",l,32.f/getHeight());
 	numbershader->setUniform("length",1);
-	numbershader->setUniform("col",1,1,1);
+	numbershader->setUniform("col",fabs(1-pow(knobs[9].value,.5)),fabs(1-knobs[9].value),fabs(1-pow(knobs[9].value,2.)));
 	rmsout = getvis(knobs[7].r);
 	for(int i = 0; i < pitchnum[0]; i++) {
 		numbershader->setUniform("pos",knobs[7].x*2-1+knobs[7].radius*ratio+(i-pitchnum[0]*.5f)*l,1-knobs[7].y*2+knobs[7].radius*.5f-l-rmsout*.1f);
@@ -439,10 +592,15 @@ void CRMBLAudioProcessorEditor::openGLContextClosing() {
 	baseshader->release();
 	logoshader->release();
 	knobshader->release();
+	feedbackshader->release();
+	buffershader->release();
 	numbershader->release();
 
 	basetex.release();
 	numbertex.release();
+
+	feedbackbuffer.release();
+	mainbuffer.release();
 
 	audioProcessor.logger.release();
 
