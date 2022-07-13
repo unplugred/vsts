@@ -340,7 +340,7 @@ void PisstortionAudioProcessorEditor::renderOpenGL() {
 	for (int i = 0; i < knobcount; i++) {
 		knobshader->setUniform("knobpos",((float)knobs[i].x*2)/getWidth(),2-((float)knobs[i].y*2)/getHeight());
 		knobshader->setUniform("knobrot",(knobs[i].lerpedvalue-.5f)*.748f);
-		knobshader->setUniform("hover",knobs[i].hover<0.5?4*knobs[i].hover*knobs[i].hover*knobs[i].hover:1-(float)pow(-2*knobs[i].hover+2,3)/2);
+		knobshader->setUniform("hover",knobs[i].hover<0.5?4*knobs[i].hover*knobs[i].hover*knobs[i].hover:1-(float)pow(2-2*knobs[i].hover,3)/2);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	}
 	context.extensions.glDisableVertexAttribArray(coord);
@@ -348,7 +348,7 @@ void PisstortionAudioProcessorEditor::renderOpenGL() {
 	float osalpha = oversamplingalpha;
 	if(oversamplingalpha < 1) {
 		if(oversamplingalpha > 0)
-			osalpha = oversamplingalpha<0.5?4*oversamplingalpha*oversamplingalpha*oversamplingalpha:1-(float)pow(-2*oversamplingalpha+2,3)/2;
+			osalpha = oversamplingalpha<0.5?4*oversamplingalpha*oversamplingalpha*oversamplingalpha:1-(float)pow(2-2*oversamplingalpha,3)/2;
 		glLineWidth(1.3);
 		visshader->use();
 		coord = context.extensions.glGetAttribLocation(visshader->getProgramID(),"aPos");
@@ -393,7 +393,7 @@ void PisstortionAudioProcessorEditor::renderOpenGL() {
 	creditsshader->setUniform("basescale",242.f/basetex.getWidth(),462.f/basetex.getHeight());
 	creditsshader->setUniform("creditstex",1);
 	creditsshader->setUniform("texscale",242.f/creditstex.getWidth(),48.f/creditstex.getHeight());
-	creditsshader->setUniform("alpha",creditsalpha<0.5?4*creditsalpha*creditsalpha*creditsalpha:1-(float)pow(-2*creditsalpha+2,3)/2);
+	creditsshader->setUniform("alpha",creditsalpha<0.5?4*creditsalpha*creditsalpha*creditsalpha:1-(float)pow(2-2*creditsalpha,3)/2);
 	creditsshader->setUniform("shineprog",websiteht);
 	coord = context.extensions.glGetAttribLocation(creditsshader->getProgramID(),"aPos");
 	context.extensions.glEnableVertexAttribArray(coord);

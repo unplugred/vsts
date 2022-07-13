@@ -254,7 +254,7 @@ void ProtoAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	for(int i = 0; i < knobcount; i++) {
-		knobshader->setUniform("knobpos",((float)knobs[i].x*2-48.f)/getWidth()-1,2-((float)knobs[i].y*2+48.f)/getHeight()-1);
+		knobshader->setUniform("knobpos",((float)knobs[i].x*2-48.f)/getWidth()-1,1-((float)knobs[i].y*2+48.f)/getHeight());
 		knobshader->setUniform("knobrot",(knobs[i].value-.5f)*5.5f);
 		knobshader->setUniform("hoverstate",hover==i?1:0);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
