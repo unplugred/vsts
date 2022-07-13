@@ -302,7 +302,7 @@ void main(){
 			gl_FragColor.g = gl_FragColor.g*.5+texture2D(feedbacktex,nuv+vec2((time.w+.004*lowpass)*ratio,time.w)).g*.5;
 			gl_FragColor.b = gl_FragColor.b*.5+texture2D(feedbacktex,nuv+vec2((time.z-.008*lowpass)*ratio,time.z)).b*.5;
 		}
-		gl_FragColor   = vec4((vec3(col1.r,col2.r,col1.r)*vec3(col1.g,col2.g,col1.g)+(1-vec3(col1.g,col2.g,col1.g))*feedback*gl_FragColor)*min(nuv.x*res.x,1)*min(nuv.y*res.y,1)*min((1-nuv.x)*res.x,1)*min((1-nuv.y)*res.y,1),1);
+		gl_FragColor   = vec4((vec3(col1.r,col2.r,col1.r)*vec3(col1.g,col2.g,col1.g)+(1-vec3(col1.g,col2.g,col1.g))*feedback*gl_FragColor.rgb)*min(nuv.x*res.x,1)*min(nuv.y*res.y,1)*min((1-nuv.x)*res.x,1)*min((1-nuv.y)*res.y,1),1);
 	}
 })";
 	feedbackshader.reset(new OpenGLShaderProgram(context));
