@@ -87,22 +87,23 @@ void PisstortionAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
 		setoversampling(0);
 		apvts.getParameter("oversampling")->setValueNotifyingHost(0);
 	}
-	dcfilter.init((int)sampleRate,getTotalNumInputChannels());
 	for(int i = 0; i < paramcount; i++) if(pots[i].smoothtime > 0)
 		pots[i].smooth.reset(sampleRate*(state.values[6]+1), pots[i].smoothtime);
 	samplesperblock = samplesPerBlock;
 	samplerate = sampleRate;
-	resetoversampling();
+	reseteverything();
 	preparedtoplay = true;
 }
 void PisstortionAudioProcessor::changechannelnum(int newchannelnum) {
 	channelnum = newchannelnum;
 	if(newchannelnum <= 0) return;
 
-	resetoversampling();
+	reseteverything();
 }
-void PisstortionAudioProcessor::resetoversampling() {
+void PisstortionAudioProcessor::reseteverything() {
 	if(channelnum <= 0 || samplesperblock <= 0) return;
+
+	dcfilter.init(samplerate,channelnum);
 
 	ospointerarray.resize(channelnum);
 	os.reset(new dsp::Oversampling<float>(channelnum,1,dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR));
