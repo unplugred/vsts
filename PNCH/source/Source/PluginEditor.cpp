@@ -275,7 +275,7 @@ void PNCHAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 		Desktop::setMousePosition(dragpos);
 	} else {
 		if(hover == 1) URL("https://vst.unplug.red/").launchInDefaultBrowser();
-		if(hover == 2) credits = false;
+		else if(hover == 2) credits = false;
 		int prevhover = hover;
 		hover = recalchover(event.x,event.y);
 	}

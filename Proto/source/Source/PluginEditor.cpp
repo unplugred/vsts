@@ -479,11 +479,13 @@ void ProtoAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 		event.source.enableUnboundedMouseMovement(false);
 		Desktop::setMousePosition(dragpos);
 	} else {
-		if(hover == -3) URL("https://vst.unplug.red/").launchInDefaultBrowser();
 		int prevhover = hover;
 		hover = recalchover(event.x,event.y);
-		if(hover == -3 && prevhover != -3 && websiteht < -1) websiteht = .65f;
-		if(hover > -1) knobs[hover].hoverstate = -4;
+		if(hover == -3) {
+			if(prevhover == -3) URL("https://vst.unplug.red/").launchInDefaultBrowser();
+			else if(websiteht < -1) websiteht = .65f;
+		}
+		else if(hover > -1) knobs[hover].hoverstate = -4;
 	}
 	held = 1;
 }
