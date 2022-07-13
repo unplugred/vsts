@@ -512,7 +512,6 @@ int ProtoAudioProcessorEditor::recalchover(float x, float y) {
 		if(x >= (getWidth()*.5-74) && x <= (getWidth()*.5+73) && y <= (getHeight()-4)) return -3;
 		return -2;
 	}
-	float xx = 0, yy = 0;
 	for(int i = 0; i < knobcount; i++) {
 		if(fabs(knobs[i].x-x) <= 24 && fabs(knobs[i].y-y) <= 24) return i;
 	}
