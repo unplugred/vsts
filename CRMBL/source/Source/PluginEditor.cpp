@@ -787,8 +787,10 @@ void CRMBLAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 	} else {
 		int prevhover = hover;
 		hover = recalchover(event.x,event.y);
-		if(prevhover == -5 && hover == -5) URL("https://vst.unplug.red/").launchInDefaultBrowser();
-		if(prevhover != -5 && hover == -5 && websiteht <= -.3) websiteht = .19f;
+		if(hover == -5) {
+			if(prevhover == -5) URL("https://vst.unplug.red/").launchInDefaultBrowser();
+			else if(websiteht <= -.3) websiteht = .19f;
+		}
 		if(hover > -1) knobs[hover].hoverstate = -4;
 	}
 	held = 1;
