@@ -495,8 +495,7 @@ void PFAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 	} else if(hover < -4) {
 		oversampling = hover == -6;
 		audioProcessor.apvts.getParameter("oversampling")->setValueNotifyingHost(oversampling?1.f:0.f);
-		audioProcessor.undoManager.setCurrentTransactionName(
-			(String)("Set Over-Sampling to ") += oversampling);
+		audioProcessor.undoManager.setCurrentTransactionName(oversampling?"Turned oversampling on":"Turned oversampling off");
 		audioProcessor.undoManager.beginNewTransaction();
 	}
 }
