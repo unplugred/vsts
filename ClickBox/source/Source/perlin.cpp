@@ -4,7 +4,6 @@
 
 float perlin::dot(float g[], float x, float y) { return g[0]*x+g[1]*y; }
 void perlin::init() {
-	Random random;
 	for (int i = 0; i < 512; i++)
 		preperm[i] = floor(random.nextFloat()*256);
 	for (int i = 0; i < 512; i++)
