@@ -1,6 +1,5 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-using namespace gl;
 
 VuAudioProcessorEditor::VuAudioProcessorEditor (VuAudioProcessor& p)
 	: AudioProcessorEditor (&p), audioProcessor (p) {

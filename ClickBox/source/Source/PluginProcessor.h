@@ -1,7 +1,7 @@
 #pragma once
-#include <JuceHeader.h>
-#include "perlin.h"
+#include "includes.h"
 #include "CoolLogger.h"
+#include "perlin.h"
 
 struct potentiometer {
 public:

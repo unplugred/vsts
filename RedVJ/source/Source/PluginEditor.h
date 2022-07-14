@@ -7,10 +7,8 @@
 */
 
 #pragma once
-
-#include <JuceHeader.h>
+#include "includes.h"
 #include "PluginProcessor.h"
-using namespace juce;
 
 extern "C" {
 #include "lua-5.4.3/lua.h"

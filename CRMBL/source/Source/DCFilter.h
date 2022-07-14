@@ -1,5 +1,4 @@
 #pragma once
-#include <JuceHeader.h>
 #include <vector>
 
 class DCFilter {

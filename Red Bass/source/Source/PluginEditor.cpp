@@ -1,6 +1,5 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-using namespace gl;
 
 RedBassAudioProcessorEditor::RedBassAudioProcessorEditor (RedBassAudioProcessor& p, int paramcount, pluginpreset state, potentiometer pots[])
 	: AudioProcessorEditor (&p), audioProcessor (p)

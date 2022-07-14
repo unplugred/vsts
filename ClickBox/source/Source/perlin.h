@@ -1,6 +1,5 @@
 #pragma once
-#include <JuceHeader.h>
-using namespace juce;
+#include "includes.h"
 
 class perlin {
 public:

@@ -8,7 +8,6 @@
 
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-using namespace juce;
 
 RedVJAudioProcessor::RedVJAudioProcessor() :
 #ifndef JucePlugin_PreferredChannelConfigurations

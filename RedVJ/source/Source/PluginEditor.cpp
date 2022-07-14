@@ -8,8 +8,6 @@
 
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-using namespace juce;
-using namespace gl;
 
 RedVJAudioProcessorEditor* RedVJAudioProcessorEditor::singleton = nullptr;
 RedVJAudioProcessorEditor::RedVJAudioProcessorEditor (RedVJAudioProcessor& p)

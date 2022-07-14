@@ -1,6 +1,5 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-using namespace gl;
 
 ClickBoxAudioProcessorEditor::ClickBoxAudioProcessorEditor (ClickBoxAudioProcessor& p, int paramcount, pluginpreset state, potentiometer pots[]) : AudioProcessorEditor (&p), audioProcessor (p) {
 	sliders[0].hy = 116;

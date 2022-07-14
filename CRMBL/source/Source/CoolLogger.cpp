@@ -1,5 +1,4 @@
 #include "CoolLogger.h"
-using namespace gl;
 
 void CoolLogger::init(OpenGLContext* ctx, int w, int h) {
 #ifdef ENABLE_TEXT
