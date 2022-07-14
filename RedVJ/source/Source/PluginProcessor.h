@@ -7,8 +7,7 @@
 */
 
 #pragma once
-#include <JuceHeader.h>
-using namespace juce;
+#include "includes.h"
 
 struct inparameter {
 	String name = "";

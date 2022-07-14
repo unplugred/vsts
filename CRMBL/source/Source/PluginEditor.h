@@ -1,5 +1,6 @@
 #pragma once
-#include <JuceHeader.h>
+#include "includes.h"
+#include "functions.h"
 #include "PluginProcessor.h"
 
 struct knob {

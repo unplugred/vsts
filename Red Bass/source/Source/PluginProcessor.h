@@ -1,7 +1,7 @@
 #pragma once
-#include <JuceHeader.h>
-#include "envelopefollower.h"
+#include "includes.h"
 #include "CoolLogger.h"
+#include "envelopefollower.h"
 
 struct potentiometer {
 public:

@@ -1,6 +1,5 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-using namespace gl;
 
 PNCHAudioProcessorEditor::PNCHAudioProcessorEditor (PNCHAudioProcessor& p, float amountt)
 	: AudioProcessorEditor (&p), audioProcessor (p)

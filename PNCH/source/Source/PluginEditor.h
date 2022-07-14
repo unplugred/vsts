@@ -1,5 +1,5 @@
 #pragma once
-#include <JuceHeader.h>
+#include "includes.h"
 #include "PluginProcessor.h"
 
 class PNCHAudioProcessorEditor : public AudioProcessorEditor, public OpenGLRenderer, public AudioProcessorValueTreeState::Listener, private Timer

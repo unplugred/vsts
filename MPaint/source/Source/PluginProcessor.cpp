@@ -1,6 +1,5 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-#include <future>
 
 MPaintAudioProcessor::MPaintAudioProcessor() :
 	AudioProcessor(BusesProperties().withOutput("Output", AudioChannelSet::stereo(), true)),

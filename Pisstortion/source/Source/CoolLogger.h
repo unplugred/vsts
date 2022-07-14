@@ -1,10 +1,11 @@
 /* cool logger created by me, unplugred.  */
 
 #pragma once
+#include "includes.h"
+
 #define ENABLE_CONSOLE
 #define ENABLE_TEXT
 #define CONSOLE_LENGTH 20
-#include <JuceHeader.h>
 
 class CoolLogger {
 public:

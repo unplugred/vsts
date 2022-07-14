@@ -1,5 +1,5 @@
 #pragma once
-#include <JuceHeader.h>
+#include "includes.h"
 
 class EnvelopeFollower {
 public:

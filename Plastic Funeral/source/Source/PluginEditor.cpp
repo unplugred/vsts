@@ -1,6 +1,5 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-using namespace gl;
 
 PFAudioProcessorEditor::PFAudioProcessorEditor (PFAudioProcessor& p, int paramcount, pluginpreset state, potentiometer pots[])
 	: AudioProcessorEditor (&p), audioProcessor (p)

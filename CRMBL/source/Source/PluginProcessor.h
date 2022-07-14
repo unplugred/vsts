@@ -1,5 +1,5 @@
 #pragma once
-#include <JuceHeader.h>
+#include "includes.h"
 #include "CoolLogger.h"
 #include "functions.h"
 #include "DCFilter.h"

@@ -1,7 +1,7 @@
 #pragma once
-#include <JuceHeader.h>
-#include "functions.h"
+#include "includes.h"
 #include "CoolLogger.h"
+#include "functions.h"
 
 class VuAudioProcessor	: public AudioProcessor, public AudioProcessorValueTreeState::Listener {
 public:
