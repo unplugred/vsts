@@ -1,11 +1,3 @@
-/*
-  ==============================================================================
-
-	This file contains the basic framework code for a JUCE plugin editor.
-
-  ==============================================================================
-*/
-
 #pragma once
 #include "includes.h"
 #include "PluginProcessor.h"

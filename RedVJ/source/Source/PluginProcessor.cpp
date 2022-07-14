@@ -1,21 +1,10 @@
-/*
-  ==============================================================================
-
-	This file contains the basic framework code for a JUCE plugin processor.
-
-  ==============================================================================
-*/
-
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
 RedVJAudioProcessor::RedVJAudioProcessor() :
-#ifndef JucePlugin_PreferredChannelConfigurations
 	 AudioProcessor(BusesProperties().withInput("Input",AudioChannelSet::stereo(),true).withOutput("Output", AudioChannelSet::stereo(),true)),
-#endif
 	apvts(*this,&undoManager,"Parameters",createParameters()),
-	forwardFFT(fftOrder), window(fftSize, dsp::WindowingFunction<float>::hann)
-{
+	forwardFFT(fftOrder), window(fftSize, dsp::WindowingFunction<float>::hann) {
 	for(int i = 1; i <= 16; i++) apvts.addParameterListener("p"+i,this);
 }
 RedVJAudioProcessor::~RedVJAudioProcessor() {
@@ -36,18 +25,13 @@ void RedVJAudioProcessor::changeProgramName (int index, const String& newName) {
 void RedVJAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) { }
 void RedVJAudioProcessor::releaseResources() {}
 
-#ifndef JucePlugin_PreferredChannelConfigurations
-bool RedVJAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
-{
-	if (layouts.getMainInputChannelSet() != AudioChannelSet::mono()
-	 && layouts.getMainInputChannelSet() != AudioChannelSet::stereo())
+bool RedVJAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const {
+	if(layouts.getMainInputChannelSet() != layouts.getMainInputChannelSet())
 		return false;
-	return true;
+	return (layouts.getMainInputChannels() > 0);
 }
-#endif
 
-void RedVJAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midiMessages)
-{
+void RedVJAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midiMessages) {
 	ScopedNoDenormals noDenormals;
 	auto totalNumInputChannels	= getTotalNumInputChannels();
 	auto totalNumOutputChannels = getTotalNumOutputChannels();
