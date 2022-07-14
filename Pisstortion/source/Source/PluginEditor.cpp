@@ -526,7 +526,6 @@ void PisstortionAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		oversampling = hover == -6;
 		audioProcessor.apvts.getParameter("oversampling")->setValueNotifyingHost(oversampling?1.f:0.f);
 		audioProcessor.undoManager.setCurrentTransactionName(oversampling?"Turned oversampling on":"Turned oversampling off");
-			(String)("Set Over-Sampling to ") += oversampling);
 		audioProcessor.undoManager.beginNewTransaction();
 	}
 }
