@@ -1,6 +1,7 @@
 #pragma once
 #include "includes.h"
 #include "PluginProcessor.h"
+using namespace gl;
 
 struct knob {
 	int x = 0;

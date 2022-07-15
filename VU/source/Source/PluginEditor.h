@@ -2,6 +2,7 @@
 #include "includes.h"
 #include "PluginProcessor.h"
 #include "functions.h"
+using namespace gl;
 
 class VuAudioProcessorEditor : public AudioProcessorEditor, public OpenGLRenderer, public AudioProcessorValueTreeState::Listener, private Timer
 {

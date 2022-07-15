@@ -1,6 +1,7 @@
 #pragma once
 #include "includes.h"
 #include "PluginProcessor.h"
+using namespace gl;
 
 class PNCHAudioProcessorEditor : public AudioProcessorEditor, public OpenGLRenderer, public AudioProcessorValueTreeState::Listener, private Timer
 {
