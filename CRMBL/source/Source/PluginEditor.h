@@ -2,6 +2,7 @@
 #include "includes.h"
 #include "functions.h"
 #include "PluginProcessor.h"
+using namespace gl;
 
 struct knob {
 	float x = 0;

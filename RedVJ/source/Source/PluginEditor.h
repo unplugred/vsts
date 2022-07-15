@@ -1,6 +1,7 @@
 #pragma once
 #include "includes.h"
 #include "PluginProcessor.h"
+using namespace gl;
 
 extern "C" {
 #include "lua-5.4.3/lua.h"

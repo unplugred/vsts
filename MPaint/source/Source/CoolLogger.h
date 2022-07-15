@@ -2,6 +2,7 @@
 
 #pragma once
 #include "includes.h"
+using namespace gl;
 
 #define ENABLE_CONSOLE
 #define ENABLE_TEXT

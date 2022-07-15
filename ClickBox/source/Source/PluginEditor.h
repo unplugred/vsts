@@ -1,6 +1,7 @@
 #pragma once
 #include "includes.h"
 #include "PluginProcessor.h"
+using namespace gl;
 
 struct slider {
 	float x=0,y=0,w=1,h=.13671875f;
