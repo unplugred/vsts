@@ -253,7 +253,7 @@ void main(){
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 
-	dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->scale;
+	dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->dpi/96.f;
 	framebuffer.initialise(context, getWidth()*dpi, getHeight()*dpi);
 	glBindTexture(GL_TEXTURE_2D, framebuffer.getTextureID());
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);

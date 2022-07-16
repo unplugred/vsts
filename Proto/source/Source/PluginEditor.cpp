@@ -202,7 +202,7 @@ void main(){
 	creditsshader->addFragmentShader(creditsfrag);
 	creditsshader->link();
 
-	dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->scale;
+	dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->dpi/96.f;
 
 	basetex.loadImage(ImageCache::getFromMemory(BinaryData::base_png, BinaryData::base_pngSize));
 	basetex.bind();

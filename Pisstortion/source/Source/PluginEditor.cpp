@@ -252,7 +252,7 @@ void main(){
 	circleshader->addFragmentShader(circlefrag);
 	circleshader->link();
 
-	dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->scale;
+	dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->dpi/96.f;
 	framebuffer.initialise(context, getWidth()*dpi, getHeight()*dpi);
 	glBindTexture(GL_TEXTURE_2D, framebuffer.getTextureID());
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
