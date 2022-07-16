@@ -437,7 +437,7 @@ void ClickBoxAudioProcessorEditor::resized() {}
 
 void ClickBoxAudioProcessorEditor::timerCallback() {
 	shadertime += .02f;
-	websiteht -= .05f;
+	websiteht += .05f;
 
 	randomsblend += .03f;
 	if(randomsblend >= 1) {
@@ -493,7 +493,7 @@ void ClickBoxAudioProcessorEditor::mouseMove(const MouseEvent& event) {
 	prevpos[0].y = event.y*.00390625f;
 	int prevhover = hover;
 	hover = recalchover(event.x,event.y);
-	if(hover == -3 && prevhover != -3 && websiteht < -.78515625) websiteht = .16015625f;
+	if(hover == -3 && prevhover != -3 && websiteht > .16015625f) websiteht = -.78515625;
 }
 void ClickBoxAudioProcessorEditor::mouseEnter(const MouseEvent& event) {
 	setMouseCursor(MouseCursor::NoCursor);
@@ -544,7 +544,7 @@ void ClickBoxAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 	} else if(initialdrag == -3) {
 		int prevhover = hover;
 		hover = recalchover(event.x,event.y)==-3?-3:-1;
-		if(initialdrag == -3 && hover == -3 && prevhover != -3 && websiteht < -.78515625) websiteht = .16015625;
+		if(initialdrag == -3 && hover == -3 && prevhover != -3 && websiteht > .16015625) websiteht = -.78515625;
 	} else if(initialdrag == -4) {
 		hover = recalchover(event.x,event.y)==-4?-4:-1;
 	}
