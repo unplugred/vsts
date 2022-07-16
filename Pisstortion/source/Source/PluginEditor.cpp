@@ -57,13 +57,12 @@ void PisstortionAudioProcessorEditor::newOpenGLContextCreated() {
 R"(#version 330 core
 in vec2 aPos;
 uniform vec2 texscale;
-uniform vec2 circlescale;
 out vec2 v_TexCoord;
 out vec2 circlecoord;
 void main(){
 	gl_Position = vec4(aPos*2-1,0,1);
 	v_TexCoord = vec2(aPos.x*texscale.x,1-(1-aPos.y)*texscale.y);
-	circlecoord = vec2(aPos.x*circlescale.x,1-(1-aPos.y)*circlescale.y);
+	circlecoord = aPos;
 })";
 	basefrag =
 R"(#version 330 core
@@ -71,9 +70,10 @@ in vec2 v_TexCoord;
 in vec2 circlecoord;
 uniform sampler2D circletex;
 uniform sampler2D basetex;
+uniform float dpi;
 void main(){
 	float bubbles = texture2D(circletex,circlecoord).r;
-	vec3 c = texture2D(basetex,v_TexCoord).rgb;
+	vec3 c = max(min((texture2D(basetex,v_TexCoord).rgb-.5)*dpi+.5,1),0);
 	if(c.g >= 1) c.b = 0;
 	if(bubbles > 0 && v_TexCoord.y > .7)
 		c = vec3(c.r,c.g*(1-bubbles),c.b+c.g*bubbles);
@@ -91,7 +91,6 @@ R"(#version 330 core
 in vec2 aPos;
 uniform vec2 texscale;
 uniform vec2 knobscale;
-uniform vec2 circlescale;
 uniform float ratio;
 uniform vec2 knobpos;
 uniform float knobrot;
@@ -104,7 +103,7 @@ void main(){
 		(pos.x*cos(rot)-pos.y*sin(rot))*ratio-1+knobpos.x,
 		pos.x*sin(rot)+pos.y*cos(rot)-1+knobpos.y,0,1);
 	v_TexCoord = vec2(aPos.x*texscale.x,1-(1-aPos.y)*texscale.y);
-	circlecoord = vec2((gl_Position.x*.5+.5)*circlescale.x,1-(.5-gl_Position.y*.5)*circlescale.y);
+	circlecoord = gl_Position.xy*.5+.5;
 })";
 	knobfrag =
 R"(#version 330 core
@@ -169,10 +168,12 @@ in vec2 basecoord;
 in vec2 highlightcoord;
 uniform sampler2D basetex;
 uniform float alpha;
+uniform float dpi;
 void main(){
 	vec3 tex = texture2D(basetex,basecoord).rgb;
 	if(tex.r <= 0) {
-		float bleh = (tex.g > .9 && tex.b > .9) ? 1 : 0;
+		float bleh = 0;
+		if(tex.g >= .99 && tex.b > .02) bleh = min(max((tex.b-.5)*dpi+.5,0),1);
 		if(highlightcoord.x>0&&highlightcoord.x<1&&highlightcoord.y>0&&highlightcoord.y<1)bleh=1-bleh;
 		gl_FragColor = vec4(.05,.05,.05,bleh*alpha);
 	} else {
@@ -204,6 +205,7 @@ uniform sampler2D basetex;
 uniform sampler2D creditstex;
 uniform float alpha;
 uniform float shineprog;
+uniform float dpi;
 void main(){
 	float y = (v_TexCoord.y+alpha)*1.1875;
 	float creditols = 0;
@@ -213,12 +215,13 @@ void main(){
 		if(y < 1)
 			creditols = texture2D(creditstex,vec2(v_TexCoord.x,y)).b;
 		else if(y > 1.1875 && y < 2.1875) {
-			creditols = texture2D(creditstex,vec2(v_TexCoord.x,y-1.1875)).r;
+			y -= 1.1875;
+			creditols = texture2D(creditstex,vec2(v_TexCoord.x,y)).r;
 			if(v_TexCoord.x+shineprog < 1 && v_TexCoord.x+shineprog > .582644628099)
-				shine = texture2D(creditstex,v_TexCoord+vec2(shineprog,alpha)).g*min(base.g+base.b,1);
+				shine = max(min((texture2D(creditstex,vec2(v_TexCoord.x+shineprog,y)).g*min(base.g+base.b,1)-.5)*dpi+.5,1),0);
 		}
 	}
-	gl_FragColor = vec4(vec3(.05+shine*.8),creditols);
+	gl_FragColor = vec4(vec3(.05+shine*.8),max(min((creditols-.5)*dpi+.5,1),0));
 })";
 	creditsshader.reset(new OpenGLShaderProgram(context));
 	creditsshader->addVertexShader(creditsvert);
@@ -249,15 +252,16 @@ void main(){
 	circleshader->addFragmentShader(circlefrag);
 	circleshader->link();
 
-	framebuffer.initialise(context, getWidth(), getHeight());
+	dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->scale;
+	framebuffer.initialise(context, getWidth()*dpi, getHeight()*dpi);
 	glBindTexture(GL_TEXTURE_2D, framebuffer.getTextureID());
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 	basetex.loadImage(ImageCache::getFromMemory(BinaryData::base_png, BinaryData::base_pngSize));
 	basetex.bind();
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 
@@ -270,8 +274,8 @@ void main(){
 
 	creditstex.loadImage(ImageCache::getFromMemory(BinaryData::credits_png, BinaryData::credits_pngSize));
 	creditstex.bind();
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 
@@ -315,8 +319,8 @@ void PisstortionAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, framebuffer.getTextureID());
 	baseshader->setUniform("circletex",1);
+	baseshader->setUniform("dpi",(float)fmax(dpi,1));
 	baseshader->setUniform("texscale",242.f/basetex.getWidth(),462.f/basetex.getHeight());
-	baseshader->setUniform("circlescale",((float)getWidth())/framebuffer.getWidth(),((float)getHeight())/framebuffer.getHeight());
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
@@ -329,9 +333,8 @@ void PisstortionAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, framebuffer.getTextureID());
 	knobshader->setUniform("circletex",1);
-	knobshader->setUniform("texscale",54.f/knobtex.getWidth(),54.f/knobtex.getHeight());
+	knobshader->setUniform("texscale",108.f/knobtex.getWidth(),108.f/knobtex.getHeight());
 	knobshader->setUniform("knobscale",54.f/getWidth(),54.f/getHeight());
-	knobshader->setUniform("circlescale",242.f/basetex.getWidth(),462.f/basetex.getHeight());
 	knobshader->setUniform("ratio",((float)getHeight())/getWidth());
 	coord = context.extensions.glGetAttribLocation(knobshader->getProgramID(),"aPos");
 	context.extensions.glEnableVertexAttribArray(coord);
@@ -348,7 +351,7 @@ void PisstortionAudioProcessorEditor::renderOpenGL() {
 	if(oversamplingalpha < 1) {
 		if(oversamplingalpha > 0)
 			osalpha = oversamplingalpha<0.5?4*oversamplingalpha*oversamplingalpha*oversamplingalpha:1-(float)pow(2-2*oversamplingalpha,3)/2;
-		glLineWidth(1.3);
+		glLineWidth(1.3*dpi);
 		visshader->use();
 		coord = context.extensions.glGetAttribLocation(visshader->getProgramID(),"aPos");
 		context.extensions.glActiveTexture(GL_TEXTURE0);
@@ -373,6 +376,7 @@ void PisstortionAudioProcessorEditor::renderOpenGL() {
 		coord = context.extensions.glGetAttribLocation(oversamplingshader->getProgramID(),"aPos");
 		context.extensions.glActiveTexture(GL_TEXTURE0);
 		basetex.bind();
+		oversamplingshader->setUniform("dpi",(float)fmax(dpi,1));
 		oversamplingshader->setUniform("basetex",0);
 		oversamplingshader->setUniform("alpha",osalpha);
 		oversamplingshader->setUniform("selection",.458677686f+oversamplinglerped*.2314049587f);
@@ -388,6 +392,7 @@ void PisstortionAudioProcessorEditor::renderOpenGL() {
 	basetex.bind();
 	context.extensions.glActiveTexture(GL_TEXTURE1);
 	creditstex.bind();
+	creditsshader->setUniform("dpi",(float)fmax(dpi,1));
 	creditsshader->setUniform("basetex",0);
 	creditsshader->setUniform("basescale",242.f/basetex.getWidth(),462.f/basetex.getHeight());
 	creditsshader->setUniform("creditstex",1);
@@ -454,7 +459,7 @@ void PisstortionAudioProcessorEditor::timerCallback() {
 	if(creditsalpha != ((hover<=-2&&hover>=-3)?1:0))
 		creditsalpha = fmax(fmin(creditsalpha+((hover<=-2&&hover>=-3)?.05f:-.05f),1),0);
 	if(creditsalpha <= 0) websiteht = -1;
-	if(websiteht >= -.227273 && creditsalpha >= .5) websiteht -= .05;
+	if(websiteht >= -.227273) websiteht -= .05;
 
 	if(audioProcessor.rmscount.get() > 0) {
 		rms = sqrt(audioProcessor.rmsadd.get()/audioProcessor.rmscount.get());

@@ -159,8 +159,10 @@ in vec2 uv;
 uniform sampler2D basetex;
 uniform float r;
 uniform float gb;
+uniform float dpi;
 void main(){
 	vec4 col = texture2D(basetex,uv);
+	col.gba = max(min((col.gba-.5)*dpi+.5,1),0);
 	col.r /= col.a;
 	gl_FragColor = vec4(0);
 	if(col.r <= (r+.033)) {
@@ -190,12 +192,14 @@ R"(#version 330 core
 in vec2 uv;
 uniform sampler2D basetex;
 uniform float websiteht;
+uniform float dpi;
 void main(){
 	vec4 col = texture2D(basetex,uv);
+	col.rga = max(min((col.rga-.5)*dpi+.5,1),0);
 	col.r /= col.a;
 	gl_FragColor = vec4(0);
 	if(col.r >= .85)
-		gl_FragColor = vec4(vec2(col.g*(1-texture2D(basetex,vec2(min(uv.x+websiteht,.3),uv.y)).b*.5)),1,col.a);
+		gl_FragColor = vec4(vec2(col.g*(1-max(min((texture2D(basetex,vec2(min(uv.x+websiteht,.3),uv.y)).b-.5)*dpi+.5,1),0)*.5)),1,col.a);
 })";
 	logoshader.reset(new OpenGLShaderProgram(context));
 	logoshader->addVertexShader(logovert);
@@ -375,12 +379,13 @@ void main(){
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 
-	feedbackbuffer.initialise(context, getWidth(), getHeight());
+	dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->scale;
+	feedbackbuffer.initialise(context, getWidth()*dpi, getHeight()*dpi);
 	glBindTexture(GL_TEXTURE_2D, feedbackbuffer.getTextureID());
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	mainbuffer.initialise(context, getWidth(), getHeight());
+	mainbuffer.initialise(context, getWidth()*dpi, getHeight()*dpi);
 	glBindTexture(GL_TEXTURE_2D, mainbuffer.getTextureID());
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -408,6 +413,7 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 	baseshader->setUniform("basetex",0);
 	baseshader->setUniform("gb",postfb?1.f:0.f);
 	baseshader->setUniform("texscale",507.f/basetex.getWidth(),465.f/basetex.getHeight());
+	baseshader->setUniform("dpi",(float)fmax(dpi,1));
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	for(int i = 0; i < knobcount; i++) {
@@ -433,6 +439,7 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 	logoshader->setUniform("basetex",0);
 	logoshader->setUniform("websiteht",websiteht);
 	logoshader->setUniform("texscale",507.f/basetex.getWidth(),465.f/basetex.getHeight());
+	logoshader->setUniform("dpi",(float)fmax(dpi,1));
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
@@ -456,6 +463,7 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 			basetex.bind();
 			baseshader->setUniform("basetex",0);
 			baseshader->setUniform("texscale",507.f/basetex.getWidth(),465.f/basetex.getHeight());
+			baseshader->setUniform("dpi",(float)fmax(dpi,1));
 			context.extensions.glEnableVertexAttribArray(coord);
 			context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 			if(i == 1) {
