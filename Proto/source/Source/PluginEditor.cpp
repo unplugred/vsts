@@ -202,6 +202,8 @@ void main(){
 	creditsshader->addFragmentShader(creditsfrag);
 	creditsshader->link();
 
+	dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->scale;
+
 	basetex.loadImage(ImageCache::getFromMemory(BinaryData::base_png, BinaryData::base_pngSize));
 	basetex.bind();
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -277,7 +279,7 @@ void ProtoAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glDisableVertexAttribArray(coord);
 
 	if(oversamplingalpha <= 0) {
-		glLineWidth(1);
+		glLineWidth(1*dpi);
 		visshader->use();
 		coord = context.extensions.glGetAttribLocation(visshader->getProgramID(),"aPos");
 		context.extensions.glEnableVertexAttribArray(coord);

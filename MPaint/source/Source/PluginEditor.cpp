@@ -41,34 +41,44 @@ R"(#version 330 core
 in vec2 uv;
 uniform sampler2D tex;
 uniform int errorhover;
+uniform float dpi;
+uniform vec2 res;
 void main(){
-	gl_FragColor = texture2D(tex,uv);
-	if(errorhover > .5 && uv.x > .8 && uv.y < .15 && gl_FragColor.r < .1)
-		gl_FragColor = vec4(.972549,0,0,1);
+	vec2 nuv = uv*res;
+	if(mod(nuv.x,1)>.5) nuv.x = floor(nuv.x)+(1-min((1-mod(nuv.x,1))*dpi*2,.5));
+	else nuv.x = floor(nuv.x)+min(mod(nuv.x,1)*dpi*2,.5);
+	if(mod(nuv.y,1)>.5) nuv.y = floor(nuv.y)+(1-min((1-mod(nuv.y,1))*dpi*2,.5));
+	else nuv.y = floor(nuv.y)+min(mod(nuv.y,1)*dpi*2,.5);
+	nuv /= res;
+	gl_FragColor = texture2D(tex,nuv);
+	if((errorhover < .5 || uv.x < .8 || uv.y > .15) && res.y > 80)
+		gl_FragColor.r = gl_FragColor.g;
 })";
 	shader.reset(new OpenGLShaderProgram(context));
 	shader->addVertexShader(vert);
 	shader->addFragmentShader(frag);
 	shader->link();
 
+	dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->scale;
+
 	errortex.loadImage(ImageCache::getFromMemory(BinaryData::error_png, BinaryData::error_pngSize));
 	errortex.bind();
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 
 	rulertex.loadImage(ImageCache::getFromMemory(BinaryData::ruler_png, BinaryData::ruler_pngSize));
 	rulertex.bind();
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 
 	icontex.loadImage(ImageCache::getFromMemory(BinaryData::largeicon_png, BinaryData::largeicon_pngSize));
 	icontex.bind();
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
@@ -91,8 +101,9 @@ void MPaintAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	shader->use();
-
 	shader->setUniform("sound",0);
+	shader->setUniform("dpi",(float)fmax(dpi,1));
+	shader->setUniform("res",234,error?90:20);
 	shader->setUniform("pos",1.f,1.f,0.f,0.f);
 	context.extensions.glActiveTexture(GL_TEXTURE0);
 	if(error) {
@@ -114,6 +125,7 @@ void MPaintAudioProcessorEditor::renderOpenGL() {
 		shader->setUniform("texscale",16.f/icontex.getWidth(),14.f/icontex.getHeight());
 		shader->setUniform("sound",sound);
 		shader->setUniform("pos",16.f/234.f,14.f/20.f,8.f/234.f,4.f/20.f);
+		shader->setUniform("res",240,14);
 	}
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 
