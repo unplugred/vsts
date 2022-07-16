@@ -59,7 +59,7 @@ void main(){
 	shader->addFragmentShader(frag);
 	shader->link();
 
-	dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->scale;
+	dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->dpi/96.f;
 
 	errortex.loadImage(ImageCache::getFromMemory(BinaryData::error_png, BinaryData::error_pngSize));
 	errortex.bind();
