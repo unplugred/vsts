@@ -228,6 +228,7 @@ uniform float lineheight;
 uniform vec2 knobscale;
 uniform float circle;
 uniform float bright;
+uniform int dark;
 void main(){
 	float d = 0;
 	if(circle > .5) {
@@ -244,6 +245,7 @@ void main(){
 		gl_FragColor = vec4(1,1,1,min(max(1-sqrt(y*y+uv.x*uv.x)*2/(1-thickness),0)*2.5,1));
 	}
 	gl_FragColor.r = 1-(1-gl_FragColor.r)*bright;
+	if(dark > .5) gl_FragColor = vec4(gl_FragColor.r,gl_FragColor.r,gl_FragColor.r,gl_FragColor.a);
 })";
 	knobshader.reset(new OpenGLShaderProgram(context));
 	knobshader->addVertexShader(knobvert);
@@ -452,6 +454,7 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	knobshader->setUniform("circle",1.f);
+	knobshader->setUniform("dark",0);
 	float rmsout = 0;
 	for(int i = 0; i < knobcount; i++) {
 		rmsout = getvis(knobs[i].r);
@@ -496,12 +499,14 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 		if(i == 0) {
 			Time time = Time::getCurrentTime();
 			knobshader->setUniform("knobrot",((time.getMinutes()+time.getSeconds()/60.f)/60.f)*6.28318530718f);
+			knobshader->setUniform("dark",1);
 			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 			knobshader->setUniform("circle",0.f);
 			knobshader->setUniform("lineheight",.3f);
 			knobshader->setUniform("knobrot",((time.getHours()+time.getMinutes()/60.f)/12.f)*6.28318530718f);
 			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 			knobshader->setUniform("circle",1.f);
+			knobshader->setUniform("dark",0);
 		} else {
 			knobshader->setUniform("knobrot",(knobs[i].value-.5f)*(i==6?6.2831853072f:5.5f));
 			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
