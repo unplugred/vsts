@@ -162,8 +162,8 @@ uniform float gb;
 uniform float dpi;
 void main(){
 	vec4 col = texture2D(basetex,uv);
-	col.gba = max(min((col.gba-.5)*dpi+.5,1),0);
 	col.r /= col.a;
+	col.gba = max(min((col.gba-.5)*dpi+.5,1),0);
 	gl_FragColor = vec4(0);
 	if(col.r <= (r+.033)) {
 		if(col.r >= (r-.03))
