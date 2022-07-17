@@ -291,22 +291,23 @@ float noise(in vec2 p){
 			   mix(dot(hash(i + vec2(0.0,1.0)), f - vec2(0.0,1.0)),
 				   dot(hash(i + vec2(1.0,1.0)), f - vec2(1.0,1.0)), u.x), u.y);
 }
+vec4 sample(in sampler2D tex, in vec2 puv) {
+	if(puv.x < 0 || puv.x > 1 || puv.y < 0 || puv.y > 1) return vec4(0,0,0,1);
+	else return texture2D(tex,puv)*min(puv.x*res.x,1)*min(puv.y*res.y,1)*min((1-puv.x)*res.x,1)*min((1-puv.y)*res.y,1);
+}
 void main(){
 	vec2 nuv = uv;
 	if(chew > 0) nuv += vec2(noise(ruv*4),noise((ruv+2)*4))*chew;
-	if(nuv.x < 0 || nuv.x > 1 || nuv.y < 0 || nuv.y > 1) gl_FragColor = vec4(0,0,0,1);
-	else {
-		vec2 col1 = texture2D(maintex,nuv+vec2(time.x*ratio,time.x)).rg;
-		vec2 col2 = texture2D(maintex,nuv+vec2(time.y*ratio,time.y)).rg;
-		gl_FragColor   = texture2D(feedbacktex,nuv+vec2(time.z*ratio,time.z));
-		gl_FragColor.g = texture2D(feedbacktex,nuv+vec2((time.w-.004*lowpass)*ratio,time.w)).g;
-		if(lowpass > 0) {
-			gl_FragColor.r = gl_FragColor.r*.5+texture2D(feedbacktex,nuv+vec2((time.z+.008*lowpass)*ratio,time.z)).r*.5;
-			gl_FragColor.g = gl_FragColor.g*.5+texture2D(feedbacktex,nuv+vec2((time.w+.004*lowpass)*ratio,time.w)).g*.5;
-			gl_FragColor.b = gl_FragColor.b*.5+texture2D(feedbacktex,nuv+vec2((time.z-.008*lowpass)*ratio,time.z)).b*.5;
-		}
-		gl_FragColor   = vec4((vec3(col1.r,col2.r,col1.r)*vec3(col1.g,col2.g,col1.g)+(1-vec3(col1.g,col2.g,col1.g))*feedback*gl_FragColor.rgb)*min(nuv.x*res.x,1)*min(nuv.y*res.y,1)*min((1-nuv.x)*res.x,1)*min((1-nuv.y)*res.y,1),1);
+	vec2 col1 = sample(maintex,nuv+vec2(time.x*ratio,time.x)).rg;
+	vec2 col2 = sample(maintex,nuv+vec2(time.y*ratio,time.y)).rg;
+	gl_FragColor   = sample(feedbacktex,nuv+vec2(time.z*ratio,time.z));
+	gl_FragColor.g = sample(feedbacktex,nuv+vec2((time.w-.004*lowpass)*ratio,time.w)).g;
+	if(lowpass > 0) {
+		gl_FragColor.r = gl_FragColor.r*.5+sample(feedbacktex,nuv+vec2((time.z+.008*lowpass)*ratio,time.z)).r*.5;
+		gl_FragColor.g = gl_FragColor.g*.5+sample(feedbacktex,nuv+vec2((time.w+.004*lowpass)*ratio,time.w)).g*.5;
+		gl_FragColor.b = gl_FragColor.b*.5+sample(feedbacktex,nuv+vec2((time.z-.008*lowpass)*ratio,time.z)).b*.5;
 	}
+	gl_FragColor   = vec4(vec3(col1.r,col2.r,col1.r)*vec3(col1.g,col2.g,col1.g)+(1-vec3(col1.g,col2.g,col1.g))*feedback*gl_FragColor.rgb,1);
 })";
 	feedbackshader.reset(new OpenGLShaderProgram(context));
 	feedbackshader->addVertexShader(feedbackvert);
@@ -536,7 +537,7 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 		time4 = time2;
 	}
 	feedbackshader->setUniform("time",time1,time2,time3,time4);//mod + modfreq
-	feedbackshader->setUniform("pitch",(knobs[7].value-.5f)*3.14159f);
+	feedbackshader->setUniform("pitch",(knobs[7].value-.5f)*3.13f);
 	feedbackshader->setUniform("chew",knobs[8].value*knobs[8].value);
 	feedbackshader->setUniform("feedback",knobs[1].value);
 	feedbackshader->setUniform("lowpass",knobs[10].value);
