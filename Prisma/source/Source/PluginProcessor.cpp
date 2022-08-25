@@ -717,16 +717,19 @@ void PrismaAudioProcessor::setStateInformation (const void* data, int sizeInByte
 
 		for(int b = 0; b < 4; b++) {
 			std::getline(ss, token, '\n');
+			pots.bands[b].mute = std::stof(token) > .5;
 			apvts.getParameter("b"+(String)b+"mute")->setValueNotifyingHost(std::stof(token));
 
 			std::getline(ss, token, '\n');
+			pots.bands[b].solo = std::stof(token) > .5;
 			apvts.getParameter("b"+(String)b+"solo")->setValueNotifyingHost(std::stof(token));
 
 			std::getline(ss, token, '\n');
 			float val = std::stof(token);
-			apvts.getParameter("b"+(String)b+"bypass")->setValueNotifyingHost(val);
 			pots.bands[b].bandbypass.setCurrentAndTargetValue(val);
 			pots.bands[b].bypasssmooth = val;
+			pots.bands[b].bypass = val > .5;
+			apvts.getParameter("b"+(String)b+"bypass")->setValueNotifyingHost(val);
 		}
 		recalcactivebands();
 		for(int b = 0; b < 4; b++) {
