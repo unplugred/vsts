@@ -173,7 +173,7 @@ uniform float alpha;
 void main(){
 	float tex = texture2D(basetex,basecoord).b;
 	if(highlightcoord.x>0&&highlightcoord.x<1&&highlightcoord.y>0&&highlightcoord.y<1)tex=1-tex;
-	gl_FragColor = vec4(1,0,0,tex>.5?((1-tex)*alpha):0);
+	gl_FragColor = vec4(1,0,0,tex>.5?((1-tex)*alpha):0.0);
 })";
 	oversamplingshader.reset(new OpenGLShaderProgram(context));
 	oversamplingshader->addVertexShader(oversamplingvert);

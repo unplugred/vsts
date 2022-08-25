@@ -152,7 +152,7 @@ void main(){
 				highlight = lineht.y>=.5;
 			}
 			vec3 txcoordss = texture2D(mptex,((txtcoords-.5)*txdiv-vec2(1,line))*vec2(.5,.03125)).rgb;
-			float tx = texture2D(vutex,(txcoordss.rg+mod(((txtcoords-.5)*txdiv*vec2(8,1)-vec2(0,.5)),1.)*vec2(.125,.25))*txtsize+vec2(size.x*3,1-size.y*3)).g*(1-txcoordss.b*(highlight?.4:0));
+			float tx = texture2D(vutex,(txcoordss.rg+mod(((txtcoords-.5)*txdiv*vec2(8,1)-vec2(0,.5)),1.)*vec2(.125,.25))*txtsize+vec2(size.x*3,1-size.y*3)).g*(1-txcoordss.b*(highlight?0.4:0.0));
 
 			gl_FragColor = abs(gl_FragColor-bg)*(1-tx)+max(gl_FragColor-bg,0)*tx;
 		} else gl_FragColor = abs(gl_FragColor-bg);

@@ -98,10 +98,9 @@ out vec2 v_TexCoord;
 out vec2 circlecoord;
 void main(){
 	vec2 pos = ((aPos*2-1)*knobscale)/vec2(ratio,1);
-	float rot = mod(knobrot-.125,1)*-6.2831853072;
 	gl_Position = vec4(
-		(pos.x*cos(rot)-pos.y*sin(rot))*ratio-1+knobpos.x,
-		pos.x*sin(rot)+pos.y*cos(rot)-1+knobpos.y,0,1);
+		(pos.x*cos(knobrot)-pos.y*sin(knobrot))*ratio-1+knobpos.x,
+		pos.x*sin(knobrot)+pos.y*cos(knobrot)-1+knobpos.y,0,1);
 	v_TexCoord = vec2(aPos.x*texscale.x,1-(1-aPos.y)*texscale.y);
 	circlecoord = gl_Position.xy*.5+.5;
 })";
@@ -143,7 +142,7 @@ uniform sampler2D basetex;
 uniform float alpha;
 void main(){
 	float base = texture2D(basetex,basecoord).r;
-	gl_FragColor = vec4(.05,.05,.05,base <= 0 ? alpha : 0);
+	gl_FragColor = vec4(.05,.05,.05,base <= 0 ? alpha : 0.0);
 })";
 	visshader.reset(new OpenGLShaderProgram(context));
 	visshader->addVertexShader(visvert);
@@ -341,7 +340,7 @@ void PisstortionAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	for (int i = 0; i < knobcount; i++) {
 		knobshader->setUniform("knobpos",((float)knobs[i].x*2)/getWidth(),2-((float)knobs[i].y*2)/getHeight());
-		knobshader->setUniform("knobrot",(knobs[i].lerpedvalue-.5f)*.748f);
+		knobshader->setUniform("knobrot",mod((knobs[i].lerpedvalue-.5f)*.748f-.125,1)*-6.2831853072);
 		knobshader->setUniform("hover",knobs[i].hover<0.5?4*knobs[i].hover*knobs[i].hover*knobs[i].hover:1-(float)pow(2-2*knobs[i].hover,3)/2);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	}

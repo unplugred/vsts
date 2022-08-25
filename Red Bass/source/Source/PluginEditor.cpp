@@ -89,7 +89,7 @@ void main(){
 			if((hover > ((uv.x-.42236024844720496894409937888199)*4.5352112676056338028169014084507) && c.b > .5) || vis > uv.y) {
 				gl_FragColor = vec4(1,1,1,1);
 			} else {
-				gl_FragColor = vec4(vec3((mod(uv.x*322,2)+mod(uv.y*383,2))>2.9?.2:0),1);
+				gl_FragColor = vec4(vec3((mod(uv.x*322,2)+mod(uv.y*383,2))>2.9?0.2:0.0),1);
 			}
 		} else {
 			gl_FragColor = vec4(vis,vis,vis,1);

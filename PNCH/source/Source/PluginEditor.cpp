@@ -112,7 +112,7 @@ uniform vec3 colone;
 uniform vec3 coltwo;
 void main(){
 	vec3 c = texture2D(creditstex,uv).rgb;
-	float o = (hover==1?c.r:0)+c.g+(hover==2?c.b:0);
+	float o = (hover==1?c.r:0.0)+c.g+(hover==2?c.b:0.0);
 	gl_FragColor = vec4(o*colone+(1-o)*coltwo,1);
 })";
 	creditsshader.reset(new OpenGLShaderProgram(context));
