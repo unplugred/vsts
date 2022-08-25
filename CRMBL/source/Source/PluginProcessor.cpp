@@ -92,17 +92,15 @@ void CRMBLAudioProcessor::changeProgramName (int index, const String& newName) {
 
 void CRMBLAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {
 	if(!saved && sampleRate > 60000) {
-		setoversampling(0);
+		state.values[13] = 0;
 		apvts.getParameter("oversampling")->setValueNotifyingHost(0);
 	}
-	for(int i = 0; i < paramcount; i++) if(pots[i].smoothtime > 0)
-		pots[i].smooth.reset(sampleRate*(state.values[13]+1), pots[i].smoothtime);
 	samplesperblock = samplesPerBlock;
 	samplerate = sampleRate;
 
 	reseteverything();
-	preparedtoplay = true;
 }
+
 void CRMBLAudioProcessor::changechannelnum(int newchannelnum) {
 	channelnum = newchannelnum;
 	if(newchannelnum <= 0) return;
@@ -112,12 +110,16 @@ void CRMBLAudioProcessor::changechannelnum(int newchannelnum) {
 void CRMBLAudioProcessor::reseteverything() {
 	if(channelnum <= 0 || samplesperblock <= 0) return;
 
+	for(int i = 0; i < paramcount; i++) if(pots[i].smoothtime > 0 && i != 8)
+		pots[i].smooth.reset(samplerate,pots[i].smoothtime);
+	pots[8].smooth.reset(samplerate*(state.values[13]>.5?2:1),pots[8].smoothtime);
+
 	blocksizething = samplesperblock>=(MIN_DLY*samplerate)?512:samplesperblock;
 	delaytimelerp.setSize(channelnum,blocksizething,false,false,false);
 	dampdelaytime.reset(0,1.,-1,samplerate,channelnum);
 	dampchanneloffset.reset(0,.3,-1,samplerate,channelnum);
 	dampamp.reset(0,.5,-1,samplerate,1);
-	damplimiter.reset(1,.1,-1,samplerate,channelnum);
+	damplimiter.reset(1,.1,-1,samplerate*(state.values[13]>.5?2:1),channelnum);
 	damppitchlatency.reset(0,.01,-1,samplerate,2);
 	prevclear.resize(channelnum);
 	prevfilter.resize(channelnum);
@@ -129,17 +131,11 @@ void CRMBLAudioProcessor::reseteverything() {
 	}
 	resetdampenings = true;
 
-	//oversampling
-	os.reset(new dsp::Oversampling<float>(channelnum,1,dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR));
-	os->initProcessing(blocksizething);
-	os->setUsingIntegerLatency(true);
-	setoversampling(state.values[13] > .5);
-
 	//soundtouch
 	pitchshift.setChannels(channelnum);
-	pitchshift.setSampleRate(samplerate*(state.values[13]>=.5?2:1));
+	pitchshift.setSampleRate(samplerate*(state.values[13]>.5?2:1));
 	pitchshift.setPitchSemiTones(state.values[9]);
-	pitchprocessbuffer.resize(samplerate*blocksizething*(state.values[13]>=.5?2:1));
+	pitchprocessbuffer.resize(samplerate*blocksizething*(state.values[13]>.5?2:1));
 
 	//delay buffer
 	delaybuffer.setSize(channelnum,samplerate*MAX_DLY+blocksizething+257,true,true,false);
@@ -147,7 +143,15 @@ void CRMBLAudioProcessor::reseteverything() {
 	delaypointerarray.resize(channelnum);
 
 	//dc filter
-	dcfilter.init(samplerate,channelnum);
+	dcfilter.init(samplerate*(state.values[13]>.5?2:1),channelnum);
+
+	//oversampling
+	preparedtoplay = true;
+	os.reset(new dsp::Oversampling<float>(channelnum,1,dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR));
+	os->initProcessing(blocksizething);
+	os->setUsingIntegerLatency(true);
+	setoversampling(state.values[13]>.5);
+
 }
 void CRMBLAudioProcessor::releaseResources() { }
 
@@ -171,7 +175,7 @@ void CRMBLAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 
 	float prmsadd = rmsadd.get();
 	int prmscount = rmscount.get();
-	bool isoversampling = (state.values[13] >= .5);
+	bool isoversampling = (state.values[13]>.5);
 
 	int delaybuffernumsamples = delaybuffer.getNumSamples();
 	float** channelData = buffer.getArrayOfWritePointers();
@@ -408,17 +412,14 @@ void CRMBLAudioProcessor::setoversampling(bool toggle) {
 		if(channelnum <= 0) return;
 		os->reset();
 		//setLatencySamples(os->getLatencyInSamples());
-		for(int i = 0; i < paramcount; i++) if(pots[i].smoothtime > 0)
-			pots[i].smooth.reset(samplerate*2, pots[i].smoothtime);
-	} else {
-		//setLatencySamples(0);
-		for(int i = 0; i < paramcount; i++) if(pots[i].smoothtime > 0)
-			pots[i].smooth.reset(samplerate, pots[i].smoothtime);
 	}
+	//else setLatencySamples(0);
 
-	pitchprocessbuffer.resize(samplerate*blocksizething*(toggle?2:1));
-
+	pots[8].smooth.reset(samplerate*(toggle?2:1),pots[8].smoothtime);
+	damplimiter.v_samplerate = samplerate*(toggle?2:1);
 	pitchshift.setSampleRate(samplerate*(toggle?2:1));
+	pitchprocessbuffer.resize(samplerate*blocksizething*(toggle?2:1));
+	dcfilter.init(samplerate*(toggle?2:1),channelnum);
 }
 
 bool CRMBLAudioProcessor::hasEditor() const { return true; }

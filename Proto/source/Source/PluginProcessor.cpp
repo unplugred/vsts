@@ -83,25 +83,27 @@ void ProtoAudioProcessor::changeProgramName (int index, const String& newName) {
 
 void ProtoAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {
 	if(!saved && sampleRate > 60000) {
-		setoversampling(0);
+		state.values[6] = 0;
 		apvts.getParameter("oversampling")->setValueNotifyingHost(0);
 	}
-	for(int i = 0; i < paramcount; i++) if(pots[i].smoothtime > 0)
-		pots[i].smooth.reset(sampleRate*(state.values[6]+1), pots[i].smoothtime);
 	samplesperblock = samplesPerBlock;
 	samplerate = sampleRate;
-	resetoversampling();
-	preparedtoplay = true;
+
+	reseteverything();
 }
 void ProtoAudioProcessor::changechannelnum(int newchannelnum) {
 	channelnum = newchannelnum;
 	if(newchannelnum <= 0) return;
 
-	resetoversampling();
+	reseteverything();
 }
-void ProtoAudioProcessor::resetoversampling() {
+void ProtoAudioProcessor::reseteverything() {
 	if(channelnum <= 0 || samplesperblock <= 0) return;
 
+	for(int i = 0; i < paramcount; i++) if(pots[i].smoothtime > 0)
+		pots[i].smooth.reset(samplerate*(state.values[6]+1), pots[i].smoothtime);
+
+	preparedtoplay = true;
 	ospointerarray.resize(channelnum);
 	os.reset(new dsp::Oversampling<float>(channelnum,1,dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR));
 	os->initProcessing(samplesperblock);

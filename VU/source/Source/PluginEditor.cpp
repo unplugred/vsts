@@ -90,7 +90,7 @@ void main(){
 	if(right < .5) lgcoords = aPos*lgsize.xy+vec2(lgsize.z-lgsize.x,lgsize.w);
 	else lgcoords = aPos*lgsize.xy+vec2(lgsize.z,lgsize.w);
 })"))
-		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Vertex shader error",shader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at arihanan@proton.me. THANKS!","OK!");
+		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Vertex shader error",vushader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at arihanan@proton.me. THANKS!","OK!");
 	if(!vushader->addFragmentShader(
 R"(#version 330 core
 in vec2 v_TexCoord;
@@ -166,7 +166,7 @@ void main(){
 		}
 	}
 })"))
-		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Fragment shader error",shader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at arihanan@proton.me. THANKS!","OK!");
+		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Fragment shader error",vushader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at arihanan@proton.me. THANKS!","OK!");
 
 	vushader->link();
 
