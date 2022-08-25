@@ -150,7 +150,8 @@ float PNCHAudioProcessor::pnch(float source, float amount) {
 
 	double cropmount = pow((double)amount,10);
 	double sinkedsource = ((double)source-fmin(fmax((double)source,-cropmount),cropmount))/(1-cropmount);
-	return fmin(fmax(sinkedsource*pow(1-pow(1-abs(sinkedsource),12.5),(3/(1-amount*.98))-3),-1),1);
+	if(sinkedsource >= 1 || sinkedsource <= -1) return sinkedsource;
+	return sinkedsource*pow(1-pow(1-abs(sinkedsource),12.5),(3/(1-amount*.98))-3);
 }
 
 void PNCHAudioProcessor::setoversampling(bool toggle) {
