@@ -38,25 +38,24 @@ const String RedBassAudioProcessor::getProgramName (int index) { return { "hello
 void RedBassAudioProcessor::changeProgramName (int index, const String& newName) { }
 
 void RedBassAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {
-	for(int i = 0; i < paramcount; i++) if(pots[i].smoothtime > 0)
-		pots[i].smooth.reset(sampleRate, pots[i].smoothtime);
 	samplesperblock = samplesPerBlock;
 	samplerate = sampleRate;
 
-	envelopefollower.setattack(calculateattack(state.values[2]), sampleRate);
-	envelopefollower.setrelease(calculaterelease(state.values[3]), sampleRate);
-	envelopefollower.setthreshold(calculatethreshold(state.values[1]), sampleRate);
-
-	resetfilter();
+	reseteverything();
 }
 void RedBassAudioProcessor::changechannelnum(int newchannelnum) {
 	channelnum = newchannelnum;
 	if(newchannelnum <= 0) return;
-
-	resetfilter();
 }
-void RedBassAudioProcessor::resetfilter() {
-	if(channelnum <= 0 || samplesperblock <= 0) return;
+void RedBassAudioProcessor::reseteverything() {
+	if(samplesperblock <= 0) return;
+
+	for(int i = 0; i < paramcount; i++) if(pots[i].smoothtime > 0)
+		pots[i].smooth.reset(samplerate, pots[i].smoothtime);
+
+	envelopefollower.setattack(calculateattack(state.values[2]), samplerate);
+	envelopefollower.setrelease(calculaterelease(state.values[3]), samplerate);
+	envelopefollower.setthreshold(calculatethreshold(state.values[1]), samplerate);
 
 	dsp::ProcessSpec spec;
 	spec.sampleRate = samplerate;

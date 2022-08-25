@@ -84,15 +84,13 @@ void PisstortionAudioProcessor::changeProgramName (int index, const String& newN
 
 void PisstortionAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {
 	if(!saved && sampleRate > 60000) {
-		setoversampling(0);
+		state.values[6] = 0;
 		apvts.getParameter("oversampling")->setValueNotifyingHost(0);
 	}
-	for(int i = 0; i < paramcount; i++) if(pots[i].smoothtime > 0)
-		pots[i].smooth.reset(sampleRate*(state.values[6]+1), pots[i].smoothtime);
 	samplesperblock = samplesPerBlock;
 	samplerate = sampleRate;
+
 	reseteverything();
-	preparedtoplay = true;
 }
 void PisstortionAudioProcessor::changechannelnum(int newchannelnum) {
 	channelnum = newchannelnum;
@@ -103,8 +101,12 @@ void PisstortionAudioProcessor::changechannelnum(int newchannelnum) {
 void PisstortionAudioProcessor::reseteverything() {
 	if(channelnum <= 0 || samplesperblock <= 0) return;
 
-	dcfilter.init(samplerate,channelnum);
+	dcfilter.init(samplerate*(state.values[6]>.5?2:1),channelnum);
 
+	for(int i = 0; i < paramcount; i++) if(pots[i].smoothtime > 0)
+		pots[i].smooth.reset(samplerate*(state.values[6]+1), pots[i].smoothtime);
+
+	preparedtoplay = true;
 	ospointerarray.resize(channelnum);
 	os.reset(new dsp::Oversampling<float>(channelnum,1,dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR));
 	os->initProcessing(samplesperblock);
@@ -217,10 +219,12 @@ void PisstortionAudioProcessor::setoversampling(bool toggle) {
 		setLatencySamples(os->getLatencyInSamples());
 		for(int i = 0; i < paramcount; i++) if(pots[i].smoothtime > 0)
 			pots[i].smooth.reset(samplerate*2, pots[i].smoothtime);
+		dcfilter.init(samplerate*2,channelnum);
 	} else {
 		setLatencySamples(0);
 		for(int i = 0; i < paramcount; i++) if(pots[i].smoothtime > 0)
 			pots[i].smooth.reset(samplerate, pots[i].smoothtime);
+		dcfilter.init(samplerate,channelnum);
 	}
 }
 

@@ -83,30 +83,32 @@ void PFAudioProcessor::changeProgramName (int index, const String& newName) {
 
 void PFAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {
 	if(!saved && sampleRate > 60000) {
-		setoversampling(0);
+		state.values[6] = 0;
 		apvts.getParameter("oversampling")->setValueNotifyingHost(0);
 	}
-	for(int i = 0; i < paramcount; i++) if(pots[i].smoothtime > 0)
-		pots[i].smooth.reset(sampleRate*(state.values[6]+1), pots[i].smoothtime);
 	samplesperblock = samplesPerBlock;
 	samplerate = sampleRate;
-	resetoversampling();
-	preparedtoplay = true;
+	
+	reseteverything();
 }
 void PFAudioProcessor::changechannelnum(int newchannelnum) {
 	channelnum = newchannelnum;
 	if(newchannelnum <= 0) return;
 
-	resetoversampling();
+	reseteverything();
 }
-void PFAudioProcessor::resetoversampling() {
+void PFAudioProcessor::reseteverything() {
 	if(channelnum <= 0 || samplesperblock <= 0) return;
 
+	for(int i = 0; i < paramcount; i++) if(pots[i].smoothtime > 0)
+		pots[i].smooth.reset(samplerate*(state.values[6]>.5?2:1), pots[i].smoothtime);
+
+	preparedtoplay = true;
 	ospointerarray.resize(channelnum);
 	os.reset(new dsp::Oversampling<float>(channelnum,1,dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR));
 	os->initProcessing(samplesperblock);
 	os->setUsingIntegerLatency(true);
-	setoversampling(state.values[6] > .5);
+	setoversampling(state.values[6]>.5);
 }
 void PFAudioProcessor::releaseResources() { }
 
@@ -130,7 +132,7 @@ void PFAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mid
 
 	float prmsadd = rmsadd.get();
 	int prmscount = rmscount.get();
-	bool isoversampling = (state.values[6] >= .5);
+	bool isoversampling = (state.values[6]>.5);
 
 	int numsamples = buffer.getNumSamples();
 	dsp::AudioBlock<float> block(buffer);
@@ -292,8 +294,8 @@ void PFAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
 }
 void PFAudioProcessor::parameterChanged(const String& parameterID, float newValue) {
 	if(parameterID == "oversampling") {
-		state.values[6] = newValue > .5 ? 1 : 0;
-		setoversampling(newValue > .5);
+		state.values[6] = newValue>.5?1:0;
+		setoversampling(newValue>.5);
 		return;
 	}
 	for(int i = 0; i < paramcount; i++) if(parameterID == pots[i].id) {

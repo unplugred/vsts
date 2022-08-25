@@ -42,24 +42,26 @@ void PNCHAudioProcessor::changeProgramName (int index, const String& newName) { 
 
 void PNCHAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {
 	if(!saved && sampleRate > 60000) {
-		setoversampling(0);
+		oversampling = false;
 		apvts.getParameter("oversampling")->setValueNotifyingHost(0);
 	}
 	samplesperblock = samplesPerBlock;
 	samplerate = sampleRate;
-	resetoversampling();
-	amount.reset(samplerate*(oversampling.get()?2:1),.001f);
-	preparedtoplay = true;
+
+	reseteverything();
 }
 void PNCHAudioProcessor::changechannelnum(int newchannelnum) {
 	channelnum = newchannelnum;
 	if(newchannelnum <= 0) return;
 
-	resetoversampling();
+	reseteverything();
 }
-void PNCHAudioProcessor::resetoversampling() {
+void PNCHAudioProcessor::reseteverything() {
 	if(channelnum <= 0 || samplesperblock <= 0) return;
 
+	amount.reset(samplerate*(oversampling.get()?2:1),.001f);
+
+	preparedtoplay = true;
 	ospointerarray.resize(channelnum);
 	os.reset(new dsp::Oversampling<float>(channelnum,1,dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR));
 	os->initProcessing(samplesperblock);
@@ -189,7 +191,6 @@ void PNCHAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 		apvts.getParameter("amount")->setValueNotifyingHost(a);
 
 		std::getline(ss, token, '\n');
-		setoversampling(std::stoi(token)>.5);
 		apvts.getParameter("oversampling")->setValueNotifyingHost(std::stof(token));
 
 	} catch(const char* e) {
@@ -205,8 +206,8 @@ void PNCHAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 void PNCHAudioProcessor::parameterChanged(const String& parameterID, float newValue) {
 	if(parameterID == "amount") amount.setTargetValue(newValue);
 	else if(parameterID == "oversampling") {
-		oversampling = newValue > .5;
-		setoversampling(newValue > .5);
+		oversampling = newValue>.5;
+		setoversampling(newValue>.5);
 	}
 }
 

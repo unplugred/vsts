@@ -61,7 +61,7 @@ public:
 
 	void prepareToPlay (double sampleRate, int samplesPerBlock) override;
 	void changechannelnum(int newchannelnum);
-	void resetfilter();
+	void reseteverything();
 	void releaseResources() override;
 
 	bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
