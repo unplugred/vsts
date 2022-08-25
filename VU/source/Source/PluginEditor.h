@@ -78,8 +78,6 @@ private:
 		1.f,1.f};
 
 	std::unique_ptr<OpenGLShaderProgram> vushader;
-	String vertshader;
-	String fragshader;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(VuAudioProcessorEditor)
 };

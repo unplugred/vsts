@@ -10,6 +10,7 @@ public:
 	~PNCHAudioProcessorEditor() override;
 
 	void newOpenGLContextCreated() override;
+	void compileshader(std::unique_ptr<OpenGLShaderProgram> &shader, String vertexshader, String fragmentshader);
 	void renderOpenGL() override;
 	void openGLContextClosing() override;
 	void paint (Graphics&) override;
@@ -41,8 +42,6 @@ private:
 
 	OpenGLTexture basetex;
 	std::unique_ptr<OpenGLShaderProgram> baseshader;
-	String basevert;
-	String basefrag;
 
 	int hover = -1;
 	int initialdrag = 0;
@@ -52,14 +51,10 @@ private:
 	float valueoffset = 0;
 	Point<int> dragpos = Point<int>(0,0);
 	std::unique_ptr<OpenGLShaderProgram> knobshader;
-	String knobvert;
-	String knobfrag;
 
 	bool credits = false;
 	OpenGLTexture creditstex;
 	std::unique_ptr<OpenGLShaderProgram> creditsshader;
-	String creditsvert;
-	String creditsfrag;
 
 	float rms = 0;
 	Random random;

@@ -51,15 +51,16 @@ ProtoAudioProcessorEditor::~ProtoAudioProcessorEditor() {
 void ProtoAudioProcessorEditor::newOpenGLContextCreated() {
 	audioProcessor.logger.init(&context,getWidth(),getHeight());
 
-	basevert =
+	compileshader(baseshader,
+//BASE VERT
 R"(#version 330 core
 in vec2 aPos;
 out vec2 uv;
 void main(){
 	gl_Position = vec4(aPos*2-1,0,1);
 	uv = aPos;
-})";
-	basefrag =
+})",
+//BASE FRAG
 R"(#version 330 core
 in vec2 uv;
 uniform sampler2D basetex;
@@ -67,26 +68,21 @@ uniform vec2 texscale;
 uniform float offset;
 void main(){
 	gl_FragColor = texture2D(basetex,vec2(mod(uv.x*texscale.x+offset,1),1-(1-uv.y)*texscale.y));
-})";
-	baseshader.reset(new OpenGLShaderProgram(context));
-	baseshader->addVertexShader(basevert);
-	baseshader->addFragmentShader(basefrag);
-	baseshader->link();
+})");
 
-	textfrag =
+	compileshader(textshader,
+audioProcessor.logger.textvert,
+//TEXT VERT
 R"(#version 330 core
 in vec2 texcoord;
 uniform sampler2D tex;
 uniform int hoverstate;
 void main(){
 	gl_FragColor = vec4(vec2(texture2D(tex,texcoord).r),hoverstate,1);
-})";
-	textshader.reset(new OpenGLShaderProgram(context));
-	textshader->addVertexShader(audioProcessor.logger.textvert);
-	textshader->addFragmentShader(textfrag);
-	textshader->link();
+})");
 
-	knobvert =
+	compileshader(knobshader,
+//KNOB VERT
 R"(#version 330 core
 in vec2 aPos;
 uniform float knobrot;
@@ -98,54 +94,45 @@ void main(){
 	uv = vec2(
 		(aPos.x-.5)*cos(knobrot)-(aPos.y-.5)*sin(knobrot),
 		(aPos.x-.5)*sin(knobrot)+(aPos.y-.5)*cos(knobrot));
-})";
-	knobfrag =
+})",
+//KNOB FRAG
 R"(#version 330 core
 in vec2 uv;
 uniform int hoverstate;
 void main(){
 	gl_FragColor=vec4(vec2((uv.y>0&&abs(uv.x)<.02)?1:0),hoverstate,1);
-})";
-	knobshader.reset(new OpenGLShaderProgram(context));
-	knobshader->addVertexShader(knobvert);
-	knobshader->addFragmentShader(knobfrag);
-	knobshader->link();
+})");
 
-	blackvert = 
+	compileshader(blackshader,
+//BLACK VERT
 R"(#version 330 core
 in vec2 aPos;
 uniform vec4 pos;
 void main(){
 	gl_Position = vec4(aPos*pos.zw+pos.xy,0,1);
-})";
-	blackfrag = 
+})",
+//BLACK FRAG
 R"(#version 330 core
 uniform int hoverstate;
 void main(){
 	gl_FragColor = vec4(0,0,hoverstate,1);
-})";
-	blackshader.reset(new OpenGLShaderProgram(context));
-	blackshader->addVertexShader(blackvert);
-	blackshader->addFragmentShader(blackfrag);
-	blackshader->link();
+})");
 
-	visvert = 
+	compileshader(visshader,
+//VIS VERT
 R"(#version 330 core
 in vec2 aPos;
 void main(){
 	gl_Position = vec4(aPos,0,1);
-})";
-	visfrag = 
+})",
+//VIS FRAG
 R"(#version 330 core
 void main(){
 	gl_FragColor = vec4(1,1,0,1);
-})";
-	visshader.reset(new OpenGLShaderProgram(context));
-	visshader->addVertexShader(visvert);
-	visshader->addFragmentShader(visfrag);
-	visshader->link();
+})");
 
-	oversamplingvert =
+	compileshader(oversamplingshader,
+//OVERSAMPLING VERT
 R"(#version 330 core
 in vec2 aPos;
 uniform vec2 texscale;
@@ -157,8 +144,8 @@ void main(){
 	gl_Position = vec4(aPos*pos.zw+pos.xy,0,1);
 	uv = aPos*texscale;
 	highlightcoord = vec2((aPos.x-selection)*4.3214285714,aPos.y*3.3-1.1642857143);
-})";
-	oversamplingfrag =
+})",
+//OVERSAMPLING FRAG
 R"(#version 330 core
 in vec2 uv;
 in vec2 highlightcoord;
@@ -167,13 +154,10 @@ void main(){
 	float tex = texture2D(ostex,uv).b;
 	if(highlightcoord.x>0&&highlightcoord.x<1&&highlightcoord.y>0&&highlightcoord.y<1)tex=1-tex;
 	gl_FragColor = vec4(1,1,1,tex);
-})";
-	oversamplingshader.reset(new OpenGLShaderProgram(context));
-	oversamplingshader->addVertexShader(oversamplingvert);
-	oversamplingshader->addFragmentShader(oversamplingfrag);
-	oversamplingshader->link();
+})");
 
-	creditsvert =
+	compileshader(creditsshader,
+//CREDITS VERT
 R"(#version 330 core
 in vec2 aPos;
 uniform vec2 texscale;
@@ -184,8 +168,8 @@ void main(){
 	gl_Position = vec4(aPos*pos.zw+pos.xy,0,1);
 	uv = vec2(aPos.x*texscale.x,1-(1-aPos.y)*texscale.y);
 	xpos = aPos.x;
-})";
-	creditsfrag =
+})",
+//CREDITS FRAG
 R"(#version 330 core
 in vec2 uv;
 in float xpos;
@@ -197,11 +181,7 @@ void main(){
 	if(xpos+shineprog < .65 && xpos+shineprog > 0)
 		shine = texture2D(creditstex,uv+vec2(shineprog,0)).g;
 	gl_FragColor = vec4(vec2(creditols.r),shine,creditols.g);
-})";
-	creditsshader.reset(new OpenGLShaderProgram(context));
-	creditsshader->addVertexShader(creditsvert);
-	creditsshader->addFragmentShader(creditsfrag);
-	creditsshader->link();
+})");
 
 	basetex.loadImage(ImageCache::getFromMemory(BinaryData::base_png, BinaryData::base_pngSize));
 	basetex.bind();
@@ -225,6 +205,14 @@ void main(){
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 
 	context.extensions.glGenBuffers(1, &arraybuffer);
+}
+void ProtoAudioProcessorEditor::compileshader(std::unique_ptr<OpenGLShaderProgram> &shader, String vertexshader, String fragmentshader) {
+	shader.reset(new OpenGLShaderProgram(context));
+	if(!shader->addVertexShader(vertexshader))
+		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Vertex shader error",shader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at arihanan@proton.me. THANKS!","OK!");
+	if(!shader->addFragmentShader(fragmentshader))
+		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Fragment shader error",shader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at arihanan@proton.me. THANKS!","OK!");
+	shader->link();
 }
 void ProtoAudioProcessorEditor::renderOpenGL() {
 	glEnable(GL_BLEND);

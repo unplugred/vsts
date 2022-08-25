@@ -54,7 +54,8 @@ PisstortionAudioProcessorEditor::~PisstortionAudioProcessorEditor() {
 }
 
 void PisstortionAudioProcessorEditor::newOpenGLContextCreated() {
-	basevert =
+	compileshader(baseshader,
+//BASE VERT
 R"(#version 330 core
 in vec2 aPos;
 uniform vec2 texscale;
@@ -64,8 +65,8 @@ void main(){
 	gl_Position = vec4(aPos*2-1,0,1);
 	v_TexCoord = vec2(aPos.x*texscale.x,1-(1-aPos.y)*texscale.y);
 	circlecoord = aPos;
-})";
-	basefrag =
+})",
+//BASE FRAG
 R"(#version 330 core
 in vec2 v_TexCoord;
 in vec2 circlecoord;
@@ -81,13 +82,10 @@ void main(){
 	float gradient = (1-v_TexCoord.y)*.5+bubbles*.3;
 	float grayscale = c.g*.95+c.b*.85+(1-c.r-c.g-c.b)*.05;
 	gl_FragColor = vec4(vec3(grayscale)+c.r*gradient+c.r*(1-gradient)*vec3(0.984,0.879,0.426),1);
-})";
-	baseshader.reset(new OpenGLShaderProgram(context));
-	baseshader->addVertexShader(basevert);
-	baseshader->addFragmentShader(basefrag);
-	baseshader->link();
+})");
 
-	knobvert =
+	compileshader(knobshader,
+//KNOB VERT
 R"(#version 330 core
 in vec2 aPos;
 uniform vec2 texscale;
@@ -104,8 +102,8 @@ void main(){
 		pos.x*sin(knobrot)+pos.y*cos(knobrot)-1+knobpos.y,0,1);
 	v_TexCoord = vec2(aPos.x*texscale.x,1-(1-aPos.y)*texscale.y);
 	circlecoord = gl_Position.xy*.5+.5;
-})";
-	knobfrag =
+})",
+//KNOB FRAG
 R"(#version 330 core
 in vec2 v_TexCoord;
 in vec2 circlecoord;
@@ -121,13 +119,10 @@ void main(){
 		col = .05 + c.b*.8 + col*.1;
 		gl_FragColor = vec4(vec3(col),c.r);
 	} else gl_FragColor = vec4(0);
-})";
-	knobshader.reset(new OpenGLShaderProgram(context));
-	knobshader->addVertexShader(knobvert);
-	knobshader->addFragmentShader(knobfrag);
-	knobshader->link();
+})");
 
-	visvert = 
+	compileshader(visshader,
+//VIS VERT
 R"(#version 330 core
 in vec2 aPos;
 uniform vec2 texscale;
@@ -135,8 +130,8 @@ out vec2 basecoord;
 void main(){
 	gl_Position = vec4(aPos,0,1);
 	basecoord = vec2((aPos.x+1)*texscale.x*.5,1-(1-aPos.y)*texscale.y*.5);
-})";
-	visfrag = 
+})",
+//VIS FRAG
 R"(#version 330 core
 in vec2 basecoord;
 uniform sampler2D basetex;
@@ -144,13 +139,10 @@ uniform float alpha;
 void main(){
 	float base = texture2D(basetex,basecoord).r;
 	gl_FragColor = vec4(.05,.05,.05,base <= 0 ? alpha : 0.0);
-})";
-	visshader.reset(new OpenGLShaderProgram(context));
-	visshader->addVertexShader(visvert);
-	visshader->addFragmentShader(visfrag);
-	visshader->link();
+})");
 
-	oversamplingvert =
+	compileshader(oversamplingshader,
+//OVERSAMPLING VERT
 R"(#version 330 core
 in vec2 aPos;
 uniform vec2 texscale;
@@ -161,8 +153,8 @@ void main(){
 	gl_Position = vec4(aPos.x-.5,aPos.y*.2+.7,0,1);
 	basecoord = vec2((aPos.x+.5)*.5*texscale.x,1-(1.5-aPos.y)*.1*texscale.y);
 	highlightcoord = vec2((aPos.x-selection)*4.3214285714,aPos.y*3.3-1.1642857143);
-})";
-	oversamplingfrag =
+})",
+//OVERSAMPLING FRAG
 R"(#version 330 core
 in vec2 basecoord;
 in vec2 highlightcoord;
@@ -179,13 +171,10 @@ void main(){
 	} else {
 		gl_FragColor = vec4(0);
 	}
-})";
-	oversamplingshader.reset(new OpenGLShaderProgram(context));
-	oversamplingshader->addVertexShader(oversamplingvert);
-	oversamplingshader->addFragmentShader(oversamplingfrag);
-	oversamplingshader->link();
+})");
 
-	creditsvert =
+	compileshader(creditsshader,
+//CREDITS VERT
 R"(#version 330 core
 in vec2 aPos;
 uniform vec2 texscale;
@@ -196,8 +185,8 @@ void main(){
 	gl_Position = vec4(aPos.x*2-1,1-(1-aPos.y*(57./462.))*2,0,1);
 	v_TexCoord = vec2(aPos.x*texscale.x,1-(1-aPos.y)*texscale.y);
 	basecoord = vec2(aPos.x*basescale.x,1-(.5-gl_Position.y*.5)*basescale.y);
-})";
-	creditsfrag =
+})",
+//CREDITS FRAG
 R"(#version 330 core
 in vec2 v_TexCoord;
 in vec2 basecoord;
@@ -222,13 +211,10 @@ void main(){
 		}
 	}
 	gl_FragColor = vec4(vec3(.05+shine*.8),max(min((creditols-.5)*dpi+.5,1),0));
-})";
-	creditsshader.reset(new OpenGLShaderProgram(context));
-	creditsshader->addVertexShader(creditsvert);
-	creditsshader->addFragmentShader(creditsfrag);
-	creditsshader->link();
+})");
 
-	circlevert =
+	compileshader(circleshader,
+//CIRCLE VERT
 R"(#version 330 core
 in vec2 aPos;
 uniform vec2 pos;
@@ -238,19 +224,15 @@ void main(){
 	float f = .1;
 	gl_Position = vec4((aPos*2-1)*vec2(1,ratio)*f+pos*2-1,0,1);
 	v_TexCoord = aPos*2-1;
-})";
-	circlefrag =
+})",
+//CIRCLE FRAG
 R"(#version 330 core
 in vec2 v_TexCoord;
 void main(){
 	float x = v_TexCoord.x*v_TexCoord.x+v_TexCoord.y*v_TexCoord.y;
 	float f = .5;
 	gl_FragColor = vec4(1,1,1,(x>(1-(1-f)*.5)?(1-x):(x-f))*100);
-})";
-	circleshader.reset(new OpenGLShaderProgram(context));
-	circleshader->addVertexShader(circlevert);
-	circleshader->addFragmentShader(circlefrag);
-	circleshader->link();
+})");
 
 	framebuffer.initialise(context, getWidth()*dpi, getHeight()*dpi);
 	glBindTexture(GL_TEXTURE_2D, framebuffer.getTextureID());
@@ -281,6 +263,14 @@ void main(){
 	context.extensions.glGenBuffers(1, &arraybuffer);
 
 	audioProcessor.logger.init(&context,getWidth(),getHeight());
+}
+void PisstortionAudioProcessorEditor::compileshader(std::unique_ptr<OpenGLShaderProgram> &shader, String vertexshader, String fragmentshader) {
+	shader.reset(new OpenGLShaderProgram(context));
+	if(!shader->addVertexShader(vertexshader))
+		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Vertex shader error",shader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at arihanan@proton.me. THANKS!","OK!");
+	if(!shader->addFragmentShader(fragmentshader))
+		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Fragment shader error",shader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at arihanan@proton.me. THANKS!","OK!");
+	shader->link();
 }
 void PisstortionAudioProcessorEditor::renderOpenGL() {
 	glEnable(GL_BLEND);
@@ -340,7 +330,7 @@ void PisstortionAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	for (int i = 0; i < knobcount; i++) {
 		knobshader->setUniform("knobpos",((float)knobs[i].x*2)/getWidth(),2-((float)knobs[i].y*2)/getHeight());
-		knobshader->setUniform("knobrot",mod((knobs[i].lerpedvalue-.5f)*.748f-.125,1)*-6.2831853072);
+		knobshader->setUniform("knobrot",(float)fmod((knobs[i].lerpedvalue-.5f)*.748f-.125f,1)*-6.2831853072f);
 		knobshader->setUniform("hover",knobs[i].hover<0.5?4*knobs[i].hover*knobs[i].hover*knobs[i].hover:1-(float)pow(2-2*knobs[i].hover,3)/2);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	}

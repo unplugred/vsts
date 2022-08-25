@@ -28,7 +28,8 @@ PNCHAudioProcessorEditor::~PNCHAudioProcessorEditor() {
 }
 
 void PNCHAudioProcessorEditor::newOpenGLContextCreated() {
-	basevert =
+	compileshader(baseshader,
+//BASE VERT
 R"(#version 330 core
 in vec2 aPos;
 uniform vec2 letterscale;
@@ -36,8 +37,8 @@ out vec2 uv;
 void main(){
 	gl_Position = vec4(aPos*2-1,0,1);
 	uv = vec2((aPos.x-.0078125)*letterscale.x,1-(1-aPos.y)*letterscale.y);
-})";
-	basefrag =
+})",
+//BASE FRAG
 R"(#version 330 core
 in vec2 uv;
 uniform sampler2D tex;
@@ -57,13 +58,10 @@ void main(){
 		float o = texture2D(tex,vec2(mod(uv.x,1)*texscale.x,1-(1-(mod(uv.y,1)-id))*texscale.y)).r;
 		gl_FragColor = vec4(o*colone+(1-o)*coltwo,1);
 	}
-})";
-	baseshader.reset(new OpenGLShaderProgram(context));
-	baseshader->addVertexShader(basevert);
-	baseshader->addFragmentShader(basefrag);
-	baseshader->link();
+})");
 
-	knobvert =
+	compileshader(knobshader,
+//KNOB VERT
 R"(#version 330 core
 in vec2 aPos;
 uniform vec2 texscale;
@@ -75,8 +73,8 @@ void main(){
 	gl_Position = vec4(aPos*2-1+shake,0,1);
 	uv = vec2(aPos.x*texscale.x,1-(1-aPos.y)*texscale.y);
 	balluv = vec2(aPos.x*texscale.x,1-(1-aPos.y)*texscale.y)-knobrot;
-})";
-	knobfrag =
+})",
+//KNOB FRAG
 R"(#version 330 core
 in vec2 uv;
 in vec2 balluv;
@@ -88,13 +86,10 @@ void main(){
 	vec2 ball = texture2D(tex,balluv).gb;
 	float o = (c.r==c.g?1:0)+(ball.r>.5&&ball.g<.5?1:0);
 	gl_FragColor = vec4(o*colone+(1-o)*coltwo,((c.r+c.g)>.5)?1:0);
-})";
-	knobshader.reset(new OpenGLShaderProgram(context));
-	knobshader->addVertexShader(knobvert);
-	knobshader->addFragmentShader(knobfrag);
-	knobshader->link();
+})");
 
-	creditsvert =
+	compileshader(creditsshader,
+//CREDITS VERT
 R"(#version 330 core
 in vec2 aPos;
 uniform vec2 texscale;
@@ -102,8 +97,8 @@ out vec2 uv;
 void main(){
 	gl_Position = vec4(aPos.x*1.875-0.9375,aPos.y*1.891892-0.945946,0,1);
 	uv = vec2(aPos.x*texscale.x,1-(1-aPos.y)*texscale.y);
-})";
-	creditsfrag =
+})",
+//CREDITS FRAG
 R"(#version 330 core
 in vec2 uv;
 uniform sampler2D creditstex;
@@ -114,11 +109,7 @@ void main(){
 	vec3 c = texture2D(creditstex,uv).rgb;
 	float o = (hover==1?c.r:0.0)+c.g+(hover==2?c.b:0.0);
 	gl_FragColor = vec4(o*colone+(1-o)*coltwo,1);
-})";
-	creditsshader.reset(new OpenGLShaderProgram(context));
-	creditsshader->addVertexShader(creditsvert);
-	creditsshader->addFragmentShader(creditsfrag);
-	creditsshader->link();
+})");
 
 	basetex.loadImage(ImageCache::getFromMemory(BinaryData::base_png, BinaryData::base_pngSize));
 	basetex.bind();
@@ -137,6 +128,14 @@ void main(){
 	context.extensions.glGenBuffers(1, &arraybuffer);
 
 	audioProcessor.logger.init(&context,getWidth(),getHeight());
+}
+void PNCHAudioProcessorEditor::compileshader(std::unique_ptr<OpenGLShaderProgram> &shader, String vertexshader, String fragmentshader) {
+	shader.reset(new OpenGLShaderProgram(context));
+	if(!shader->addVertexShader(vertexshader))
+		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Vertex shader error",shader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at arihanan@proton.me. THANKS!","OK!");
+	if(!shader->addFragmentShader(fragmentshader))
+		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Fragment shader error",shader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at arihanan@proton.me. THANKS!","OK!");
+	shader->link();
 }
 void PNCHAudioProcessorEditor::renderOpenGL() {
 	glEnable(GL_BLEND);
