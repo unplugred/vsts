@@ -141,12 +141,10 @@ double RedBassAudioProcessor::calculaterelease(double value) {
 	return timestwo*timestwo;
 }
 double RedBassAudioProcessor::calculatelowpass(double value) {
-	double timestwo = value*131.4213562373+10;
-	return timestwo*timestwo;
+	return mapToLog10(value,100.0,20000.0);
 }
 double RedBassAudioProcessor::calculatefrequency(double value) {
-	double timestwo = value*5.527864045+4.472135955;
-	return timestwo*timestwo;
+	return mapToLog10(value,20.0,100.0);
 }
 double RedBassAudioProcessor::calculatethreshold(double value) {
 	return pow(value,2)*.7f;
