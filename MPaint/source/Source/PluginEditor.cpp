@@ -12,6 +12,7 @@ MPaintAudioProcessorEditor::MPaintAudioProcessorEditor(MPaintAudioProcessor& p, 
 	setSize(468, error?180:40);
 	setResizable(false, false);
 	setOpaque(true);
+	dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->dpi/96.f;
 
 	context.setRenderer(this);
 	context.attachTo(*this);
@@ -58,8 +59,6 @@ void main(){
 	shader->addVertexShader(vert);
 	shader->addFragmentShader(frag);
 	shader->link();
-
-	dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->dpi/96.f;
 
 	errortex.loadImage(ImageCache::getFromMemory(BinaryData::error_png, BinaryData::error_pngSize));
 	errortex.bind();
