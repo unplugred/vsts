@@ -6,10 +6,12 @@ cmake_minimum_required(VERSION 3.15)
 project(CRMBL VERSION 1.0.0)
 
 include(FetchContent)
+Set(FETCHCONTENT_QUIET FALSE)
 FetchContent_Declare(
 	JUCE
 	GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
-	GIT_TAG 7.0.1
+	GIT_TAG 7.0.2
+	GIT_PROGRESS TRUE
 )
 FetchContent_MakeAvailable(JUCE)
 
