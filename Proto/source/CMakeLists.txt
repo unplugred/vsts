@@ -22,7 +22,16 @@ option(JUCE_BUILD_EXAMPLES "Build examples" OFF)
 option(JUCE_ENABLE_MODULE_SOURCE_GROUPS "Enable module source groups" ON)
 option(JUCE_COPY_PLUGIN_AFTER_BUILD "Copy plugin after build" ON)
 
-juce_set_vst2_sdk_path(C:/vstsdk2.4)
+if(MSVC)
+	juce_set_vst2_sdk_path(C:/vstsdk2.4)
+	set(vstdir "C:/docs/MEGA/vsts/64")
+	set(vstthreedir "C:/Program Files/Common Files/VST3")
+endif(MSVC)
+if(UNIX AND NOT APPLE)
+	juce_set_vst2_sdk_path(/home/unplugred/projects/JUUUCE/vstsdk2.4)
+	set(vstdir "/home/unplugred/MEGA/vsts/linux/vst2")
+	set(vstthreedir "/home/unplugred/MEGA/vsts/linux/vst3")
+endif()
 
 juce_add_plugin("${PROJECT_NAME}"
 	COMPANY_NAME "unplugred"
@@ -40,8 +49,8 @@ juce_add_plugin("${PROJECT_NAME}"
 	VST3_CATEGORY Tools
 	VST2_CATEGORY kPlugCategEffect
 	COPY_PLUGIN_AFTER_BUILD TRUE
-	VST_COPY_DIR "C:/docs/MEGA/vsts/64"
-	VST3_COPY_DIR "C:/Program Files/Common Files/VST3")
+	VST_COPY_DIR "${vstdir}"
+	VST3_COPY_DIR "${vstthreedir}")
 
 target_sources("${PROJECT_NAME}" PRIVATE
 	Source/CoolLogger.cpp
@@ -68,6 +77,7 @@ juce_add_binary_data(BinaryData HEADER_NAME BinaryData.h NAMESPACE BinaryData SO
 	Resources/credits.png
 	Resources/dbg_txt.png
 	Resources/oversampling.png)
+set_target_properties(BinaryData PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 
 target_link_libraries("${PROJECT_NAME}" PRIVATE
 	#juce::juce_audio_basics
