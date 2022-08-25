@@ -33,6 +33,7 @@ ProtoAudioProcessorEditor::ProtoAudioProcessorEditor (ProtoAudioProcessor& p, in
 	setSize(30+106*2,162+100*3);
 	setResizable(false, false);
 	calcvis();
+	dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->dpi/96.f;
 
 	setOpaque(true);
 	context.setRenderer(this);
@@ -201,8 +202,6 @@ void main(){
 	creditsshader->addVertexShader(creditsvert);
 	creditsshader->addFragmentShader(creditsfrag);
 	creditsshader->link();
-
-	dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->dpi/96.f;
 
 	basetex.loadImage(ImageCache::getFromMemory(BinaryData::base_png, BinaryData::base_pngSize));
 	basetex.bind();
