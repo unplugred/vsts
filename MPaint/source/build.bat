@@ -37,7 +37,7 @@ If /I "%_r%"=="y" "./build/%_n%_artefacts/%_m%/Standalone/%_n%.exe"
 goto end
 
 :configure
-cmake -B build -G "Visual Studio 17 2022"
+cmake -B build -G "Visual Studio 17 2022" -T host=x64 -A x64
 goto end
 
 :end
