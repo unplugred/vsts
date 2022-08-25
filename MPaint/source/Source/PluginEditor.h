@@ -39,8 +39,6 @@ private:
 	OpenGLTexture icontex;
 	OpenGLTexture rulertex;
 	std::unique_ptr<OpenGLShaderProgram> shader;
-	String vert;
-	String frag;
 
 	bool loaded = false;
 	bool error = false;

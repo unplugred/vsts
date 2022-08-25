@@ -52,7 +52,8 @@ void VuAudioProcessorEditor::resized() {
 void VuAudioProcessorEditor::newOpenGLContextCreated() {
 	audioProcessor.logger.init(&context,getWidth(),getHeight());
 
-	vertshader =
+	vushader.reset(new OpenGLShaderProgram(context));
+	if(!vushader->addVertexShader(
 R"(#version 330 core
 in vec2 aPos;
 uniform float rotation;
@@ -88,8 +89,9 @@ void main(){
 	metercoords.y -= stereoinv*.06+.04;
 	if(right < .5) lgcoords = aPos*lgsize.xy+vec2(lgsize.z-lgsize.x,lgsize.w);
 	else lgcoords = aPos*lgsize.xy+vec2(lgsize.z,lgsize.w);
-})";
-	fragshader =
+})"))
+		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Vertex shader error",shader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at arihanan@proton.me. THANKS!","OK!");
+	if(!vushader->addFragmentShader(
 R"(#version 330 core
 in vec2 v_TexCoord;
 in vec2 metercoords;
@@ -163,15 +165,10 @@ void main(){
 			else gl_FragColor = gl_FragColor*(1-lg.g)+vec4(1.,.4549,.2588,1.)*lg.r;
 		}
 	}
-})";
+})"))
+		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Fragment shader error",shader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at arihanan@proton.me. THANKS!","OK!");
 
-	vushader.reset(new OpenGLShaderProgram(context));
-	if(
-		!vushader->addVertexShader(vertshader) ||
-		!vushader->addFragmentShader(fragshader) ||
-		!vushader->link()) {
-		DBG(vushader->getLastError());
-	}
+	vushader->link();
 
 	vutex.loadImage(ImageCache::getFromMemory(BinaryData::map_png, BinaryData::map_pngSize));
 	vutex.bind();

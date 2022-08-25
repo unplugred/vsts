@@ -42,15 +42,16 @@ RedBassAudioProcessorEditor::~RedBassAudioProcessorEditor() {
 }
 
 void RedBassAudioProcessorEditor::newOpenGLContextCreated() {
-	feedbackvert =
+	compileshader(feedbackshader,
+//FEEDBACK VERT
 R"(#version 330 core
 in vec2 aPos;
 out vec2 uv;
 void main(){
 	gl_Position = vec4(aPos*2-1,0,1);
 	uv = aPos*2.1+.003;
-})";
-	feedbackfrag =
+})",
+//FEEDBACK FRAG
 R"(#version 330 core
 in vec2 uv;
 uniform sampler2D buffertex;
@@ -58,13 +59,10 @@ uniform float vis;
 void main(){
 	if(uv.x > 1) gl_FragColor = vec4(vis,vis,vis,1);
 	else gl_FragColor = texture2D(buffertex,uv);
-})";
-	feedbackshader.reset(new OpenGLShaderProgram(context));
-	feedbackshader->addVertexShader(feedbackvert);
-	feedbackshader->addFragmentShader(feedbackfrag);
-	feedbackshader->link();
+})");
 
-	basevert =
+	compileshader(baseshader,
+//BASE VERT
 R"(#version 330 core
 in vec2 aPos;
 uniform vec2 texscale;
@@ -74,8 +72,8 @@ void main(){
 	gl_Position = vec4(aPos*2-1,0,1);
 	texuv = vec2(aPos.x*texscale.x,1-(1-aPos.y)*texscale.y);
 	uv = vec2(aPos.x,(aPos.y-0.0318627)*1.0652742);
-})";
-	basefrag =
+})",
+//BASE FRAG
 R"(#version 330 core
 in vec2 texuv;
 in vec2 uv;
@@ -102,13 +100,10 @@ void main(){
 	} else {
 		gl_FragColor = texture2D(buffertex,vec2((uv.x>.5?(1-uv.x):(uv.x))*2,uv.y))*vec4(.5,.5,.5,1);
 	}
-})";
-	baseshader.reset(new OpenGLShaderProgram(context));
-	baseshader->addVertexShader(basevert);
-	baseshader->addFragmentShader(basefrag);
-	baseshader->link();
+})");
 
-	knobvert =
+	compileshader(knobshader,
+//KNOB VERT
 R"(#version 330 core
 in vec2 aPos;
 uniform float ratio;
@@ -121,18 +116,15 @@ void main(){
 	gl_Position = vec4(
 		(pos.x*cos(knobrot)-pos.y*sin(knobrot))*ratio-1+knobpos.x,
 		pos.x*sin(knobrot)+pos.y*cos(knobrot)-1+knobpos.y,0,1);
-})";
-	knobfrag =
+})",
+//KNOB FRAG
 R"(#version 330 core
 void main(){
 	gl_FragColor = vec4(1);
-})";
-	knobshader.reset(new OpenGLShaderProgram(context));
-	knobshader->addVertexShader(knobvert);
-	knobshader->addFragmentShader(knobfrag);
-	knobshader->link();
+})");
 
-	togglevert =
+	compileshader(toggleshader,
+//TOGGLE VERT
 R"(#version 330 core
 in vec2 aPos;
 uniform vec2 basescale;
@@ -143,8 +135,8 @@ out vec2 basecoord;
 void main(){
 	gl_Position = vec4(aPos*2*knobscale-knobscale-1+knobpos,0,1);
 	basecoord = vec2((gl_Position.x*.5+.5)*basescale.x,1-(.5-gl_Position.y*.5)*basescale.y);
-})";
-	togglefrag =
+})",
+//TOGGLE FRAG
 R"(#version 330 core
 in vec2 basecoord;
 uniform sampler2D basetex;
@@ -156,13 +148,10 @@ void main(){
 	else
 		c.r *= c.g;
 	gl_FragColor = vec4(1,1,1,c.r);
-})";
-	toggleshader.reset(new OpenGLShaderProgram(context));
-	toggleshader->addVertexShader(togglevert);
-	toggleshader->addFragmentShader(togglefrag);
-	toggleshader->link();
+})");
 
-	textvert =
+	compileshader(textshader,
+//TEXT VERT
 R"(#version 330 core
 in vec2 aPos;
 uniform vec2 size;
@@ -173,18 +162,14 @@ out vec2 uv;
 void main(){
 	gl_Position = vec4((aPos*size*vec2(length,1)+pos)*2-1,0,1);
 	uv = vec2((aPos.x*length+letter)*.0625,aPos.y);
-})";
-	textfrag =
+})",
+//TEXT FRAG
 R"(#version 330 core
 in vec2 uv;
 uniform sampler2D tex;
 void main(){
 	gl_FragColor = vec4(1,1,1,texture2D(tex,uv).r);
-})";
-	textshader.reset(new OpenGLShaderProgram(context));
-	textshader->addVertexShader(textvert);
-	textshader->addFragmentShader(textfrag);
-	textshader->link();
+})");
 
 	basetex.loadImage(ImageCache::getFromMemory(BinaryData::base_png, BinaryData::base_pngSize));
 	basetex.bind();
@@ -208,6 +193,14 @@ void main(){
 	context.extensions.glGenBuffers(1, &arraybuffer);
 
 	audioProcessor.logger.init(&context,getWidth(),getHeight());
+}
+void RedBassAudioProcessorEditor::compileshader(std::unique_ptr<OpenGLShaderProgram> &shader, String vertexshader, String fragmentshader) {
+	shader.reset(new OpenGLShaderProgram(context));
+	if(!shader->addVertexShader(vertexshader))
+		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Vertex shader error",shader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at arihanan@proton.me. THANKS!","OK!");
+	if(!shader->addFragmentShader(fragmentshader))
+		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Fragment shader error",shader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at arihanan@proton.me. THANKS!","OK!");
+	shader->link();
 }
 void RedBassAudioProcessorEditor::renderOpenGL() {
 	glEnable(GL_BLEND);

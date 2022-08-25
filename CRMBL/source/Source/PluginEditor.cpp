@@ -144,7 +144,8 @@ CRMBLAudioProcessorEditor::~CRMBLAudioProcessorEditor() {
 void CRMBLAudioProcessorEditor::newOpenGLContextCreated() {
 	audioProcessor.logger.init(&context,getWidth(),getHeight());
 
-	basevert =
+	compileshader(baseshader,
+//BASE VERT
 R"(#version 330 core
 in vec2 aPos;
 uniform vec2 texscale;
@@ -153,8 +154,8 @@ out vec2 uv;
 void main(){
 	gl_Position = vec4(aPos*2-1-vec2(0,offset),0,1);
 	uv = vec2(aPos.x*texscale.x,1-(1-aPos.y)*texscale.y);
-})";
-	basefrag =
+})",
+//BASE FRAG
 R"(#version 330 core
 in vec2 uv;
 uniform sampler2D basetex;
@@ -173,13 +174,10 @@ void main(){
 			gl_FragColor = vec4(0,0,1,col.a);
 		if(col.r >= .7) gl_FragColor.g = gl_FragColor.r;
 	}
-})";
-	baseshader.reset(new OpenGLShaderProgram(context));
-	baseshader->addVertexShader(basevert);
-	baseshader->addFragmentShader(basefrag);
-	baseshader->link();
+})");
 
-	logovert =
+	compileshader(logoshader,
+//LOGO VERT
 R"(#version 330 core
 in vec2 aPos;
 uniform vec2 texscale;
@@ -187,8 +185,8 @@ out vec2 uv;
 void main(){
 	gl_Position = vec4(aPos*2-1,0,1);
 	uv = vec2(aPos.x*texscale.x,1-(1-aPos.y)*texscale.y);
-})";
-	logofrag =
+})",
+//LOGO FRAG
 R"(#version 330 core
 in vec2 uv;
 uniform sampler2D basetex;
@@ -201,13 +199,10 @@ void main(){
 	gl_FragColor = vec4(0);
 	if(col.r >= .85)
 		gl_FragColor = vec4(vec2(col.g*(1-max(min((texture2D(basetex,vec2(min(uv.x+websiteht,.3),uv.y)).b-.5)*dpi+.5,1),0)*.5)),1,col.a);
-})";
-	logoshader.reset(new OpenGLShaderProgram(context));
-	logoshader->addVertexShader(logovert);
-	logoshader->addFragmentShader(logofrag);
-	logoshader->link();
+})");
 
-	knobvert =
+	compileshader(knobshader,
+//KNOB VERT
 R"(#version 330 core
 in vec2 aPos;
 uniform float knobrot;
@@ -219,8 +214,8 @@ void main(){
 	uv = vec2(
 		(aPos.x-.5)*cos(knobrot)-(aPos.y-.5)*sin(knobrot),
 		(aPos.x-.5)*sin(knobrot)+(aPos.y-.5)*cos(knobrot))*2;
-})";
-	knobfrag =
+})",
+//KNOB FRAG
 R"(#version 330 core
 in vec2 uv;
 uniform int hoverstate;
@@ -247,13 +242,10 @@ void main(){
 	}
 	gl_FragColor.r = 1-(1-gl_FragColor.r)*bright;
 	if(dark > .5) gl_FragColor = vec4(gl_FragColor.r,gl_FragColor.r,gl_FragColor.r,gl_FragColor.a);
-})";
-	knobshader.reset(new OpenGLShaderProgram(context));
-	knobshader->addVertexShader(knobvert);
-	knobshader->addFragmentShader(knobfrag);
-	knobshader->link();
+})");
 
-	feedbackvert =
+	compileshader(feedbackshader,
+//FEEDBACK VERT
 R"(#version 330 core
 in vec2 aPos;
 uniform float pitch;
@@ -265,8 +257,8 @@ void main(){
 	uv = vec2(
 		(aPos.x-.5)*cos(pitch)-(aPos.y-.5)*sin(pitch),
 		(aPos.x-.5)*sin(pitch)+(aPos.y-.5)*cos(pitch))+.5;
-})";
-	feedbackfrag =
+})",
+//FEEDBACK FRAG
 R"(#version 330 core
 in vec2 uv;
 in vec2 ruv;
@@ -311,21 +303,18 @@ void main(){
 		gl_FragColor.b = gl_FragColor.b*.5+sample(feedbacktex,nuv+vec2((time.z-.008*lowpass)*ratio,time.z)).b*.5;
 	}
 	gl_FragColor   = vec4(vec3(col1.r,col2.r,col1.r)*vec3(col1.g,col2.g,col1.g)+(1-vec3(col1.g,col2.g,col1.g))*feedback*gl_FragColor.rgb,1);
-})";
-	feedbackshader.reset(new OpenGLShaderProgram(context));
-	feedbackshader->addVertexShader(feedbackvert);
-	feedbackshader->addFragmentShader(feedbackfrag);
-	feedbackshader->link();
+})");
 
-	buffervert =
+	compileshader(buffershader,
+//BUFFER VERT
 R"(#version 330 core
 in vec2 aPos;
 out vec2 uv;
 void main(){
 	gl_Position = vec4(aPos*2-1,0,1);
 	uv = aPos;
-})";
-	bufferfrag =
+})",
+//BUFFER FRAG
 R"(#version 330 core
 in vec2 uv;
 uniform sampler2D feedbacktex;
@@ -338,13 +327,10 @@ void main(){
 	if(col.g < 1)
 		gl_FragColor = gl_FragColor*col.b+texture2D(feedbacktex,uv)*vec4(vec3(wet),1)*(1-col.b);
 	gl_FragColor = vec4(abs(gl_FragColor.rgb*gl_FragColor.a-vec3(pow(reverse,.5),reverse,pow(reverse,2.))),1);
-})";
-	buffershader.reset(new OpenGLShaderProgram(context));
-	buffershader->addVertexShader(buffervert);
-	buffershader->addFragmentShader(bufferfrag);
-	buffershader->link();
+})");
 
-	numbervert =
+	compileshader(numbershader,
+//NUMBER VERT
 R"(#version 330 core
 in vec2 aPos;
 uniform vec2 size;
@@ -355,19 +341,15 @@ out vec2 uv;
 void main(){
 	gl_Position = vec4(aPos*size*vec2(length,1)+pos,0,1);
 	uv = (aPos+index)*vec2(.0625*length,.5);
-})";
-	numberfrag =
+})",
+//NUMBER FRAG
 R"(#version 330 core
 in vec2 uv;
 uniform sampler2D numbertex;
 uniform vec3 col;
 void main(){
 	gl_FragColor = vec4(texture2D(numbertex,uv).r)*vec4(col,1);
-})";
-	numbershader.reset(new OpenGLShaderProgram(context));
-	numbershader->addVertexShader(numbervert);
-	numbershader->addFragmentShader(numberfrag);
-	numbershader->link();
+})");
 
 	basetex.loadImage(ImageCache::getFromMemory(BinaryData::map_png, BinaryData::map_pngSize));
 	basetex.bind();
@@ -394,6 +376,14 @@ void main(){
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 	context.extensions.glGenBuffers(1, &arraybuffer);
+}
+void CRMBLAudioProcessorEditor::compileshader(std::unique_ptr<OpenGLShaderProgram> &shader, String vertexshader, String fragmentshader) {
+	shader.reset(new OpenGLShaderProgram(context));
+	if(!shader->addVertexShader(vertexshader))
+		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Vertex shader error",shader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at arihanan@proton.me. THANKS!","OK!");
+	if(!shader->addFragmentShader(fragmentshader))
+		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Fragment shader error",shader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at arihanan@proton.me. THANKS!","OK!");
+	shader->link();
 }
 void CRMBLAudioProcessorEditor::renderOpenGL() {
 	glEnable(GL_BLEND);

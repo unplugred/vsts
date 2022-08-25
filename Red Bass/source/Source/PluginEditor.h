@@ -26,6 +26,7 @@ public:
 	~RedBassAudioProcessorEditor() override;
 
 	void newOpenGLContextCreated() override;
+	void compileshader(std::unique_ptr<OpenGLShaderProgram> &shader, String vertexshader, String fragmentshader);
 	void renderOpenGL() override;
 	void openGLContextClosing() override;
 	void paint (Graphics&) override;
@@ -58,14 +59,10 @@ private:
 	float vis = 0;
 	OpenGLFrameBuffer framebuffer;
 	std::unique_ptr<OpenGLShaderProgram> feedbackshader;
-	String feedbackvert;
-	String feedbackfrag;
 
 	float credits = 0;
 	OpenGLTexture basetex;
 	std::unique_ptr<OpenGLShaderProgram> baseshader;
-	String basevert;
-	String basefrag;
 
 	int hover = -1;
 	int initialdrag = 0;
@@ -74,17 +71,11 @@ private:
 	float valueoffset = 0;
 	Point<int> dragpos = Point<int>(0,0);
 	std::unique_ptr<OpenGLShaderProgram> knobshader;
-	String knobvert;
-	String knobfrag;
 
 	std::unique_ptr<OpenGLShaderProgram> toggleshader;
-	String togglevert;
-	String togglefrag;
 
 	OpenGLTexture texttex;
 	std::unique_ptr<OpenGLShaderProgram> textshader;
-	String textvert;
-	String textfrag;
 
 	int freqfreq = 20;
 	int lowpfreq = 150;

@@ -83,23 +83,21 @@ ClickBoxAudioProcessorEditor::~ClickBoxAudioProcessorEditor() {
 void ClickBoxAudioProcessorEditor::newOpenGLContextCreated() {
 	audioProcessor.logger.init(&context,getWidth(),getHeight());
 
-	clearvert =
+	compileshader(clearshader,
+//CLEAR VERT
 R"(#version 330 core
 in vec2 aPos;
 void main() {
 	gl_Position = vec4(aPos*2-1,0,1);
-})";
-	clearfrag =
+})",
+//CLEAR FRAG
 R"(#version 330 core
 void main() {
 	gl_FragColor = vec4(.10546875,.10546875,.10546875,.15);
-})";
-	clearshader.reset(new OpenGLShaderProgram(context));
-	clearshader->addVertexShader(clearvert);
-	clearshader->addFragmentShader(clearfrag);
-	clearshader->link();
+})");
 
-	slidervert =
+	compileshader(slidershader,
+//SLIDER VERT
 R"(#version 330 core
 in vec2 aPos;
 uniform vec4 texscale;
@@ -110,8 +108,8 @@ void main() {
 	texcoord = vec2(aPos.x*texscale.z+texscale.x,1-((1-aPos.y)*texscale.w+texscale.y));
 	gl_Position = vec4(texcoord*2-1,0,1);
 	sliderpos = aPos.x*margin.x-margin.y;
-})";
-	sliderfrag =
+})",
+//SLIDER FRAG
 R"(#version 330 core
 in vec2 texcoord;
 in float sliderpos;
@@ -132,13 +130,10 @@ void main() {
 	}
 
 	gl_FragColor = vec4(color,alpha);
-})";
-	slidershader.reset(new OpenGLShaderProgram(context));
-	slidershader->addVertexShader(slidervert);
-	slidershader->addFragmentShader(sliderfrag);
-	slidershader->link();
+})");
 
-	creditsvert =
+	compileshader(creditsshader,
+//CREDITS VERT
 R"(#version 330 core
 in vec2 aPos;
 uniform float texscale;
@@ -152,8 +147,8 @@ void main() {
 		shadercoord.x*cos(rot.z)-shadercoord.y*sin(rot.z),
 		shadercoord.x*sin(rot.z)+shadercoord.y*cos(rot.z));
 	texcoord = gl_Position.xy*.5+.5;
-})";
-	creditsfrag =
+})",
+//CREDITS FRAG
 R"(#version 330 core
 in vec2 texcoord;
 in vec2 shadercoord;
@@ -192,13 +187,10 @@ void main() {
 			gl_FragColor = vec4(col>.5?color:vec3(.10546875),1);
 		}
 	} else gl_FragColor = vec4(0);
-})";
-	creditsshader.reset(new OpenGLShaderProgram(context));
-	creditsshader->addVertexShader(creditsvert);
-	creditsshader->addFragmentShader(creditsfrag);
-	creditsshader->link();
+})");
 
-	ppvert =
+	compileshader(ppshader,
+//PP VERT
 R"(#version 330 core
 in vec2 aPos;
 uniform vec2 texscale;
@@ -206,8 +198,8 @@ out vec2 texcoord;
 void main() {
 	gl_Position = vec4(aPos*2-1,0,1);
 	texcoord = aPos;
-})";
-	ppfrag =
+})",
+//PP FRAG
 R"(#version 330 core
 in vec2 texcoord;
 uniform sampler2D tex;
@@ -238,13 +230,10 @@ void main() {
 	}
 
 	gl_FragColor = vec4(col.rgb*col.a+.10546875*(1-col.a),1);
-})";
-	ppshader.reset(new OpenGLShaderProgram(context));
-	ppshader->addVertexShader(ppvert);
-	ppshader->addFragmentShader(ppfrag);
-	ppshader->link();
+})");
 
-	cursorvert =
+	compileshader(cursorshader,
+//CURSOR VERT
 R"(#version 330 core
 in vec2 aPos;
 uniform vec2 pos;
@@ -255,8 +244,8 @@ void main() {
 	gl_Position = vec4(aPos.x*.125-1.03125+pos.x,aPos.y*.125+.90625-pos.y,0,1);
 	texcoord = aPos*vec2(.5,1)+vec2(automated*.5,0);
 	basecoord = gl_Position.xy*.5+.5;
-})";
-	cursorfrag =
+})",
+//CURSOR FRAG
 R"(#version 330 core
 in vec2 texcoord;
 in vec2 basecoord;
@@ -271,11 +260,7 @@ void main() {
 		if(clamp > .5) texx.g *= texture2D(base,basecoord).b;
 		gl_FragColor = vec4(texx.g>.5?col:(clamp<.5?(col+.8):vec3(.10546875)),texx.r>.5?1:0);
 	}
-})";
-	cursorshader.reset(new OpenGLShaderProgram(context));
-	cursorshader->addVertexShader(cursorvert);
-	cursorshader->addFragmentShader(cursorfrag);
-	cursorshader->link();
+})");
 
 	slidertex.loadImage(ImageCache::getFromMemory(BinaryData::tex_png,BinaryData::tex_pngSize));
 	slidertex.bind();
@@ -304,6 +289,14 @@ void main() {
 	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
 
 	context.extensions.glGenBuffers(1,&arraybuffer);
+}
+void ClickBoxAudioProcessorEditor::compileshader(std::unique_ptr<OpenGLShaderProgram> &shader, String vertexshader, String fragmentshader) {
+	shader.reset(new OpenGLShaderProgram(context));
+	if(!shader->addVertexShader(vertexshader))
+		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Vertex shader error",shader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at arihanan@proton.me. THANKS!","OK!");
+	if(!shader->addFragmentShader(fragmentshader))
+		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Fragment shader error",shader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at arihanan@proton.me. THANKS!","OK!");
+	shader->link();
 }
 void ClickBoxAudioProcessorEditor::renderOpenGL() {
 	glEnable(GL_BLEND);

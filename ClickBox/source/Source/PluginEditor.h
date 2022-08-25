@@ -34,6 +34,7 @@ public:
 	~ClickBoxAudioProcessorEditor() override;
 
 	void newOpenGLContextCreated() override;
+	void compileshader(std::unique_ptr<OpenGLShaderProgram> &shader, String vertexshader, String fragmentshader);
 	void renderOpenGL() override;
 	void openGLContextClosing() override;
 	void paint (Graphics&) override;
@@ -81,8 +82,6 @@ private:
 		1.f,1.f};
 
 	std::unique_ptr<OpenGLShaderProgram> clearshader;
-	String clearvert;
-	String clearfrag;
 
 	int slidercount = 0;
 	slider sliders[6];
@@ -90,8 +89,6 @@ private:
 	Point<int> dragpos;
 	OpenGLTexture slidertex;
 	std::unique_ptr<OpenGLShaderProgram> slidershader;
-	String slidervert;
-	String sliderfrag;
 
 	bool trailactive = false;
 	int mousecolor = 0;
@@ -99,24 +96,18 @@ private:
 	mousepos prevpos[7];
 	OpenGLTexture cursortex;
 	std::unique_ptr<OpenGLShaderProgram> cursorshader;
-	String cursorvert;
-	String cursorfrag;
 
 	float websiteht = -1;
 	bool credits = false;
 	float shadertime = 0;
 	OpenGLTexture creditstex;
 	std::unique_ptr<OpenGLShaderProgram> creditsshader;
-	String creditsvert;
-	String creditsfrag;
 
 	float randoms[8];
 	float randomsblend = 0;
 	float ppamount = 0;
 	OpenGLFrameBuffer framebuffer;
 	std::unique_ptr<OpenGLShaderProgram> ppshader;
-	String ppvert;
-	String ppfrag;
 
 	Random random;
 

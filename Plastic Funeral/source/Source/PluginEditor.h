@@ -27,6 +27,7 @@ public:
 	~PFAudioProcessorEditor() override;
 
 	void newOpenGLContextCreated() override;
+	void compileshader(std::unique_ptr<OpenGLShaderProgram> &shader, String vertexshader, String fragmentshader);
 	void renderOpenGL() override;
 	void openGLContextClosing() override;
 	void calcvis();
@@ -61,8 +62,6 @@ private:
 
 	OpenGLTexture basetex;
 	std::unique_ptr<OpenGLShaderProgram> baseshader;
-	String basevert;
-	String basefrag;
 
 	int hover = -1;
 	int initialdrag = 0;
@@ -74,32 +73,22 @@ private:
 	Point<int> dragpos = Point<int>(0,0);
 	OpenGLTexture knobtex;
 	std::unique_ptr<OpenGLShaderProgram> knobshader;
-	String knobvert;
-	String knobfrag;
 
 	std::unique_ptr<OpenGLShaderProgram> visshader;
-	String visvert;
-	String visfrag;
 
 	float oversamplingalpha = 0;
 	float oversamplinglerped = 1;
 	bool oversampling = true;
 	std::unique_ptr<OpenGLShaderProgram> oversamplingshader;
-	String oversamplingvert;
-	String oversamplingfrag;
 
 	float websiteht = -1;
 	float creditsalpha = 0;
 	OpenGLTexture creditstex;
 	std::unique_ptr<OpenGLShaderProgram> creditsshader;
-	String creditsvert;
-	String creditsfrag;
 
 	float rms = 0;
 	OpenGLFrameBuffer framebuffer;
 	std::unique_ptr<OpenGLShaderProgram> ppshader;
-	String ppvert;
-	String ppfrag;
 
 	Random random;
 

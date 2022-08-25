@@ -35,6 +35,7 @@ public:
 	~CRMBLAudioProcessorEditor() override;
 
 	void newOpenGLContextCreated() override;
+	void compileshader(std::unique_ptr<OpenGLShaderProgram> &shader, String vertexshader, String fragmentshader);
 	void renderOpenGL() override;
 	void openGLContextClosing() override;
 	void paint(Graphics&) override;
@@ -71,13 +72,9 @@ private:
 
 	OpenGLTexture basetex;
 	std::unique_ptr<OpenGLShaderProgram> baseshader;
-	String basevert;
-	String basefrag;
 
 	float websiteht = -1;
 	std::unique_ptr<OpenGLShaderProgram> logoshader;
-	String logovert;
-	String logofrag;
 
 	int hover = -1;
 	int initialdrag = 0;
@@ -87,15 +84,11 @@ private:
 	float valueoffset = 0;
 	Point<int> dragpos = Point<int>(0,0);
 	std::unique_ptr<OpenGLShaderProgram> knobshader;
-	String knobvert;
-	String knobfrag;
 
 	int pitchnum[4]{1,0,0,0};
 	int timenum[6]{1,0,0,0,0,0};
 	OpenGLTexture numbertex;
 	std::unique_ptr<OpenGLShaderProgram> numbershader;
-	String numbervert;
-	String numberfrag;
 
 	bool oversampling = true;
 	bool postfb = true;
@@ -108,13 +101,9 @@ private:
 
 	OpenGLFrameBuffer feedbackbuffer;
 	std::unique_ptr<OpenGLShaderProgram> feedbackshader;
-	String feedbackvert;
-	String feedbackfrag;
 
 	OpenGLFrameBuffer mainbuffer;
 	std::unique_ptr<OpenGLShaderProgram> buffershader;
-	String buffervert;
-	String bufferfrag;
 
 	float dpi = 1;
 
