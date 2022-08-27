@@ -137,11 +137,13 @@ void PrismaAudioProcessor::changechannelnum(int newchannelnum) {
 void PrismaAudioProcessor::reseteverything() {
 	if(channelnum <= 0 || samplesperblock <= 0) return;
 
+	//fft
 	nextFFTBlockReady = false;
 	for(int i = 0; i < fftSize; i++) fifo[i] = 0;
 	for(int i = 0; i < fftSize*2; i++) fftData[i] = 0;
 	fifoIndex = 0;
 
+	//crossover filters
 	dsp::ProcessSpec spec;
 	spec.sampleRate = samplerate*(pots.oversampling?2:1);
 	spec.maximumBlockSize = samplesperblock;
@@ -150,7 +152,6 @@ void PrismaAudioProcessor::reseteverything() {
 		crossover[i].reset();
 		crossover[i].prepare(spec);
 	}
-
 	crossover[0].setCutoffFrequency(calcfilter(state[pots.isb?1:0].crossover[0]));
 	crossover[0].setType(dsp::LinkwitzRileyFilterType::lowpass);
 	crossover[1].setCutoffFrequency(calcfilter(state[pots.isb?1:0].crossover[1]));
@@ -170,18 +171,44 @@ void PrismaAudioProcessor::reseteverything() {
 	crossover[8].setCutoffFrequency(calcfilter(state[pots.isb?1:0].crossover[2]));
 	crossover[8].setType(dsp::LinkwitzRileyFilterType::highpass);
 
+	//dc filter
 	dcfilter.init(samplerate*(pots.oversampling?2:1),channelnum*4);
 
-	modulefilters.resize(channelnum*16);
+	//declick
+	declick.resize(channelnum*4);
+
+	//sample divide
 	sampleandhold.resize(channelnum*16);
+	for(int b = 0; b < 4; b++) {
+		for(int m = 0; m < 4; m++) {
+			holdtime[b*4+m] = 0;
+
+			//parameter smoothing
+			pots.bands[b].modules[m].value.reset(samplerate*(pots.oversampling?2:1),.001f);
+		}
+	}
+
+	//lowpass+highpass modules
+	modulefilters.resize(channelnum*16);
 	dsp::ProcessSpec monospec;
 	monospec.sampleRate = samplerate*(pots.oversampling?2:1);
 	monospec.maximumBlockSize = samplesperblock;
 	monospec.numChannels = 1;
 	for(int c = 0; c < channelnum; c++) {
 		for(int b = 0; b < 4; b++) {
+
+			//dc filter
+			dcfilter.reset(b*channelnum+c);
+
+			//declick
+			declick[c*4+b] = 0;
+			declickprogress[b] = 0;
+
+			//sample divide
 			for(int m = 0; m < 4; m++) {
 				sampleandhold[c*16+b*4+m] = 0;
+
+				//lowpass+highpass modules
 				if(state[pots.isb?1:0].id[b][m] == 15 || state[pots.isb?1:0].id[b][m] == 16) {
 					modulefilters[c*16+b*4+m].reset();
 					(*modulefilters[c*16+b*4+m].parameters.get()).type = state[pots.isb?1:0].id[b][m] == 15 ? dsp::StateVariableFilter::Parameters<float>::Type::lowPass : dsp::StateVariableFilter::Parameters<float>::Type::highPass;
@@ -190,16 +217,8 @@ void PrismaAudioProcessor::reseteverything() {
 			}
 		}
 	}
-	for(int b = 0; b < 4; b++) {
-		for(int m = 0; m < 4; m++) {
-			holdtime[b*4+m] = 0;
-		}
-	}
 
-	for(int b = 0; b < 4; b++)
-		for(int m = 0; m < 4; m++)
-			pots.bands[b].modules[m].value.reset(samplerate*(pots.oversampling?2:1),.001f);
-
+	//oversampling
 	preparedtoplay = true;
 	ospointerarray.resize(channelnum);
 	os.reset(new dsp::Oversampling<float>(channelnum,1,dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR));
@@ -273,7 +292,7 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 
 
 	for(int b = 0; b < 4; b++) {
-		bool removedc = false;
+		bool newremovedc = false;
 		for(int m = 0; m < 4; m++) {
 			if(state[pots.isb?1:0].id[b][m] != 0) { //NONE
 
@@ -312,7 +331,7 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 
 				//ASYM
 				} else if(state[pots.isb?1:0].id[b][m] == 4) {
-					removedc = true;
+					newremovedc = true;
 					for(int s = 0; s < numsamples; ++s) {
 						state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
 						if(state[pots.isb?1:0].values[b][m] > 0) {
@@ -327,7 +346,7 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 
 				//RECTIFY
 				} else if(state[pots.isb?1:0].id[b][m] == 5) {
-					removedc = true;
+					newremovedc = true;
 					for(int s = 0; s < numsamples; ++s) {
 						state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
 						if(state[pots.isb?1:0].values[b][m] > 0) {
@@ -409,7 +428,7 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 
 				//DC
 				} else if(state[pots.isb?1:0].id[b][m] == 11) {
-					removedc = true;
+					newremovedc = true;
 					for(int s = 0; s < numsamples; ++s) {
 						state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
 						if(state[pots.isb?1:0].values[b][m] != .5) {
@@ -484,7 +503,11 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 				wetChannelData[b][c][s] = fmax(fmin(wetChannelData[b][c][s],100),-100);
 			}
 		}
-		if(removedc) {
+		if(newremovedc != removedc[b]) {
+			removedc[b] = newremovedc;
+			for(int c = 0; c < channelnum; ++c) dcfilter.reset(b*channelnum+c);
+		}
+		if(removedc[b]) {
 			for(int s = 0; s < numsamples; ++s) {
 				for(int c = 0; c < channelnum; ++c) {
 					wetChannelData[b][c][s] = dcfilter.process(wetChannelData[b][c][s],b*channelnum+c);
@@ -499,11 +522,27 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 			state[pots.isb?1:0].gain[b] = pots.bands[b].gain.getNextValue();
 			pots.bands[b].activesmooth = pots.bands[b].bandactive.getNextValue();
 			pots.bands[b].bypasssmooth = pots.bands[b].bandbypass.getNextValue();
+			float declickease = 1;
+			if(declickprogress[b] < 1) {
+				declickprogress[b] = fmin(declickprogress[b]+.015625f,1);
+				declickease = (cos(declickprogress[b]*3.14159234129f)-1)*-.5f;
+			}
 			for(int c = 0; c < channelnum; ++c) {
+				if(declickease < .999f)
+					wetChannelData[b][c][s] = declick[c*4+b]*(1-declickease)+wetChannelData[b][c][s]*declickease;
+
 				dryChannelData[b][c][s] = (
 					((double)dryChannelData[b][c][s])*(1-state[pots.isb?1:0].wet*(1-pots.bands[b].bypasssmooth))+
 					((double)wetChannelData[b][c][s])*state[pots.isb?1:0].wet*(1-pots.bands[b].bypasssmooth)*pow((double)state[pots.isb?1:0].gain[b]*2,2)
 					)*pots.bands[b].activesmooth;
+			}
+		}
+	}
+
+	for(int b = 0; b < 4; b++) {
+		if(declickprogress[b] >= .999f) {
+			for(int c = 0; c < channelnum; ++c) {
+				declick[c*4+b] = wetChannelData[b][c][numsamples-1];
 			}
 		}
 	}
@@ -832,7 +871,7 @@ void PrismaAudioProcessor::parameterChanged(const String& parameterID, float new
 		return;
 	}
 	if(parameterID.endsWith("id")) {
-		if(state[pots.isb?1:0].id[b][m] == newValue) return;
+		if(state[pots.isb?1:0].id[b][m] != 0 && declickprogress[b] >= .999f) declickprogress[b] = 0;
 		state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getTargetValue();
 		pots.bands[b].modules[m].value.setCurrentAndTargetValue(state[pots.isb?1:0].values[b][m]);
 

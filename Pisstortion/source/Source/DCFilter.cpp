@@ -21,3 +21,8 @@ double DCFilter::process(double in, int channel) {
 	prevout[channel] = out;
 	return out;
 }
+
+void DCFilter::reset(int channel) {
+	previn[channel] = 0;
+	prevout[channel] = 0;
+}

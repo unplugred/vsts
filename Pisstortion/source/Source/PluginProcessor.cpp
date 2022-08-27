@@ -102,6 +102,7 @@ void PisstortionAudioProcessor::reseteverything() {
 	if(channelnum <= 0 || samplesperblock <= 0) return;
 
 	dcfilter.init(samplerate*(state.values[6]>.5?2:1),channelnum);
+	for(int i = 0; i < channelnum; i++) dcfilter.reset(i);
 
 	for(int i = 0; i < paramcount; i++) if(pots[i].smoothtime > 0)
 		pots[i].smooth.reset(samplerate*(state.values[6]+1), pots[i].smoothtime);
