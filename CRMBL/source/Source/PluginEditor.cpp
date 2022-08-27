@@ -86,12 +86,12 @@ CRMBLAudioProcessorEditor::CRMBLAudioProcessorEditor (CRMBLAudioProcessor& p, in
 	knobs[10].linewidth = .0401800064;
 	knobs[10].r = .125;
 
-	for(int i = 0; i < 11; i++) {
+	for(int i = 0; i < knobcount; i++) {
 		knobs[i].radius += .004;
 		knobs[i].x -= .001;
 		knobs[i].y += .002;
 	}
-	for(int i = 1; i < 11; i++) {
+	for(int i = 1; i < knobcount; i++) {
 		knobs[i].id = pots[knobs[i].index].id;
 		knobs[i].name = pots[knobs[i].index].name;
 		if(pots[knobs[i].index].smoothtime > 0)
@@ -135,8 +135,11 @@ CRMBLAudioProcessorEditor::CRMBLAudioProcessorEditor (CRMBLAudioProcessor& p, in
 	startTimerHz(30);
 }
 CRMBLAudioProcessorEditor::~CRMBLAudioProcessorEditor() {
-	for(int i = 0; i < knobcount; i++) audioProcessor.apvts.removeParameterListener(knobs[i].id,this);
+	for(int i = 1; i < knobcount; i++) audioProcessor.apvts.removeParameterListener(knobs[i].id,this);
 	audioProcessor.apvts.removeParameterListener("oversampling",this);
+	audioProcessor.apvts.removeParameterListener("hold",this);
+	audioProcessor.apvts.removeParameterListener("pingpostfeedback",this);
+	audioProcessor.apvts.removeParameterListener("sync",this);
 	stopTimer();
 	context.detach();
 }
