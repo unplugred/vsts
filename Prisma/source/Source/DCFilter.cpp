@@ -2,7 +2,7 @@
 #include "DCFilter.h"
 
 void DCFilter::init(int samplerate, int channels) {
-	R = 1-(126.f/samplerate);
+	R = 1-(31.5/(double)samplerate); //CUTOFF 5Hz
 
 	if(prevout.size() != channels || previn.size() != channels) {
 		previn.clear();
