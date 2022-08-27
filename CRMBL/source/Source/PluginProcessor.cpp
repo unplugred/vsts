@@ -144,6 +144,7 @@ void CRMBLAudioProcessor::reseteverything() {
 
 	//dc filter
 	dcfilter.init(samplerate*(state.values[13]>.5?2:1),channelnum);
+	for(int i = 0; i < channelnum; i++) dcfilter.reset(i);
 
 	//oversampling
 	preparedtoplay = true;
@@ -322,15 +323,10 @@ void CRMBLAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 		for(int sample = 0; sample < numsamples; ++sample) {
 			state.values[10] = pots[10].smooth.getNextValue();
 			if(state.values[10] > 0) {
-				double val = 1-state.values[10]*.75;
-				val -= .0000031746*samplerate-.14-state.values[10]*.75*(.0000022676*samplerate-.1);
-				val = fmax(fmin(val, 1), 0);
-				if(samplerate > 44100) val = 1-(1-val)*fmin(state.values[10]*7.5,1);
-				val = 1-val*val;
+				double val = std::exp(-6.2831853072*mapToLog10((double)state.values[10],20.0,20000.0)/samplerate);
 				for(int channel = 0; channel < channelnum; ++channel) {
-					delayProcessData[channel][sample] += prevfilter[channel]*val;
+					delayProcessData[channel][sample] = delayProcessData[channel][sample]*(1-val)+prevfilter[channel]*val;
 					prevfilter[channel] = delayProcessData[channel][sample];
-					delayProcessData[channel][sample] *= 1-val*.99;
 				}
 			}
 		}
