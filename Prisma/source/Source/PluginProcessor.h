@@ -123,6 +123,7 @@ private:
 	int samplerate = 44100;
 
 	DCFilter dcfilter;
+	bool removedc[4] { false,false,false,false };
 
 	dsp::LinkwitzRileyFilter<float> crossover[9];
 	std::array<juce::AudioBuffer<float>,4> filterbuffers;
@@ -132,6 +133,9 @@ private:
 
 	std::vector<float> sampleandhold;
 	float holdtime[16];
+
+	std::vector<float> declick;
+	float declickprogress[4] { 1,1,1,1 };
 
 	float fifo[fftSize];
 	float fftData[fftSize*2];
