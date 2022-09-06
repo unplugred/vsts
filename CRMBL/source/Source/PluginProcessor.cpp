@@ -323,7 +323,7 @@ void CRMBLAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 		for(int sample = 0; sample < numsamples; ++sample) {
 			state.values[10] = pots[10].smooth.getNextValue();
 			if(state.values[10] > 0) {
-				double val = std::exp(-6.2831853072*mapToLog10((double)state.values[10],250.0,20000.0)/samplerate);
+				double val = std::exp(-6.2831853072*mapToLog10(1-(double)state.values[10],250.0,20000.0)/samplerate);
 				for(int channel = 0; channel < channelnum; ++channel) {
 					delayProcessData[channel][sample] = delayProcessData[channel][sample]*(1-val)+prevfilter[channel]*val;
 					prevfilter[channel] = delayProcessData[channel][sample];
