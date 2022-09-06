@@ -43,7 +43,7 @@ juce_add_plugin("${PROJECT_NAME}"
 	NEEDS_MIDI_OUTPUT FALSE
 	IS_MIDI_EFFECT FALSE
 	EDITOR_WANTS_KEYBOARD_FOCUS FALSE
-	DESCRIPTION "A waveshaper distortion plugin."
+	DESCRIPTION "Advanced sinefold distortion plugin."
 	PLUGIN_MANUFACTURER_CODE Ured
 	PLUGIN_CODE Piss
 	VST3_CATEGORY Distortion

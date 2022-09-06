@@ -43,7 +43,7 @@ juce_add_plugin("${PROJECT_NAME}"
 	NEEDS_MIDI_OUTPUT FALSE
 	IS_MIDI_EFFECT FALSE
 	EDITOR_WANTS_KEYBOARD_FOCUS FALSE
-	DESCRIPTION "A weird knob that makes ur stuff tight."
+	DESCRIPTION "Weird knob that makes ur stuff tight."
 	PLUGIN_MANUFACTURER_CODE Ured
 	PLUGIN_CODE Pnch
 	VST3_CATEGORY Distortion

@@ -43,7 +43,7 @@ juce_add_plugin("${PROJECT_NAME}"
 	NEEDS_MIDI_OUTPUT FALSE
 	IS_MIDI_EFFECT FALSE
 	EDITOR_WANTS_KEYBOARD_FOCUS FALSE
-	DESCRIPTION "A modular multiband distortion plugin."
+	DESCRIPTION "Modular multiband distortion plugin."
 	PLUGIN_MANUFACTURER_CODE Ured
 	PLUGIN_CODE Prsm
 	VST3_CATEGORY Distortion

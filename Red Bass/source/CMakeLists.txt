@@ -44,7 +44,7 @@ juce_add_plugin("${PROJECT_NAME}"
 	NEEDS_MIDI_OUTPUT FALSE
 	IS_MIDI_EFFECT FALSE
 	EDITOR_WANTS_KEYBOARD_FOCUS FALSE
-	DESCRIPTION "A low-end enchancer excellent for kicks."
+	DESCRIPTION "Low-end enchancer excellent for kicks."
 	PLUGIN_MANUFACTURER_CODE Ured
 	PLUGIN_CODE Rdbs
 	VST3_CATEGORY Fx
