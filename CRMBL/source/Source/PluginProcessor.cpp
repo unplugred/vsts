@@ -372,7 +372,8 @@ void CRMBLAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 					forward = interpolatesamples(delayData[channel],delaybufferindex-dlytime+delaybuffernumsamples,delaybuffernumsamples);
 				}
 				//dry wet
-				channelData[channel][sample+startread] = channelData[channel][sample+startread]*(1-state.values[11])+(forward*sqrt(1-state.values[7])+reverse*sqrt(state.values[7]))*state.values[11];
+				float mixval = state.values[11]<.5?2*state.values[11]*state.values[11]:1-pow(-2*state.values[11]+2,2)*.5;
+				channelData[channel][sample+startread] = channelData[channel][sample+startread]*sqrt(1-mixval)+(forward*sqrt(1-state.values[7])+reverse*sqrt(state.values[7]))*sqrt(mixval);
 				//update delay buffer
 				delayData[channel][delaybufferindex] = delayProcessData[channel][sample];
 			}
