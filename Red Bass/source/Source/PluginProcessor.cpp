@@ -115,7 +115,7 @@ void RedBassAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer
 		for(int channel = 0; channel < channelnum; ++channel) {
 			sidechain += channelData[channel][sample];
 			if(state.values[5] < 1)
-				channelData[channel][sample] = (float)fmin(fmax((osc+((double)channelData[channel][sample])*state.values[6])*(1-state.values[5]),-1),1);
+				channelData[channel][sample] = (osc+((double)channelData[channel][sample])*state.values[6])*(1-state.values[5]);
 			else channelData[channel][sample] = 0;
 		}
 
@@ -124,7 +124,7 @@ void RedBassAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer
 		if(state.values[4] < 1) sidechain = filter.processSample(sidechain);
 		else filter.processSample(sidechain);
 		if(state.values[5] > 0) for(int channel = 0; channel < channelnum; ++channel)
-			channelData[channel][sample] = (float)fmin(fmax(channelData[channel][sample]+sidechain*state.values[5],-1),1);
+			channelData[channel][sample] += sidechain*state.values[5];
 
 		envelopefollower.process(sidechain);
 	}
