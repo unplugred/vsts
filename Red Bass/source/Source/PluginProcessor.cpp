@@ -5,7 +5,7 @@ RedBassAudioProcessor::RedBassAudioProcessor() :
 	AudioProcessor(BusesProperties().withInput("Input",AudioChannelSet::stereo(),true).withOutput("Output",AudioChannelSet::stereo(),true)),
 	apvts(*this, &undoManager, "Parameters", createParameters())
 {
-	pots[0] = potentiometer("Frequency"			,"freq"		,.001f	,0.48f	);
+	pots[0] = potentiometer("Frequency"			,"freq"		,.001f	,0.58f	);
 	pots[1] = potentiometer("Threshold"			,"threshold",0		,0.02f	);
 	pots[2] = potentiometer("Attack"			,"attack"	,0		,0.17f	);
 	pots[3] = potentiometer("Release"			,"release"	,0		,0.18f	);
@@ -223,7 +223,7 @@ AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new RedBassAudioProc
 
 AudioProcessorValueTreeState::ParameterLayout RedBassAudioProcessor::createParameters() {
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("freq"		,"Frequency"		,0.0f	,1.0f	,0.48f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>("freq"		,"Frequency"		,0.0f	,1.0f	,0.58f	));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>("threshold"	,"Threshold"		,0.0f	,1.0f	,0.02f	));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>("attack"		,"Attack"			,0.0f	,1.0f	,0.17f	));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>("release"		,"Release"			,0.0f	,1.0f	,0.18f	));
