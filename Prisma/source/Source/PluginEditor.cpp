@@ -1339,7 +1339,7 @@ void PrismaAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 					bool currentmute = buttons[hover+20][0];
 					audioProcessor.undoManager.setCurrentTransactionName((String)(currentmute?"Unmuted band ":"Muted band ") += (String)(hover+20));
 					if(currentmute && state[0].gain[hover+20] <= .01f)
-						audioProcessor.apvts.getParameter("b"+(String)(hover+20)+"gain")->setValueNotifyingHost(1.f);
+						audioProcessor.apvts.getParameter("b"+(String)(hover+20)+"gain")->setValueNotifyingHost(.5f);
 					audioProcessor.apvts.getParameter("b"+(String)(hover+20)+"mute")->setValueNotifyingHost(!currentmute);
 					audioProcessor.undoManager.beginNewTransaction();
 				} else if(hoverbutton == 1) {
