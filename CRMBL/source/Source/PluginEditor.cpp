@@ -485,13 +485,13 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 		knobshader->setUniform("knobpos",knobs[i].x*2-1,1-knobs[i].y*2-rmsout*.1f);
 		knobshader->setUniform("hoverstate",hover==i?1:0);
 		if(i == 0) {
-			Time time = Time::getCurrentTime();
-			knobshader->setUniform("knobrot",((time.getMinutes()+time.getSeconds()/60.f)/60.f)*6.28318530718f);
+			Time computertime = Time::getCurrentTime();
+			knobshader->setUniform("knobrot",((computertime.getMinutes()+computertime.getSeconds()/60.f)/60.f)*6.28318530718f);
 			knobshader->setUniform("dark",1);
 			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 			knobshader->setUniform("circle",0.f);
 			knobshader->setUniform("lineheight",.3f);
-			knobshader->setUniform("knobrot",((time.getHours()+time.getMinutes()/60.f)/12.f)*6.28318530718f);
+			knobshader->setUniform("knobrot",((computertime.getHours()+computertime.getMinutes()/60.f)/12.f)*6.28318530718f);
 			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 			knobshader->setUniform("circle",1.f);
 			knobshader->setUniform("dark",0);
