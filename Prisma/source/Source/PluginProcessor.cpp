@@ -773,25 +773,24 @@ void PrismaAudioProcessor::setStateInformation (const void* data, int sizeInByte
 		std::getline(ss, token, '\n');
 		apvts.getParameter("oversampling")->setValueNotifyingHost(std::stof(token));
 
-		for(int i = 0; i < getNumPrograms(); i++) {
+		for(int i = 0; i < (saveversion >= 1 ? getNumPrograms() : 8); i++) {
 			for(int b = 0; b < 4; b++) {
 				for(int m = 0; m < 4; m++) {
 					std::getline(ss, token, '\n');
-					presets[i].values[b][m] = std::stof(token);
+					if(i != currentpreset) presets[i].values[b][m] = std::stof(token);
 					std::getline(ss, token, '\n');
-					presets[i].id[b][m] = std::stof(token);
+					if(i != currentpreset) presets[i].id[b][m] = std::stof(token);
 				}
 				if(b >= 1) {
 					std::getline(ss, token, '\n');
-					presets[i].crossover[b-1] = std::stof(token);
+					if(i != currentpreset) presets[i].crossover[b-1] = std::stof(token);
 				}
 				std::getline(ss, token, '\n');
-				presets[i].gain[b] = std::stof(token);
+				if(i != currentpreset) presets[i].gain[b] = std::stof(token);
 			}
 			std::getline(ss, token, '\n');
-			presets[i].wet = std::stof(token);
+			if(i != currentpreset) presets[i].wet = std::stof(token);
 		}
-
 	} catch (const char* e) {
 		logger.debug((String)"Error loading saved data: "+(String)e);
 	} catch(String e) {
