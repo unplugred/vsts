@@ -1,7 +1,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-ClickBoxAudioProcessorEditor::ClickBoxAudioProcessorEditor (ClickBoxAudioProcessor& p, int paramcount, pluginpreset state, potentiometer pots[]) : AudioProcessorEditor (&p), audioProcessor (p) {
+ClickBoxAudioProcessorEditor::ClickBoxAudioProcessorEditor (ClickBoxAudioProcessor& p, int paramcount, pluginpreset state, pluginparams params) : AudioProcessorEditor (&p), audioProcessor (p) {
 	sliders[0].hy = 116;
 	sliders[0].hh = 146;
 	sliders[0].y = .4453125f;
@@ -41,15 +41,12 @@ ClickBoxAudioProcessorEditor::ClickBoxAudioProcessorEditor (ClickBoxAudioProcess
 	sliders[5].h = .14453125f;
 
 	for(int i = 0; i < 6; i++) {
-		sliders[i].id = pots[i+2].id;
-		sliders[i].name = pots[i+2].name;
-		if(pots[i+2].smoothtime > 0)
-			sliders[i].value = pots[i+2].normalize(pots[i+2].smooth.getTargetValue());
-		else
-			sliders[i].value = pots[i+2].normalize(state.values[i+2]);
-		sliders[i].minimumvalue = pots[i+2].minimumvalue;
-		sliders[i].maximumvalue = pots[i+2].maximumvalue;
-		sliders[i].defaultvalue = pots[i+2].normalize(pots[i+2].defaultvalue);
+		sliders[i].id = params.pots[i].id;
+		sliders[i].name = params.pots[i].name;
+		sliders[i].value = params.pots[i].normalize(state.values[i]);
+		sliders[i].minimumvalue = params.pots[i].minimumvalue;
+		sliders[i].maximumvalue = params.pots[i].maximumvalue;
+		sliders[i].defaultvalue = params.pots[i].normalize(params.pots[i].defaultvalue);
 		slidercount++;
 		audioProcessor.apvts.addParameterListener(sliders[i].id, this);
 	
@@ -507,6 +504,7 @@ void ClickBoxAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		initialvalue = sliders[hover].value;
 		audioProcessor.undoManager.beginNewTransaction();
 		audioProcessor.apvts.getParameter(sliders[hover].id)->beginChangeGesture();
+		audioProcessor.lerpchanged[hover] = true;
 		if(sliders[hover].isslider)
 			audioProcessor.apvts.getParameter(sliders[hover].id)->setValueNotifyingHost(((float)event.x-sliders[hover].hx-2)/(sliders[hover].hw-sliders[hover].hx-4));
 		else

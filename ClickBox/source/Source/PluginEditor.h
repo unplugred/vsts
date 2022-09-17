@@ -30,7 +30,7 @@ struct mousepos {
 };
 class ClickBoxAudioProcessorEditor	: public AudioProcessorEditor, public OpenGLRenderer, public AudioProcessorValueTreeState::Listener, private Timer {
 public:
-	ClickBoxAudioProcessorEditor (ClickBoxAudioProcessor&, int paramcount, pluginpreset state, potentiometer pots[]);
+	ClickBoxAudioProcessorEditor (ClickBoxAudioProcessor&, int paramcount, pluginpreset state, pluginparams params);
 	~ClickBoxAudioProcessorEditor() override;
 
 	void newOpenGLContextCreated() override;

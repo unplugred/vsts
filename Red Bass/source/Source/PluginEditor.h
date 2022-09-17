@@ -22,7 +22,7 @@ struct knob {
 class RedBassAudioProcessorEditor : public AudioProcessorEditor, public OpenGLRenderer, public AudioProcessorValueTreeState::Listener, private Timer
 {
 public:
-	RedBassAudioProcessorEditor (RedBassAudioProcessor&, int paramcount, pluginpreset state, potentiometer pots[]);
+	RedBassAudioProcessorEditor (RedBassAudioProcessor&, int paramcount, pluginpreset state, pluginparams params);
 	~RedBassAudioProcessorEditor() override;
 
 	void newOpenGLContextCreated() override;

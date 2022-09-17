@@ -1,12 +1,21 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-VuAudioProcessorEditor::VuAudioProcessorEditor (VuAudioProcessor& p)
-	: AudioProcessorEditor (&p), audioProcessor (p) {
+VuAudioProcessorEditor::VuAudioProcessorEditor(VuAudioProcessor& p, int paramcount, pluginpreset state, potentiometer pots[])
+	: AudioProcessorEditor (&p), audioProcessor (p)
+{
+	for(int i = 0; i < knobcount; i++) {
+		knobs[i].id = pots[i].id;
+		knobs[i].name = pots[i].name;
+		knobs[i].value = state.values[i];
+		knobs[i].minimumvalue = pots[i].minimumvalue;
+		knobs[i].maximumvalue = pots[i].maximumvalue;
+		knobs[i].defaultvalue = pots[i].defaultvalue;
+		audioProcessor.apvts.addParameterListener(knobs[i].id,this);
+	}
 
-	audioProcessor.apvts.addParameterListener("nominal",this);
-	multiplier = 1.f/Decibels::decibelsToGain((float)audioProcessor.nominal.get());
-	stereodamp = audioProcessor.stereo.get()?1:0;
+	multiplier = 1.f/Decibels::decibelsToGain(knobs[0].value);
+	stereodamp = knobs[2].value;
 
 	context.setRenderer(this);
 	context.attachTo(*this);
@@ -23,9 +32,9 @@ VuAudioProcessorEditor::VuAudioProcessorEditor (VuAudioProcessor& p)
 }
 
 VuAudioProcessorEditor::~VuAudioProcessorEditor() {
+	for(int i = 0; i < knobcount; i++) audioProcessor.apvts.removeParameterListener(knobs[i].id,this);
 	stopTimer();
 	context.detach();
-	audioProcessor.apvts.removeParameterListener("nominal",this);
 }
 
 void VuAudioProcessorEditor::resized() {
@@ -224,8 +233,8 @@ void VuAudioProcessorEditor::renderOpenGL() {
 	vushader->setUniform("stereo", stereodamp);
 	vushader->setUniform("stereoinv", 2-(1/(stereodamp*.5f+.5f)));
 	vushader->setUniform("pause", settingsfade);
-	vushader->setUniform("lines", 24.f+audioProcessor.nominal.get(), -4.f-audioProcessor.damping.get(), hover==3?31.f:(audioProcessor.stereo.get()?29.f:30.f));
-	vushader->setUniform("lineht", hover==1?1.f:0.f,hover==2?1.f:0.f,1.f,websiteht);
+	vushader->setUniform("lines", 24.f+knobs[0].value, -4.f-knobs[1].value, hover==2?31.f:(30.f-knobs[2].value));
+	vushader->setUniform("lineht", hover==0?1.f:0.f,hover==1?1.f:0.f,1.f,websiteht);
 
 	vushader->setUniform("size", 800.f/vutex.getWidth(), 475.f/vutex.getHeight());
 	vushader->setUniform("txtsize", 384.f/vutex.getWidth(), 354.f/vutex.getHeight());
@@ -291,10 +300,8 @@ void VuAudioProcessorEditor::timerCallback() {
 		rightpeak = false;
 	} else bypassdetection++;
 
-	float damping = audioProcessor.damping.get()*.05f;
-	bool stereo = audioProcessor.stereo.get();
-	leftvu = functions::smoothdamp(leftvu,fmin(leftrms*multiplier,1),&leftvelocity,damping,-1,.03333f);
-	if(stereo) rightvu = functions::smoothdamp(rightvu,fmin(rightrms*multiplier,1),&rightvelocity,damping,-1,.03333f);
+	leftvu = functions::smoothdamp(leftvu,fmin(leftrms*multiplier,1),&leftvelocity,knobs[1].value*.05f,-1,.03333f);
+	if(knobs[2].value>.5) rightvu = functions::smoothdamp(rightvu,fmin(rightrms*multiplier,1),&rightvelocity,knobs[1].value*.05f,-1,.03333f);
 	leftpeaklerp = functions::smoothdamp(leftpeaklerp,leftpeak?1:0,&leftpeakvelocity,0.027f,-1,.03333f);
 	rightpeaklerp = functions::smoothdamp(rightpeaklerp,rightpeak?1:0,&leftpeakvelocity,0.027f,-1,.03333f);
 
@@ -309,7 +316,7 @@ void VuAudioProcessorEditor::timerCallback() {
 
 	settingsfade = functions::smoothdamp(settingsfade,fmin(settingstimer,1),&settingsvelocity,0.3,-1,.03333f);
 	settingstimer = held?60:fmax(settingstimer-1,0);
-	stereodamp = functions::smoothdamp(stereodamp,stereo?1:0,&stereovelocity,0.3,-1,.03333f);
+	stereodamp = functions::smoothdamp(stereodamp,knobs[2].value,&stereovelocity,0.3,-1,.03333f);
 	websiteht -= .05f;
 
 	int h = audioProcessor.height.get();
@@ -328,7 +335,7 @@ void VuAudioProcessorEditor::timerCallback() {
 		audioProcessor.width = getWidth();
 		audioProcessor.height = getHeight();
 	} else {
-		double ratio = (audioProcessor.stereo?64.f:32.f)/19.f;
+		double ratio = (knobs[2].value*32.f+32.f)/19.f;
 		if(getConstrainer()->getFixedAspectRatio() != ratio)
 			getConstrainer()->setFixedAspectRatio(ratio);
 	}
@@ -338,7 +345,11 @@ void VuAudioProcessorEditor::timerCallback() {
 }
 
 void VuAudioProcessorEditor::parameterChanged(const String& parameterID, float newValue) {
-	if(parameterID == "nominal") multiplier = 1.f/Decibels::decibelsToGain((float)newValue);
+	for(int i = 0; i < knobcount; i++) if(knobs[i].id == parameterID) {
+		if(i == 0) multiplier = 1.f/Decibels::decibelsToGain((float)newValue);
+		knobs[i].value = newValue;
+		return;
+	}
 }
 void VuAudioProcessorEditor::mouseEnter(const MouseEvent& event) {
 	settingstimer = 120;
@@ -347,7 +358,7 @@ void VuAudioProcessorEditor::mouseMove(const MouseEvent& event) {
 	settingstimer = fmax(settingstimer,60);
 	int prevhover = hover;
 	hover = recalchover(event.x,event.y);
-	if(hover == 4 && prevhover != 4 && websiteht < -.6) websiteht = 1.0f;
+	if(hover == 3 && prevhover != 3 && websiteht < -.6) websiteht = 1.0f;
 }
 void VuAudioProcessorEditor::mouseExit(const MouseEvent& event) {
 	if(!held) settingstimer = 0;
@@ -355,92 +366,63 @@ void VuAudioProcessorEditor::mouseExit(const MouseEvent& event) {
 void VuAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 	held = true;
 	initialdrag = hover;
-	if(hover == 1 || hover == 2) {
+	if(hover == 0 || hover == 1) {
+		initialvalue = knobs[hover].value;
+		valueoffset = 0;
+		audioProcessor.apvts.getParameter(knobs[hover].id)->beginChangeGesture();
+		audioProcessor.undoManager.beginNewTransaction();
 		dragpos = event.getScreenPosition();
 		event.source.enableUnboundedMouseMovement(true);
-		if(hover == 1) {
-			initialvalue = audioProcessor.nominal.get();
-			valueoffset = 0;
-			audioProcessor.apvts.getParameter("nominal")->beginChangeGesture();
-		} else {
-			initialvalue = audioProcessor.damping.get();
-			valueoffset = 0;
-			audioProcessor.apvts.getParameter("damping")->beginChangeGesture();
-		}
-		audioProcessor.undoManager.beginNewTransaction();
 	}
 }
 void VuAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
-	if(initialdrag == 3) hover = recalchover(event.x,event.y)==3?3:0;
-	else if(initialdrag == 4) hover = recalchover(event.x,event.y)==4?4:0;
-	else if(hover != 0) {
+	if(initialdrag == 2) hover = recalchover(event.x,event.y)==2?2:-1;
+	else if(initialdrag == 3) hover = recalchover(event.x,event.y)==3?3:-1;
+	else if(hover == 0 || hover == 1) {
 		float dist = (event.getDistanceFromDragStartY()+event.getDistanceFromDragStartX())*-.04f;
 		float val = dist+valueoffset;
 		int clampval = initialvalue-(val>0?floor(val):ceil(val));
-		if(hover == 1) {
-			audioProcessor.apvts.getParameter("nominal")->setValueNotifyingHost((clampval+24)/18.f);
-			valueoffset = fmax(fmin(valueoffset,initialvalue-dist+25),initialvalue-dist+5);
-		} else {
-			audioProcessor.apvts.getParameter("damping")->setValueNotifyingHost((clampval-1)/8.f);
-			valueoffset = fmax(fmin(valueoffset,initialvalue-dist),initialvalue-dist-10);
-		}
+		audioProcessor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(knobs[hover].normalize(clampval));
+		valueoffset = fmax(fmin(valueoffset,initialvalue-dist-knobs[hover].minimumvalue+1),initialvalue-dist-knobs[hover].maximumvalue-1);
 	}
 }
 void VuAudioProcessorEditor::mouseUp(const MouseEvent& event) {
-	if(hover == 1 || hover == 2) {
-		if(hover == 1) {
-			audioProcessor.undoManager.setCurrentTransactionName(
-				(audioProcessor.nominal.get() - initialvalue) >= 0 ? "Increased nominal" : "Decreased nominal");
-			audioProcessor.apvts.getParameter("nominal")->endChangeGesture();
-		} else {
-			audioProcessor.undoManager.setCurrentTransactionName(
-				(audioProcessor.damping.get() - initialvalue) >= 0 ? "Increased damping" : "Decreased damping");
-			audioProcessor.apvts.getParameter("damping")->endChangeGesture();
-		}
+	if(hover == 0 || hover == 1) {
+		audioProcessor.undoManager.setCurrentTransactionName(
+			(String)((knobs[hover].value - initialvalue) >= 0 ? "Increased " : "Decreased ") += knobs[hover].name);
+		audioProcessor.apvts.getParameter(knobs[hover].id)->endChangeGesture();
 		audioProcessor.undoManager.beginNewTransaction();
 		event.source.enableUnboundedMouseMovement(false);
 		Desktop::setMousePosition(dragpos);
-	} else if(hover == 3) {
-		bool stereo = !audioProcessor.stereo.get();
+	} else if(hover == 2) {
+		bool stereo = knobs[2].value<.5;
 		audioProcessor.apvts.getParameter("stereo")->setValueNotifyingHost(stereo?1:0);
 		audioProcessor.undoManager.setCurrentTransactionName(stereo?"Set to stereo":"Set to mono");
 		audioProcessor.undoManager.beginNewTransaction();
-	}
-	else if(hover == 4) URL("https://vst.unplug.red/").launchInDefaultBrowser();
+	} else if(hover == 3) URL("https://vst.unplug.red/").launchInDefaultBrowser();
 	held = false;
 	hover = recalchover(event.x,event.y);
 }
 void VuAudioProcessorEditor::mouseDoubleClick(const MouseEvent& event) {
-	if(hover == 1) {
-		audioProcessor.undoManager.setCurrentTransactionName("Reset nominal");
-		audioProcessor.apvts.getParameter("nominal")->setValueNotifyingHost(
-			audioProcessor.apvts.getParameter("nominal")->getDefaultValue());
-		audioProcessor.undoManager.beginNewTransaction();
-	} else if (hover == 2) {
-		audioProcessor.undoManager.setCurrentTransactionName("Reset damping");
-		audioProcessor.apvts.getParameter("damping")->setValueNotifyingHost(
-			audioProcessor.apvts.getParameter("damping")->getDefaultValue());
-		audioProcessor.undoManager.beginNewTransaction();
-	}
+	if(hover != 0 && hover != 1) return;
+	audioProcessor.undoManager.setCurrentTransactionName((String)"Reset " += knobs[hover].name);
+	audioProcessor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(knobs[hover].normalize(knobs[hover].defaultvalue));
+	audioProcessor.undoManager.beginNewTransaction();
 }
 void VuAudioProcessorEditor::mouseWheelMove(const MouseEvent& event, const MouseWheelDetails& wheel) {
-	if(wheel.isSmooth) return;
-	if(hover == 1)
-		audioProcessor.apvts.getParameter("nominal")->setValueNotifyingHost((audioProcessor.nominal.get()+(wheel.deltaY>0?25:23))/18.f);
-	else if(hover == 2)
-		audioProcessor.apvts.getParameter("damping")->setValueNotifyingHost((audioProcessor.damping.get()+(wheel.deltaY>0?0:-2))/8.f);
+	if((hover != 0 && hover != 1) || wheel.isSmooth) return;
+	audioProcessor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(knobs[hover].normalize(knobs[hover].value+(wheel.deltaY>0?1:-1)));
 }
 int VuAudioProcessorEditor::recalchover(float x, float y) {
-	bool stereo = audioProcessor.stereo.get();
-	float xx = (x/getWidth()-.5f)*8*3.8*(stereo+1);
+	float xx = (x/getWidth()-.5f)*8*3.8*(knobs[2].value+1);
 	float yy = (y/getHeight()-.5f)*(7.4f);
-	if(xx >= 1 && ((xx <= 8 && audioProcessor.nominal.get() <= -10) || xx <= 7) && yy > -1.5 && yy <= -.5)
-		return 1;
+	if(xx >= 1 && ((xx <= 8 && knobs[0].value <= -10) || xx <= 7) && yy > -1.5 && yy <= -.5)
+		return 0;
 	if(xx >= 1 && xx <= 4 && yy > -.5 && yy <= .5)
+		return 1;
+	if((yy > .5 && yy <= 1.5) && ((knobs[2].value<.5 && xx >= -8 && xx <= -2) || (knobs[2].value>.5 && xx >= -1 && xx <= 3)))
 		return 2;
-	if((yy > .5 && yy <= 1.5) && ((!stereo && xx >= -8 && xx <= -2) || (stereo && xx >= -1 && xx <= 3)))
-		return 3;
 	if(x >= (getWidth()-151) && y >= (getHeight()-49) && x < (getWidth()-1) && y < (getHeight()-1))
-		return 4;
-	return 0;
+		return 3;
+	return -1;
 }

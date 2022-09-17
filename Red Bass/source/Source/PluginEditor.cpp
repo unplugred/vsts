@@ -1,27 +1,32 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-RedBassAudioProcessorEditor::RedBassAudioProcessorEditor (RedBassAudioProcessor& p, int paramcount, pluginpreset state, potentiometer pots[])
+RedBassAudioProcessorEditor::RedBassAudioProcessorEditor (RedBassAudioProcessor& p, int paramcount, pluginpreset state, pluginparams params)
 	: AudioProcessorEditor (&p), audioProcessor (p)
 {
 	for(int x = 0; x < 2; x++) {
 		for(int y = 0; y < 4; y++) {
 			int i = x+y*2;
+			int ii = i<5?i:(i-1);
 			knobs[x*4+y].x = x*248+37;
 			knobs[x*4+y].y = y*100+46;
-			knobs[i].id = pots[i].id;
-			knobs[i].name = pots[i].name;
-			if(pots[i].smoothtime > 0)
-				knobs[i].value = pots[i].normalize(pots[i].smooth.getTargetValue());
-			else
-				knobs[i].value = pots[i].normalize(state.values[i]);
-			knobs[i].minimumvalue = pots[i].minimumvalue;
-			knobs[i].maximumvalue = pots[i].maximumvalue;
-			knobs[i].defaultvalue = pots[i].normalize(pots[i].defaultvalue);
+			if(i != 5) {
+				knobs[i].id = params.pots[ii].id;
+				knobs[i].name = params.pots[ii].name;
+				knobs[i].value = params.pots[ii].normalize(state.values[ii]);
+				knobs[i].minimumvalue = params.pots[ii].minimumvalue;
+				knobs[i].maximumvalue = params.pots[ii].maximumvalue;
+				knobs[i].defaultvalue = params.pots[ii].normalize(params.pots[ii].defaultvalue);
+				audioProcessor.apvts.addParameterListener(knobs[i].id,this);
+			}
 			knobcount++;
-			audioProcessor.apvts.addParameterListener(knobs[i].id,this);
 		}
 	}
+	knobs[5].id = "monitor";
+	knobs[5].name = "Monitor Sidechain";
+	knobs[5].value = params.monitorsmooth.getTargetValue() >.5;
+	audioProcessor.apvts.addParameterListener("monitor",this);
+
 	freqfreq = audioProcessor.calculatefrequency(knobs[0].value);
 	lowpfreq = audioProcessor.calculatelowpass(knobs[4].value);
 
@@ -37,6 +42,7 @@ RedBassAudioProcessorEditor::RedBassAudioProcessorEditor (RedBassAudioProcessor&
 }
 RedBassAudioProcessorEditor::~RedBassAudioProcessorEditor() {
 	for (int i = 0; i < knobcount; i++) audioProcessor.apvts.removeParameterListener(knobs[i].id,this);
+	audioProcessor.apvts.removeParameterListener("monitor",this);
 	stopTimer();
 	context.detach();
 }
@@ -366,6 +372,7 @@ void RedBassAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		valueoffset = 0;
 		audioProcessor.undoManager.beginNewTransaction();
 		audioProcessor.apvts.getParameter(knobs[hover].id)->beginChangeGesture();
+		audioProcessor.lerpchanged[hover<5?hover:(hover-1)] = true;
 		dragpos = event.getScreenPosition();
 		event.source.enableUnboundedMouseMovement(true);
 	}

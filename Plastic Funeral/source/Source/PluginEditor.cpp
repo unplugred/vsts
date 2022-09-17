@@ -1,7 +1,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-PFAudioProcessorEditor::PFAudioProcessorEditor (PFAudioProcessor& p, int paramcount, pluginpreset state, potentiometer pots[])
+PFAudioProcessorEditor::PFAudioProcessorEditor (PFAudioProcessor& p, int paramcount, pluginpreset state, pluginparams params)
 	: AudioProcessorEditor (&p), audioProcessor (p)
 {
 	for(int x = 0; x < 2; x++) {
@@ -9,29 +9,23 @@ PFAudioProcessorEditor::PFAudioProcessorEditor (PFAudioProcessor& p, int paramco
 			int i = x+y*2;
 			knobs[i].x = x*106+68;
 			knobs[i].y = y*100+144;
-			knobs[i].id = pots[i].id;
-			knobs[i].name = pots[i].name;
-			if(pots[i].smoothtime > 0)
-				knobs[i].value = pots[i].normalize(pots[i].smooth.getTargetValue());
-			else
-				knobs[i].value = pots[i].normalize(state.values[i]);
-			knobs[i].minimumvalue = pots[i].minimumvalue;
-			knobs[i].maximumvalue = pots[i].maximumvalue;
-			knobs[i].defaultvalue = pots[i].normalize(pots[i].defaultvalue);
+			knobs[i].id = params.pots[i].id;
+			knobs[i].name = params.pots[i].name;
+			knobs[i].value = params.pots[i].normalize(state.values[i]);
+			knobs[i].minimumvalue = params.pots[i].minimumvalue;
+			knobs[i].maximumvalue = params.pots[i].maximumvalue;
+			knobs[i].defaultvalue = params.pots[i].normalize(params.pots[i].defaultvalue);
 			knobcount++;
 			audioProcessor.apvts.addParameterListener(knobs[i].id,this);
 		}
 	}
-	for(int i = 0; i < paramcount; i++)
-		if(pots[i].id == "oversampling") {
-			oversampling = state.values[i];
-	}
+	oversampling = params.oversampling;
 	oversamplinglerped = oversampling;
 	audioProcessor.apvts.addParameterListener("oversampling",this);
-	calcvis();
 
 	setSize (242, 462);
 	setResizable(false, false);
+	calcvis();
 	dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->dpi/96.f;
 
 	setOpaque(true);
@@ -480,6 +474,7 @@ void PFAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		valueoffset = 0;
 		audioProcessor.undoManager.beginNewTransaction();
 		audioProcessor.apvts.getParameter(knobs[hover].id)->beginChangeGesture();
+		audioProcessor.lerpchanged[hover] = true;
 		dragpos = event.getScreenPosition();
 		event.source.enableUnboundedMouseMovement(true);
 	} else if(hover < -4) {
@@ -530,16 +525,15 @@ void PFAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 	held = 1;
 }
 void PFAudioProcessorEditor::mouseDoubleClick(const MouseEvent& event) {
-	if(hover > -1) {
-		audioProcessor.undoManager.setCurrentTransactionName((String)"Reset " += knobs[hover].name);
-		audioProcessor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(knobs[hover].defaultvalue);
-		audioProcessor.undoManager.beginNewTransaction();
-	}
+	if(hover <= -1) return;
+	audioProcessor.undoManager.setCurrentTransactionName((String)"Reset " += knobs[hover].name);
+	audioProcessor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(knobs[hover].defaultvalue);
+	audioProcessor.undoManager.beginNewTransaction();
 }
 void PFAudioProcessorEditor::mouseWheelMove(const MouseEvent& event, const MouseWheelDetails& wheel) {
-	if(hover > -1)
-		audioProcessor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(
-			knobs[hover].value+wheel.deltaY*((event.mods.isShiftDown() || event.mods.isAltDown())?.03f:.2f));
+	if(hover <= -1) return;
+	audioProcessor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(
+		knobs[hover].value+wheel.deltaY*((event.mods.isShiftDown() || event.mods.isAltDown())?.03f:.2f));
 }
 int PFAudioProcessorEditor::recalchover(float x, float y) {
 	if (x >= 8 && x <= 234 && y >= 8 && y <= 87) {

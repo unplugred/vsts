@@ -35,7 +35,7 @@ struct bubble {
 class PisstortionAudioProcessorEditor : public AudioProcessorEditor, public OpenGLRenderer, public AudioProcessorValueTreeState::Listener, private Timer
 {
 public:
-	PisstortionAudioProcessorEditor (PisstortionAudioProcessor&, int paramcount, pluginpreset state, potentiometer pots[]);
+	PisstortionAudioProcessorEditor (PisstortionAudioProcessor&, int paramcount, pluginpreset state, pluginparams params);
 	~PisstortionAudioProcessorEditor() override;
 
 	void newOpenGLContextCreated() override;

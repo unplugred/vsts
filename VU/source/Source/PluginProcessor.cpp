@@ -5,14 +5,21 @@ VuAudioProcessor::VuAudioProcessor() :
 	AudioProcessor(BusesProperties().withInput("Input",AudioChannelSet::stereo(),true).withOutput("Output",AudioChannelSet::stereo(),true)),
 	apvts(*this, &undoManager, "Parameters", createParameters())
 {
-	apvts.addParameterListener("nominal", this);
-	apvts.addParameterListener("damping", this);
-	apvts.addParameterListener("stereo", this);
+	for(int i = 0; i < getNumPrograms(); i++) {
+		presets[i] = pluginpreset("Program "+(String)(i+1),-18,5,0);
+	}
+
+	pots[0] = potentiometer("Nominal"	,"nominal"	,presets[0].values[0]	,-24	,-6	,potentiometer::ptype::inttype);
+	pots[1] = potentiometer("Damping"	,"damping"	,presets[0].values[1]	,1		,9	,potentiometer::ptype::inttype);
+	pots[2] = potentiometer("Stereo"	,"stereo"	,presets[0].values[2]	,0		,1	,potentiometer::ptype::booltype);
+
+	for(int i = 0; i < paramcount; i++) {
+		presets[currentpreset].values[i] = pots[i].inflate(apvts.getParameter(pots[i].id)->getValue());
+		apvts.addParameterListener(pots[i].id, this);
+	}
 }
 VuAudioProcessor::~VuAudioProcessor() {
-	apvts.removeParameterListener("nominal",this);
-	apvts.removeParameterListener("damping",this);
-	apvts.removeParameterListener("stereo",this);
+	for(int i = 0; i < paramcount; i++) apvts.removeParameterListener(pots[i].id, this);
 }
 
 const String VuAudioProcessor::getName() const { return "VU"; }
@@ -20,11 +27,23 @@ bool VuAudioProcessor::acceptsMidi() const { return false; }
 bool VuAudioProcessor::producesMidi() const { return false; }
 bool VuAudioProcessor::isMidiEffect() const { return false; }
 double VuAudioProcessor::getTailLengthSeconds() const { return 0.0; }
-int VuAudioProcessor::getNumPrograms() { return 1; }
-int VuAudioProcessor::getCurrentProgram() { return 0; }
-void VuAudioProcessor::setCurrentProgram (int index) {} 
-const String VuAudioProcessor::getProgramName (int index) { return ":)"; }
-void VuAudioProcessor::changeProgramName (int index, const String& newName) {}
+int VuAudioProcessor::getNumPrograms() { return 20; }
+int VuAudioProcessor::getCurrentProgram() { return currentpreset; }
+void VuAudioProcessor::setCurrentProgram (int index) {
+	if(currentpreset == index) return;
+
+	undoManager.beginNewTransaction((String)"Changed preset to " += presets[index].name);
+	currentpreset = index;
+
+	for(int i = 0; i < paramcount; i++)
+		apvts.getParameter(pots[i].id)->setValueNotifyingHost(pots[i].normalize(presets[index].values[i]));
+}
+const String VuAudioProcessor::getProgramName (int index) {
+	return { presets[index].name };
+}
+void VuAudioProcessor::changeProgramName (int index, const String& newName) {
+	presets[index].name = newName;
+}
 
 void VuAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {}
 void VuAudioProcessor::releaseResources() {}
@@ -76,7 +95,7 @@ void VuAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mid
 		rightvu = output;
 		leftpeak = newleftpeak;
 		rightpeak = newleftpeak;
-	} else if(stereo.get()) {
+	} else if(presets[currentpreset].values[2]>.5) {
 		leftvu = leftvu.get()+leftrms*leftrms;
 		rightvu = rightvu.get()+rightrms*rightrms;
 		leftpeak = newleftpeak;
@@ -89,17 +108,23 @@ void VuAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mid
 }
 
 bool VuAudioProcessor::hasEditor() const { return true; }
-AudioProcessorEditor* VuAudioProcessor::createEditor() { return new VuAudioProcessorEditor (*this); }
+AudioProcessorEditor* VuAudioProcessor::createEditor() {
+	return new VuAudioProcessorEditor(*this,paramcount,presets[currentpreset],pots);
+}
 
 void VuAudioProcessor::getStateInformation (MemoryBlock& destData) {
 	const char linebreak = '\n';
 	std::ostringstream data;
-	data << version
-		<< linebreak << nominal.get()
-		<< linebreak << damping.get()
-		<< linebreak << (stereo.get()?1:0)
-		<< linebreak << height.get()
-		<< linebreak;
+	data << version << linebreak
+		<< height.get() << linebreak
+		<< currentpreset << linebreak;
+
+	for(int i = 0; i < getNumPrograms(); i++) {
+		data << presets[i].name << linebreak;
+		for(int v = 0; v < paramcount; v++)
+			data << presets[i].values[v] << linebreak;
+	}
+
 	MemoryOutputStream stream(destData,false);
 	stream.writeString(data.str());
 }
@@ -111,17 +136,30 @@ void VuAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
 		std::getline(ss,token,'\n');
 		int saveversion = std::stoi(token);
 
-		std::getline(ss,token,'\n');
-		apvts.getParameter("nominal")->setValueNotifyingHost((std::stof(token)+24)/18);
-		
-		std::getline(ss,token,'\n');
-		apvts.getParameter("damping")->setValueNotifyingHost((std::stof(token)-1)/8);
+		if(saveversion >= 2) {
+			std::getline(ss,token,'\n');
+			height = std::stoi(token);
 
-		std::getline(ss,token,'\n');
-		apvts.getParameter("stereo")->setValueNotifyingHost(std::stof(token));
+			std::getline(ss,token,'\n');
+			currentpreset = std::stoi(token);
 
-		std::getline(ss,token,'\n');
-		height = std::stoi(token);
+			for(int i = 0; i < getNumPrograms(); i++) {
+				std::getline(ss, token, '\n');
+				presets[i].name = token;
+				for(int v = 0; v < paramcount; v++) {
+					std::getline(ss, token, '\n');
+					presets[i].values[v] = std::stof(token);
+				}
+			}
+		} else {
+			for(int i = 0; i < 3; i++) {
+				std::getline(ss, token, '\n');
+				presets[currentpreset].values[i] = std::stof(token);
+			}
+
+			std::getline(ss,token,'\n');
+			height = std::stoi(token);
+		}
 	} catch (const char* e) {
 		logger.debug((String)"Error loading saved data: "+(String)e);
 	} catch(String e) {
@@ -131,11 +169,16 @@ void VuAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
 	} catch(...) {
 		logger.debug((String)"Error loading saved data");
 	}
+
+	for(int i = 0; i < paramcount; i++) {
+		apvts.getParameter(pots[i].id)->setValueNotifyingHost(pots[i].normalize(presets[currentpreset].values[i]));
+	}
 }
 void VuAudioProcessor::parameterChanged(const String& parameterID, float newValue) {
-	if(parameterID == "nominal") nominal = newValue;
-	else if(parameterID == "damping") damping = newValue;
-	else if(parameterID == "stereo") stereo = newValue > .5;
+	for(int i = 0; i < paramcount; i++) if(parameterID == pots[i].id) {
+		presets[currentpreset].values[i] = newValue;
+		return;
+	}
 }
 
 AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new VuAudioProcessor(); }
