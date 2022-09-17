@@ -91,7 +91,7 @@ public:
 	AudioProcessorValueTreeState apvts;
 	UndoManager undoManager;
 
-	int version = 0;
+	int version = 1;
 	pluginparams pots;
 	CoolLogger logger;
 
