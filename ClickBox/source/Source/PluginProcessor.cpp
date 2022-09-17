@@ -53,12 +53,14 @@ void ClickBoxAudioProcessor::setCurrentProgram(int index) {
 		if(lerpstage < .001 || lerpchanged[i])
 			lerptable[i] = params.pots[i].normalize(presets[currentpreset].values[i]);
 		lerpchanged[i] = false;
-		if(params.pots[i].ttype == potentiometer::ptype::booltype) {
-			lerpchanged[i] = true;
-			apvts.getParameter(params.pots[i].id)->setValueNotifyingHost(params.pots[i].normalize(presets[index].values[i]));
-		}
 	}
 	currentpreset = index;
+	for(int i = 0; i < paramcount; i++) {
+		if(params.pots[i].ttype == potentiometer::ptype::booltype) {
+			lerpchanged[i] = true;
+			apvts.getParameter(params.pots[i].id)->setValueNotifyingHost(params.pots[i].normalize(presets[currentpreset].values[i]));
+		}
+	}
 
 	if(lerpstage <= 0) {
 		lerpstage = 1;

@@ -99,13 +99,13 @@ void PrismaAudioProcessor::setCurrentProgram (int index) {
 
 	for(int b = 0; b < 4; b++) {
 		for(int m = 0; m < 4; m++) {
-			apvts.getParameter("b"+(String)b+"m"+(String)m+"val")->setValueNotifyingHost(presets[index].values[b][m]);
-			apvts.getParameter("b"+(String)b+"m"+(String)m+"id")->setValueNotifyingHost(presets[index].id[b][m]/16.f);
+			apvts.getParameter("b"+(String)b+"m"+(String)m+"val")->setValueNotifyingHost(presets[currentpreset].values[b][m]);
+			apvts.getParameter("b"+(String)b+"m"+(String)m+"id")->setValueNotifyingHost(presets[currentpreset].id[b][m]/16.f);
 		}
-		if(b >= 1) apvts.getParameter("b"+(String)b+"cross")->setValueNotifyingHost(presets[index].crossover[b-1]);
-		apvts.getParameter("b"+(String)b+"gain")->setValueNotifyingHost(presets[index].gain[b]);
+		if(b >= 1) apvts.getParameter("b"+(String)b+"cross")->setValueNotifyingHost(presets[currentpreset].crossover[b-1]);
+		apvts.getParameter("b"+(String)b+"gain")->setValueNotifyingHost(presets[currentpreset].gain[b]);
 	}
-	apvts.getParameter("wet")->setValueNotifyingHost(presets[index].wet);
+	apvts.getParameter("wet")->setValueNotifyingHost(presets[currentpreset].wet);
 }
 const String PrismaAudioProcessor::getProgramName (int index) {
 	return { presets[index].name };

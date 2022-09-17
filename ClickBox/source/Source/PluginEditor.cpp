@@ -470,6 +470,7 @@ void ClickBoxAudioProcessorEditor::timerCallback() {
 
 void ClickBoxAudioProcessorEditor::parameterChanged(const String& parameterID, float newValue) {
 	for(int i = 0; i < slidercount; i++) if(sliders[i].id == parameterID) {
+		if(sliders[i].value == sliders[i].normalize(newValue)) return;
 		sliders[i].value = sliders[i].normalize(newValue);
 		float r = sliders[i].isslider?(sliders[i].value*3*sliders[i].w+sliders[i].coloffset):random.nextFloat();
 		sliders[i].r = getr(r);
