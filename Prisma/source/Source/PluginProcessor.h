@@ -108,9 +108,8 @@ private:
 	float crossovertruevalue[3];
 
 	AudioProcessorValueTreeState::ParameterLayout createParameters();
-	pluginpreset presets[8];
+	pluginpreset presets[20];
 	int currentpreset = 0;
-	bool boot = false;
 	bool preparedtoplay = false;
 	bool saved = false;
 

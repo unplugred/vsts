@@ -4,10 +4,24 @@
 #include "functions.h"
 using namespace gl;
 
+struct knob {
+	float value = .5f;
+	String id;
+	String name;
+	float minimumvalue = 0.f;
+	float maximumvalue = 1.f;
+	float defaultvalue = 0.f;
+	float normalize(float val) {
+		return (val-minimumvalue)/(maximumvalue-minimumvalue);
+	}
+	float inflate(float val) {
+		return val*(maximumvalue-minimumvalue)+minimumvalue;
+	}
+};
 class VuAudioProcessorEditor : public AudioProcessorEditor, public OpenGLRenderer, public AudioProcessorValueTreeState::Listener, private Timer
 {
 public:
-	VuAudioProcessorEditor (VuAudioProcessor&);
+	VuAudioProcessorEditor(VuAudioProcessor&, int paramcount, pluginpreset state, potentiometer pots[]);
 	~VuAudioProcessorEditor() override;
 
 	void newOpenGLContextCreated() override;
@@ -63,6 +77,9 @@ public:
 
 	int prevh = 0;
 	int prevw = 0;
+
+	knob knobs[3];
+	int knobcount = 3;
 private:
 	VuAudioProcessor& audioProcessor;
 

@@ -1,7 +1,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-CRMBLAudioProcessorEditor::CRMBLAudioProcessorEditor (CRMBLAudioProcessor& p, int paramcount, pluginpreset state, potentiometer pots[])
+CRMBLAudioProcessorEditor::CRMBLAudioProcessorEditor (CRMBLAudioProcessor& p, int paramcount, pluginpreset state, pluginparams params)
 	: AudioProcessorEditor (&p), audioProcessor (p)
 {
 	//special labels: time, mod, feedback
@@ -92,27 +92,22 @@ CRMBLAudioProcessorEditor::CRMBLAudioProcessorEditor (CRMBLAudioProcessor& p, in
 		knobs[i].y += .002;
 	}
 	for(int i = 1; i < knobcount; i++) {
-		knobs[i].id = pots[knobs[i].index].id;
-		knobs[i].name = pots[knobs[i].index].name;
-		if(pots[knobs[i].index].smoothtime > 0)
-			knobs[i].value = pots[knobs[i].index].normalize(pots[knobs[i].index].smooth.getTargetValue());
-		else
-			knobs[i].value = pots[knobs[i].index].normalize(state.values[knobs[i].index]);
-		knobs[i].minimumvalue = pots[knobs[i].index].minimumvalue;
-		knobs[i].maximumvalue = pots[knobs[i].index].maximumvalue;
-		knobs[i].defaultvalue = pots[knobs[i].index].normalize(pots[knobs[i].index].defaultvalue);
+		knobs[i].id = params.pots[knobs[i].index].id;
+		knobs[i].name = params.pots[knobs[i].index].name;
+		knobs[i].value = params.pots[knobs[i].index].normalize(state.values[knobs[i].index]);
+		knobs[i].minimumvalue = params.pots[knobs[i].index].minimumvalue;
+		knobs[i].maximumvalue = params.pots[knobs[i].index].maximumvalue;
+		knobs[i].defaultvalue = params.pots[knobs[i].index].normalize(params.pots[knobs[i].index].defaultvalue);
 		audioProcessor.apvts.addParameterListener(knobs[i].id,this);
 	}
+	hold = params.holdsmooth.getTargetValue() >.5;
+	oversampling = params.oversampling;
 	for(int i = 0; i < paramcount; i++) {
-		if(pots[i].id == "oversampling")
-			oversampling = state.values[i] > .5;
-		else if(pots[i].id == "hold")
-			hold = pots[i].smooth.getTargetValue() >.5;
-		else if(pots[i].id == "pingpostfeedback")
-			postfb = pots[i].smooth.getTargetValue() >.5;
-		else if(pots[i].id == "time")
-			time = pots[i].smooth.getTargetValue();
-		else if(pots[i].id == "sync")
+		if(params.pots[i].id == "pingpostfeedback")
+			postfb = state.values[i] > .5;
+		else if(params.pots[i].id == "time")
+			time = state.values[i];
+		else if(params.pots[i].id == "sync")
 			sync = state.values[i];
 	}
 	recalclabels();
@@ -735,6 +730,7 @@ void CRMBLAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		valueoffset = 0;
 		audioProcessor.undoManager.beginNewTransaction();
 		audioProcessor.apvts.getParameter(knobs[hover].id)->beginChangeGesture();
+		audioProcessor.lerpchanged[knobs[hover].index] = true;
 		dragpos = event.getScreenPosition();
 		event.source.enableUnboundedMouseMovement(true);
 	} else if(hover == -2) {

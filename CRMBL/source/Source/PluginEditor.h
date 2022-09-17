@@ -31,7 +31,7 @@ struct knob {
 class CRMBLAudioProcessorEditor : public AudioProcessorEditor, public OpenGLRenderer, public AudioProcessorValueTreeState::Listener, private Timer
 {
 public:
-	CRMBLAudioProcessorEditor (CRMBLAudioProcessor&, int paramcount, pluginpreset state, potentiometer pots[]);
+	CRMBLAudioProcessorEditor (CRMBLAudioProcessor&, int paramcount, pluginpreset state, pluginparams params);
 	~CRMBLAudioProcessorEditor() override;
 
 	void newOpenGLContextCreated() override;

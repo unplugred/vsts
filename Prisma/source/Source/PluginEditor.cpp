@@ -214,7 +214,7 @@ PrismaAudioProcessorEditor::PrismaAudioProcessorEditor(PrismaAudioProcessor& p, 
 	audioProcessor.transition = false;
 	for(int b = 0; b < 4; b++) {
 		for(int m = 0; m < 4; m++) {
-			state[0].modulesvalues[b*4+m].value = pots.bands[b].modules[m].value.getTargetValue();
+			state[0].modulesvalues[b*4+m].value = states.values[b][m];
 			audioProcessor.apvts.addParameterListener("b"+(String)b+"m"+(String)m+"val", this);
 			state[0].modulesvalues[b*4+m].id = states.id[b][m];
 			audioProcessor.apvts.addParameterListener("b"+(String)b+"m"+(String)m+"id", this);
@@ -224,7 +224,7 @@ PrismaAudioProcessorEditor::PrismaAudioProcessorEditor(PrismaAudioProcessor& p, 
 			crossovertruevalue[b-1] = state[0].crossover[b-1];
 			audioProcessor.apvts.addParameterListener("b"+(String)b+"cross", this);
 		}
-		state[0].gain[b] = pots.bands[b].gain.getTargetValue();
+		state[0].gain[b] = states.gain[b];
 		audioProcessor.apvts.addParameterListener("b"+(String)b+"gain", this);
 
 		truemute[b] = pots.bands[b].mute;
@@ -237,7 +237,7 @@ PrismaAudioProcessorEditor::PrismaAudioProcessorEditor(PrismaAudioProcessor& p, 
 		buttons[b][2] = pots.bands[b].bypass;
 		audioProcessor.apvts.addParameterListener("b"+(String)b+"bypass", this);
 	}
-	state[0].wet = pots.wet.getTargetValue();
+	state[0].wet = states.wet;
 	audioProcessor.apvts.addParameterListener("wet", this);
 	oversampling = pots.oversampling;
 	audioProcessor.apvts.addParameterListener("oversampling", this);

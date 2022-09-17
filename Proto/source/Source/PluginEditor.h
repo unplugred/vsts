@@ -23,7 +23,7 @@ struct knob {
 class ProtoAudioProcessorEditor : public AudioProcessorEditor, public OpenGLRenderer, public AudioProcessorValueTreeState::Listener, private Timer
 {
 public:
-	ProtoAudioProcessorEditor (ProtoAudioProcessor&, int paramcount, pluginpreset state, potentiometer pots[]);
+	ProtoAudioProcessorEditor(ProtoAudioProcessor&, int paramcount, pluginpreset state, pluginparams params);
 	~ProtoAudioProcessorEditor() override;
 
 	void newOpenGLContextCreated() override;

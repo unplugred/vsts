@@ -6,6 +6,9 @@ PrismaAudioProcessor::PrismaAudioProcessor() :
 	apvts(*this, &undoManager, "Parameters", createParameters()),
 	forwardFFT(fftOrder), window(fftSize, dsp::WindowingFunction<float>::hann)
 {
+	for(int i = 0; i < getNumPrograms(); i++)
+		presets[i].name = "Program " + (String)(i+1);
+
 	for(int b = 0; b < 4; b++) {
 		for(int m = 0; m < 4; m++) {
 			state[0].values[b][m] = apvts.getParameter("b"+(String)b+"m"+(String)m+"val")->getValue();
@@ -53,6 +56,9 @@ PrismaAudioProcessor::PrismaAudioProcessor() :
 	}
 
 	state[1] = state[0];
+	String presetname = presets[currentpreset].name;
+	presets[currentpreset] = state[0];
+	presets[currentpreset].name = presetname;
 
 	for(int i = 0; i < scopeSize; i++) scopeData[i] = 0;
 	for(int i = 0; i < fftSize; i++) fifo[i] = 0;
@@ -82,14 +88,14 @@ bool PrismaAudioProcessor::producesMidi() const { return false; }
 bool PrismaAudioProcessor::isMidiEffect() const { return false; }
 double PrismaAudioProcessor::getTailLengthSeconds() const { return 0.0; }
 
-int PrismaAudioProcessor::getNumPrograms() { return 8; }
+int PrismaAudioProcessor::getNumPrograms() { return 20; }
 int PrismaAudioProcessor::getCurrentProgram() { return currentpreset; }
 void PrismaAudioProcessor::setCurrentProgram (int index) {
-	if(!boot) return;
+	if(currentpreset == index) return;
 
 	undoManager.beginNewTransaction((String)"Changed preset to " += presets[index].name);
-	currentpreset = index;
 	transition = true;
+	currentpreset = index;
 
 	for(int b = 0; b < 4; b++) {
 		for(int m = 0; m < 4; m++) {
@@ -106,16 +112,6 @@ const String PrismaAudioProcessor::getProgramName (int index) {
 }
 void PrismaAudioProcessor::changeProgramName (int index, const String& newName) {
 	presets[index].name = newName;
-	
-	for(int b = 0; b < 4; b++) {
-		for(int m = 0; m < 4; m++) {
-			presets[index].values[b][m] = state[pots.isb?1:0].values[b][m];
-			presets[index].id[b][m] = state[pots.isb?1:0].id[b][m];
-		}
-		if(b >= 1) presets[index].crossover[b-1] = state[pots.isb?1:0].crossover[b-1];
-		presets[index].gain[b] = state[pots.isb?1:0].gain[b];
-	}
-	presets[index].wet = state[pots.isb?1:0].wet;
 }
 
 void PrismaAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {
@@ -568,8 +564,6 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 			else pushNextSampleIntoFifo(avg/channelnum);
 		}
 	}
-
-	boot = true;
 }
 void PrismaAudioProcessor::setoversampling(bool toggle) {
 	if(!preparedtoplay) return;
@@ -645,7 +639,7 @@ void PrismaAudioProcessor::drawNextFrameOfSpectrum(int fallfactor) {
 
 bool PrismaAudioProcessor::hasEditor() const { return true; }
 AudioProcessorEditor* PrismaAudioProcessor::createEditor() {
-	return new PrismaAudioProcessorEditor(*this,state[pots.isb?1:0],pots);
+	return new PrismaAudioProcessorEditor(*this,presets[currentpreset],pots);
 }
 
 void PrismaAudioProcessor::getStateInformation (MemoryBlock& destData) {
@@ -820,6 +814,7 @@ void PrismaAudioProcessor::parameterChanged(const String& parameterID, float new
 	}
 	if(parameterID == "wet") {
 		pots.wet.setTargetValue(newValue);
+		presets[currentpreset].wet = newValue;
 		return;
 	}
 	int b = std::stoi(std::string(1,parameterID.toStdString()[1]));
@@ -845,6 +840,9 @@ void PrismaAudioProcessor::parameterChanged(const String& parameterID, float new
 		state[pots.isb?1:0].crossover[0] = fmin(fmax(crossovertruevalue[0],.02f),.94f);
 		state[pots.isb?1:0].crossover[1] = fmin(fmax(fmax(crossovertruevalue[1],crossovertruevalue[0]+.02f),.04f),.96f);
 		state[pots.isb?1:0].crossover[2] = fmin(fmax(fmax(fmax(crossovertruevalue[2],crossovertruevalue[1]+.02f),crossovertruevalue[0]+.04f),.06f),.98f);
+		presets[currentpreset].crossover[0] = state[pots.isb?1:0].crossover[0];
+		presets[currentpreset].crossover[1] = state[pots.isb?1:0].crossover[1];
+		presets[currentpreset].crossover[2] = state[pots.isb?1:0].crossover[2];
 
 		if(b == 1) {
 			crossover[0].setCutoffFrequency(calcfilter(state[pots.isb?1:0].crossover[0]));
@@ -863,11 +861,13 @@ void PrismaAudioProcessor::parameterChanged(const String& parameterID, float new
 	}
 	if(parameterID.endsWith("gain")) {
 		pots.bands[b].gain.setTargetValue(newValue);
+		presets[currentpreset].gain[b] = newValue;
 		return;
 	}
 	int m = std::stoi(std::string(1,parameterID.toStdString()[3]));
 	if(parameterID.endsWith("val")) {
 		pots.bands[b].modules[m].value.setTargetValue(newValue);
+		presets[currentpreset].values[b][m] = newValue;
 		return;
 	}
 	if(parameterID.endsWith("id")) {
@@ -891,6 +891,7 @@ void PrismaAudioProcessor::parameterChanged(const String& parameterID, float new
 		}
 
 		state[pots.isb?1:0].id[b][m] = newValue;
+		presets[currentpreset].id[b][m] = newValue;
 		return;
 	}
 }

@@ -15,11 +15,10 @@ public:
 	float minimumvalue = 0;
 	float maximumvalue = 1;
 	float defaultvalue = 0;
-	bool savedinpreset = true;
 	ptype ttype = ptype::floattype;
 	SmoothedValue<float,ValueSmoothingTypes::Linear> smooth;
 	float smoothtime = 0;
-	potentiometer(String potname = "", String potid = "", float smoothed = 0, float potdefault = 0.f, float potmin = 0.f, float potmax = 1.f, bool potsaved = true, ptype pottype = ptype::floattype) {
+	potentiometer(String potname = "", String potid = "", float smoothed = 0, float potdefault = 0.f, float potmin = 0.f, float potmax = 1.f, ptype pottype = ptype::floattype) {
 		name = potname;
 		id = potid;
 		smoothtime = smoothed;
@@ -27,7 +26,6 @@ public:
 		defaultvalue = potdefault;
 		minimumvalue = potmin;
 		maximumvalue = potmax;
-		savedinpreset = potsaved;
 		ttype = pottype;
 	}
 	float normalize(float val) {
@@ -37,11 +35,19 @@ public:
 		return val*(maximumvalue-minimumvalue)+minimumvalue;
 	}
 };
+struct pluginparams {
+	potentiometer pots[6];
+	bool overridee = false;
+	float x = .5f;
+	float y = .5f;
+	SmoothedValue<float,ValueSmoothingTypes::Linear> xsmooth;
+	SmoothedValue<float,ValueSmoothingTypes::Linear> ysmooth;
+};
 
 struct pluginpreset {
 	String name = "";
-	float values[9];
-	pluginpreset(String pname = "", float val1 = 0.f, float val2 = 0.f, float val3 = 0.f, float val4 = 0.f, float val5 = 0.f, float val6 = 0.f, float val7 = 0.f, float val8 = 0.f, float val9 = 0.f) {
+	float values[6];
+	pluginpreset(String pname = "", float val1 = .5f, float val2 = .5f, float val3 = .28f, float val4 = 0.f, float val5 = 1.f, float val6 = 0.f) {
 		name = pname;
 		values[0] = val1;
 		values[1] = val2;
@@ -49,13 +55,10 @@ struct pluginpreset {
 		values[3] = val4;
 		values[4] = val5;
 		values[5] = val6;
-		values[6] = val7;
-		values[7] = val8;
-		values[8] = val9;
 	}
 };
 
-class ClickBoxAudioProcessor : public AudioProcessor, public AudioProcessorValueTreeState::Listener {
+class ClickBoxAudioProcessor : public AudioProcessor, public AudioProcessorValueTreeState::Listener, private Timer {
 public:
 	ClickBoxAudioProcessor();
 	~ClickBoxAudioProcessor() override;
@@ -94,15 +97,22 @@ public:
 	Atomic<float> y = .5f;
 	Atomic<float> i = .0f;
 
-	int version = 2;
-	const int paramcount = 9;
+	int version = 3;
+	const int paramcount = 6;
 
 	pluginpreset state;
-	potentiometer pots[9];
+	pluginparams params;
+	bool lerpchanged[6];
 
 	CoolLogger logger;
 
 private:
+	pluginpreset presets[20];
+	int currentpreset = 0;
+	void timerCallback() override;
+	float lerptable[6];
+	float lerpstage = 0;
+
 	float oldautomod = 0;
 	float oldoverride = 1;
 

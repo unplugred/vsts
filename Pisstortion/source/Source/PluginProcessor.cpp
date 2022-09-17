@@ -5,35 +5,42 @@ PisstortionAudioProcessor::PisstortionAudioProcessor() :
 	AudioProcessor(BusesProperties().withInput("Input",AudioChannelSet::stereo(),true).withOutput("Output",AudioChannelSet::stereo(),true)),
 	apvts(*this, &undoManager, "Parameters", createParameters())
 {
-	presets[0] = pluginpreset("Default"				,0.17f	,1.0f	,0.35f	,0.31f	,0.1f	);
-	presets[1] = pluginpreset("Sand in Your Ear"	,0.3f	,1.0f	,1.0f	,0.18f	,0.0f	);
-	presets[2] = pluginpreset("Mega Drive"			,0.02f	,0.42f	,0.0f	,1.0f	,0.0f	);
-	presets[3] = pluginpreset("Easy to Destroy"		,0.32f	,1.0f	,0.13f	,1.0f	,0.0f	);
-	presets[4] = pluginpreset("Screamy"				,0.58f	,1.0f	,0.0f	,0.51f	,0.52f	);
-	presets[5] = pluginpreset("I Love Piss"			,1.0f	,1.0f	,0.0f	,1.0f	,0.25f	);
-	presets[6] = pluginpreset("You Broke It"		,0.09f	,1.0f	,0.0f	,0.02f	,0.0f	);
-	presets[7] = pluginpreset("Splashing"			,1.0f	,1.0f	,0.39f	,0.07f	,0.22f	);
-	presets[8] = pluginpreset("PISS LASERS"			,0.39f	,0.95f	,0.36f	,0.59f	,0.34f	);
+	presets[0] = pluginpreset("Default"				,0.17f	,1.0f	,0.35f	,0.31f	,0.1f	,1.0f	);
+	presets[1] = pluginpreset("Sand in Your Ear"	,0.3f	,1.0f	,1.0f	,0.18f	,0.0f	,1.0f	);
+	presets[2] = pluginpreset("Mega Drive"			,0.02f	,0.42f	,0.0f	,1.0f	,0.0f	,1.0f	);
+	presets[3] = pluginpreset("Easy to Destroy"		,0.32f	,1.0f	,0.13f	,1.0f	,0.0f	,1.0f	);
+	presets[4] = pluginpreset("Screamy"				,0.58f	,1.0f	,0.0f	,0.51f	,0.52f	,1.0f	);
+	presets[5] = pluginpreset("I Love Piss"			,1.0f	,1.0f	,0.0f	,1.0f	,0.25f	,1.0f	);
+	presets[6] = pluginpreset("You Broke It"		,0.09f	,1.0f	,0.0f	,0.02f	,0.0f	,1.0f	);
+	presets[7] = pluginpreset("Splashing"			,1.0f	,1.0f	,0.39f	,0.07f	,0.22f	,1.0f	);
+	presets[8] = pluginpreset("PISS LASERS"			,0.39f	,0.95f	,0.36f	,0.59f	,0.34f	,1.0f	);
+	for(int i = 9; i < getNumPrograms(); i++) {
+		presets[i] = presets[0];
+		presets[i].name = "Program " + (String)(i-8);
+	}
 
-	pots[0] = potentiometer("Frequency"			,"freq"			,.001f		,presets[0].values[0]	);
-	pots[1] = potentiometer("Piss"				,"piss"			,.002f	,presets[0].values[1]	);
-	pots[2] = potentiometer("Noise Reduction"	,"noise"		,.002f	,presets[0].values[2]	);
-	pots[3] = potentiometer("Harmonics"			,"harm"			,.001f	,presets[0].values[3]	);
-	pots[4] = potentiometer("Stereo"			,"stereo"		,.001f	,presets[0].values[4]	);
-	pots[5] = potentiometer("Out Gain"			,"gain"			,.002f	,1.0f					,0.f	,1.f	,false	);
-	pots[6] = potentiometer("Over-Sampling"		,"oversampling"	,0		,1						,0		,1		,false	,potentiometer::ptype::booltype);
+	params.pots[0] = potentiometer("Frequency"			,"freq"		,.001f	,presets[0].values[0]	);
+	params.pots[1] = potentiometer("Piss"				,"piss"		,.002f	,presets[0].values[1]	);
+	params.pots[2] = potentiometer("Noise Reduction"	,"noise"	,.002f	,presets[0].values[2]	);
+	params.pots[3] = potentiometer("Harmonics"			,"harm"		,.001f	,presets[0].values[3]	);
+	params.pots[4] = potentiometer("Stereo"				,"stereo"	,.001f	,presets[0].values[4]	);
+	params.pots[5] = potentiometer("Out Gain"			,"gain"		,.002f	,presets[0].values[5]	);
 
 	for(int i = 0; i < paramcount; i++) {
-		state.values[i] = pots[i].inflate(apvts.getParameter(pots[i].id)->getValue());
-		if(pots[i].smoothtime > 0) pots[i].smooth.setCurrentAndTargetValue(state.values[i]);
-		apvts.addParameterListener(pots[i].id, this);
+		state.values[i] = params.pots[i].inflate(apvts.getParameter(params.pots[i].id)->getValue());
+		presets[currentpreset].values[i] = state.values[i];
+		if(params.pots[i].smoothtime > 0) params.pots[i].smooth.setCurrentAndTargetValue(state.values[i]);
+		apvts.addParameterListener(params.pots[i].id, this);
 	}
+	params.oversampling = apvts.getParameter("oversampling")->getValue() > .5;
+	apvts.addParameterListener("oversampling", this);
 
 	updatevis = true;
 }
 
 PisstortionAudioProcessor::~PisstortionAudioProcessor(){
-	for(int i = 0; i < paramcount; i++) apvts.removeParameterListener(pots[i].id, this);
+	for(int i = 0; i < paramcount; i++) apvts.removeParameterListener(params.pots[i].id, this);
+	apvts.removeParameterListener("oversampling", this);
 }
 
 const String PisstortionAudioProcessor::getName() const { return "Pisstortion"; }
@@ -42,15 +49,18 @@ bool PisstortionAudioProcessor::producesMidi() const { return false; }
 bool PisstortionAudioProcessor::isMidiEffect() const { return false; }
 double PisstortionAudioProcessor::getTailLengthSeconds() const { return 0.0; }
 
-int PisstortionAudioProcessor::getNumPrograms() { return 9; }
+int PisstortionAudioProcessor::getNumPrograms() { return 20; }
 int PisstortionAudioProcessor::getCurrentProgram() { return currentpreset; }
 void PisstortionAudioProcessor::setCurrentProgram (int index) {
-	if(!boot) return;
+	if(currentpreset == index) return;
 
 	undoManager.beginNewTransaction((String)"Changed preset to " += presets[index].name);
+	for(int i = 0; i < paramcount; i++) {
+		if(lerpstage < .001 || lerpchanged[i])
+			lerptable[i] = params.pots[i].normalize(presets[currentpreset].values[i]);
+		lerpchanged[i] = false;
+	}
 	currentpreset = index;
-	for(int i = 0; i < paramcount; i++) if(pots[i].savedinpreset)
-		lerptable[i] = pots[i].normalize(state.values[i]);
 
 	if(lerpstage <= 0) {
 		lerpstage = 1;
@@ -60,31 +70,28 @@ void PisstortionAudioProcessor::setCurrentProgram (int index) {
 void PisstortionAudioProcessor::timerCallback() {
 	lerpstage *= .64f;
 	if(lerpstage < .001) {
-		for(int i = 0; i < paramcount; i++) if(pots[i].savedinpreset)
-			apvts.getParameter(pots[i].id)->setValueNotifyingHost(pots[i].normalize(presets[currentpreset].values[i]));
+		for(int i = 0; i < paramcount; i++) if(!lerpchanged[i])
+			apvts.getParameter(params.pots[i].id)->setValueNotifyingHost(params.pots[i].normalize(presets[currentpreset].values[i]));
 		lerpstage = 0;
 		undoManager.beginNewTransaction();
 		stopTimer();
 		return;
 	}
-	for(int i = 0; i < paramcount; i++) if(pots[i].savedinpreset)
-		lerpValue(pots[i].id, lerptable[i], pots[i].normalize(presets[currentpreset].values[i]));
-}
-void PisstortionAudioProcessor::lerpValue(StringRef slider, float& oldval, float newval) {
-	oldval = (newval-oldval)*.36f+oldval;
-	apvts.getParameter(slider)->setValueNotifyingHost(oldval);
+	for(int i = 0; i < paramcount; i++) if(!lerpchanged[i]) {
+		lerptable[i] = (params.pots[i].normalize(presets[currentpreset].values[i])-lerptable[i])*.36f+lerptable[i];
+		apvts.getParameter(params.pots[i].id)->setValueNotifyingHost(lerptable[i]);
+	}
 }
 const String PisstortionAudioProcessor::getProgramName (int index) {
 	return { presets[index].name };
 }
 void PisstortionAudioProcessor::changeProgramName (int index, const String& newName) {
-	for(int i = 0; i < paramcount; i++) if(pots[i].savedinpreset)
-		presets[index].values[i] = state.values[i];
+	presets[index].name = newName;
 }
 
 void PisstortionAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {
 	if(!saved && sampleRate > 60000) {
-		state.values[6] = 0;
+		params.oversampling = false;
 		apvts.getParameter("oversampling")->setValueNotifyingHost(0);
 	}
 	samplesperblock = samplesPerBlock;
@@ -104,15 +111,15 @@ void PisstortionAudioProcessor::reseteverything() {
 	dcfilter.init(samplerate*(state.values[6]>.5?2:1),channelnum);
 	for(int i = 0; i < channelnum; i++) dcfilter.reset(i);
 
-	for(int i = 0; i < paramcount; i++) if(pots[i].smoothtime > 0)
-		pots[i].smooth.reset(samplerate*(state.values[6]+1), pots[i].smoothtime);
+	for(int i = 0; i < paramcount; i++) if(params.pots[i].smoothtime > 0)
+		params.pots[i].smooth.reset(samplerate*(params.oversampling?2:1), params.pots[i].smoothtime);
 
 	preparedtoplay = true;
 	ospointerarray.resize(channelnum);
 	os.reset(new dsp::Oversampling<float>(channelnum,1,dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR));
 	os->initProcessing(samplesperblock);
 	os->setUsingIntegerLatency(true);
-	setoversampling(state.values[6] > .5);
+	setoversampling(params.oversampling);
 }
 void PisstortionAudioProcessor::releaseResources() { }
 
@@ -136,11 +143,10 @@ void PisstortionAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBu
 
 	int prmsadd = rmsadd.get();
 	int prmscount = rmscount.get();
-	bool isoversampling = (state.values[6] >= .5);
 
 	int numsamples = buffer.getNumSamples();
 	dsp::AudioBlock<float> block(buffer);
-	if(isoversampling) {
+	if(params.oversampling) {
 		dsp::AudioBlock<float> osblock = os->processSamplesUp(block);
 		for(int i = 0; i < channelnum; i++)
 			ospointerarray[i] = osblock.getChannelPointer(i);
@@ -149,12 +155,12 @@ void PisstortionAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBu
 	}
 
 	float** channelData;
-	if(isoversampling) channelData = osbuffer.getArrayOfWritePointers();
+	if(params.oversampling) channelData = osbuffer.getArrayOfWritePointers();
 	else channelData = buffer.getArrayOfWritePointers();
 
 	for (int sample = 0; sample < numsamples; ++sample) {
-		for(int i = 0; i < paramcount; i++) if(pots[i].smoothtime > 0)
-			state.values[i] = pots[i].smooth.getNextValue();
+		for(int i = 0; i < paramcount; i++) if(params.pots[i].smoothtime > 0)
+			state.values[i] = params.pots[i].smooth.getNextValue();
 
 		for (int channel = 0; channel < channelnum; ++channel) {
 			channelData[channel][sample] = pisstortion(channelData[channel][sample],channel,channelnum,state,true);
@@ -165,12 +171,10 @@ void PisstortionAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBu
 		}
 	}
 
-	if(isoversampling) os->processSamplesDown(block);
+	if(params.oversampling) os->processSamplesDown(block);
 
 	rmsadd = prmsadd;
 	rmscount = prmscount;
-
-	boot = true;
 }
 
 float PisstortionAudioProcessor::pisstortion(float source, int channel, int channelcount, pluginpreset stt, bool removedc) {
@@ -218,40 +222,33 @@ void PisstortionAudioProcessor::setoversampling(bool toggle) {
 		if(channelnum <= 0) return;
 		os->reset();
 		setLatencySamples(os->getLatencyInSamples());
-		for(int i = 0; i < paramcount; i++) if(pots[i].smoothtime > 0)
-			pots[i].smooth.reset(samplerate*2, pots[i].smoothtime);
+		for(int i = 0; i < paramcount; i++) if(params.pots[i].smoothtime > 0)
+			params.pots[i].smooth.reset(samplerate*2, params.pots[i].smoothtime);
 		dcfilter.init(samplerate*2,channelnum);
 	} else {
 		setLatencySamples(0);
-		for(int i = 0; i < paramcount; i++) if(pots[i].smoothtime > 0)
-			pots[i].smooth.reset(samplerate, pots[i].smoothtime);
+		for(int i = 0; i < paramcount; i++) if(params.pots[i].smoothtime > 0)
+			params.pots[i].smooth.reset(samplerate, params.pots[i].smoothtime);
 		dcfilter.init(samplerate,channelnum);
 	}
 }
 
 bool PisstortionAudioProcessor::hasEditor() const { return true; }
 AudioProcessorEditor* PisstortionAudioProcessor::createEditor() {
-	return new PisstortionAudioProcessorEditor (*this,paramcount,state,pots);
+	return new PisstortionAudioProcessorEditor (*this,paramcount,state,params);
 }
 
 void PisstortionAudioProcessor::getStateInformation (MemoryBlock& destData) {
 	const char linebreak = '\n';
 	std::ostringstream data;
 
-	data << version
-		<< linebreak << currentpreset << linebreak;
-
-	pluginpreset newstate = state;
-	for(int i = 0; i < paramcount; i++) {
-		if(pots[i].smoothtime > 0)
-			data << pots[i].smooth.getTargetValue() << linebreak;
-		else
-			data << newstate.values[i] << linebreak;
-	}
+	data << version << linebreak
+		<< currentpreset << linebreak
+		<< (params.oversampling?1:0) << linebreak;
 
 	for(int i = 0; i < getNumPrograms(); i++) {
 		data << presets[i].name << linebreak;
-		for(int v = 0; v < paramcount; v++) if(pots[v].savedinpreset)
+		for(int v = 0; v < paramcount; v++)
 			data << presets[i].values[v] << linebreak;
 	}
 
@@ -270,27 +267,38 @@ void PisstortionAudioProcessor::setStateInformation (const void* data, int sizeI
 		std::getline(ss, token, '\n');
 		currentpreset = std::stoi(token);
 
-		for(int i = 0; i < paramcount; i++) {
+		if(saveversion >= 3) {
+			std::getline(ss, token, '\n');
+			params.oversampling = std::stof(token) > .5;
+
+			for(int i = 0; i < getNumPrograms(); i++) {
+				std::getline(ss, token, '\n');
+				presets[i].name = token;
+				for(int v = 0; v < paramcount; v++) {
+					std::getline(ss, token, '\n');
+					presets[i].values[v] = std::stof(token);
+				}
+			}
+		} else {
+			for(int i = 0; i < 6; i++) {
+				std::getline(ss, token, '\n');
+				presets[currentpreset].values[i] = std::stof(token);
+			}
+
 			std::getline(ss, token, '\n');
 			float val = std::stof(token);
-			if(saveversion <= 1 && pots[i].id == "oversampling") val = val > 1.5 ? 1 : 0;
-			apvts.getParameter(pots[i].id)->setValueNotifyingHost(pots[i].normalize(val));
-			if(pots[i].smoothtime > 0) {
-				pots[i].smooth.setCurrentAndTargetValue(val);
-				state.values[i] = val;
-			}
-		}
+			if(saveversion <= 1) val = val > 1.5 ? 1 : 0;
+			params.oversampling = val>.5;
 
-		for(int i = 0; i < (saveversion == 0 ? 8 : getNumPrograms()); i++) {
-			std::getline(ss, token, '\n'); presets[i].name = token;
-			for(int v = 0; v < paramcount; v++) if(pots[v].savedinpreset) {
+			for(int i = 0; i < (saveversion == 0 ? 8 : getNumPrograms()); i++) {
 				std::getline(ss, token, '\n');
-				presets[i].values[v] = std::stof(token);
+				presets[i].name = token;
+				for(int v = 0; v < 5; v++) {
+					std::getline(ss, token, '\n');
+					if(currentpreset != i) presets[i].values[v] = std::stof(token);
+				}
 			}
 		}
-
-		updatevis = true;
-
 	} catch (const char* e) {
 		logger.debug((String)"Error loading saved data: "+(String)e);
 	} catch(String e) {
@@ -300,16 +308,27 @@ void PisstortionAudioProcessor::setStateInformation (const void* data, int sizeI
 	} catch(...) {
 		logger.debug((String)"Error loading saved data");
 	}
+
+	for(int i = 0; i < paramcount; i++) {
+		apvts.getParameter(params.pots[i].id)->setValueNotifyingHost(params.pots[i].normalize(presets[currentpreset].values[i]));
+		if(params.pots[i].smoothtime > 0) {
+			params.pots[i].smooth.setCurrentAndTargetValue(presets[currentpreset].values[i]);
+			state.values[i] = presets[currentpreset].values[i];
+		}
+	}
+	apvts.getParameter("oversampling")->setValueNotifyingHost(params.oversampling);
+	updatevis = true;
 }
 void PisstortionAudioProcessor::parameterChanged(const String& parameterID, float newValue) {
 	if(parameterID == "oversampling") {
-		state.values[6] = newValue > .5 ? 1 : 0;
-		setoversampling(newValue > .5);
+		params.oversampling = newValue>.5;
+		setoversampling(newValue>.5);
 		return;
 	}
-	for(int i = 0; i < paramcount; i++) if(parameterID == pots[i].id) {
-		if(pots[i].smoothtime > 0) pots[i].smooth.setTargetValue(newValue);
+	for(int i = 0; i < paramcount; i++) if(parameterID == params.pots[i].id) {
+		if(params.pots[i].smoothtime > 0) params.pots[i].smooth.setTargetValue(newValue);
 		else state.values[i] = newValue;
+		if(lerpstage < .001 || lerpchanged[i]) presets[currentpreset].values[i] = newValue;
 		return;
 	}
 }

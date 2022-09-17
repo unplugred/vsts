@@ -19,11 +19,10 @@ public:
 	float minimumvalue = 0;
 	float maximumvalue = 1;
 	float defaultvalue = 0;
-	bool savedinpreset = true;
 	ptype ttype = ptype::floattype;
 	SmoothedValue<float,ValueSmoothingTypes::Linear> smooth;
 	float smoothtime = 0;
-	potentiometer(String potname = "", String potid = "", float smoothed = 0, float potdefault = 0.f, float potmin = 0.f, float potmax = 1.f, bool potsaved = true, ptype pottype = ptype::floattype) {
+	potentiometer(String potname = "", String potid = "", float smoothed = 0, float potdefault = 0.f, float potmin = 0.f, float potmax = 1.f, ptype pottype = ptype::floattype) {
 		name = potname;
 		id = potid;
 		smoothtime = smoothed;
@@ -31,7 +30,6 @@ public:
 		defaultvalue = potdefault;
 		minimumvalue = potmin;
 		maximumvalue = potmax;
-		savedinpreset = potsaved;
 		ttype = pottype;
 	}
 	float normalize(float val) {
@@ -41,11 +39,17 @@ public:
 		return val*(maximumvalue-minimumvalue)+minimumvalue;
 	}
 };
+struct pluginparams {
+	potentiometer pots[12];
+	bool oversampling = true;
+	float hold = 0;
+	SmoothedValue<float,ValueSmoothingTypes::Linear> holdsmooth;
+};
 
 struct pluginpreset {
 	String name = "";
-	float values[14];
-	pluginpreset(String pname = "", float val1 = .32f, float val2 = 0.f, float val3 = 0.f, float val4 = .5f, float val5 = 0.f, float val6 = 0.f, float val7 = .5f, float val8 = 0.f, float val9 = 0.f, float val10 = 0.f, float val11 = .3f, float val12 = .4f, float val13 = 0.f, float val14 = 1.f) {
+	float values[12];
+	pluginpreset(String pname = "", float val1 = .32f, float val2 = 0.f, float val3 = .15f, float val4 = .5f, float val5 = 0.f, float val6 = 0.f, float val7 = .5f, float val8 = 0.f, float val9 = 0.f, float val10 = 0.f, float val11 = .3f, float val12 = .4f) {
 		name = pname;
 		values[0] = val1;
 		values[1] = val2;
@@ -59,8 +63,6 @@ struct pluginpreset {
 		values[9] = val10;
 		values[10] = val11;
 		values[11] = val12;
-		values[12] = val13;
-		values[13] = val14;
 	}
 };
 
@@ -101,7 +103,6 @@ public:
 	void getStateInformation (MemoryBlock& destData) override;
 	void setStateInformation (const void* data, int sizeInBytes) override;
 	virtual void parameterChanged(const String& parameterID, float newValue);
-	//void randomize();
  
 	AudioProcessorValueTreeState apvts;
 	UndoManager undoManager;
@@ -112,22 +113,21 @@ public:
 	Atomic<float> lastosc = 0;
 	Atomic<float> lastmodamp = 0;
 
-	int version = 0;
-	const int paramcount = 14;
+	int version = 1;
+	const int paramcount = 12;
 
 	pluginpreset state;
-	potentiometer pots[14];
+	pluginparams params;
+	bool lerpchanged[6];
 
 	CoolLogger logger;
 private:
 	AudioProcessorValueTreeState::ParameterLayout createParameters();
-	pluginpreset presets[8];
+	pluginpreset presets[20];
 	int currentpreset = 0;
 	void timerCallback() override;
-	void lerpValue(StringRef, float&, float);
-	float lerptable[13];
+	float lerptable[12];
 	float lerpstage = 0;
-	bool boot = false;
 	bool preparedtoplay = false;
 	bool saved = false;
 
