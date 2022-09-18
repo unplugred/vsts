@@ -118,7 +118,7 @@ public:
 
 	pluginpreset state;
 	pluginparams params;
-	bool lerpchanged[6];
+	bool lerpchanged[12];
 
 	CoolLogger logger;
 private:
