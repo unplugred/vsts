@@ -445,7 +445,6 @@ void CRMBLAudioProcessor::getStateInformation (MemoryBlock& destData) {
 	stream.writeString(data.str());
 }
 void CRMBLAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
-	/*
 	saved = true;
 	try {
 		std::stringstream ss(String::createStringFromData(data, sizeInBytes).toRawUTF8());
@@ -513,7 +512,6 @@ void CRMBLAudioProcessor::setStateInformation (const void* data, int sizeInBytes
 	apvts.getParameter("hold")->setValueNotifyingHost(params.hold);
 	params.holdsmooth.setCurrentAndTargetValue(params.hold);
 	apvts.getParameter("oversampling")->setValueNotifyingHost(params.oversampling);
-	*/
 }
 void CRMBLAudioProcessor::parameterChanged(const String& parameterID, float newValue) {
 	if(parameterID == "hold") {
