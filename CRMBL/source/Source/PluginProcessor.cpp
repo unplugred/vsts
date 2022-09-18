@@ -5,8 +5,8 @@ CRMBLAudioProcessor::CRMBLAudioProcessor() :
 	AudioProcessor(BusesProperties().withInput("Input",AudioChannelSet::stereo(),true).withOutput("Output",AudioChannelSet::stereo(),true)),
 	apvts(*this, &undoManager, "Parameters", createParameters())
 {
-	//												,time	,sync	,modamp	,modfreq,pingpon,pingpos,feedbac,reverse,chew	,pitch	,lowpass,wet	,
-	//presets[0] = pluginpreset("Default"				,0.32f	,0.0f	,0.15f	,0.5f	,0.0f	,0.0f	,0.5f	,0.0f	,0.0f	,0.0f	,0.3f	,0.4	);
+	//										,time	,sync	,modamp	,modfreq,pingpon,pingpos,feedbac,reverse,chew	,pitch	,lowpass,wet	,
+	//presets[0] = pluginpreset("Default"	,0.32f	,0.0f	,0.15f	,0.5f	,0.0f	,1.0f	,0.5f	,0.0f	,0.0f	,0.0f	,0.3f	,0.4	);
 	for(int i = 0; i < getNumPrograms(); i++) {
 		//presets[i] = presets[0];
 		presets[i].name = "Program " + (String)(i+1);
@@ -445,6 +445,7 @@ void CRMBLAudioProcessor::getStateInformation (MemoryBlock& destData) {
 	stream.writeString(data.str());
 }
 void CRMBLAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
+	/*
 	saved = true;
 	try {
 		std::stringstream ss(String::createStringFromData(data, sizeInBytes).toRawUTF8());
@@ -512,6 +513,7 @@ void CRMBLAudioProcessor::setStateInformation (const void* data, int sizeInBytes
 	apvts.getParameter("hold")->setValueNotifyingHost(params.hold);
 	params.holdsmooth.setCurrentAndTargetValue(params.hold);
 	apvts.getParameter("oversampling")->setValueNotifyingHost(params.oversampling);
+	*/
 }
 void CRMBLAudioProcessor::parameterChanged(const String& parameterID, float newValue) {
 	if(parameterID == "hold") {
@@ -546,7 +548,7 @@ AudioProcessorValueTreeState::ParameterLayout CRMBLAudioProcessor::createParamet
 	parameters.push_back(std::make_unique<AudioParameterBool	>("pingpostfeedback","Ping Post Feedback"	,true	));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>("feedback"		,"Feedback"				,0.0f	,1.0f	,0.5f	));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>("reverse"			,"Reverse"				,0.0f	,1.0f	,0.0f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("chew"			,"Chew"				,0.0f	,1.0f	,0.0f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>("chew"			,"Chew"					,0.0f	,1.0f	,0.0f	));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>("pitch"			,"Pitch"				,-24.0f	,24.0f	,0.0f	));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>("lowpass"			,"Lowpass"				,0.0f	,1.0f	,0.3f	));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>("wet"				,"Dry/Wet"				,0.0f	,1.0f	,0.4f	));
