@@ -463,13 +463,14 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 				//PAN
 				} else if(state[pots.isb?1:0].id[b][m] == 14) {
 					if(channelnum > 1) {
+						double halfsqrt2 = sqrt(2.0)*.5;
 						for(int s = 0; s < numsamples; ++s) {
 							state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
 							if(state[pots.isb?1:0].values[b][m] != .5) {
 								for(int c = 0; c < channelnum; ++c) {
-									double amplitude = ((double)c)/(channelnum-1);
-									if(state[pots.isb?1:0].values[b][m] > .5) amplitude = 1-amplitude;
-									wetChannelData[b][c][s] *= 1-amplitude*fabs(state[pots.isb?1:0].values[b][m]-.5)*2;
+									double cpos = ((double)c)/(channelnum-1);
+									double linearpan = cpos*(state[pots.isb?1:0].values[b][m]*2-1)+.5*(2-state[pots.isb?1:0].values[b][m]*2);
+									wetChannelData[b][c][s] *= sin(linearpan*1.5707963268)*.7071067812+linearpan;
 								}
 							}
 						}
