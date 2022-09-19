@@ -26,9 +26,9 @@ VersionInfoDescription={#PluginName}
 VersionInfoProductName={#PluginName}
 VersionInfoProductVersion=1.0
 VersionInfoVersion=1.0
-WizardImageFile=WizClassicImage.bmp
+WizardImageFile=assets\image\{#PluginName}.bmp
 WizardImageStretch=false
-WizardSmallImageFile=WizClassicSmallImage.bmp
+WizardSmallImageFile=assets\smallimage\{#PluginName}.bmp
 
 [Files]
 Source: "build\64\{#PluginName}.dll"; DestDir: {code:GetVST2Dir|0}; Components: VST64; Flags: ignoreversion
