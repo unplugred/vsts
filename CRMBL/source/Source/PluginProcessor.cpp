@@ -366,9 +366,9 @@ void CRMBLAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 					double calccounter = fmod(reversecounter[channel]-dampchanneloffsetval*dlytime+dlytime,dlytime);
 					reverse = interpolatesamples(delayData[channel],delaybufferindex-calccounter+delaybuffernumsamples,delaybuffernumsamples);
 					if(calccounter <= 256) {
-						double lerpamount = calccounter*.00390625;
+						double lerpamount = calccounter*.00390625*1.5707963268;
 						calccounter += dlytime;
-						reverse = reverse*sqrt(lerpamount)+interpolatesamples(delayData[channel],delaybufferindex-calccounter+delaybuffernumsamples,delaybuffernumsamples)*sqrt(1-lerpamount);
+						reverse = reverse*sin(lerpamount)+interpolatesamples(delayData[channel],delaybufferindex-calccounter+delaybuffernumsamples,delaybuffernumsamples)*cos(lerpamount);
 					}
 				}
 				if(state.values[7] < 1) {
@@ -376,8 +376,9 @@ void CRMBLAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 					forward = interpolatesamples(delayData[channel],delaybufferindex-dlytime+delaybuffernumsamples,delaybuffernumsamples);
 				}
 				//dry wet
-				float mixval = state.values[11]<.5?2*state.values[11]*state.values[11]:1-pow(-2*state.values[11]+2,2)*.5;
-				channelData[channel][sample+startread] = channelData[channel][sample+startread]*sqrt(1-mixval)+(forward*sqrt(1-state.values[7])+reverse*sqrt(state.values[7]))*sqrt(mixval);
+				double mixval = state.values[11]*1.5707963268;
+				double reversemixval = state.values[7]*1.5707963268;
+				channelData[channel][sample+startread] = channelData[channel][sample+startread]*cos(mixval)+(forward*cos(reversemixval)+reverse*sin(reversemixval))*sin(mixval);
 				//update delay buffer
 				delayData[channel][delaybufferindex] = delayProcessData[channel][sample];
 			}
