@@ -244,9 +244,7 @@ PrismaAudioProcessorEditor::PrismaAudioProcessorEditor(PrismaAudioProcessor& p, 
 	isb = pots.isb;
 	audioProcessor.apvts.addParameterListener("ab", this);
 
-	state[0].crossover[0] = fmin(fmax(crossovertruevalue[0],.02f),.94f);
-	state[0].crossover[1] = fmin(fmax(fmax(crossovertruevalue[1],crossovertruevalue[0]+.02f),.04f),.96f);
-	state[0].crossover[2] = fmin(fmax(fmax(fmax(crossovertruevalue[2],crossovertruevalue[1]+.02f),crossovertruevalue[0]+.04f),.06f),.98f);
+	audioProcessor.calccross(crossovertruevalue,state[0].crossover);
 	for(int i = 0; i < 3; i++) crossoverlerp[i] = state[0].crossover[i];
 
 	for(int m = 0; m < 16; m++) {
@@ -1151,9 +1149,8 @@ void PrismaAudioProcessorEditor::parameterChanged(const String& parameterID, flo
 	int b = std::stoi(std::string(1,parameterID.toStdString()[1]));
 	if(parameterID.endsWith("cross")) {
 		crossovertruevalue[b-1] = newValue;
-		state[0].crossover[0] = fmin(fmax(crossovertruevalue[0],.02f),.94f);
-		state[0].crossover[1] = fmin(fmax(fmax(crossovertruevalue[1],crossovertruevalue[0]+.02f),.04f),.96f);
-		state[0].crossover[2] = fmin(fmax(fmax(fmax(crossovertruevalue[2],crossovertruevalue[1]+.02f),crossovertruevalue[0]+.04f),.06f),.98f);
+		audioProcessor.calccross(crossovertruevalue,state[0].crossover);
+
 		for(int i = 0; i < 3; i++)
 			crossoverlerp[i] = state[0].crossover[i]*(1-presettransitionease)+state[1].crossover[i]*presettransitionease;
 		return;

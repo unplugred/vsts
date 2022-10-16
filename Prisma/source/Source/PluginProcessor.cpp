@@ -837,26 +837,22 @@ void PrismaAudioProcessor::parameterChanged(const String& parameterID, float new
 	}
 	if(parameterID.endsWith("cross")) {
 		crossovertruevalue[b-1] = newValue;
-		state[pots.isb?1:0].crossover[0] = fmin(fmax(crossovertruevalue[0],.02f),.94f);
-		state[pots.isb?1:0].crossover[1] = fmin(fmax(fmax(crossovertruevalue[1],crossovertruevalue[0]+.02f),.04f),.96f);
-		state[pots.isb?1:0].crossover[2] = fmin(fmax(fmax(fmax(crossovertruevalue[2],crossovertruevalue[1]+.02f),crossovertruevalue[0]+.04f),.06f),.98f);
+		calccross(crossovertruevalue,state[pots.isb?1:0].crossover);
+
 		presets[currentpreset].crossover[0] = state[pots.isb?1:0].crossover[0];
 		presets[currentpreset].crossover[1] = state[pots.isb?1:0].crossover[1];
 		presets[currentpreset].crossover[2] = state[pots.isb?1:0].crossover[2];
 
-		if(b == 1) {
-			crossover[0].setCutoffFrequency(calcfilter(state[pots.isb?1:0].crossover[0]));
-			crossover[3].setCutoffFrequency(calcfilter(state[pots.isb?1:0].crossover[0]));
-		} else if(b == 2) {
-			crossover[1].setCutoffFrequency(calcfilter(state[pots.isb?1:0].crossover[1]));
-			crossover[4].setCutoffFrequency(calcfilter(state[pots.isb?1:0].crossover[1]));
-			crossover[6].setCutoffFrequency(calcfilter(state[pots.isb?1:0].crossover[1]));
-		} else {
-			crossover[2].setCutoffFrequency(calcfilter(state[pots.isb?1:0].crossover[2]));
-			crossover[5].setCutoffFrequency(calcfilter(state[pots.isb?1:0].crossover[2]));
-			crossover[7].setCutoffFrequency(calcfilter(state[pots.isb?1:0].crossover[2]));
-			crossover[8].setCutoffFrequency(calcfilter(state[pots.isb?1:0].crossover[2]));
-		}
+		crossover[0].setCutoffFrequency(calcfilter(state[pots.isb?1:0].crossover[0]));
+		crossover[1].setCutoffFrequency(calcfilter(state[pots.isb?1:0].crossover[1]));
+		crossover[2].setCutoffFrequency(calcfilter(state[pots.isb?1:0].crossover[2]));
+		crossover[3].setCutoffFrequency(calcfilter(state[pots.isb?1:0].crossover[0]));
+		crossover[4].setCutoffFrequency(calcfilter(state[pots.isb?1:0].crossover[1]));
+		crossover[5].setCutoffFrequency(calcfilter(state[pots.isb?1:0].crossover[2]));
+		crossover[6].setCutoffFrequency(calcfilter(state[pots.isb?1:0].crossover[1]));
+		crossover[7].setCutoffFrequency(calcfilter(state[pots.isb?1:0].crossover[2]));
+		crossover[8].setCutoffFrequency(calcfilter(state[pots.isb?1:0].crossover[2]));
+
 		return;
 	}
 	if(parameterID.endsWith("gain")) {
@@ -894,6 +890,11 @@ void PrismaAudioProcessor::parameterChanged(const String& parameterID, float new
 		presets[currentpreset].id[b][m] = newValue;
 		return;
 	}
+}
+void PrismaAudioProcessor::calccross(float* input, float* output) {
+	output[0] = fmin(fmax(input[0],.02f),.94f);
+	output[1] = fmin(fmax(fmax(input[1],input[0]+.02f),.04f),.96f);
+	output[2] = fmin(fmax(fmax(fmax(input[2],input[1]+.02f),input[0]+.04f),.06f),.98f);
 }
 double PrismaAudioProcessor::calcfilter(float val) {
 	return mapToLog10(val,20.f,20000.f);

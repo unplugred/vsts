@@ -80,6 +80,7 @@ public:
 	void getStateInformation (MemoryBlock& destData) override;
 	void setStateInformation (const void* data, int sizeInBytes) override;
 	virtual void parameterChanged(const String& parameterID, float newValue);
+	void calccross(float* input, float* output);
 	double calcfilter(float val);
 
 	void switchpreset(bool isbb);
@@ -105,7 +106,7 @@ public:
 	float scopeData[scopeSize];
 private:
 	pluginpreset state[2];
-	float crossovertruevalue[3];
+	float crossovertruevalue[3] {.25f,.5f,.75f};
 
 	AudioProcessorValueTreeState::ParameterLayout createParameters();
 	pluginpreset presets[20];
