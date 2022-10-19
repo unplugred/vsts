@@ -1,8 +1,6 @@
 #include "functions.h"
 
 double functions::smoothdamp(double current, double target, double* currentvelocity, double smoothtime, double maxspeed, int samplerate) {
-	//if(abs(*currentvelocity) < 0.0000001) *currentvelocity = 0;
-	if(abs(current) < 0.0000001 && target == 0) current = 0;
 	smoothtime = fmax(.0001, smoothtime);
 	double num1 = 2./smoothtime;
 	double num2 = num1/((double)samplerate);
@@ -16,7 +14,6 @@ double functions::smoothdamp(double current, double target, double* currentveloc
 		num6 = target;
 		*currentvelocity = 0;
 	} else *currentvelocity = (*currentvelocity-num1*num5)*num3;
-	if(abs(*currentvelocity) < 0.0000001) num6 = target;
 	return num6;
 }
 
