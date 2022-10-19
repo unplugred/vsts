@@ -131,21 +131,21 @@ AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new RedVJAudioProces
 
 AudioProcessorValueTreeState::ParameterLayout RedVJAudioProcessor::createParameters() {
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
-	parameters.push_back(std::make_unique<AudioParameterFloat>("p1","Parameter01",0.f,1.f,.5f));
-	parameters.push_back(std::make_unique<AudioParameterFloat>("p2","Parameter02",0.f,1.f,.5f));
-	parameters.push_back(std::make_unique<AudioParameterFloat>("p3","Parameter03",0.f,1.f,.5f));
-	parameters.push_back(std::make_unique<AudioParameterFloat>("p4","Parameter04",0.f,1.f,.5f));
-	parameters.push_back(std::make_unique<AudioParameterFloat>("p5","Parameter05",0.f,1.f,.5f));
-	parameters.push_back(std::make_unique<AudioParameterFloat>("p6","Parameter06",0.f,1.f,.5f));
-	parameters.push_back(std::make_unique<AudioParameterFloat>("p7","Parameter07",0.f,1.f,.5f));
-	parameters.push_back(std::make_unique<AudioParameterFloat>("p8","Parameter08",0.f,1.f,.5f));
-	parameters.push_back(std::make_unique<AudioParameterFloat>("p9","Parameter09",0.f,1.f,.5f));
-	parameters.push_back(std::make_unique<AudioParameterFloat>("p10","Parameter10",0.f,1.f,.5f));
-	parameters.push_back(std::make_unique<AudioParameterFloat>("p11","Parameter11",0.f,1.f,.5f));
-	parameters.push_back(std::make_unique<AudioParameterFloat>("p12","Parameter12",0.f,1.f,.5f));
-	parameters.push_back(std::make_unique<AudioParameterFloat>("p13","Parameter13",0.f,1.f,.5f));
-	parameters.push_back(std::make_unique<AudioParameterFloat>("p14","Parameter14",0.f,1.f,.5f));
-	parameters.push_back(std::make_unique<AudioParameterFloat>("p15","Parameter15",0.f,1.f,.5f));
-	parameters.push_back(std::make_unique<AudioParameterFloat>("p16","Parameter16",0.f,1.f,.5f));
+	parameters.push_back(std::make_unique<AudioParameterFloat>("p1"	,"Parameter01",juce::NormalisableRange<float>(0.f,1.f),.5f));
+	parameters.push_back(std::make_unique<AudioParameterFloat>("p2"	,"Parameter02",juce::NormalisableRange<float>(0.f,1.f),.5f));
+	parameters.push_back(std::make_unique<AudioParameterFloat>("p3"	,"Parameter03",juce::NormalisableRange<float>(0.f,1.f),.5f));
+	parameters.push_back(std::make_unique<AudioParameterFloat>("p4"	,"Parameter04",juce::NormalisableRange<float>(0.f,1.f),.5f));
+	parameters.push_back(std::make_unique<AudioParameterFloat>("p5"	,"Parameter05",juce::NormalisableRange<float>(0.f,1.f),.5f));
+	parameters.push_back(std::make_unique<AudioParameterFloat>("p6"	,"Parameter06",juce::NormalisableRange<float>(0.f,1.f),.5f));
+	parameters.push_back(std::make_unique<AudioParameterFloat>("p7"	,"Parameter07",juce::NormalisableRange<float>(0.f,1.f),.5f));
+	parameters.push_back(std::make_unique<AudioParameterFloat>("p8"	,"Parameter08",juce::NormalisableRange<float>(0.f,1.f),.5f));
+	parameters.push_back(std::make_unique<AudioParameterFloat>("p9"	,"Parameter09",juce::NormalisableRange<float>(0.f,1.f),.5f));
+	parameters.push_back(std::make_unique<AudioParameterFloat>("p10","Parameter10",juce::NormalisableRange<float>(0.f,1.f),.5f));
+	parameters.push_back(std::make_unique<AudioParameterFloat>("p11","Parameter11",juce::NormalisableRange<float>(0.f,1.f),.5f));
+	parameters.push_back(std::make_unique<AudioParameterFloat>("p12","Parameter12",juce::NormalisableRange<float>(0.f,1.f),.5f));
+	parameters.push_back(std::make_unique<AudioParameterFloat>("p13","Parameter13",juce::NormalisableRange<float>(0.f,1.f),.5f));
+	parameters.push_back(std::make_unique<AudioParameterFloat>("p14","Parameter14",juce::NormalisableRange<float>(0.f,1.f),.5f));
+	parameters.push_back(std::make_unique<AudioParameterFloat>("p15","Parameter15",juce::NormalisableRange<float>(0.f,1.f),.5f));
+	parameters.push_back(std::make_unique<AudioParameterFloat>("p16","Parameter16",juce::NormalisableRange<float>(0.f,1.f),.5f));
 	return { parameters.begin(), parameters.end() };
 }
