@@ -541,9 +541,9 @@ AudioProcessorValueTreeState::ParameterLayout CRMBLAudioProcessor::createParamet
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
 	parameters.push_back(std::make_unique<AudioParameterFloat	>("time"			,"Time (MS)"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.32f	));
 	parameters.push_back(std::make_unique<AudioParameterInt		>("sync"			,"Time (Eighth note)"									,0.0f	,16.0f	 ,0.0f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("modamp"			,"Mod Amount"			,juce::NormalisableRange<float>( 0.0f	,1.0f	 ,0.15f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("modfreq"			,"Mod Frequency"		,juce::NormalisableRange<float>( 0.0f	,1.0f	 ,0.5f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("pingpong"		,"Ping Pong"			,juce::NormalisableRange<float>( -1.0f	,1.0f	 ,0.0f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>("modamp"			,"Mod Amount"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.15f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>("modfreq"			,"Mod Frequency"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>("pingpong"		,"Ping Pong"			,juce::NormalisableRange<float>( -1.0f	,1.0f	),0.0f	));
 	parameters.push_back(std::make_unique<AudioParameterBool	>("pingpostfeedback","Ping Post Feedback"													 ,true	));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>("feedback"		,"Feedback"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>("reverse"			,"Reverse"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	));
