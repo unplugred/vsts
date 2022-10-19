@@ -305,12 +305,12 @@ AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new ProtoAudioProces
 
 AudioProcessorValueTreeState::ParameterLayout ProtoAudioProcessor::createParameters() {
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("freq"		,"Frequency"	,0.0f	,1.0f	,0.32f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("fat"			,"Fatness"		,-20.0f	,20.0f	,0.0f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("drive"		,"Drive"		,0.0f	,1.0f	,0.0f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("dry"			,"Dry"			,0.0f	,1.0f	,0.0f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("stereo"		,"Stereo"		,0.0f	,1.0f	,0.37f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("gain"		,"Out Gain"		,0.0f	,1.0f	,0.4f	));
-	parameters.push_back(std::make_unique<AudioParameterBool	>("oversampling","Over-Sampling",true	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>("freq"		,"Frequency"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.32f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>("fat"			,"Fatness"		,juce::NormalisableRange<float>( -20.0f	,20.0f	),0.0f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>("drive"		,"Drive"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>("dry"			,"Dry"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>("stereo"		,"Stereo"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.37f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>("gain"		,"Out Gain"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.4f	));
+	parameters.push_back(std::make_unique<AudioParameterBool	>("oversampling","Over-Sampling"												 ,true	));
 	return { parameters.begin(), parameters.end() };
 }

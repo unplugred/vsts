@@ -337,12 +337,12 @@ AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new PisstortionAudio
 
 AudioProcessorValueTreeState::ParameterLayout PisstortionAudioProcessor::createParameters() {
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("freq"		,"Frequency"		,0.0f	,1.0f	,0.17f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("piss"		,"Piss"				,0.0f	,1.0f	,1.0f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("noise"		,"Noise Reduction"	,0.0f	,1.0f	,0.35f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("harm"		,"Harmonics"		,0.0f	,1.0f	,0.31f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("stereo"		,"Stereo"			,0.0f	,1.0f	,0.1f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("gain"		,"Out Gain"			,0.0f	,1.0f	,1.0f	));
-	parameters.push_back(std::make_unique<AudioParameterBool	>("oversampling","Over-Sampling"	,true	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>("freq"		,"Frequency"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.17f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>("piss"		,"Piss"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),1.0f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>("noise"		,"Noise Reduction"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.35f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>("harm"		,"Harmonics"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.31f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>("stereo"		,"Stereo"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.1f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>("gain"		,"Out Gain"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),1.0f	));
+	parameters.push_back(std::make_unique<AudioParameterBool	>("oversampling","Over-Sampling"													 ,true	));
 	return { parameters.begin(), parameters.end() };
 }

@@ -301,15 +301,14 @@ AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new ClickBoxAudioPro
 
 AudioProcessorValueTreeState::ParameterLayout ClickBoxAudioProcessor::createParameters() {
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
-	parameters.push_back(std::make_unique<AudioParameterFloat>("x","X",0.0f,1.0f,0.5f));
-	parameters.push_back(std::make_unique<AudioParameterFloat>("y","Y",0.0f,1.0f,0.5f));
-	parameters.push_back(std::make_unique<AudioParameterFloat>("intensity","Intensity",0.0f,1.0f,0.5f));
-	parameters.push_back(std::make_unique<AudioParameterFloat>("amount","Amount",0.0f,1.0f,0.5f));
-	parameters.push_back(std::make_unique<AudioParameterFloat>("stereo","Stereo",0.0f,1.0f,0.28f));
-	parameters.push_back(std::make_unique<AudioParameterBool>("sidechain","Side-chain to dry",false));
-	parameters.push_back(std::make_unique<AudioParameterBool>("dry","Dry out",true));
-	parameters.push_back(std::make_unique<AudioParameterFloat>("auto","Auto",0.0f,1.0f,0.0f));
-	parameters.push_back(std::make_unique<AudioParameterBool>("override","Override",false));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>("x"			,"X"				,juce::NormalisableRange( 0.0f	,1.0f	),0.5f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>("y"			,"Y"				,juce::NormalisableRange( 0.0f	,1.0f	),0.5f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>("intensity"	,"Intensity"		,juce::NormalisableRange( 0.0f	,1.0f	),0.5f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>("amount"		,"Amount"			,juce::NormalisableRange( 0.0f	,1.0f	),0.5f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>("stereo"		,"Stereo"			,juce::NormalisableRange( 0.0f	,1.0f	),0.28f	));
+	parameters.push_back(std::make_unique<AudioParameterBool	>("sidechain"	,"Side-chain to dry"										 ,false	));
+	parameters.push_back(std::make_unique<AudioParameterBool	>("dry"			,"Dry out"													 ,true	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>("auto"		,"Auto"				,juce::NormalisableRange( 0.0f	,1.0f	),0.0f	));
+	parameters.push_back(std::make_unique<AudioParameterBool	>("override"	,"Override"													 ,false	));
 	return { parameters.begin(), parameters.end() };
 }
-

@@ -297,13 +297,13 @@ AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new RedBassAudioProc
 
 AudioProcessorValueTreeState::ParameterLayout RedBassAudioProcessor::createParameters() {
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("freq"		,"Frequency"		,0.0f	,1.0f	,0.58f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("threshold"	,"Threshold"		,0.0f	,1.0f	,0.02f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("attack"		,"Attack"			,0.0f	,1.0f	,0.17f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("release"		,"Release"			,0.0f	,1.0f	,0.18f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("lowpass"		,"Sidechain lowpass",0.0f	,1.0f	,0.0f	));
-	parameters.push_back(std::make_unique<AudioParameterBool	>("monitor"		,"Monitor sidechain",false	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("dry"			,"Dry"				,0.0f	,1.0f	,1.0f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("wet"			,"Wet"				,0.0f	,1.0f	,0.18f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>("freq"		,"Frequency"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.58f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>("threshold"	,"Threshold"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.02f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>("attack"		,"Attack"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.17f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>("release"		,"Release"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.18f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>("lowpass"		,"Sidechain lowpass",juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	));
+	parameters.push_back(std::make_unique<AudioParameterBool	>("monitor"		,"Monitor sidechain"												 ,false	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>("dry"			,"Dry"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),1.0f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>("wet"			,"Wet"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.18f	));
 	return { parameters.begin(), parameters.end() };
 }
