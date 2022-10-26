@@ -717,16 +717,15 @@ void PrismaAudioProcessorEditor::renderOpenGL() {
 				moduleshader->setUniform("id",state[i].modulesvalues[m].id);
 				moduleshader->setUniform("pos",(11.f+114.f*floor(m*.25f))/getWidth(),(368.f-78.f*fmod(m,4))/getHeight());
 				moduleshader->setUniform("hover",(!hoverknob&&hover==m&&hoverselector<0)?modules[state[i].modulesvalues[m].id].hovercutoff:0.f);
-				if(fmod(m,4) == 0) {
-					moduleshader->setUniform("selector",selectorease[(int)floor(m*.25f)]-presettransitionease+i);
-					moduleshader->setUniform("grayscale",bypassease[(int)floor(m*.25f)]);
-				}
+				if(fmod(m,4) == 0) moduleshader->setUniform("selector",selectorease[(int)floor(m*.25f)]-presettransitionease+i);
 				if(state[i].modulesvalues[m].id == 0) {
 					moduleshader->setUniform("bg",bypasscolors[(int)floor(m*.25f)][0][0],bypasscolors[(int)floor(m*.25f)][0][1],bypasscolors[(int)floor(m*.25f)][0][2]);
 					moduleshader->setUniform("tx",bypasscolors[(int)floor(m*.25f)][1][0],bypasscolors[(int)floor(m*.25f)][1][1],bypasscolors[(int)floor(m*.25f)][1][2]);
+					moduleshader->setUniform("grayscale",1.f);
 				} else {
 					moduleshader->setUniform("bg",modules[state[i].modulesvalues[m].id].colors[0],modules[state[i].modulesvalues[m].id].colors[1],modules[state[i].modulesvalues[m].id].colors[2]);
 					moduleshader->setUniform("tx",modules[state[i].modulesvalues[m].id].colors[3],modules[state[i].modulesvalues[m].id].colors[4],modules[state[i].modulesvalues[m].id].colors[5]);
+					moduleshader->setUniform("grayscale",bypassease[(int)floor(m*.25f)]);
 				}
 				if(modules[state[i].modulesvalues[m].id].clip >= 0) moduleshader->setUniform("kn",0,0,0);
 				else moduleshader->setUniform("kn",modules[state[i].modulesvalues[m].id].colors[6],modules[state[i].modulesvalues[m].id].colors[7],modules[state[i].modulesvalues[m].id].colors[8]);
@@ -749,6 +748,7 @@ void PrismaAudioProcessorEditor::renderOpenGL() {
 		if(selectorease[b] > 0) {
 			moduleshader->setUniform("pos",(125.f+114.f*b)/getWidth(),86.f/getHeight());
 			moduleshader->setUniform("selector",selectorease[b]+1);
+			moduleshader->setUniform("grayscale",1.f);
 			if(hoverselector == b)
 				moduleshader->setUniform("highlight",hover,17.f);
 			else
