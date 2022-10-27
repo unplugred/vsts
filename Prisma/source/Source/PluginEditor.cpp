@@ -744,11 +744,11 @@ void PrismaAudioProcessorEditor::renderOpenGL() {
 	moduleshader->setUniform("texscale",114.f/selectortex.getWidth(),389.f/selectortex.getHeight());
 	moduleshader->setUniform("size",114.f/getWidth(),389.f/getHeight());
 	moduleshader->setUniform("kn",0.f,0.f,0.f);
+	moduleshader->setUniform("grayscale",1.f);
 	for(int b = 0; b < 4; b++) {
 		if(selectorease[b] > 0) {
 			moduleshader->setUniform("pos",(125.f+114.f*b)/getWidth(),86.f/getHeight());
 			moduleshader->setUniform("selector",selectorease[b]+1);
-			moduleshader->setUniform("grayscale",1.f);
 			if(hoverselector == b)
 				moduleshader->setUniform("highlight",hover,17.f);
 			else
