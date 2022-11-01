@@ -258,7 +258,8 @@ PrismaAudioProcessorEditor::PrismaAudioProcessorEditor(PrismaAudioProcessor& p, 
 
 	setSize(478,561);
 	setResizable(false, false);
-	dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->dpi/96.f;
+	if((SystemStats::getOperatingSystemType() & SystemStats::OperatingSystemType::Windows) != 0)
+		dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->dpi/96.f;
 
 	setOpaque(true);
 	context.setRenderer(this);

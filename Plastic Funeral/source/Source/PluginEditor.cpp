@@ -26,7 +26,8 @@ PFAudioProcessorEditor::PFAudioProcessorEditor (PFAudioProcessor& p, int paramco
 	setSize (242, 462);
 	setResizable(false, false);
 	calcvis();
-	dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->dpi/96.f;
+	if((SystemStats::getOperatingSystemType() & SystemStats::OperatingSystemType::Windows) != 0)
+		dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->dpi/96.f;
 
 	setOpaque(true);
 	context.setRenderer(this);

@@ -27,7 +27,8 @@ ProtoAudioProcessorEditor::ProtoAudioProcessorEditor(ProtoAudioProcessor& p, int
 	setSize(30+106*2,162+100*3);
 	setResizable(false, false);
 	calcvis();
-	dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->dpi/96.f;
+	if((SystemStats::getOperatingSystemType() & SystemStats::OperatingSystemType::Windows) != 0)
+		dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->dpi/96.f;
 
 	setOpaque(true);
 	context.setRenderer(this);
