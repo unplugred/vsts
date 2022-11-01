@@ -39,7 +39,7 @@ REPLY=${REPLY:-S}
 echo
 if [[ $REPLY =~ ^[Aa]$ ]]
 then
-	vp=ALL_BUILD
+	vp=${vn}_All
 	vr=m
 else
 	if [[ $REPLY =~ ^[Ss]$ ]]
@@ -82,5 +82,5 @@ fi
 cmake --build build --config ${vm} --target ${vp}
 if [ $vr == y ]
 then
-	"./build/${vn}_artefacts/${vm}/Standalone/Red Bass"
+	"./build/${vn}_artefacts/Standalone/Red Bass"
 fi
