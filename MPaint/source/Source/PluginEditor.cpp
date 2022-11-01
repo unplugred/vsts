@@ -12,7 +12,8 @@ MPaintAudioProcessorEditor::MPaintAudioProcessorEditor(MPaintAudioProcessor& p, 
 	setSize(468, error?180:40);
 	setResizable(false, false);
 	setOpaque(true);
-	dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->dpi/96.f;
+	if((SystemStats::getOperatingSystemType() & SystemStats::OperatingSystemType::Windows) != 0)
+		dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->dpi/96.f;
 
 	context.setRenderer(this);
 	context.attachTo(*this);
