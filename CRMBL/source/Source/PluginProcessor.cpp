@@ -272,20 +272,20 @@ void CRMBLAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 
 		//----prepare delay buffer----
 		dsp::AudioBlock<float> delayprocessblock;
-		AudioBuffer<float>* delayprocessbufferpointer;
+		AudioBuffer<float> delayprocessbuffertwo;
 		int upsamplednumsamples = numsamples;
 		if(params.oversampling) {
 			for(int i = 0; i < channelnum; i++) delaypointerarray[i] = delayprocessbuffer.getWritePointer(i);
 			delayprocessblock = os->processSamplesUp(dsp::AudioBlock<float>(delaypointerarray.data(), channelnum, static_cast<int>(numsamples)));
 			upsamplednumsamples = delayprocessblock.getNumSamples();
 			for(int i = 0; i < channelnum; i++) delaypointerarray[i] = delayprocessblock.getChannelPointer(i);
-			delayprocessbufferpointer = &AudioBuffer<float>(delaypointerarray.data(), channelnum, static_cast<int>(upsamplednumsamples));
+			delayprocessbuffertwo = AudioBuffer<float>(delaypointerarray.data(), channelnum, static_cast<int>(upsamplednumsamples));
 		} else {
 			for(int i = 0; i < channelnum; i++) delaypointerarray[i] = delayprocessbuffer.getWritePointer(i);
-			delayprocessbufferpointer = &AudioBuffer<float>(delaypointerarray.data(), channelnum, static_cast<int>(upsamplednumsamples));
-			delayprocessblock = dsp::AudioBlock<float>(*delayprocessbufferpointer);
+			delayprocessbuffertwo = AudioBuffer<float>(delaypointerarray.data(), channelnum, static_cast<int>(upsamplednumsamples));
+			delayprocessblock = dsp::AudioBlock<float>(delayprocessbuffertwo);
 		}
-		delayProcessData = delayprocessbufferpointer->getArrayOfWritePointers();
+		delayProcessData = delayprocessbuffertwo.getArrayOfWritePointers();
 
 		//----process delay buffer----
 		for(int sample = 0; sample < upsamplednumsamples; ++sample) {
@@ -309,7 +309,7 @@ void CRMBLAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 		}
 		//pitch
 		if(!ispitchbypassed) {
-			AudioDataConverters::interleaveSamples(delayprocessbufferpointer->getArrayOfReadPointers(),pitchprocessbuffer.data(),upsamplednumsamples,channelnum);
+			AudioDataConverters::interleaveSamples(delayprocessbuffertwo.getArrayOfReadPointers(),pitchprocessbuffer.data(),upsamplednumsamples,channelnum);
 			pitchshift.putSamples(pitchprocessbuffer.data(), upsamplednumsamples);
 			pitchshift.receiveSamples(pitchprocessbuffer.data(), upsamplednumsamples);
 			AudioDataConverters::deinterleaveSamples(pitchprocessbuffer.data(),delayProcessData,upsamplednumsamples,channelnum);
@@ -318,9 +318,10 @@ void CRMBLAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 		//----down sample----
 		if(params.oversampling) {
 			for(int i = 0; i < channelnum; i++) delaypointerarray[i] = delayprocessbuffer.getWritePointer(i);
-				delayprocessbufferpointer = &AudioBuffer<float>(delaypointerarray.data(), channelnum, static_cast<int>(numsamples));
-			os->processSamplesDown(dsp::AudioBlock<float>(*delayprocessbufferpointer));
-			delayProcessData = delayprocessbufferpointer->getArrayOfWritePointers();
+				delayprocessbuffertwo = AudioBuffer<float>(delaypointerarray.data(), channelnum, static_cast<int>(numsamples));
+			dsp::AudioBlock<float> delayprocessblocktwo(delayprocessbuffertwo);
+			os->processSamplesDown(delayprocessblocktwo);
+			delayProcessData = delayprocessbuffertwo.getArrayOfWritePointers();
 		}
 
 		//lowpass
