@@ -409,9 +409,10 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	for(int i = 0; i < knobcount; i++) {
+		knobs[i].yoffset = damparray[((int)round(33+dampreadpos-knobs[i].r*16))%32]*.05f;
 		if(i != 1 && i != 2 && i != 4) {
 			baseshader->setUniform("r",knobs[i].r);
-			baseshader->setUniform("offset",getvis(knobs[i].r)*.1f);
+			baseshader->setUniform("offset",knobs[i].yoffset*2);
 			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 		}
 	}
@@ -444,9 +445,7 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	knobshader->setUniform("circle",1.f);
 	knobshader->setUniform("dark",0);
-	float rmsout = 0;
 	for(int i = 0; i < knobcount; i++) {
-		rmsout = getvis(knobs[i].r);
 		if(i == 1 || i == 3) {
 			context.extensions.glDisableVertexAttribArray(coord);
 
@@ -460,14 +459,14 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 			context.extensions.glEnableVertexAttribArray(coord);
 			context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 			if(i == 1) {
-				baseshader->setUniform("offset",getvis(knobs[1].r)*.1f);
+				baseshader->setUniform("offset",knobs[1].yoffset*2);
 				baseshader->setUniform("r",knobs[1].r);
 				glDrawArrays(GL_TRIANGLE_STRIP,0,4);
-				baseshader->setUniform("offset",getvis(knobs[2].r)*.1f);
+				baseshader->setUniform("offset",knobs[2].yoffset*2);
 				baseshader->setUniform("r",knobs[2].r);
 				glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 			} else {
-				baseshader->setUniform("offset",getvis(knobs[4].r)*.1f);
+				baseshader->setUniform("offset",knobs[4].yoffset*2);
 				baseshader->setUniform("r",knobs[4].r);
 				glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 			}
@@ -482,8 +481,8 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 		knobshader->setUniform("thickness",1-knobs[i].linewidth*2.8f);
 		knobshader->setUniform("lineheight",knobs[i].lineheight);
 		knobshader->setUniform("knobscale",knobs[i].radius*ratio*2.f,knobs[i].radius*2.f);
-		knobshader->setUniform("bright",1-rmsout*.2f);
-		knobshader->setUniform("knobpos",knobs[i].x*2-1,1-knobs[i].y*2-rmsout*.1f);
+		knobshader->setUniform("bright",1-knobs[i].yoffset*4);
+		knobshader->setUniform("knobpos",knobs[i].x*2-1,1-(knobs[i].y+knobs[i].yoffset)*2);
 		knobshader->setUniform("hoverstate",hover==i?1:0);
 		if(i == 0) {
 			Time computertime = Time::getCurrentTime();
@@ -569,23 +568,21 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 	numbershader->setUniform("size",l,32.f/getHeight());
 	numbershader->setUniform("length",1);
 	numbershader->setUniform("col",fabs(1-pow(knobs[9].value,.5)),fabs(1-knobs[9].value),fabs(1-pow(knobs[9].value,2.)));
-	rmsout = getvis(knobs[7].r);
 	for(int i = 0; i < pitchnum[0]; i++) {
-		numbershader->setUniform("pos",knobs[7].x*2-1+knobs[7].radius*ratio+(i-pitchnum[0]*.5f)*l,1-knobs[7].y*2+knobs[7].radius*.5f-l-rmsout*.1f);
+		numbershader->setUniform("pos",knobs[7].x*2-1+knobs[7].radius*ratio+(i-pitchnum[0]*.5f)*l,1-(knobs[7].y+knobs[7].yoffset)*2+knobs[7].radius*.5f-l);
 		numbershader->setUniform("index",pitchnum[i+1],1);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	}
-	rmsout = getvis(knobs[2].r);
 	n = timenum[0]==-1;
 	for(int i = 0; i < timenum[0]; i++) {
-		numbershader->setUniform("pos",knobs[2].x*2-1+knobs[2].radius*ratio+(i-timenum[0]*.5f)*l,1-knobs[2].y*2+knobs[2].radius*.6f-l-rmsout*.1f);
+		numbershader->setUniform("pos",knobs[2].x*2-1+knobs[2].radius*ratio+(i-timenum[0]*.5f)*l,1-(knobs[2].y+knobs[2].yoffset)*2+knobs[2].radius*.6f-l);
 		numbershader->setUniform("index",timenum[i+1],1);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	}
 	if(audioProcessor.outofrange.get()) {
 		numbershader->setUniform("length",13);
 		numbershader->setUniform("col",1,0,0);
-		numbershader->setUniform("pos",knobs[2].x*2-1+knobs[2].radius*ratio-6.5f*l,1-knobs[2].y*2+knobs[2].radius*.6f+l-rmsout*.1f);
+		numbershader->setUniform("pos",knobs[2].x*2-1+knobs[2].radius*ratio-6.5f*l,1-(knobs[2].y+knobs[2].yoffset)*2+knobs[2].radius*.6f+l);
 		numbershader->setUniform("index",0.f,0.f);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	}
@@ -635,9 +632,6 @@ void CRMBLAudioProcessorEditor::timerCallback() {
 	damparray[dampreadpos] = rmsdamp.nextvalue(rms,0);
 
 	context.triggerRepaint();
-}
-float CRMBLAudioProcessorEditor::getvis(float r) {
-	return damparray[((int)round(33+dampreadpos-r*16))%32];
 }
 
 void CRMBLAudioProcessorEditor::parameterChanged(const String& parameterID, float newValue) {
@@ -822,12 +816,12 @@ int CRMBLAudioProcessorEditor::recalchover(float x, float y) {
 		else if(x <= 119 && y >= 382 && y <= 402) return -3;
 		else if(y >= 406) return -5;
 		return -1;
-	} else if(x >= 336 && x <= 381 && y >= 390 && y <= 421) return -2;
+	} else if(x >= 336 && x <= 381 && (y-knobs[6].yoffset*getHeight()) >= 380 && (y-knobs[6].yoffset*getHeight()) <= 421) return -2;
 	float r = 0, xx = 0, yy = 0;
 	for(int i = knobcount-1; i >= 1; i--) {
 		r = knobs[i].radius*getHeight()*.5;
 		xx = knobs[i].x*getWidth()+r-x;
-		yy = knobs[i].y*getHeight()-r-y;
+		yy = (knobs[i].y+knobs[i].yoffset)*getHeight()-r-y;
 		if(sqrt(xx*xx+yy*yy)<= r) return i;
 	}
 	return -1;
