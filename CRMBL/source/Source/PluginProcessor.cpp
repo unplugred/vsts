@@ -345,7 +345,7 @@ void CRMBLAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 			for (int channel = 0; channel < channelnum; ++channel) {
 				//vis
 				if(prmscount < samplerate*2) {
-					prmsadd += channelData[channel][sample+startread]*channelData[channel][sample+startread];
+					prmsadd += fmin(channelData[channel][sample+startread]*channelData[channel][sample+startread],1);
 					prmscount++;
 				}
 				//channel offset

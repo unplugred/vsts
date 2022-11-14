@@ -11,6 +11,7 @@ struct knob {
 	float linewidth = .1;
 	float lineheight = .63;
 	float r = 0;
+	float yoffset = 0;
 
 	int index = -1;
 	String id;
@@ -41,7 +42,6 @@ public:
 	void paint(Graphics&) override;
 
 	void timerCallback() override;
-	float getvis(float r);
 
 	virtual void parameterChanged(const String& parameterID, float newValue);
 	void recalclabels();
