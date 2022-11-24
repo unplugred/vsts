@@ -297,8 +297,9 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 					for(int s = 0; s < numsamples; ++s) {
 						state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
 						if(state[pots.isb?1:0].values[b][m] > 0) {
+							double val = 1-(1-(pow(1-state[pots.isb?1:0].values[b][m],10)+(1-pow(state[pots.isb?1:0].values[b][m],.2)))*.5)*.99;
 							for(int c = 0; c < channelnum; ++c) {
-								wetChannelData[b][c][s] = (1-pow(1-fmin(fabs((double)wetChannelData[b][c][s]),1),1/(1-pow((double)state[pots.isb?1:0].values[b][m],.05)*.99)))*(wetChannelData[b][c][s]>0?1:-1);
+								wetChannelData[b][c][s] = (1-pow(1-fmin(fabs((double)wetChannelData[b][c][s]),1),1/val))*(wetChannelData[b][c][s]>0?1:-1)*(1-(1-val)*.92);
 							}
 						}
 					}
@@ -308,8 +309,9 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 					for(int s = 0; s < numsamples; ++s) {
 						state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
 						if(state[pots.isb?1:0].values[b][m] > 0) {
+							double val = 1-(1-(pow(1-state[pots.isb?1:0].values[b][m],10)+(1-pow(state[pots.isb?1:0].values[b][m],.2)))*.5)*.99;
 							for(int c = 0; c < channelnum; ++c) {
-								wetChannelData[b][c][s] = fmax(fmin(wetChannelData[b][c][s]/(1-pow((double)state[pots.isb?1:0].values[b][m],.1)*.99),1),-1);
+								wetChannelData[b][c][s] = fmax(fmin(wetChannelData[b][c][s],val),-val)*(.08/val+.92);
 							}
 						}
 					}
@@ -319,8 +321,9 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 					for(int s = 0; s < numsamples; ++s) {
 						state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
 						if(state[pots.isb?1:0].values[b][m] > 0) {
+							double val = 1-state[pots.isb?1:0].values[b][m]*.99;
 							for(int c = 0; c < channelnum; ++c) {
-								wetChannelData[b][c][s] = pow(fabs((double)wetChannelData[b][c][s]),1-state[pots.isb?1:0].values[b][m]*.99)*(wetChannelData[b][c][s]>0?1:-1);
+								wetChannelData[b][c][s] = pow(fabs((double)wetChannelData[b][c][s]),val)*(wetChannelData[b][c][s]>0?1:-1)*(1-(1-pow(val,2))*.92);
 							}
 						}
 					}
@@ -331,11 +334,13 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 					for(int s = 0; s < numsamples; ++s) {
 						state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
 						if(state[pots.isb?1:0].values[b][m] > 0) {
+							double val = 1-state[pots.isb?1:0].values[b][m]*.99;
 							for(int c = 0; c < channelnum; ++c) {
-								if(wetChannelData[b][c][s] >= 0) 
-									wetChannelData[b][c][s] = pow((double)wetChannelData[b][c][s],1-state[pots.isb?1:0].values[b][m]);
+								if(wetChannelData[b][c][s] >= 0)
+									wetChannelData[b][c][s] = pow((double)wetChannelData[b][c][s],val);
 								else
-									wetChannelData[b][c][s] = abs(pow((double)wetChannelData[b][c][s]+1,1-state[pots.isb?1:0].values[b][m]))*(wetChannelData[b][c][s]>-1?1:-1)-1;
+									wetChannelData[b][c][s] = abs(pow((double)wetChannelData[b][c][s]+1,val))*(wetChannelData[b][c][s]>-1?1:-1)-1;
+								wetChannelData[b][c][s] *= 1-(1-pow(val,1.5))*.86;
 							}
 						}
 					}
@@ -347,7 +352,7 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 						state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
 						if(state[pots.isb?1:0].values[b][m] > 0) {
 							for(int c = 0; c < channelnum; ++c) {
-								wetChannelData[b][c][s] = wetChannelData[b][c][s]*(1-state[pots.isb?1:0].values[b][m])+fabs(wetChannelData[b][c][s])*state[pots.isb?1:0].values[b][m];
+								wetChannelData[b][c][s] = (wetChannelData[b][c][s]*(1-state[pots.isb?1:0].values[b][m])+fabs(wetChannelData[b][c][s])*state[pots.isb?1:0].values[b][m])*(state[pots.isb?1:0].values[b][m]+1);
 							}
 						}
 					}
@@ -357,9 +362,10 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 					for(int s = 0; s < numsamples; ++s) {
 						state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
 						if(state[pots.isb?1:0].values[b][m] > 0) {
+							double val = pow(state[pots.isb?1:0].values[b][m],2);
 							for(int c = 0; c < channelnum; ++c) {
-								double amped = fmod(fabs(wetChannelData[b][c][s]*(100-cos(state[pots.isb?1:0].values[b][m]*1.5708)*99)),4);
-								wetChannelData[b][c][s] = (amped>3?(amped-4):(amped>1?(2-amped):amped))*(wetChannelData[b][c][s]>0?1:-1);
+								double amped = fmod(fabs(wetChannelData[b][c][s]*(val*70+1)),4);
+								wetChannelData[b][c][s] = (amped>3?(amped-4):(amped>1?(2-amped):amped))*(wetChannelData[b][c][s]>0?1:-1)*(1-(1-(pow(1-val,40)+(1-pow(val,.2)))*.5)*.92);
 							}
 						}
 					}
@@ -369,8 +375,9 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 					for(int s = 0; s < numsamples; ++s) {
 						state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
 						if(state[pots.isb?1:0].values[b][m] > 0) {
+							double val = pow(state[pots.isb?1:0].values[b][m],2);
 							for(int c = 0; c < channelnum; ++c) {
-								wetChannelData[b][c][s] = sin(((double)wetChannelData[b][c][s])*(50-cos(state[pots.isb?1:0].values[b][m]*1.5708)*49)*3.14159234129)*fmin(state[pots.isb?1:0].values[b][m]*10,1)+((double)wetChannelData[b][c][s])*fmax(1-state[pots.isb?1:0].values[b][m]*10,0);
+								wetChannelData[b][c][s] = (sin(((double)wetChannelData[b][c][s])*(val*35+1)*3.14159234129)*fmin(val*5,1)+((double)wetChannelData[b][c][s])*fmax(1-val*5,0))*(1-(1-(pow(1-val,40)+(1-pow(val,.2)))*.5)*.92);
 							}
 						}
 					}
