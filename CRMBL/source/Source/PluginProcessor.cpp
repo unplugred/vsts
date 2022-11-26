@@ -35,6 +35,7 @@ CRMBLAudioProcessor::CRMBLAudioProcessor() :
 	apvts.addParameterListener("hold", this);
 	params.oversampling = apvts.getParameter("oversampling")->getValue() > .5;
 	apvts.addParameterListener("oversampling", this);
+	apvts.addParameterListener("randomize", this);
 }
 
 CRMBLAudioProcessor::~CRMBLAudioProcessor(){
@@ -525,6 +526,9 @@ void CRMBLAudioProcessor::parameterChanged(const String& parameterID, float newV
 		setoversampling(newValue>.5);
 		return;
 	}
+	if(parameterID == "randomize" && newValue>.5) {
+		return randomize();
+	}
 	if(parameterID == "pingpostfeedback" && channelnum > 1) {
 		for(int i = 0; i < channelnum; i++) reversecounter[i] = state.values[4] > 0 ? reversecounter[0] : reversecounter[channelnum-1];
 	}
@@ -534,6 +538,60 @@ void CRMBLAudioProcessor::parameterChanged(const String& parameterID, float newV
 		if(lerpstage < .001 || lerpchanged[i]) presets[currentpreset].values[i] = newValue;
 		return;
 	}
+}
+void CRMBLAudioProcessor::randomize() {
+	if(!preparedtoplay) return;
+	float val = 0;
+
+	apvts.getParameter("time")->setValueNotifyingHost(1-pow(random.nextFloat(),.5));
+
+	if(random.nextFloat() < .7) val = 0;
+	else val = floor((1-pow(random.nextFloat(),.5))*16+1)/16;
+	apvts.getParameter("sync")->setValueNotifyingHost(val);
+
+	apvts.getParameter("modamp")->setValueNotifyingHost(pow(random.nextFloat(),2.5));
+
+	apvts.getParameter("modfreq")->setValueNotifyingHost(1-pow(random.nextFloat(),.333));
+
+	val = random.nextFloat();
+	if(val < .3) val = .5;
+	else {
+		apvts.getParameter("pingpostfeedback")->setValueNotifyingHost(val<.7?1:0);
+		if(val < .7) {
+			if(random.nextFloat() < .7) val = random.nextBool()?.25:.75;
+			else val = random.nextFloat();
+		} else val = (1-pow(random.nextFloat(),.5))*(random.nextBool()?.5:-.5)+.5;
+		apvts.getParameter("pingpong")->setValueNotifyingHost(val);
+	}
+
+
+	apvts.getParameter("feedback")->setValueNotifyingHost(random.nextFloat());
+
+	val = random.nextFloat();
+	if(val < .3) val = 0;
+	else if(val < .55) val = 1;
+	else val = random.nextFloat();
+	apvts.getParameter("reverse")->setValueNotifyingHost(val);
+
+	if(random.nextFloat() < .3) val = 0;
+	else val = 1-pow(random.nextFloat(),.5);
+	apvts.getParameter("chew")->setValueNotifyingHost(val);
+
+	if(random.nextFloat() < .5) val = 0;
+	else {
+		val = random.nextFloat();
+		if(val < .45) val = 12;
+		else if(val < .6) val = 7;
+		else if(val < .8) val = floor(random.nextFloat()*12+1);
+		else val = random.nextFloat()*12;
+		if(random.nextFloat() < .15) val += 12;
+		if(random.nextFloat() < .3) val *= -1;
+	}
+	apvts.getParameter("pitch")->setValueNotifyingHost(val/48+.5);
+
+	if(random.nextFloat() < .3) val = 0;
+	else val = random.nextFloat();
+	apvts.getParameter("lowpass")->setValueNotifyingHost(val);
 }
 
 AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new CRMBLAudioProcessor(); }
@@ -553,6 +611,7 @@ AudioProcessorValueTreeState::ParameterLayout CRMBLAudioProcessor::createParamet
 	parameters.push_back(std::make_unique<AudioParameterFloat	>("lowpass"			,"Lowpass"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.3f	));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>("wet"				,"Dry/Wet"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.4f	));
 	parameters.push_back(std::make_unique<AudioParameterBool	>("hold"			,"Hold"																	 ,false	));
+	parameters.push_back(std::make_unique<AudioParameterBool	>("randomize"		,"Randomize"															 ,false	));
 	parameters.push_back(std::make_unique<AudioParameterBool	>("oversampling"	,"Over-Sampling"														 ,true	));
 	return { parameters.begin(), parameters.end() };
 }
