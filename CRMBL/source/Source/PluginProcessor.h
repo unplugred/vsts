@@ -103,7 +103,8 @@ public:
 	void getStateInformation (MemoryBlock& destData) override;
 	void setStateInformation (const void* data, int sizeInBytes) override;
 	virtual void parameterChanged(const String& parameterID, float newValue);
- 
+	void randomize();
+
 	AudioProcessorValueTreeState apvts;
 	UndoManager undoManager;
 
@@ -158,6 +159,7 @@ private:
 	soundtouch::SoundTouch pitchshift;
 	DCFilter dcfilter;
 	std::unique_ptr<dsp::Oversampling<float>> os;
+	Random random;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (CRMBLAudioProcessor)
 };
