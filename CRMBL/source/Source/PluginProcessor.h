@@ -108,11 +108,11 @@ public:
 	AudioProcessorValueTreeState apvts;
 	UndoManager undoManager;
 
-	Atomic<bool> outofrange = false;
 	Atomic<float> rmsadd = 0;
 	Atomic<int> rmscount = 0;
 	Atomic<float> lastosc = 0;
 	Atomic<float> lastmodamp = 0;
+	Atomic<float> lastbpm = 120;
 
 	int version = 1;
 	const int paramcount = 12;

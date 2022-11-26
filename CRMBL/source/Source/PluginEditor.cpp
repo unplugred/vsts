@@ -517,14 +517,23 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 	feedbackshader->setUniform("maintex",1);
 	float osc = audioProcessor.lastosc.get();
 	float dampmodamp = audioProcessor.lastmodamp.get();
-	float time1 = (knobs[2].value*knobs[2].value*(1-dampmodamp)+osc)*.25f+.005f;
+	float time = 0;
+	bool outofrange = false;
+	if(sync > 0) {
+		time = ((30*(knobs[2].value*15+1))/audioProcessor.lastbpm.get()-MIN_DLY)/(MAX_DLY-MIN_DLY);
+		if(time > 1) {
+			outofrange = true;
+			time = 1;
+		}
+	} else time = knobs[2].value*knobs[2].value;
+	float time1 = (time*(1-dampmodamp)+osc)*.25f+.005f;
 	float time2 = time1;
 	float time3 = time1;
 	float time4 = time1;
 	if(knobs[6].value > .5)
-		time2 = (knobs[2].value*knobs[2].value+osc)*(2-knobs[6].value*2)*(1-dampmodamp)*.25f+.0025f;
+		time2 = (time+osc)*(2-knobs[6].value*2)*(1-dampmodamp)*.25f+.0025f;
 	else if(knobs[6].value < .5)
-		time1 = (knobs[2].value*knobs[2].value+osc)*(  knobs[6].value*2)*(1-dampmodamp)*.25f+.0025f;
+		time1 = (time+osc)*(  knobs[6].value*2)*(1-dampmodamp)*.25f+.0025f;
 	if(!postfb) {
 		time3 = time1;
 		time4 = time2;
@@ -564,7 +573,6 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 	numbertex.bind();
 	numbershader->setUniform("numbertex",0);
 	float l = 16.f/getWidth();
-	bool n = pitchnum[0]==-1;
 	numbershader->setUniform("size",l,32.f/getHeight());
 	numbershader->setUniform("length",1);
 	numbershader->setUniform("col",fabs(1-pow(knobs[9].value,.5)),fabs(1-knobs[9].value),fabs(1-pow(knobs[9].value,2.)));
@@ -573,13 +581,12 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 		numbershader->setUniform("index",pitchnum[i+1],1);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	}
-	n = timenum[0]==-1;
 	for(int i = 0; i < timenum[0]; i++) {
 		numbershader->setUniform("pos",knobs[2].x*2-1+knobs[2].radius*ratio+(i-timenum[0]*.5f)*l,1-(knobs[2].y+knobs[2].yoffset)*2+knobs[2].radius*.6f-l);
 		numbershader->setUniform("index",timenum[i+1],1);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	}
-	if(audioProcessor.outofrange.get()) {
+	if(outofrange) {
 		numbershader->setUniform("length",13);
 		numbershader->setUniform("col",1,0,0);
 		numbershader->setUniform("pos",knobs[2].x*2-1+knobs[2].radius*ratio-6.5f*l,1-(knobs[2].y+knobs[2].yoffset)*2+knobs[2].radius*.6f+l);
@@ -678,7 +685,7 @@ void CRMBLAudioProcessorEditor::recalclabels() {
 	}
 	if(sync <= 0) {
 		knobs[2].value = time;
-		num = round(pow(knobs[2].value,2)*5980+20);
+		num = round((pow(knobs[2].value,2)*(MAX_DLY-MIN_DLY)+MIN_DLY)*1000);
 		timenum[0] = 0;
 		if(num >= 100) {
 			if(num >= 1000) {
