@@ -191,10 +191,13 @@ void CRMBLAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 	float** delaytimelerpData = delaytimelerp.getArrayOfWritePointers();
 
 	double bpm = 120;
-	if(getPlayHead() != nullptr) {
-		AudioPlayHead::CurrentPositionInfo cpi;
-		getPlayHead()->getCurrentPosition(cpi);
-		bpm = cpi.bpm;
+	if(state.values[1] > 0) {
+		if(getPlayHead() != nullptr) {
+			AudioPlayHead::CurrentPositionInfo cpi;
+			getPlayHead()->getCurrentPosition(cpi);
+			if(cpi.bpm != lastbpm.get()) lastbpm = cpi.bpm;
+			bpm = cpi.bpm;
+		} else bpm = lastbpm.get();
 	}
 
 	int pitchlatency = 0;
@@ -226,13 +229,8 @@ void CRMBLAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 			state.values[5] = params.pots[5].smooth.getNextValue();
 
 			double time = pow(state.values[0],2);
-			if(state.values[1] > 0) {
-				time = ((30.*state.values[1])/bpm-MIN_DLY)/(MAX_DLY-MIN_DLY);
-				if(time > 1) {
-					time = 1;
-					outofrange = true;
-				} else outofrange = false;
-			}
+			if(state.values[1] > 0)
+				time = fmin(((30.*state.values[1])/bpm-MIN_DLY)/(MAX_DLY-MIN_DLY),1);
 
 			if(resetdampenings && sample == 0) dampamp.v_current[0] = state.values[2];
 			double dampmodamp = pow(dampamp.nextvalue(state.values[2]),4)*.36;
