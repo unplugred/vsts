@@ -4,6 +4,9 @@
 #include "functions.h"
 #include "DCFilter.h"
 
+#define BANNER
+//#define BETA
+
 #define MAX_DLY 6.0
 #define MIN_DLY 0.02
 

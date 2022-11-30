@@ -256,7 +256,12 @@ PrismaAudioProcessorEditor::PrismaAudioProcessorEditor(PrismaAudioProcessor& p, 
 
 	state[1] = state[0];
 
+#ifdef BANNER
+	setSize(478,561+21);
+	banneroffset = 21.f/getHeight();
+#else
 	setSize(478,561);
+#endif
 	setResizable(false, false);
 	if((SystemStats::getOperatingSystemType() & SystemStats::OperatingSystemType::Windows) != 0)
 		dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->dpi/96.f;
@@ -308,10 +313,12 @@ void PrismaAudioProcessorEditor::newOpenGLContextCreated() {
 R"(#version 330 core
 in vec2 aPos;
 uniform vec2 texscale;
+uniform vec2 size;
+uniform float pos;
 out vec2 uv;
 out vec2 p;
 void main(){
-	gl_Position = vec4(aPos*2-1,0,1);
+	gl_Position = vec4((aPos*size+vec2(0,pos))*2-1,0,1);
 	p = (aPos-vec2(.0230125523,.1532976827))*vec2(1.048245614,1.442159383);
 	uv = vec2(aPos.x*texscale.x,1-(1-aPos.y)*texscale.y);
 })",
@@ -532,9 +539,10 @@ in vec2 aPos;
 uniform vec2 texscale;
 uniform vec2 id;
 uniform vec2 size;
+uniform float pos;
 out vec2 uv;
 void main(){
-	gl_Position = vec4(aPos*size*2-1,0,1);
+	gl_Position = vec4((aPos*size+vec2(0,pos))*2-1,0,1);
 	uv = vec2((aPos.x+id.x)*texscale.x,1-(1-aPos.y+id.y)*texscale.y);
 })",
 //LOGO FRAG
@@ -634,6 +642,39 @@ void main(){
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
+#ifdef BANNER
+	compileshader(bannershader,
+//BANNER VERT
+R"(#version 330 core
+in vec2 aPos;
+uniform vec2 texscale;
+uniform vec2 size;
+out vec2 uv;
+void main(){
+	gl_Position = vec4((aPos*vec2(1,size.y))*2-1,0,1);
+	uv = vec2(aPos.x*size.x,1-(1-aPos.y)*texscale.y);
+})",
+//BANNER FRAG
+R"(#version 330 core
+in vec2 uv;
+uniform sampler2D tex;
+uniform vec2 texscale;
+uniform float pos;
+uniform float free;
+uniform float dpi;
+void main(){
+	vec2 col = max(min((texture2D(tex,vec2(mod(uv.x+pos,1)*texscale.x,uv.y)).rg-.5)*dpi+.5,1),0);
+	gl_FragColor = vec4(vec3(col.r*free+col.g*(1-free)),1);
+})");
+
+	bannertex.loadImage(ImageCache::getFromMemory(BinaryData::banner_png, BinaryData::banner_pngSize));
+	bannertex.bind();
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+#endif
+
 	context.extensions.glGenBuffers(1, &arraybuffer);
 }
 void PrismaAudioProcessorEditor::compileshader(std::unique_ptr<OpenGLShaderProgram> &shader, String vertexshader, String fragmentshader) {
@@ -696,6 +737,8 @@ void PrismaAudioProcessorEditor::renderOpenGL() {
 	baseshader->setUniform("grayscale",activeease[0],activeease[1],activeease[2],activeease[3]);
 	baseshader->setUniform("selector",selectorease[0],selectorease[1],selectorease[2],selectorease[3]);
 	baseshader->setUniform("texscale",478.f/basetex.getWidth(),561.f/basetex.getHeight());
+	baseshader->setUniform("size",478.f/getWidth(),561.f/getHeight());
+	baseshader->setUniform("pos",banneroffset);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	context.extensions.glDisableVertexAttribArray(coord);
 
@@ -716,7 +759,7 @@ void PrismaAudioProcessorEditor::renderOpenGL() {
 		for(int m = 0; m < 16; m++) {
 			if(selectorease[(int)floor(m*.25f)] < 1) {
 				moduleshader->setUniform("id",state[i].modulesvalues[m].id);
-				moduleshader->setUniform("pos",(11.f+114.f*floor(m*.25f))/getWidth(),(368.f-78.f*fmod(m,4))/getHeight());
+				moduleshader->setUniform("pos",(11.f+114.f*floor(m*.25f))/getWidth(),(368.f-78.f*fmod(m,4))/getHeight()+banneroffset);
 				moduleshader->setUniform("hover",(!hoverknob&&hover==m&&hoverselector<0)?modules[state[i].modulesvalues[m].id].hovercutoff:0.f);
 				if(fmod(m,4) == 0) moduleshader->setUniform("selector",selectorease[(int)floor(m*.25f)]-presettransitionease+i);
 				if(state[i].modulesvalues[m].id == 0) {
@@ -748,7 +791,7 @@ void PrismaAudioProcessorEditor::renderOpenGL() {
 	moduleshader->setUniform("grayscale",1.f);
 	for(int b = 0; b < 4; b++) {
 		if(selectorease[b] > 0) {
-			moduleshader->setUniform("pos",(125.f+114.f*b)/getWidth(),86.f/getHeight());
+			moduleshader->setUniform("pos",(125.f+114.f*b)/getWidth(),86.f/getHeight()+banneroffset);
 			moduleshader->setUniform("selector",selectorease[b]+1);
 			if(hoverselector == b)
 				moduleshader->setUniform("highlight",hover,17.f);
@@ -787,14 +830,14 @@ void PrismaAudioProcessorEditor::renderOpenGL() {
 				elementshader->setUniform("tx",modules[state[i].modulesvalues[m].id].colors[3],modules[state[i].modulesvalues[m].id].colors[4],modules[state[i].modulesvalues[m].id].colors[5]);
 				elementshader->setUniform("kn",modules[state[i].modulesvalues[m].id].colors[6],modules[state[i].modulesvalues[m].id].colors[7],modules[state[i].modulesvalues[m].id].colors[8]);
 				elementshader->setUniform("moduleid",modules[state[i].modulesvalues[m].id].clip);
-				elementshader->setUniform("modulepos",(11.f+114.f*floor(m*.25f))/getWidth(),(368.f-78.f*fmod(m,4))/getHeight());
+				elementshader->setUniform("modulepos",(11.f+114.f*floor(m*.25f))/getWidth(),(368.f-78.f*fmod(m,4))/getHeight()+banneroffset);
 				elementshader->setUniform("modulesize",getWidth()/114.f,getHeight()/87.f);
 				elementshader->setUniform("moduletexscale",114.f/modulestex.getWidth(),87.f/modulestex.getHeight());
 				for(int e = 0; e < modules[state[i].modulesvalues[m].id].subknobs.size(); e++) {
 					elementshader->setUniform("rot",(.5f-state[i].modulesvalues[m].lerps[e*2])*6.28318531f*modules[state[i].modulesvalues[m].id].subknobs[e].rotspeed);
 					elementshader->setUniform("pos",
 						(34.f+114.f*floor(m*.25f)+sin((state[i].modulesvalues[m].lerps[e*2+1]-.5f)*6.28318531f*modules[state[i].modulesvalues[m].id].subknobs[e].movespeed)*modules[state[i].modulesvalues[m].id].subknobs[e].moveradius)/getWidth (),
-						(365.f-78.f*fmod (m,4   )+cos((state[i].modulesvalues[m].lerps[e*2+1]-.5f)*6.28318531f*modules[state[i].modulesvalues[m].id].subknobs[e].movespeed)*modules[state[i].modulesvalues[m].id].subknobs[e].moveradius)/getHeight());
+						(365.f-78.f*fmod (m,4   )+cos((state[i].modulesvalues[m].lerps[e*2+1]-.5f)*6.28318531f*modules[state[i].modulesvalues[m].id].subknobs[e].movespeed)*modules[state[i].modulesvalues[m].id].subknobs[e].moveradius)/getHeight()+banneroffset);
 					elementshader->setUniform("id",modules[state[i].modulesvalues[m].id].subknobs[e].id);
 					glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 				}
@@ -825,16 +868,16 @@ void PrismaAudioProcessorEditor::renderOpenGL() {
 				float x = 0;
 				if(b == 0) {
 					x = (eyelerpx*(1-eyelid*.5f)-6*eyelid*.5f)+(presettransitionease-selectorease[0]-i)*114.f;
-					decalshader->setUniform("pos",x/getWidth(),(eyelerpy*(1-eyelid*.5f)+51*eyelid*.5f)/getHeight());
+					decalshader->setUniform("pos",x/getWidth(),(eyelerpy*(1-eyelid*.5f)+51*eyelid*.5f)/getHeight()+banneroffset);
 				} else {
 					x = -6.f+114.f*b+sin((state[i].crossover[b-1]-.5f)*.8f*6.28318531f)*8.f+(presettransitionease-selectorease[b]-i)*114.f;
-					decalshader->setUniform("pos",x/getWidth(),(59.f+cos((state[i].crossover[b-1]-.5f)*.8f*6.28318531f)*8.f)/getHeight());
+					decalshader->setUniform("pos",x/getWidth(),(59.f+cos((state[i].crossover[b-1]-.5f)*.8f*6.28318531f)*8.f)/getHeight()+banneroffset);
 				}
 				decalshader->setUniform("clip",(11.f+114.f*b-x)/96.f,(125.f+114.f*b-x)/96.f);
 				glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 
 				x = 46.f+114.f*b+sin((state[i].gain[b]-.5f)*.8f*6.28318531f)*8.f+(presettransitionease-selectorease[b]-i)*114.f;
-				decalshader->setUniform("pos",x/getWidth(),(59.f+cos((state[i].gain[b]-.5f)*.8f*6.28318531f)*8.f)/getHeight());
+				decalshader->setUniform("pos",x/getWidth(),(59.f+cos((state[i].gain[b]-.5f)*.8f*6.28318531f)*8.f)/getHeight()+banneroffset);
 				decalshader->setUniform("clip",(11.f+114.f*b-x)/96.f,(125.f+114.f*b-x)/96.f);
 				glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 			}
@@ -842,14 +885,14 @@ void PrismaAudioProcessorEditor::renderOpenGL() {
 	}
 
 	//WET KNOB
-	decalshader->setUniform("pos",402.f/getWidth(),-1.f/getHeight());
+	decalshader->setUniform("pos",402.f/getWidth(),-1.f/getHeight()+banneroffset);
 	decalshader->setUniform("offset",0.f,1.f);
 	decalshader->setUniform("rot",(.5f-(state[0].wet*(1-presettransitionease)+state[1].wet*presettransitionease))*6.28318531f*.8f);
 	decalshader->setUniform("clip",0.f,1.f);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 
 	//QUALITY
-	decalshader->setUniform("pos",351.f/getWidth(),24.f/getHeight());
+	decalshader->setUniform("pos",351.f/getWidth(),24.f/getHeight()+banneroffset);
 	decalshader->setUniform("rot",0.f);
 	decalshader->setUniform("texscale",48.f/elementstex.getWidth(),48.f/elementstex.getHeight());
 	decalshader->setUniform("size",48.f/getWidth(),48.f/getHeight());
@@ -864,17 +907,17 @@ void PrismaAudioProcessorEditor::renderOpenGL() {
 	if(hover == -11) decalshader->setUniform("color",activecolors[1][1][0]*.6f,activecolors[1][1][1]*.6f,activecolors[1][1][2]*.6f);
 	else decalshader->setUniform("color",0.f,0.f,0.f);
 	decalshader->setUniform("channels",isb?0.f:1.f,isb?1.f:0.f,0.f,0.f);
-	decalshader->setUniform("pos",251.f/getWidth(),40.f/getHeight());
+	decalshader->setUniform("pos",251.f/getWidth(),40.f/getHeight()+banneroffset);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	if(hover == -12) decalshader->setUniform("color",activecolors[1][1][0]*.6f,activecolors[1][1][1]*.6f,activecolors[1][1][2]*.6f);
 	else decalshader->setUniform("color",0.f,0.f,0.f);
-	decalshader->setUniform("pos",207.f/getWidth(),40.f/getHeight());
+	decalshader->setUniform("pos",207.f/getWidth(),40.f/getHeight()+banneroffset);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	decalshader->setUniform("channels",isb?1.f:0.f,isb?0.f:1.f,0.f,0.f);
-	decalshader->setUniform("pos",225.f/getWidth(),40.f/getHeight());
+	decalshader->setUniform("pos",225.f/getWidth(),40.f/getHeight()+banneroffset);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	decalshader->setUniform("channels",0.f,0.f,1.f,0.f);
-	decalshader->setUniform("pos",216.f/getWidth(),40.f/getHeight());
+	decalshader->setUniform("pos",216.f/getWidth(),40.f/getHeight()+banneroffset);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 
 	if(eyelid > .1 && selectorease[0] < 1) {
@@ -893,7 +936,7 @@ void PrismaAudioProcessorEditor::renderOpenGL() {
 				activecolors[0][0][2]*.3f+activecolors[0][1][2]*.7f);
 		for(int i = 0; i < isdouble; i++) {
 			float x = (presettransitionease-selectorease[0]-i)*114.f;
-			lidshader->setUniform("pos",(25.f+x)/getWidth(),90.f/getHeight());
+			lidshader->setUniform("pos",(25.f+x)/getWidth(),90.f/getHeight()+banneroffset);
 			lidshader->setUniform("clip",(-x-14.f)/34.f,(-x-14.f+114.f)/34.f);
 			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 		}
@@ -916,7 +959,7 @@ void PrismaAudioProcessorEditor::renderOpenGL() {
 	decalshader->setUniform("dpi",dpi);
 	for(int b = 0; b < 4; b++) {
 		if((selectorease[b] > 0 && selectorease[b] < 1) || presettransition > 0) {
-			decalshader->setUniform("pos",(11.f+114.f*b)/getWidth(),86.f/getHeight());
+			decalshader->setUniform("pos",(11.f+114.f*b)/getWidth(),86.f/getHeight()+banneroffset);
 			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 		}
 	}
@@ -932,6 +975,7 @@ void PrismaAudioProcessorEditor::renderOpenGL() {
 	logoshader->setUniform("tex",0);
 	logoshader->setUniform("id",3.f,11.f);
 	logoshader->setUniform("size",192.f/getWidth(),96.f/getHeight());
+	logoshader->setUniform("pos",banneroffset);
 	logoshader->setUniform("texscale",192.f/elementstex.getWidth(),96.f/elementstex.getHeight());
 	logoshader->setUniform("offset",websiteht);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
@@ -943,7 +987,7 @@ void PrismaAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	visshader->setUniform("size",330.f/getWidth(),52.f/getHeight());
-	visshader->setUniform("pos",74.f/getWidth(),486.f/getHeight());
+	visshader->setUniform("pos",74.f/getWidth(),486.f/getHeight()+banneroffset);
 	visshader->setUniform("low",activecolors[0][0][0],activecolors[0][0][1],activecolors[0][0][2]);
 	visshader->setUniform("lowmid",activecolors[1][0][0],activecolors[1][0][1],activecolors[1][0][2]);
 	visshader->setUniform("highmid",activecolors[2][0][0],activecolors[2][0][1],activecolors[2][0][2]);
@@ -997,15 +1041,38 @@ void PrismaAudioProcessorEditor::renderOpenGL() {
 				visbttnshader->setUniform(ison?"hlt":"clr",activecolors[hover+20][1][0],activecolors[hover+20][1][1],activecolors[hover+20][1][2]);
 				visbttnshader->setUniform(ison?"clr":"hlt",.9921875f,.9921875f,.94921875f);
 				if(right-left <= 47)
-					visbttnshader->setUniform("pos",((float)a)/getWidth(),(522.f-15*i)/getHeight());
+					visbttnshader->setUniform("pos",((float)a)/getWidth(),(522.f-15*i)/getHeight()+banneroffset);
 				else
-					visbttnshader->setUniform("pos",((float)a+15*i)/getWidth(),522.f/getHeight());
+					visbttnshader->setUniform("pos",((float)a+15*i)/getWidth(),522.f/getHeight()+banneroffset);
 				visbttnshader->setUniform("btn",i==0?1.f:0.f,i==1?1.f:0.f,i==2?1.f:0.f);
 				glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 			}
 			context.extensions.glDisableVertexAttribArray(coord);
 		}
 	}
+
+#ifdef BANNER
+	bannershader->use();
+	coord = context.extensions.glGetAttribLocation(bannershader->getProgramID(),"aPos");
+	context.extensions.glEnableVertexAttribArray(coord);
+	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+	context.extensions.glActiveTexture(GL_TEXTURE0);
+	bannertex.bind();
+	bannershader->setUniform("tex",0);
+	bannershader->setUniform("dpi",dpi);
+#ifdef BETA
+	bannershader->setUniform("texscale",494.f/bannertex.getWidth(),21.f/bannertex.getHeight());
+	bannershader->setUniform("size",getWidth()/494.f,21.f/getHeight());
+	bannershader->setUniform("free",0.f);
+#else
+	bannershader->setUniform("texscale",426.f/bannertex.getWidth(),21.f/bannertex.getHeight());
+	bannershader->setUniform("size",getWidth()/426.f,21.f/getHeight());
+	bannershader->setUniform("free",1.f);
+#endif
+	bannershader->setUniform("pos",bannerx);
+	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+	context.extensions.glDisableVertexAttribArray(coord);
+#endif
 
 	audioProcessor.logger.drawlog();
 }
@@ -1023,6 +1090,11 @@ void PrismaAudioProcessorEditor::openGLContextClosing() {
 	selectortex.release();
 	modulestex.release();
 	elementstex.release();
+
+#ifdef BANNER
+	bannershader->release();
+	bannertex.release();
+#endif
 
 	audioProcessor.logger.release();
 
@@ -1125,6 +1197,11 @@ void PrismaAudioProcessorEditor::timerCallback() {
 		else vispolygon[i*4+1] = -.2f;
 		visline[i*2+1] = vispolygon[i*4+1];
 	}
+
+#ifdef BANNER
+	bannerx = fmod(bannerx+.0005f,1.f);
+#endif
+
 	context.triggerRepaint();
 }
 

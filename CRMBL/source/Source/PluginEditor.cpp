@@ -116,7 +116,12 @@ CRMBLAudioProcessorEditor::CRMBLAudioProcessorEditor (CRMBLAudioProcessor& p, in
 	audioProcessor.apvts.addParameterListener("pingpostfeedback",this);
 	audioProcessor.apvts.addParameterListener("sync",this);
 
+#ifdef BANNER
+	setSize(507,465+21);
+	banneroffset = 21.f/getHeight();
+#else
 	setSize(507,465);
+#endif
 	setResizable(false, false);
 	if((SystemStats::getOperatingSystemType() & SystemStats::OperatingSystemType::Windows) != 0)
 		dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->dpi/96.f;
@@ -148,10 +153,11 @@ void CRMBLAudioProcessorEditor::newOpenGLContextCreated() {
 R"(#version 330 core
 in vec2 aPos;
 uniform vec2 texscale;
+uniform float banner;
 uniform float offset;
 out vec2 uv;
 void main(){
-	gl_Position = vec4(aPos*2-1-vec2(0,offset),0,1);
+	gl_Position = vec4(vec2(aPos.x,aPos.y*(1-banner)-offset)*2-1,0,1);
 	uv = vec2(aPos.x*texscale.x,1-(1-aPos.y)*texscale.y);
 })",
 //BASE FRAG
@@ -179,10 +185,11 @@ void main(){
 //LOGO VERT
 R"(#version 330 core
 in vec2 aPos;
+uniform float banner;
 uniform vec2 texscale;
 out vec2 uv;
 void main(){
-	gl_Position = vec4(aPos*2-1,0,1);
+	gl_Position = vec4(vec2(aPos.x,aPos.y*(1-banner))*2-1,0,1);
 	uv = vec2(aPos.x*texscale.x,1-(1-aPos.y)*texscale.y);
 })",
 //LOGO FRAG
@@ -204,12 +211,13 @@ void main(){
 //KNOB VERT
 R"(#version 330 core
 in vec2 aPos;
+uniform float banner;
 uniform float knobrot;
 uniform vec2 knobscale;
 uniform vec2 knobpos;
 out vec2 uv;
 void main(){
-	gl_Position = vec4(aPos*knobscale+knobpos,0,1);
+	gl_Position = vec4((aPos*knobscale+knobpos)*vec2(1,1-banner)-vec2(0,banner),0,1);
 	uv = vec2(
 		(aPos.x-.5)*cos(knobrot)-(aPos.y-.5)*sin(knobrot),
 		(aPos.x-.5)*sin(knobrot)+(aPos.y-.5)*cos(knobrot))*2;
@@ -248,10 +256,11 @@ void main(){
 R"(#version 330 core
 in vec2 aPos;
 uniform float pitch;
+uniform float banner;
 out vec2 uv;
 out vec2 ruv;
 void main(){
-	gl_Position = vec4(aPos*2-1,0,1);
+	gl_Position = vec4(vec2(aPos.x,aPos.y*(1-banner))*2-1,0,1);
 	ruv = aPos;
 	uv = vec2(
 		(aPos.x-.5)*cos(pitch)-(aPos.y-.5)*sin(pitch),
@@ -308,9 +317,10 @@ void main(){
 //BUFFER VERT
 R"(#version 330 core
 in vec2 aPos;
+uniform float banner;
 out vec2 uv;
 void main(){
-	gl_Position = vec4(aPos*2-1,0,1);
+	gl_Position = vec4(vec2(aPos.x,aPos.y*(1-banner)+banner)*2-1,0,1);
 	uv = aPos;
 })",
 //BUFFER FRAG
@@ -332,6 +342,7 @@ void main(){
 //NUMBER VERT
 R"(#version 330 core
 in vec2 aPos;
+uniform float banner;
 uniform vec2 size;
 uniform vec2 pos;
 uniform vec2 index;
@@ -364,15 +375,48 @@ void main(){
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 
-	feedbackbuffer.initialise(context, getWidth()*dpi, getHeight()*dpi);
+	feedbackbuffer.initialise(context, 507*dpi, 465*dpi);
 	glBindTexture(GL_TEXTURE_2D, feedbackbuffer.getTextureID());
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	mainbuffer.initialise(context, getWidth()*dpi, getHeight()*dpi);
+	mainbuffer.initialise(context, 507*dpi, 465*dpi);
 	glBindTexture(GL_TEXTURE_2D, mainbuffer.getTextureID());
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+#ifdef BANNER
+	compileshader(bannershader,
+//BANNER VERT
+R"(#version 330 core
+in vec2 aPos;
+uniform vec2 texscale;
+uniform vec2 size;
+out vec2 uv;
+void main(){
+	gl_Position = vec4((aPos*vec2(1,size.y))*2-1,0,1);
+	uv = vec2(aPos.x*size.x,1-(1-aPos.y)*texscale.y);
+})",
+//BANNER FRAG
+R"(#version 330 core
+in vec2 uv;
+uniform sampler2D tex;
+uniform vec2 texscale;
+uniform float pos;
+uniform float free;
+uniform float dpi;
+void main(){
+	vec2 col = max(min((texture2D(tex,vec2(mod(uv.x+pos,1)*texscale.x,uv.y)).rg-.5)*dpi+.5,1),0);
+	gl_FragColor = vec4(vec3(col.r*free+col.g*(1-free)),1);
+})");
+
+	bannertex.loadImage(ImageCache::getFromMemory(BinaryData::banner_png, BinaryData::banner_pngSize));
+	bannertex.bind();
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+#endif
 
 	context.extensions.glGenBuffers(1, &arraybuffer);
 }
@@ -403,6 +447,7 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glActiveTexture(GL_TEXTURE0);
 	basetex.bind();
 	baseshader->setUniform("basetex",0);
+	baseshader->setUniform("banner",banneroffset);
 	baseshader->setUniform("gb",postfb?1.f:0.f);
 	baseshader->setUniform("texscale",507.f/basetex.getWidth(),465.f/basetex.getHeight());
 	baseshader->setUniform("dpi",(float)fmax(dpi,1));
@@ -412,7 +457,7 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 		knobs[i].yoffset = damparray[((int)round(33+dampreadpos-knobs[i].r*16))%32]*.05f;
 		if(i != 1 && i != 2 && i != 4) {
 			baseshader->setUniform("r",knobs[i].r);
-			baseshader->setUniform("offset",knobs[i].yoffset*2);
+			baseshader->setUniform("offset",knobs[i].yoffset*(1-banneroffset));
 			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 		}
 	}
@@ -430,6 +475,7 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glActiveTexture(GL_TEXTURE0);
 	basetex.bind();
 	logoshader->setUniform("basetex",0);
+	logoshader->setUniform("banner",banneroffset);
 	logoshader->setUniform("websiteht",websiteht);
 	logoshader->setUniform("texscale",507.f/basetex.getWidth(),465.f/basetex.getHeight());
 	logoshader->setUniform("dpi",(float)fmax(dpi,1));
@@ -438,11 +484,12 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	context.extensions.glDisableVertexAttribArray(coord);
 
-	float ratio = ((float)getHeight())/getWidth();
+	float ratio = 465.f/507.f;
 	knobshader->use();
 	coord = context.extensions.glGetAttribLocation(knobshader->getProgramID(),"aPos");
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+	knobshader->setUniform("banner",banneroffset);
 	knobshader->setUniform("circle",1.f);
 	knobshader->setUniform("dark",0);
 	for(int i = 0; i < knobcount; i++) {
@@ -459,14 +506,14 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 			context.extensions.glEnableVertexAttribArray(coord);
 			context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 			if(i == 1) {
-				baseshader->setUniform("offset",knobs[1].yoffset*2);
+				baseshader->setUniform("offset",knobs[1].yoffset*(1-banneroffset));
 				baseshader->setUniform("r",knobs[1].r);
 				glDrawArrays(GL_TRIANGLE_STRIP,0,4);
-				baseshader->setUniform("offset",knobs[2].yoffset*2);
+				baseshader->setUniform("offset",knobs[2].yoffset*(1-banneroffset));
 				baseshader->setUniform("r",knobs[2].r);
 				glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 			} else {
-				baseshader->setUniform("offset",knobs[4].yoffset*2);
+				baseshader->setUniform("offset",knobs[4].yoffset*(1-banneroffset));
 				baseshader->setUniform("r",knobs[4].r);
 				glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 			}
@@ -515,6 +562,7 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, mainbuffer.getTextureID());
 	feedbackshader->setUniform("maintex",1);
+	feedbackshader->setUniform("banner",banneroffset);
 	float osc = audioProcessor.lastosc.get();
 	float dampmodamp = audioProcessor.lastmodamp.get();
 	float time = 0;
@@ -543,8 +591,8 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 	feedbackshader->setUniform("chew",knobs[8].value*knobs[8].value);
 	feedbackshader->setUniform("feedback",knobs[1].value);
 	feedbackshader->setUniform("lowpass",knobs[10].value);
-	feedbackshader->setUniform("ratio",((float)getHeight())/getWidth());
-	feedbackshader->setUniform("res",getHeight(),getWidth());
+	feedbackshader->setUniform("ratio",ratio);
+	feedbackshader->setUniform("res",(1-banneroffset)*getHeight(),getWidth());
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	context.extensions.glDisableVertexAttribArray(coord);
 
@@ -560,6 +608,7 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, mainbuffer.getTextureID());
 	buffershader->setUniform("maintex",1);
+	buffershader->setUniform("banner",banneroffset);
 	buffershader->setUniform("wet",knobs[5].value);
 	buffershader->setUniform("reverse",knobs[9].value);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
@@ -573,27 +622,54 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 	numbertex.bind();
 	numbershader->setUniform("numbertex",0);
 	float l = 16.f/getWidth();
+	numbershader->setUniform("banner",banneroffset);
 	numbershader->setUniform("size",l,32.f/getHeight());
 	numbershader->setUniform("length",1);
 	numbershader->setUniform("col",fabs(1-pow(knobs[9].value,.5)),fabs(1-knobs[9].value),fabs(1-pow(knobs[9].value,2.)));
 	for(int i = 0; i < pitchnum[0]; i++) {
-		numbershader->setUniform("pos",knobs[7].x*2-1+knobs[7].radius*ratio+(i-pitchnum[0]*.5f)*l,1-(knobs[7].y+knobs[7].yoffset)*2+knobs[7].radius*.5f-l);
+		numbershader->setUniform("pos",knobs[7].x*2-1+knobs[7].radius*ratio+(i-pitchnum[0]*.5f)*l,
+				1-((knobs[7].y+knobs[7].yoffset)*2-knobs[7].radius*.5f+l)*(1-banneroffset));
 		numbershader->setUniform("index",pitchnum[i+1],1);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	}
 	for(int i = 0; i < timenum[0]; i++) {
-		numbershader->setUniform("pos",knobs[2].x*2-1+knobs[2].radius*ratio+(i-timenum[0]*.5f)*l,1-(knobs[2].y+knobs[2].yoffset)*2+knobs[2].radius*.6f-l);
+		numbershader->setUniform("pos",knobs[2].x*2-1+knobs[2].radius*ratio+(i-timenum[0]*.5f)*l,
+				1-((knobs[2].y+knobs[2].yoffset)*2-knobs[2].radius*.6f+l)*(1-banneroffset));
 		numbershader->setUniform("index",timenum[i+1],1);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	}
 	if(outofrange) {
 		numbershader->setUniform("length",13);
 		numbershader->setUniform("col",1,0,0);
-		numbershader->setUniform("pos",knobs[2].x*2-1+knobs[2].radius*ratio-6.5f*l,1-(knobs[2].y+knobs[2].yoffset)*2+knobs[2].radius*.6f+l);
+		numbershader->setUniform("pos",knobs[2].x*2-1+knobs[2].radius*ratio-6.5f*l,
+				1-((knobs[2].y+knobs[2].yoffset)*2-knobs[2].radius*.6f-l)*(1-banneroffset));
 		numbershader->setUniform("index",0.f,0.f);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	}
 	context.extensions.glDisableVertexAttribArray(coord);
+
+#ifdef BANNER
+	bannershader->use();
+	coord = context.extensions.glGetAttribLocation(bannershader->getProgramID(),"aPos");
+	context.extensions.glEnableVertexAttribArray(coord);
+	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+	context.extensions.glActiveTexture(GL_TEXTURE0);
+	bannertex.bind();
+	bannershader->setUniform("tex",0);
+	bannershader->setUniform("dpi",dpi);
+#ifdef BETA
+	bannershader->setUniform("texscale",494.f/bannertex.getWidth(),21.f/bannertex.getHeight());
+	bannershader->setUniform("size",getWidth()/494.f,21.f/getHeight());
+	bannershader->setUniform("free",0.f);
+#else
+	bannershader->setUniform("texscale",426.f/bannertex.getWidth(),21.f/bannertex.getHeight());
+	bannershader->setUniform("size",getWidth()/426.f,21.f/getHeight());
+	bannershader->setUniform("free",1.f);
+#endif
+	bannershader->setUniform("pos",bannerx);
+	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+	context.extensions.glDisableVertexAttribArray(coord);
+#endif
 
 	audioProcessor.logger.drawlog();
 }
@@ -610,6 +686,11 @@ void CRMBLAudioProcessorEditor::openGLContextClosing() {
 
 	feedbackbuffer.release();
 	mainbuffer.release();
+
+#ifdef BANNER
+	bannershader->release();
+	bannertex.release();
+#endif
 
 	audioProcessor.logger.release();
 
@@ -637,6 +718,10 @@ void CRMBLAudioProcessorEditor::timerCallback() {
 
 	dampreadpos = (dampreadpos+1)%32;
 	damparray[dampreadpos] = rmsdamp.nextvalue(rms,0);
+
+#ifdef BANNER
+	bannerx = fmod(bannerx+.0005f,1.f);
+#endif
 
 	context.triggerRepaint();
 }
@@ -823,12 +908,12 @@ int CRMBLAudioProcessorEditor::recalchover(float x, float y) {
 		else if(x <= 119 && y >= 382 && y <= 402) return -3;
 		else if(y >= 406) return -5;
 		return -1;
-	} else if(x >= 336 && x <= 381 && (y-knobs[6].yoffset*getHeight()) >= 380 && (y-knobs[6].yoffset*getHeight()) <= 421) return -2;
+	} else if(x >= 336 && x <= 381 && (y-knobs[6].yoffset*465) >= 380 && (y-knobs[6].yoffset*465) <= 421) return -2;
 	float r = 0, xx = 0, yy = 0;
 	for(int i = knobcount-1; i >= 1; i--) {
-		r = knobs[i].radius*getHeight()*.5;
+		r = knobs[i].radius*465*.5;
 		xx = knobs[i].x*getWidth()+r-x;
-		yy = (knobs[i].y+knobs[i].yoffset)*getHeight()-r-y;
+		yy = (knobs[i].y+knobs[i].yoffset)*465-r-y;
 		if(sqrt(xx*xx+yy*yy)<= r) return i;
 	}
 	return -1;

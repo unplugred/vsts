@@ -24,7 +24,12 @@ ProtoAudioProcessorEditor::ProtoAudioProcessorEditor(ProtoAudioProcessor& p, int
 	oversamplinglerped = oversampling;
 	audioProcessor.apvts.addParameterListener("oversampling",this);
 
+#ifdef BANNER
+	setSize(30+106*2,162+100*3+21);
+	banneroffset = 21.f/getHeight();
+#else
 	setSize(30+106*2,162+100*3);
+#endif
 	setResizable(false, false);
 	calcvis();
 	if((SystemStats::getOperatingSystemType() & SystemStats::OperatingSystemType::Windows) != 0)
@@ -199,6 +204,39 @@ void main(){
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 
+#ifdef BANNER
+	compileshader(bannershader,
+//BANNER VERT
+R"(#version 330 core
+in vec2 aPos;
+uniform vec2 texscale;
+uniform vec2 size;
+out vec2 uv;
+void main(){
+	gl_Position = vec4((aPos*vec2(1,size.y))*2-1,0,1);
+	uv = vec2(aPos.x*size.x,1-(1-aPos.y)*texscale.y);
+})",
+//BANNER FRAG
+R"(#version 330 core
+in vec2 uv;
+uniform sampler2D tex;
+uniform vec2 texscale;
+uniform float pos;
+uniform float free;
+uniform float dpi;
+void main(){
+	vec2 col = max(min((texture2D(tex,vec2(mod(uv.x+pos,1)*texscale.x,uv.y)).rg-.5)*dpi+.5,1),0);
+	gl_FragColor = vec4(vec3(col.r*free+col.g*(1-free)),1);
+})");
+
+	bannertex.loadImage(ImageCache::getFromMemory(BinaryData::banner_png, BinaryData::banner_pngSize));
+	bannertex.bind();
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+#endif
+
 	context.extensions.glGenBuffers(1, &arraybuffer);
 }
 void ProtoAudioProcessorEditor::compileshader(std::unique_ptr<OpenGLShaderProgram> &shader, String vertexshader, String fragmentshader) {
@@ -298,7 +336,7 @@ void ProtoAudioProcessorEditor::renderOpenGL() {
 		creditsshader->setUniform("creditstex",0);
 		creditsshader->setUniform("texscale",148.f/creditstex.getWidth(),46.f/creditstex.getHeight());
 		creditsshader->setUniform("shineprog",websiteht);
-		creditsshader->setUniform("pos",((float)-148)/getWidth(),2/(getHeight()*.5f)-1,148/(getWidth()*.5f), 46/(getHeight()*.5f));
+		creditsshader->setUniform("pos",((float)-148)/getWidth(),2/(getHeight()*.5f)-1+banneroffset*2,148/(getWidth()*.5f), 46/(getHeight()*.5f));
 		coord = context.extensions.glGetAttribLocation(creditsshader->getProgramID(),"aPos");
 		context.extensions.glEnableVertexAttribArray(coord);
 		context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
@@ -307,9 +345,32 @@ void ProtoAudioProcessorEditor::renderOpenGL() {
 	}
 
 	else if(creditsalpha <= 0)
-		audioProcessor.logger.drawstring((String)"Temporary user interface!\nThe look of this VST is \nsubject to change.",0,0,0,1,&textshader);
+		audioProcessor.logger.drawstring((String)"Temporary user interface!\nThe look of this VST is \nsubject to change.",0,banneroffset,0,1,&textshader);
 
 	audioProcessor.logger.drawstring(audioProcessor.getName()+(String)" (Prototype)",1,1,1,0,&textshader);
+
+#ifdef BANNER
+	bannershader->use();
+	coord = context.extensions.glGetAttribLocation(bannershader->getProgramID(),"aPos");
+	context.extensions.glEnableVertexAttribArray(coord);
+	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+	context.extensions.glActiveTexture(GL_TEXTURE0);
+	bannertex.bind();
+	bannershader->setUniform("tex",0);
+	bannershader->setUniform("dpi",dpi);
+#ifdef BETA
+	bannershader->setUniform("texscale",494.f/bannertex.getWidth(),21.f/bannertex.getHeight());
+	bannershader->setUniform("size",getWidth()/494.f,21.f/getHeight());
+	bannershader->setUniform("free",0.f);
+#else
+	bannershader->setUniform("texscale",426.f/bannertex.getWidth(),21.f/bannertex.getHeight());
+	bannershader->setUniform("size",getWidth()/426.f,21.f/getHeight());
+	bannershader->setUniform("free",1.f);
+#endif
+	bannershader->setUniform("pos",bannerx);
+	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+	context.extensions.glDisableVertexAttribArray(coord);
+#endif
 
 	needtoupdate--;
 	audioProcessor.logger.drawlog();
@@ -326,6 +387,11 @@ void ProtoAudioProcessorEditor::openGLContextClosing() {
 	basetex.release();
 	oversamplingtex.release();
 	creditstex.release();
+
+#ifdef BANNER
+	bannershader->release();
+	bannertex.release();
+#endif
 
 	audioProcessor.logger.release();
 
@@ -385,6 +451,10 @@ void ProtoAudioProcessorEditor::timerCallback() {
 	} else rms *= .9f;
 
 	time = fmod(time+.0002f,1.f);
+
+#ifdef BANNER
+	bannerx = fmod(bannerx+.0005f,1.f);
+#endif
 
 	context.triggerRepaint();
 }
@@ -491,8 +561,8 @@ int ProtoAudioProcessorEditor::recalchover(float x, float y) {
 		if(midx >= -6 && midx <= 22) return -5;
 		if(midx >= 23 && midx <= 51) return -6;
 		return -4;
-	} else if(y >= (getHeight()-48)) {
-		if(x >= (getWidth()*.5-74) && x <= (getWidth()*.5+73) && y <= (getHeight()-4)) return -3;
+	} else if(y >= ((1-banneroffset)*getHeight()-48) && y < (1-banneroffset)*getHeight()) {
+		if(x >= (getWidth()*.5-74) && x <= (getWidth()*.5+73) && y <= ((1-banneroffset)*getHeight()-4)) return -3;
 		return -2;
 	}
 	for(int i = 0; i < knobcount; i++) {

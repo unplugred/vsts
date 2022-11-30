@@ -133,8 +133,15 @@ private:
 	float bypassease[4] {1.f,1.f,1.f,1.f};
 	std::unique_ptr<OpenGLShaderProgram> visbttnshader;
 
+#ifdef BANNER
+	float bannerx = 0;
+	OpenGLTexture bannertex;
+	std::unique_ptr<OpenGLShaderProgram> bannershader;
+#endif
+	float banneroffset = 0;
+
 	float dpi = 1;
-	
+
 	float selectorlerp[4] = {0,0,0,0};
 	float selectorease[4] = {0,0,0,0};
 	bool selectorstate[4] = {false,false,false,false};

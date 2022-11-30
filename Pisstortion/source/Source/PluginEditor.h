@@ -108,6 +108,13 @@ private:
 	bubble bubbles[20];
 	Random random;
 
+#ifdef BANNER
+	float bannerx = 0;
+	OpenGLTexture bannertex;
+	std::unique_ptr<OpenGLShaderProgram> bannershader;
+#endif
+	float banneroffset = 0;
+
 	float dpi = 1;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PisstortionAudioProcessorEditor)

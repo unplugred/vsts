@@ -24,9 +24,16 @@ VuAudioProcessorEditor::VuAudioProcessorEditor(VuAudioProcessor& p, int paramcou
 	int h = audioProcessor.height.get();
 	int w = round(h*((stereodamp>.5f?64.f:32.f)/19.f));
 	audioProcessor.width = w;
+#ifdef BANNER
+	setSize(w,h+21);
+	banneroffset = 21.f/(h+21);
+#else
 	setSize(w,h);
+#endif
 	setResizeLimits(3,2,3200,950);
 	//getConstrainer()->setFixedAspectRatio((audioProcessor.stereo?64.f:32.f)/19.f);
+	if((SystemStats::getOperatingSystemType() & SystemStats::OperatingSystemType::Windows) != 0)
+		dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->dpi/96.f;
 
 	startTimerHz(30);
 }
@@ -39,7 +46,11 @@ VuAudioProcessorEditor::~VuAudioProcessorEditor() {
 
 void VuAudioProcessorEditor::resized() {
 	int w = getWidth();
+#ifdef BANNER
+	int h = getHeight()-21;
+#else
 	int h = getHeight();
+#endif
 	if(h != audioProcessor.height.get() && h != prevh) {
 		prevw = w;
 		w = round(h*((32.f+stereodamp*32.f)/19.f));
@@ -71,6 +82,7 @@ uniform float stereo;
 uniform float stereoinv;
 uniform vec2 size;
 uniform vec4 lgsize;
+uniform float banner;
 out vec2 v_TexCoord;
 out vec2 metercoords;
 out vec2 txtcoords;
@@ -78,16 +90,16 @@ out vec2 lgcoords;
 void main(){
 	metercoords = aPos;
 	if(stereo <= .001) {
-		gl_Position = vec4(aPos*2-1,0,1);
+		gl_Position = vec4((aPos*vec2(1,1-banner)+vec2(0,banner))*2-1,0,1);
 		v_TexCoord = (aPos+vec2(2,0))*size;
 		txtcoords = aPos;
 	} else if(right < .5) {
-		gl_Position = vec4(aPos*2-1,0,1);
+		gl_Position = vec4((aPos*vec2(1,1-banner)+vec2(0,banner))*2-1,0,1);
 		v_TexCoord = aPos*vec2(1+stereo,1)*size;
 		txtcoords = vec2(aPos.x*(1+stereo)-.5*stereo,aPos.y);
 		metercoords.x = metercoords.x*(1+stereo)-.0387*stereo;
 	} else {
-		gl_Position = vec4((aPos.x+1)*(2-stereoinv)-1,aPos.y*2-1,0,1);
+		gl_Position = vec4((aPos.x+1)*(2-stereoinv)-1,(aPos.y*(1-banner)+banner)*2-1,0,1);
 		v_TexCoord = (aPos+vec2(1,0))*size;
 		txtcoords = aPos+vec2(1-stereo*.5,0);
 		metercoords.x+=.0465;
@@ -176,7 +188,6 @@ void main(){
 	}
 })"))
 		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Fragment shader error",vushader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at arihanan@proton.me. THANKS!","OK!");
-
 	vushader->link();
 
 	vutex.loadImage(ImageCache::getFromMemory(BinaryData::map_png, BinaryData::map_pngSize));
@@ -200,6 +211,44 @@ void main(){
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 
+#ifdef BANNER
+	bannershader.reset(new OpenGLShaderProgram(context));
+	if(!bannershader->addVertexShader(
+//BANNER VERT
+R"(#version 330 core
+in vec2 aPos;
+uniform vec2 texscale;
+uniform vec2 size;
+out vec2 uv;
+void main(){
+	gl_Position = vec4((aPos*vec2(1,size.y))*2-1,0,1);
+	uv = vec2(aPos.x*size.x,1-(1-aPos.y)*texscale.y);
+})"))
+		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Vertex shader error",bannershader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at arihanan@proton.me. THANKS!","OK!");
+	if(!bannershader->addFragmentShader(
+//BANNER FRAG
+R"(#version 330 core
+in vec2 uv;
+uniform sampler2D tex;
+uniform vec2 texscale;
+uniform float pos;
+uniform float free;
+uniform float dpi;
+void main(){
+	vec2 col = max(min((texture2D(tex,vec2(mod(uv.x+pos,1)*texscale.x,uv.y)).rg-.5)*dpi+.5,1),0);
+	gl_FragColor = vec4(vec3(col.r*free+col.g*(1-free)),1);
+})"))
+		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Fragment shader error",bannershader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at arihanan@proton.me. THANKS!","OK!");
+	bannershader->link();
+
+	bannertex.loadImage(ImageCache::getFromMemory(BinaryData::banner_png, BinaryData::banner_pngSize));
+	bannertex.bind();
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+#endif
+
 	context.extensions.glGenBuffers(1, &arraybuffer);
 }
 void VuAudioProcessorEditor::renderOpenGL() {
@@ -221,12 +270,13 @@ void VuAudioProcessorEditor::renderOpenGL() {
 	lgtex.bind();
 	vushader->setUniform("lgtex", 2);
 
+	vushader->setUniform("banner", banneroffset);
 	vushader->setUniform("rotation", (leftvu-.5f)*(1.47f-stereodamp*.025f));
 	vushader->setUniform("peak", leftpeaklerp);
 	vushader->setUniform("right", 0.f);
 	vushader->setUniform("lgsize",
 		((float)getWidth())/lgtex.getWidth(),
-		((float)getHeight())/lgtex.getHeight(),
+		((1-banneroffset)*getHeight())/lgtex.getHeight(),
 		164.f/lgtex.getWidth(),
 		(62.f/lgtex.getHeight())*(1-settingsfade));
 
@@ -251,13 +301,35 @@ void VuAudioProcessorEditor::renderOpenGL() {
 		vushader->setUniform("right", 1.f);
 		vushader->setUniform("lgsize",
 			((float)getWidth())/lgtex.getWidth()*(1/(stereodamp+1)),
-			((float)getHeight())/lgtex.getHeight(),
-			164.f/lgtex.getWidth()-(stereodamp/152)*getHeight()*1.56f,
+			((1-banneroffset)*getHeight())/lgtex.getHeight(),
+			164.f/lgtex.getWidth()-(stereodamp/152)*(1-banneroffset)*getHeight()*1.56f,
 			(62.f/lgtex.getHeight())*(1-settingsfade));
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 	}
-
 	context.extensions.glDisableVertexAttribArray(coord);
+
+#ifdef BANNER
+	bannershader->use();
+	coord = context.extensions.glGetAttribLocation(bannershader->getProgramID(),"aPos");
+	context.extensions.glEnableVertexAttribArray(coord);
+	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+	context.extensions.glActiveTexture(GL_TEXTURE0);
+	bannertex.bind();
+	bannershader->setUniform("tex",0);
+	bannershader->setUniform("dpi",dpi);
+#ifdef BETA
+	bannershader->setUniform("texscale",494.f/bannertex.getWidth(),21.f/bannertex.getHeight());
+	bannershader->setUniform("size",getWidth()/494.f,21.f/getHeight());
+	bannershader->setUniform("free",0.f);
+#else
+	bannershader->setUniform("texscale",426.f/bannertex.getWidth(),21.f/bannertex.getHeight());
+	bannershader->setUniform("size",getWidth()/426.f,21.f/getHeight());
+	bannershader->setUniform("free",1.f);
+#endif
+	bannershader->setUniform("pos",bannerx);
+	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+	context.extensions.glDisableVertexAttribArray(coord);
+#endif
 
 	audioProcessor.logger.drawlog();
 }
@@ -267,6 +339,11 @@ void VuAudioProcessorEditor::openGLContextClosing() {
 	vutex.release();
 	mptex.release();
 	lgtex.release();
+
+#ifdef BANNER
+	bannershader->release();
+	bannertex.release();
+#endif
 
 	audioProcessor.logger.release();
 
@@ -325,7 +402,13 @@ void VuAudioProcessorEditor::timerCallback() {
 		w = round(h*((32.f+stereodamp*32.f)/19.f));
 		audioProcessor.width = w;
 	} else w = audioProcessor.width.get();
+#ifdef BANNER
+	setSize(w,h+21);
+	banneroffset = 21.f/(h+21);
+	bannerx = fmod(bannerx+.0005f,1.f);
+#else
 	setSize(w,h);
+#endif
 	audioProcessor.logger.width = w;
 	audioProcessor.logger.height = h;
 	/*
@@ -415,14 +498,14 @@ void VuAudioProcessorEditor::mouseWheelMove(const MouseEvent& event, const Mouse
 }
 int VuAudioProcessorEditor::recalchover(float x, float y) {
 	float xx = (x/getWidth()-.5f)*8*3.8*(knobs[2].value+1);
-	float yy = (y/getHeight()-.5f)*(7.4f);
+	float yy = (y/((1-banneroffset)*getHeight())-.5f)*(7.4f);
 	if(xx >= 1 && ((xx <= 8 && knobs[0].value <= -10) || xx <= 7) && yy > -1.5 && yy <= -.5)
 		return 0;
 	if(xx >= 1 && xx <= 4 && yy > -.5 && yy <= .5)
 		return 1;
 	if((yy > .5 && yy <= 1.5) && ((knobs[2].value<.5 && xx >= -8 && xx <= -2) || (knobs[2].value>.5 && xx >= -1 && xx <= 3)))
 		return 2;
-	if(x >= (getWidth()-151) && y >= (getHeight()-49) && x < (getWidth()-1) && y < (getHeight()-1))
+	if(x >= (getWidth()-151) && y >= ((1-banneroffset)*getHeight()-49) && x < (getWidth()-1) && y < ((1-banneroffset)*getHeight()-1))
 		return 3;
 	return -1;
 }

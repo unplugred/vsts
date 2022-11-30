@@ -23,7 +23,12 @@ PFAudioProcessorEditor::PFAudioProcessorEditor (PFAudioProcessor& p, int paramco
 	oversamplinglerped = oversampling;
 	audioProcessor.apvts.addParameterListener("oversampling",this);
 
-	setSize (242, 462);
+#ifdef BANNER
+	setSize(242,462+21);
+	banneroffset = 21.f/getHeight();
+#else
+	setSize(242,462);
+#endif
 	setResizable(false, false);
 	calcvis();
 	if((SystemStats::getOperatingSystemType() & SystemStats::OperatingSystemType::Windows) != 0)
@@ -47,10 +52,11 @@ void PFAudioProcessorEditor::newOpenGLContextCreated() {
 //BASE VERT
 R"(#version 330 core
 in vec2 aPos;
+uniform float banner;
 uniform vec2 texscale;
 out vec2 uv;
 void main(){
-	gl_Position = vec4(aPos*2-1,0,1);
+	gl_Position = vec4(aPos*vec2(2,(1-banner)*2)-1,0,1);
 	uv = vec2(aPos.x*texscale.x,1-(1-aPos.y)*texscale.y);
 })",
 //BASE FRAG
@@ -122,10 +128,11 @@ void main(){
 //VIS VERT
 R"(#version 330 core
 in vec2 aPos;
+uniform float banner;
 uniform vec2 texscale;
 out vec2 basecoord;
 void main(){
-	gl_Position = vec4(aPos,0,1);
+	gl_Position = vec4(vec2(aPos.x,aPos.y*(1-banner)-banner),0,1);
 	basecoord = vec2((aPos.x+1)*texscale.x*.5,1-(1-aPos.y)*texscale.y*.5);
 })",
 //VIS FRAG
@@ -143,12 +150,13 @@ void main(){
 //OVERSAMPLING VERT
 R"(#version 330 core
 in vec2 aPos;
+uniform float banner;
 uniform vec2 texscale;
 uniform float selection;
 out vec2 basecoord;
 out vec2 highlightcoord;
 void main(){
-	gl_Position = vec4(aPos.x-.5,aPos.y*.2+.7,0,1);
+	gl_Position = vec4(aPos.x-.5,aPos.y*(1-banner)*.2+.7-banner*1.7,0,1);
 	basecoord = vec2((aPos.x+.5)*.5*texscale.x,1-(1.5-aPos.y)*.1*texscale.y);
 	highlightcoord = vec2((aPos.x-selection)*4.3214285714,aPos.y*3.3-1.1642857143);
 })",
@@ -168,10 +176,11 @@ void main(){
 //CREDITS VERT
 R"(#version 330 core
 in vec2 aPos;
+uniform float banner;
 uniform vec2 texscale;
 out vec2 uv;
 void main(){
-	gl_Position = vec4(aPos.x*2-1,1-(1-aPos.y*(59./462.))*2,0,1);
+	gl_Position = vec4(aPos.x*2-1,1-(1-aPos.y*(1-banner)*(59./462.))*2,0,1);
 	uv = vec2(aPos.x*texscale.x,1-(1-aPos.y)*texscale.y);
 })",
 //CREDITS FRAG
@@ -192,10 +201,11 @@ void main(){
 //PP VERT
 R"(#version 330 core
 in vec2 aPos;
+uniform float banner;
 uniform float shake;
 out vec2 uv;
 void main(){
-	gl_Position = vec4(aPos*2-1,0,1);
+	gl_Position = vec4(vec2(aPos.x,aPos.y*(1-banner)+banner)*2-1,0,1);
 	uv = aPos+vec2(shake,0);
 })",
 //PP FRAG
@@ -231,10 +241,43 @@ void main(){
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 
-	framebuffer.initialise(context, getWidth()*dpi, getHeight()*dpi);
+	framebuffer.initialise(context, 242*dpi, 462*dpi);
 	glBindTexture(GL_TEXTURE_2D, framebuffer.getTextureID());
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+#ifdef BANNER
+	compileshader(bannershader,
+//BANNER VERT
+R"(#version 330 core
+in vec2 aPos;
+uniform vec2 texscale;
+uniform vec2 size;
+out vec2 uv;
+void main(){
+	gl_Position = vec4((aPos*vec2(1,size.y))*2-1,0,1);
+	uv = vec2(aPos.x*size.x,1-(1-aPos.y)*texscale.y);
+})",
+//BANNER FRAG
+R"(#version 330 core
+in vec2 uv;
+uniform sampler2D tex;
+uniform vec2 texscale;
+uniform float pos;
+uniform float free;
+uniform float dpi;
+void main(){
+	vec2 col = max(min((texture2D(tex,vec2(mod(uv.x+pos,1)*texscale.x,uv.y)).rg-.5)*dpi+.5,1),0);
+	gl_FragColor = vec4(vec3(col.r*free+col.g*(1-free)),1);
+})");
+
+	bannertex.loadImage(ImageCache::getFromMemory(BinaryData::banner_png, BinaryData::banner_pngSize));
+	bannertex.bind();
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+#endif
 
 	context.extensions.glGenBuffers(1, &arraybuffer);
 
@@ -265,6 +308,7 @@ void PFAudioProcessorEditor::renderOpenGL() {
 		context.extensions.glActiveTexture(GL_TEXTURE0);
 		basetex.bind();
 		baseshader->setUniform("basetex",0);
+		baseshader->setUniform("banner",banneroffset);
 		baseshader->setUniform("texscale",242.f/basetex.getWidth(),462.f/basetex.getHeight());
 		context.extensions.glEnableVertexAttribArray(coord);
 		context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
@@ -288,7 +332,7 @@ void PFAudioProcessorEditor::renderOpenGL() {
 		knobshader->setUniform("knobcolor",.2265625f);
 		for(int i = 0; i < knobcount; i++) {
 			if(i == 2) knobshader->setUniform("knobcolor",.61328125f);
-			knobshader->setUniform("knobpos",((float)knobs[i].x*2)/getWidth(),2-((float)knobs[i].y*2)/getHeight());
+			knobshader->setUniform("knobpos",((float)knobs[i].x*2)/getWidth(),2-((float)knobs[i].y*2)/getHeight()-banneroffset*2);
 			knobshader->setUniform("knobrot",(knobs[i].value-.5f)*.748f);
 			knobshader->setUniform("id",(float)i);
 			knobshader->setUniform("hoverstate",(float)(knobs[i].hoverstate==-1?(hover==i?-1:0):knobs[i].hoverstate));
@@ -306,6 +350,7 @@ void PFAudioProcessorEditor::renderOpenGL() {
 			context.extensions.glActiveTexture(GL_TEXTURE0);
 			basetex.bind();
 			visshader->setUniform("basetex",0);
+			visshader->setUniform("banner",banneroffset);
 			visshader->setUniform("alpha",1-osalpha);
 			visshader->setUniform("texscale",242.f/basetex.getWidth(),462.f/basetex.getHeight());
 			context.extensions.glEnableVertexAttribArray(coord);
@@ -326,6 +371,7 @@ void PFAudioProcessorEditor::renderOpenGL() {
 			context.extensions.glActiveTexture(GL_TEXTURE0);
 			basetex.bind();
 			oversamplingshader->setUniform("basetex",0);
+			oversamplingshader->setUniform("banner",banneroffset);
 			oversamplingshader->setUniform("alpha",osalpha);
 			oversamplingshader->setUniform("selection",.458677686f+oversamplinglerped*.2314049587f);
 			oversamplingshader->setUniform("texscale",242.f/basetex.getWidth(),462.f/basetex.getHeight());
@@ -340,6 +386,7 @@ void PFAudioProcessorEditor::renderOpenGL() {
 			context.extensions.glActiveTexture(GL_TEXTURE0);
 			creditstex.bind();
 			creditsshader->setUniform("creditstex",0);
+			creditsshader->setUniform("banner",banneroffset);
 			creditsshader->setUniform("texscale",242.f/creditstex.getWidth(),59.f/creditstex.getHeight());
 			creditsshader->setUniform("alpha",creditsalpha<0.5?4*creditsalpha*creditsalpha*creditsalpha:1-(float)pow(-2*creditsalpha+2,3)/2);
 			creditsshader->setUniform("shineprog",websiteht);
@@ -358,6 +405,7 @@ void PFAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, framebuffer.getTextureID());
 	ppshader->setUniform("pptex",0);
+	ppshader->setUniform("banner",banneroffset);
 	ppshader->setUniform("chroma",rms*.006f);
 	ppshader->setUniform("shake",rms*.004f*(random.nextFloat()-.5f));
 	coord = context.extensions.glGetAttribLocation(ppshader->getProgramID(),"aPos");
@@ -365,6 +413,29 @@ void PFAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	context.extensions.glDisableVertexAttribArray(coord);
+
+#ifdef BANNER
+	bannershader->use();
+	coord = context.extensions.glGetAttribLocation(bannershader->getProgramID(),"aPos");
+	context.extensions.glEnableVertexAttribArray(coord);
+	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+	context.extensions.glActiveTexture(GL_TEXTURE0);
+	bannertex.bind();
+	bannershader->setUniform("tex",0);
+	bannershader->setUniform("dpi",dpi);
+#ifdef BETA
+	bannershader->setUniform("texscale",494.f/bannertex.getWidth(),21.f/bannertex.getHeight());
+	bannershader->setUniform("size",getWidth()/494.f,21.f/getHeight());
+	bannershader->setUniform("free",0.f);
+#else
+	bannershader->setUniform("texscale",426.f/bannertex.getWidth(),21.f/bannertex.getHeight());
+	bannershader->setUniform("size",getWidth()/426.f,21.f/getHeight());
+	bannershader->setUniform("free",1.f);
+#endif
+	bannershader->setUniform("pos",bannerx);
+	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+	context.extensions.glDisableVertexAttribArray(coord);
+#endif
 
 	audioProcessor.logger.drawlog();
 }
@@ -382,6 +453,11 @@ void PFAudioProcessorEditor::openGLContextClosing() {
 
 	framebuffer.release();
 
+#ifdef BANNER
+	bannershader->release();
+	bannertex.release();
+#endif
+
 	audioProcessor.logger.release();
 
 	context.extensions.glDeleteBuffers(1,&arraybuffer);
@@ -394,7 +470,7 @@ void PFAudioProcessorEditor::calcvis() {
 	for(int c = 0; c < (isStereo ? 2 : 1); c++) {
 		for(int i = 0; i < 226; i++) {
 			visline[c][i*2] = (i+8)/121.f-1;
-			visline[c][i*2+1] = 1-(48+audioProcessor.plasticfuneral(sin(i/35.8098621957f)*.8f,c,2,pp,audioProcessor.normalizegain(pp.values[1],pp.values[3])) * 38) / 231.f;
+			visline[c][i*2+1] = 1-(48+audioProcessor.plasticfuneral(sin(i/35.8098621957f)*.8f,c,2,pp,audioProcessor.normalizegain(pp.values[1],pp.values[3])) * 38)/231.f;
 		}
 	}
 }
@@ -438,6 +514,10 @@ void PFAudioProcessorEditor::timerCallback() {
 		audioProcessor.rmsadd = 0;
 		audioProcessor.rmscount = 0;
 	} else rms *= .9f;
+
+#ifdef BANNER
+	bannerx = fmod(bannerx+.0005f,1.f);
+#endif
 
 	context.triggerRepaint();
 }
@@ -542,7 +622,7 @@ int PFAudioProcessorEditor::recalchover(float x, float y) {
 		if(x >= 115 && x <= 143) return -5;
 		if(x >= 144 && x <= 172) return -6;
 		return -4;
-	} else if(y >= 403) {
+	} else if(y >= 403 && y < 462) {
 		if(x >= 50 && x <= 196 && y >= 412 && y <= 456) return -3;
 		return -2;
 	}

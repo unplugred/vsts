@@ -74,6 +74,7 @@ target_compile_definitions("${PROJECT_NAME}" PUBLIC
 	JUCE_USE_CAMERA=0)
 
 juce_add_binary_data(BinaryData HEADER_NAME BinaryData.h NAMESPACE BinaryData SOURCES
+	Resources/banner.png
 	Resources/base.png
 	Resources/credits.png
 	Resources/dbg_txt.png

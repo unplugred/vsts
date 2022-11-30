@@ -3,6 +3,9 @@
 #include "DCFilter.h"
 #include "CoolLogger.h"
 
+#define BANNER
+//#define BETA
+
 struct potentiometer {
 public:
 	enum ptype {
