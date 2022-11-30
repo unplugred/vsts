@@ -507,7 +507,7 @@ int RedBassAudioProcessorEditor::recalchover(float x, float y) {
 	for(int i = 0; i < knobcount; i++) {
 		xx = knobs[i].x-x;
 		yy = knobs[i].y-y;
-		if((xx*xx+yy*yy)<=3364) return i;
+		if((xx*xx+yy*yy)<=841) return i;
 	}
 	return -1;
 }
