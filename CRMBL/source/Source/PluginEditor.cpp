@@ -457,7 +457,7 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 		knobs[i].yoffset = damparray[((int)round(33+dampreadpos-knobs[i].r*16))%32]*.05f;
 		if(i != 1 && i != 2 && i != 4) {
 			baseshader->setUniform("r",knobs[i].r);
-			baseshader->setUniform("offset",knobs[i].yoffset*(1-banneroffset));
+			baseshader->setUniform("offset",knobs[i].yoffset*(1-banneroffset)*1.15f);
 			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 		}
 	}
@@ -506,14 +506,14 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 			context.extensions.glEnableVertexAttribArray(coord);
 			context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 			if(i == 1) {
-				baseshader->setUniform("offset",knobs[1].yoffset*(1-banneroffset));
+				baseshader->setUniform("offset",knobs[1].yoffset*(1-banneroffset)*1.15f);
 				baseshader->setUniform("r",knobs[1].r);
 				glDrawArrays(GL_TRIANGLE_STRIP,0,4);
-				baseshader->setUniform("offset",knobs[2].yoffset*(1-banneroffset));
+				baseshader->setUniform("offset",knobs[2].yoffset*(1-banneroffset)*1.15f);
 				baseshader->setUniform("r",knobs[2].r);
 				glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 			} else {
-				baseshader->setUniform("offset",knobs[4].yoffset*(1-banneroffset));
+				baseshader->setUniform("offset",knobs[4].yoffset*(1-banneroffset)*1.15f);
 				baseshader->setUniform("r",knobs[4].r);
 				glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 			}
