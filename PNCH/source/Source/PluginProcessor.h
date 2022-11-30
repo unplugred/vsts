@@ -2,6 +2,9 @@
 #include "includes.h"
 #include "CoolLogger.h"
 
+#define BANNER
+//#define BETA
+
 class PNCHAudioProcessor : public AudioProcessor, public AudioProcessorValueTreeState::Listener {
 public:
 	PNCHAudioProcessor();

@@ -3,6 +3,9 @@
 #include "CoolLogger.h"
 #include "functions.h"
 
+#define BANNER
+//#define BETA
+
 struct potentiometer {
 public:
 	enum ptype {

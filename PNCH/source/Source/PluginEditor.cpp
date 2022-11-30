@@ -12,8 +12,15 @@ PNCHAudioProcessorEditor::PNCHAudioProcessorEditor (PNCHAudioProcessor& p, float
 	c1 = Colour::fromHSV(hue,1.f,lightness?1.f:.4f,1.f);
 	c2 = Colour::fromHSV(hue+.1666f*(random.nextFloat()>.5?1:-1),1.f,lightness?.4f:1.f,1.f);
 
-	setSize (128, 148);
+#ifdef BANNER
+	setSize(128,148+21);
+	banneroffset = 21.f/getHeight();
+#else
+	setSize(128,148);
+#endif
 	setResizable(false, false);
+	if((SystemStats::getOperatingSystemType() & SystemStats::OperatingSystemType::Windows) != 0)
+		dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->dpi/96.f;
 
 	setOpaque(true);
 	context.setRenderer(this);
@@ -33,9 +40,10 @@ void PNCHAudioProcessorEditor::newOpenGLContextCreated() {
 R"(#version 330 core
 in vec2 aPos;
 uniform vec2 letterscale;
+uniform float banner;
 out vec2 uv;
 void main(){
-	gl_Position = vec4(aPos*2-1,0,1);
+	gl_Position = vec4(vec2(aPos.x,aPos.y*(1-banner)+banner)*2-1,0,1);
 	uv = vec2((aPos.x-.0078125)*letterscale.x,1-(1-aPos.y)*letterscale.y);
 })",
 //BASE FRAG
@@ -67,10 +75,11 @@ in vec2 aPos;
 uniform vec2 texscale;
 uniform vec2 knobrot;
 uniform vec2 shake;
+uniform float banner;
 out vec2 uv;
 out vec2 balluv;
 void main(){
-	gl_Position = vec4(aPos*2-1+shake,0,1);
+	gl_Position = vec4(vec2(aPos.x,aPos.y*(1-banner)+banner)*2-1+shake,0,1);
 	uv = vec2(aPos.x*texscale.x,1-(1-aPos.y)*texscale.y);
 	balluv = vec2(aPos.x*texscale.x,1-(1-aPos.y)*texscale.y)-knobrot;
 })",
@@ -93,9 +102,10 @@ void main(){
 R"(#version 330 core
 in vec2 aPos;
 uniform vec2 texscale;
+uniform float banner;
 out vec2 uv;
 void main(){
-	gl_Position = vec4(aPos.x*1.875-0.9375,aPos.y*1.891892-0.945946,0,1);
+	gl_Position = vec4(aPos.x*1.875-0.9375,(aPos.y*(1-banner)+banner*1.03)*1.891892-0.945946,0,1);
 	uv = vec2(aPos.x*texscale.x,1-(1-aPos.y)*texscale.y);
 })",
 //CREDITS FRAG
@@ -124,6 +134,39 @@ void main(){
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+
+#ifdef BANNER
+	compileshader(bannershader,
+//BANNER VERT
+R"(#version 330 core
+in vec2 aPos;
+uniform vec2 texscale;
+uniform vec2 size;
+out vec2 uv;
+void main(){
+	gl_Position = vec4((aPos*vec2(1,size.y))*2-1,0,1);
+	uv = vec2(aPos.x*size.x,1-(1-aPos.y)*texscale.y);
+})",
+//BANNER FRAG
+R"(#version 330 core
+in vec2 uv;
+uniform sampler2D tex;
+uniform vec2 texscale;
+uniform float pos;
+uniform float free;
+uniform float dpi;
+void main(){
+	vec2 col = max(min((texture2D(tex,vec2(mod(uv.x+pos,1)*texscale.x,uv.y)).rg-.5)*dpi+.5,1),0);
+	gl_FragColor = vec4(vec3(col.r*free+col.g*(1-free)),1);
+})");
+
+	bannertex.loadImage(ImageCache::getFromMemory(BinaryData::banner_png, BinaryData::banner_pngSize));
+	bannertex.bind();
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+#endif
 
 	context.extensions.glGenBuffers(1, &arraybuffer);
 
@@ -154,7 +197,8 @@ void PNCHAudioProcessorEditor::renderOpenGL() {
 	basetex.bind();
 	baseshader->setUniform("tex",0);
 	baseshader->setUniform("texscale",25.f/basetex.getWidth(),21.f/basetex.getHeight());
-	baseshader->setUniform("letterscale",getWidth()/25.f,getHeight()/21.f);
+	baseshader->setUniform("banner",banneroffset);
+	baseshader->setUniform("letterscale",getWidth()/25.f,(1-banneroffset)*getHeight()/21.f);
 	baseshader->setUniform("amount",(float)floor(amount*31));
 	baseshader->setUniform("colone",c1.getFloatRed(),c1.getFloatGreen(),c1.getFloatBlue());
 	baseshader->setUniform("coltwo",c2.getFloatRed(),c2.getFloatGreen(),c2.getFloatBlue());
@@ -169,6 +213,7 @@ void PNCHAudioProcessorEditor::renderOpenGL() {
 		creditstex.bind();
 		creditsshader->setUniform("creditstex",0);
 		creditsshader->setUniform("texscale",120.f/creditstex.getWidth(),140.f/creditstex.getHeight());
+		creditsshader->setUniform("banner",banneroffset);
 		creditsshader->setUniform("hover",(float)hover);
 		creditsshader->setUniform("colone",c1.getFloatRed(),c1.getFloatGreen(),c1.getFloatBlue());
 		creditsshader->setUniform("coltwo",c2.getFloatRed(),c2.getFloatGreen(),c2.getFloatBlue());
@@ -179,9 +224,10 @@ void PNCHAudioProcessorEditor::renderOpenGL() {
 		basetex.bind();
 		knobshader->setUniform("tex",0);
 		knobshader->setUniform("texscale",128.f/basetex.getWidth(),148.f/basetex.getHeight());
+		knobshader->setUniform("banner",banneroffset);
 		float rotato = (amount-.5f)*5.f;
 		knobshader->setUniform("knobrot",round(sin(rotato)*38)/128.f,round(cos(rotato)*38)/148.f);
-		knobshader->setUniform("shake",.03125f*(random.nextFloat()-.5f)*10.f*rms,.027027f*(random.nextFloat()-.5f)*10.f*rms);
+		knobshader->setUniform("shake",.03125f*(random.nextFloat()-.5f)*10.f*rms,.027027f*(1-banneroffset)*(random.nextFloat()-.5f)*10.f*rms);
 		knobshader->setUniform("colone",c1.getFloatRed(),c1.getFloatGreen(),c1.getFloatBlue());
 		knobshader->setUniform("coltwo",c2.getFloatRed(),c2.getFloatGreen(),c2.getFloatBlue());
 		coord = context.extensions.glGetAttribLocation(knobshader->getProgramID(),"aPos");
@@ -190,6 +236,29 @@ void PNCHAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	context.extensions.glDisableVertexAttribArray(coord);
+
+#ifdef BANNER
+	bannershader->use();
+	coord = context.extensions.glGetAttribLocation(bannershader->getProgramID(),"aPos");
+	context.extensions.glEnableVertexAttribArray(coord);
+	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+	context.extensions.glActiveTexture(GL_TEXTURE0);
+	bannertex.bind();
+	bannershader->setUniform("tex",0);
+	bannershader->setUniform("dpi",dpi);
+#ifdef BETA
+	bannershader->setUniform("texscale",494.f/bannertex.getWidth(),21.f/bannertex.getHeight());
+	bannershader->setUniform("size",getWidth()/494.f,21.f/getHeight());
+	bannershader->setUniform("free",0.f);
+#else
+	bannershader->setUniform("texscale",426.f/bannertex.getWidth(),21.f/bannertex.getHeight());
+	bannershader->setUniform("size",getWidth()/426.f,21.f/getHeight());
+	bannershader->setUniform("free",1.f);
+#endif
+	bannershader->setUniform("pos",bannerx);
+	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+	context.extensions.glDisableVertexAttribArray(coord);
+#endif
 
 	audioProcessor.logger.drawlog();
 }
@@ -200,6 +269,11 @@ void PNCHAudioProcessorEditor::openGLContextClosing() {
 
 	basetex.release();
 	creditstex.release();
+
+#ifdef BANNER
+	bannershader->release();
+	bannertex.release();
+#endif
 
 	audioProcessor.logger.release();
 
@@ -213,6 +287,10 @@ void PNCHAudioProcessorEditor::timerCallback() {
 		audioProcessor.rmsadd = 0;
 		audioProcessor.rmscount = 0;
 	} else rms *= .9f;
+
+#ifdef BANNER
+	bannerx = fmod(bannerx+.0005f,1.f);
+#endif
 
 	context.triggerRepaint();
 }
@@ -287,7 +365,7 @@ void PNCHAudioProcessorEditor::mouseWheelMove(const MouseEvent& event, const Mou
 int PNCHAudioProcessorEditor::recalchover(float x, float y) {
 	if (credits) {
 		if(x >= 69 && x <= 97 && y >= 93 && y <= 117) return 1;
-		if(x >= 8 && x <= 59 && y >= 112 && y <= 132) return 2;
+		if(x >= 8 && x <= 59 && y >= 112 && y <= 137) return 2;
 	} else {
 		float xx = 60-x;
 		float yy = 88-y;

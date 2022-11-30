@@ -30,7 +30,12 @@ PisstortionAudioProcessorEditor::PisstortionAudioProcessorEditor (PisstortionAud
 		bubbles[i].moveage = random.nextFloat();
 	}
 
-	setSize (242, 462);
+#ifdef BANNER
+	setSize(242,462+21);
+	banneroffset = 21.f/getHeight();
+#else
+	setSize(242,462);
+#endif
 	setResizable(false, false);
 	calcvis();
 	if((SystemStats::getOperatingSystemType() & SystemStats::OperatingSystemType::Windows) != 0)
@@ -54,11 +59,12 @@ void PisstortionAudioProcessorEditor::newOpenGLContextCreated() {
 //BASE VERT
 R"(#version 330 core
 in vec2 aPos;
+uniform float banner;
 uniform vec2 texscale;
 out vec2 v_TexCoord;
 out vec2 circlecoord;
 void main(){
-	gl_Position = vec4(aPos*2-1,0,1);
+	gl_Position = vec4(vec2(aPos.x,aPos.y*(1-banner)+banner)*2-1,0,1);
 	v_TexCoord = vec2(aPos.x*texscale.x,1-(1-aPos.y)*texscale.y);
 	circlecoord = aPos;
 })",
@@ -84,6 +90,7 @@ void main(){
 //KNOB VERT
 R"(#version 330 core
 in vec2 aPos;
+uniform float banner;
 uniform vec2 texscale;
 uniform vec2 knobscale;
 uniform float ratio;
@@ -97,7 +104,7 @@ void main(){
 		(pos.x*cos(knobrot)-pos.y*sin(knobrot))*ratio-1+knobpos.x,
 		pos.x*sin(knobrot)+pos.y*cos(knobrot)-1+knobpos.y,0,1);
 	v_TexCoord = vec2(aPos.x*texscale.x,1-(1-aPos.y)*texscale.y);
-	circlecoord = gl_Position.xy*.5+.5;
+	circlecoord = vec2(gl_Position.x,(gl_Position.y-banner)/(1-banner))*.5+.5;
 })",
 //KNOB FRAG
 R"(#version 330 core
@@ -121,10 +128,11 @@ void main(){
 //VIS VERT
 R"(#version 330 core
 in vec2 aPos;
+uniform float banner;
 uniform vec2 texscale;
 out vec2 basecoord;
 void main(){
-	gl_Position = vec4(aPos,0,1);
+	gl_Position = vec4(aPos.x,aPos.y*(1-banner)+banner,0,1);
 	basecoord = vec2((aPos.x+1)*texscale.x*.5,1-(1-aPos.y)*texscale.y*.5);
 })",
 //VIS FRAG
@@ -141,12 +149,13 @@ void main(){
 //OVERSAMPLING VERT
 R"(#version 330 core
 in vec2 aPos;
+uniform float banner;
 uniform vec2 texscale;
 uniform float selection;
 out vec2 basecoord;
 out vec2 highlightcoord;
 void main(){
-	gl_Position = vec4(aPos.x-.5,aPos.y*.2+.7,0,1);
+	gl_Position = vec4(aPos.x-.5,aPos.y*(1-banner)*.2+.7+banner*.3,0,1);
 	basecoord = vec2((aPos.x+.5)*.5*texscale.x,1-(1.5-aPos.y)*.1*texscale.y);
 	highlightcoord = vec2((aPos.x-selection)*4.3214285714,aPos.y*3.3-1.1642857143);
 })",
@@ -173,14 +182,15 @@ void main(){
 //CREDITS VERT
 R"(#version 330 core
 in vec2 aPos;
+uniform float banner;
 uniform vec2 texscale;
 uniform vec2 basescale;
 out vec2 v_TexCoord;
 out vec2 basecoord;
 void main(){
-	gl_Position = vec4(aPos.x*2-1,1-(1-aPos.y*(57./462.))*2,0,1);
+	gl_Position = vec4(aPos.x*2-1,1-(1-aPos.y*(1-banner)*(57./462.)-banner)*2,0,1);
 	v_TexCoord = vec2(aPos.x*texscale.x,1-(1-aPos.y)*texscale.y);
-	basecoord = vec2(aPos.x*basescale.x,1-(.5-gl_Position.y*.5)*basescale.y);
+	basecoord = vec2(aPos.x*basescale.x,1-(1-aPos.y*(57./462.))*basescale.y);
 })",
 //CREDITS FRAG
 R"(#version 330 core
@@ -230,7 +240,7 @@ void main(){
 	gl_FragColor = vec4(1,1,1,(x>(1-(1-f)*.5)?(1-x):(x-f))*100);
 })");
 
-	framebuffer.initialise(context, getWidth()*dpi, getHeight()*dpi);
+	framebuffer.initialise(context, 242*dpi, 462*dpi);
 	glBindTexture(GL_TEXTURE_2D, framebuffer.getTextureID());
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -255,6 +265,39 @@ void main(){
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+
+#ifdef BANNER
+	compileshader(bannershader,
+//BANNER VERT
+R"(#version 330 core
+in vec2 aPos;
+uniform vec2 texscale;
+uniform vec2 size;
+out vec2 uv;
+void main(){
+	gl_Position = vec4((aPos*vec2(1,size.y))*2-1,0,1);
+	uv = vec2(aPos.x*size.x,1-(1-aPos.y)*texscale.y);
+})",
+//BANNER FRAG
+R"(#version 330 core
+in vec2 uv;
+uniform sampler2D tex;
+uniform vec2 texscale;
+uniform float pos;
+uniform float free;
+uniform float dpi;
+void main(){
+	vec2 col = max(min((texture2D(tex,vec2(mod(uv.x+pos,1)*texscale.x,uv.y)).rg-.5)*dpi+.5,1),0);
+	gl_FragColor = vec4(vec3(col.r*free+col.g*(1-free)),1);
+})");
+
+	bannertex.loadImage(ImageCache::getFromMemory(BinaryData::banner_png, BinaryData::banner_pngSize));
+	bannertex.bind();
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+#endif
 
 	context.extensions.glGenBuffers(1, &arraybuffer);
 
@@ -304,6 +347,7 @@ void PisstortionAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, framebuffer.getTextureID());
 	baseshader->setUniform("circletex",1);
+	baseshader->setUniform("banner",banneroffset);
 	baseshader->setUniform("dpi",(float)fmax(dpi,1));
 	baseshader->setUniform("texscale",242.f/basetex.getWidth(),462.f/basetex.getHeight());
 	context.extensions.glEnableVertexAttribArray(coord);
@@ -318,6 +362,7 @@ void PisstortionAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, framebuffer.getTextureID());
 	knobshader->setUniform("circletex",1);
+	knobshader->setUniform("banner",banneroffset);
 	knobshader->setUniform("texscale",108.f/knobtex.getWidth(),108.f/knobtex.getHeight());
 	knobshader->setUniform("knobscale",54.f/getWidth(),54.f/getHeight());
 	knobshader->setUniform("ratio",((float)getHeight())/getWidth());
@@ -342,6 +387,7 @@ void PisstortionAudioProcessorEditor::renderOpenGL() {
 		context.extensions.glActiveTexture(GL_TEXTURE0);
 		basetex.bind();
 		visshader->setUniform("basetex",0);
+		visshader->setUniform("banner",banneroffset);
 		visshader->setUniform("alpha",1-osalpha);
 		visshader->setUniform("texscale",242.f/basetex.getWidth(),462.f/basetex.getHeight());
 		context.extensions.glEnableVertexAttribArray(coord);
@@ -361,8 +407,9 @@ void PisstortionAudioProcessorEditor::renderOpenGL() {
 		coord = context.extensions.glGetAttribLocation(oversamplingshader->getProgramID(),"aPos");
 		context.extensions.glActiveTexture(GL_TEXTURE0);
 		basetex.bind();
-		oversamplingshader->setUniform("dpi",(float)fmax(dpi,1));
 		oversamplingshader->setUniform("basetex",0);
+		oversamplingshader->setUniform("dpi",(float)fmax(dpi,1));
+		oversamplingshader->setUniform("banner",banneroffset);
 		oversamplingshader->setUniform("alpha",osalpha);
 		oversamplingshader->setUniform("selection",.458677686f+oversamplinglerped*.2314049587f);
 		oversamplingshader->setUniform("texscale",242.f/basetex.getWidth(),462.f/basetex.getHeight());
@@ -377,8 +424,9 @@ void PisstortionAudioProcessorEditor::renderOpenGL() {
 	basetex.bind();
 	context.extensions.glActiveTexture(GL_TEXTURE1);
 	creditstex.bind();
-	creditsshader->setUniform("dpi",(float)fmax(dpi,1));
 	creditsshader->setUniform("basetex",0);
+	creditsshader->setUniform("dpi",(float)fmax(dpi,1));
+	creditsshader->setUniform("banner",banneroffset);
 	creditsshader->setUniform("basescale",242.f/basetex.getWidth(),462.f/basetex.getHeight());
 	creditsshader->setUniform("creditstex",1);
 	creditsshader->setUniform("texscale",242.f/creditstex.getWidth(),48.f/creditstex.getHeight());
@@ -389,6 +437,29 @@ void PisstortionAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	context.extensions.glDisableVertexAttribArray(coord);
+
+#ifdef BANNER
+	bannershader->use();
+	coord = context.extensions.glGetAttribLocation(bannershader->getProgramID(),"aPos");
+	context.extensions.glEnableVertexAttribArray(coord);
+	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+	context.extensions.glActiveTexture(GL_TEXTURE0);
+	bannertex.bind();
+	bannershader->setUniform("tex",0);
+	bannershader->setUniform("dpi",dpi);
+#ifdef BETA
+	bannershader->setUniform("texscale",494.f/bannertex.getWidth(),21.f/bannertex.getHeight());
+	bannershader->setUniform("size",getWidth()/494.f,21.f/getHeight());
+	bannershader->setUniform("free",0.f);
+#else
+	bannershader->setUniform("texscale",426.f/bannertex.getWidth(),21.f/bannertex.getHeight());
+	bannershader->setUniform("size",getWidth()/426.f,21.f/getHeight());
+	bannershader->setUniform("free",1.f);
+#endif
+	bannershader->setUniform("pos",bannerx);
+	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+	context.extensions.glDisableVertexAttribArray(coord);
+#endif
 
 	audioProcessor.logger.drawlog();
 }
@@ -405,6 +476,11 @@ void PisstortionAudioProcessorEditor::openGLContextClosing() {
 	creditstex.release();
 
 	framebuffer.release();
+
+#ifdef BANNER
+	bannershader->release();
+	bannertex.release();
+#endif
 
 	audioProcessor.logger.release();
 
@@ -467,6 +543,10 @@ void PisstortionAudioProcessorEditor::timerCallback() {
 		calcvis();
 		audioProcessor.updatevis = false;
 	}
+
+#ifdef BANNER
+	bannerx = fmod(bannerx+.0005f,1.f);
+#endif
 
 	context.triggerRepaint();
 }
@@ -576,7 +656,7 @@ int PisstortionAudioProcessorEditor::recalchover(float x, float y) {
 		if(x >= 115 && x <= 143) return -5;
 		if(x >= 144 && x <= 172) return -6;
 		return -4;
-	} else if(y >= 403) {
+	} else if(y >= 403 && y < 462) {
 		if(x >= 50 && x <= 196 && y >= 412 && y <= 456) return -3;
 		return -2;
 	}
