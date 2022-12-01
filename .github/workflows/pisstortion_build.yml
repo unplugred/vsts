@@ -1,0 +1,78 @@
+name: Pisstortion Build
+
+on:
+  push:
+    branches:
+      - '**'
+    tags:
+      - '*.*.*'
+  pull_request:
+    branches:
+      - master
+
+env:
+  CMAKE_VERSION: 3.22.1
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    name: build pisstortion
+    strategy:
+      matrix:
+        config:
+        - {
+            name: "Windows MSVC",
+            os: windows-latest,
+            cc: "cl", cxx: "cl",
+          }
+        - {
+            name: "Linux",
+            os: ubuntu-latest,
+          }
+        - {
+            name: "Mac",
+            os: macos-latest,
+          }
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: true
+    
+    - if: startsWith(matrix.os, 'ubuntu')
+      name: install juce dependencies
+      id: pisstortion_juce_dependencies
+      run: | 
+        sudo apt-get update
+        sudo apt-get install g++ libasound2-dev libjack-jackd2-dev ladspa-sdk libcurl4-openssl-dev libfreetype6-dev libx11-dev libxcomposite-dev libxcursor-dev libxcursor-dev libxext-dev libxinerama-dev libxrandr-dev libxrender-dev libwebkit2gtk-4.0-dev libglu1-mesa-dev mesa-common-dev
+
+    - if: startsWith(matrix.os, 'ubuntu')
+      name: configure
+      id: pisstortion_configure
+      run: |
+        cd Pisstoriton
+        cmake -B build -G "Unix Makefiles"
+
+    - if: startsWith(matrix.os, 'ubuntu')
+      name: build
+      id: pisstortion_build
+      run: |
+        cmake --build build --config Release --target Pisstortion_VST
+        cmake --build build --config Release --target Pisstortion_VST3
+
+    - if: startsWith(matrix.os, 'ubuntu')
+      name: package
+      id: pisstortion_build
+      run: |
+        mkdir -p "Pisstortion/VST"
+        mkdir -p "Pisstortion/VST3"
+        mv "./build/Pisstortion_artefacts/VST/libPisstortion.so" "Pisstortion/VST/Pisstortion.so"
+        mv "./build/Pisstortion_artefacts/VST3/Pisstortion.vst3/Contents/x86_64-linux/Pisstortion.so" "Pisstortion/VST3/Pisstortion.so"
+
+    - uses: actions/upload-artifact@v2
+      with:
+        name: Pisstortion ${{ matrix.name }}
+        path: Pisstortion
+
+
