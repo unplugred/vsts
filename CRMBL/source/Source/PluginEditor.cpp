@@ -200,8 +200,8 @@ uniform float websiteht;
 uniform float dpi;
 void main(){
 	vec4 col = texture2D(basetex,uv);
-	col.rga = max(min((col.rga-.5)*dpi+.5,1),0);
 	col.r /= col.a;
+	col.ga = max(min((col.ga-.5)*dpi+.5,1),0);
 	gl_FragColor = vec4(0);
 	if(col.r >= .85)
 		gl_FragColor = vec4(vec2(col.g*(1-max(min((texture2D(basetex,vec2(min(uv.x+websiteht,.3),uv.y)).b-.5)*dpi+.5,1),0)*.5)),1,col.a);
