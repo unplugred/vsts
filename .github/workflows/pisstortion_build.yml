@@ -63,7 +63,7 @@ jobs:
 
     - if: startsWith(matrix.os, 'ubuntu')
       name: package
-      id: pisstortion_build
+      id: pisstortion_package
       run: |
         mkdir -p "Pisstortion/VST"
         mkdir -p "Pisstortion/VST3"
