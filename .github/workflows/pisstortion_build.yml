@@ -47,21 +47,27 @@ jobs:
         sudo apt-get update
         sudo apt-get install g++ libasound2-dev libjack-jackd2-dev ladspa-sdk libcurl4-openssl-dev libfreetype6-dev libx11-dev libxcomposite-dev libxcursor-dev libxcursor-dev libxext-dev libxinerama-dev libxrandr-dev libxrender-dev libwebkit2gtk-4.0-dev libglu1-mesa-dev mesa-common-dev
 
-    - if: startsWith(matrix.os, 'ubuntu')
+    - if: !startsWith(matrix.os, 'windows')
       name: configure
       id: pisstortion_configure
       run: |
         cd Pisstoriton
         cmake -B build -G "Unix Makefiles"
 
-    - if: startsWith(matrix.os, 'ubuntu')
-      name: build
+    - if: startsWith(matrix.os, 'windows')
+      name: configure windows
+      id: pisstortion_configure_windows
+      run: |
+        cd Pisstoriton
+        cmake -B build -G "Visual Studio 17 2022" -T host=x64 -A x64
+
+    - name: build
       id: pisstortion_build
       run: |
         cmake --build build --config Release --target Pisstortion_VST
         cmake --build build --config Release --target Pisstortion_VST3
 
-    - if: startsWith(matrix.os, 'ubuntu')
+    - if: !startsWith(matrix.os, 'windows')
       name: package
       id: pisstortion_package
       run: |
@@ -70,9 +76,17 @@ jobs:
         mv "./build/Pisstortion_artefacts/VST/libPisstortion.so" "Pisstortion/VST/Pisstortion.so"
         mv "./build/Pisstortion_artefacts/VST3/Pisstortion.vst3/Contents/x86_64-linux/Pisstortion.so" "Pisstortion/VST3/Pisstortion.so"
 
+    - if: startsWith(matrix.os, 'windows')
+      name: package windows
+      id: pisstortion_package_windows
+      run: |
+        mkdir -p "Pisstortion/VST"
+        mkdir -p "Pisstortion/VST3"
+        mv "./build/Pisstortion_artefacts/Release/VST/Pisstortion.dll" "Pisstortion/VST/Pisstortion.dll"
+        mv "./build/Pisstortion_artefacts/Release/VST3/Pisstortion.vst3/Contents/x86_64-win/Pisstortion.vst3" "Pisstortion/VST3/Pisstortion.vst3"
+
     - uses: actions/upload-artifact@v2
       with:
         name: Pisstortion ${{ matrix.name }}
         path: Pisstortion
-
 
