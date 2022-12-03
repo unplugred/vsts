@@ -1,6 +1,6 @@
 ;BASED ON DISCODSP'S INNO SETUP SCRIPT
 
-#define PluginName "PNCH"
+#define PluginName "CRMBL"
 
 [Setup]
 DisableDirPage=yes
@@ -17,7 +17,7 @@ DefaultGroupName=UnplugRed
 DisableReadyPage=false
 DisableWelcomePage=no
 LanguageDetectionMethod=uilanguage
-OutputBaseFilename={#PluginName} Installer
+OutputBaseFilename={#PluginName} Free Installer
 SetupIconFile=assets\icon.ico
 ShowLanguageDialog=no
 VersionInfoCompany=UnplugRed
@@ -31,9 +31,9 @@ WizardImageStretch=false
 WizardSmallImageFile=assets\smallimage\{#PluginName}.bmp
 
 [Files]
-Source: "build\paid\{#PluginName}.vst3"; DestDir: "{cf64}\VST3\"; Components: VST3; Flags: ignoreversion
-Source: "build\paid\{#PluginName}.dll"; DestDir: {code:GetDir|0}; Components: VST; Flags: ignoreversion
-;Source: "build\paid\{#PluginName}.clap"; DestDir: {code:GetDir|1}; Components: CLAP; Flags: ignoreversion
+Source: "build\free\{#PluginName}.vst3"; DestDir: "{cf64}\VST3\"; Components: VST3; Flags: ignoreversion
+Source: "build\free\{#PluginName}.dll"; DestDir: {code:GetDir|0}; Components: VST; Flags: ignoreversion
+;Source: "build\free\{#PluginName}.clap"; DestDir: {code:GetDir|1}; Components: CLAP; Flags: ignoreversion
 
 [Icons]
 Name: {group}\Uninstall {#PluginName}; Filename: {uninstallexe}
