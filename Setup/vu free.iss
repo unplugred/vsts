@@ -1,6 +1,6 @@
 ;BASED ON DISCODSP'S INNO SETUP SCRIPT
 
-#define PluginName "PNCH"
+#define PluginName "VU"
 
 [Setup]
 DisableDirPage=yes
@@ -17,7 +17,7 @@ DefaultGroupName=UnplugRed
 DisableReadyPage=false
 DisableWelcomePage=no
 LanguageDetectionMethod=uilanguage
-OutputBaseFilename={#PluginName} Installer
+OutputBaseFilename={#PluginName} Free Installer
 SetupIconFile=assets\icon.ico
 ShowLanguageDialog=no
 VersionInfoCompany=UnplugRed
@@ -31,9 +31,10 @@ WizardImageStretch=false
 WizardSmallImageFile=assets\smallimage\{#PluginName}.bmp
 
 [Files]
-Source: "build\paid\{#PluginName}.vst3"; DestDir: "{cf64}\VST3\"; Components: VST3; Flags: ignoreversion
-Source: "build\paid\{#PluginName}.dll"; DestDir: {code:GetDir|0}; Components: VST; Flags: ignoreversion
-;Source: "build\paid\{#PluginName}.clap"; DestDir: {code:GetDir|1}; Components: CLAP; Flags: ignoreversion
+Source: "build\free\{#PluginName}.vst3"; DestDir: "{cf64}\VST3\"; Components: VST3; Flags: ignoreversion
+Source: "build\free\{#PluginName}.dll"; DestDir: {code:GetDir|0}; Components: VST; Flags: ignoreversion
+;Source: "build\free\{#PluginName}.clap"; DestDir: {code:GetDir|1}; Components: CLAP; Flags: ignoreversion
+Source: "build\free\{#PluginName}.exe"; DestDir: {code:GetDir|1}; Components: Standalone; Flags: ignoreversion
 
 [Icons]
 Name: {group}\Uninstall {#PluginName}; Filename: {uninstallexe}
@@ -45,6 +46,7 @@ Name: "custom"; Description: "Custom"; Flags: iscustom
 Name: "VST3"; Description: "VST3"; Types: custom;
 Name: "VST"; Description: "VST"; Types: custom;
 ;Name: "CLAP"; Description: "CLAP"; Types: custom;
+Name: "Standalone"; Description: "Standalone"; Types: custom;
 
 [Code]
 var
@@ -83,6 +85,8 @@ begin
   DirPage.Values[0] := GetPreviousData('VST64', ExpandConstant('{reg:HKLM\SOFTWARE\VST,VSTPluginsPath|{pf}\Steinberg\VSTPlugins}'));
 //  DirPage.Add('CLAP folder');
 //  DirPage.Values[1] := GetPreviousData('CLAP', ExpandConstant('{reg:HKLM\SOFTWARE\CLAP,CLAPPluginsPath|{pf}\Common Files\CLAP}'));
+  DirPage.Add('Standalone folder');
+  DirPage.Values[1] := GetPreviousData('Standalone', ExpandConstant('{reg:HKLM\SOFTWARE\VST,VSTPluginsPath|{pf}\Steinberg\VSTPlugins}'));
 
 end;
 
@@ -97,6 +101,10 @@ begin
 //    DirPage.Buttons[1].Enabled := IsComponentSelected('CLAP');
 //    DirPage.PromptLabels[1].Enabled := DirPage.Buttons[1].Enabled;
 //    DirPage.Edits[1].Enabled := DirPage.Buttons[1].Enabled;
+
+    DirPage.Buttons[1].Enabled := IsComponentSelected('Standalone');
+    DirPage.PromptLabels[1].Enabled := DirPage.Buttons[1].Enabled;
+    DirPage.Edits[1].Enabled := DirPage.Buttons[1].Enabled;
   end;
 
   if CurPageID = wpSelectComponents then
@@ -109,7 +117,7 @@ function ShouldSkipPage(PageID: Integer): Boolean;
 begin
   if PageID = DirPage.ID then
   begin
-    If (not IsComponentSelected('VST')) and (not IsComponentSelected('CLAP')) then
+    If (not IsComponentSelected('VST')) and (not IsComponentSelected('CLAP')) and (not IsComponentSelected('Standalone')) then
       begin
         Result := True
       end;
@@ -125,4 +133,5 @@ procedure RegisterPreviousData(PreviousDataKey: Integer);
 begin
   SetPreviousData(PreviousDataKey, 'VST64', DirPage.Values[0]);
 //  SetPreviousData(PreviousDataKey, 'CLAP', DirPage.Values[1]);
+  SetPreviousData(PreviousDataKey, 'Standalone', DirPage.Values[1]);
 end;

@@ -18,7 +18,7 @@ DisableReadyPage=false
 DisableWelcomePage=no
 LanguageDetectionMethod=uilanguage
 OutputBaseFilename={#PluginName} Installer
-SetupIconFile=SetupClassicIcon.ico
+SetupIconFile=assets\icon.ico
 ShowLanguageDialog=no
 VersionInfoCompany=UnplugRed
 VersionInfoCopyright=UnplugRed
@@ -31,10 +31,9 @@ WizardImageStretch=false
 WizardSmallImageFile=assets\smallimage\{#PluginName}.bmp
 
 [Files]
-Source: "build\64\{#PluginName}.dll"; DestDir: {code:GetVST2Dir|0}; Components: VST64; Flags: ignoreversion
-;Source: "build\32\{#PluginName}.dll"; DestDir: {code:GetVST2Dir|1}; Components: VST; Flags: ignoreversion
-Source: "build\64\{#PluginName}.vst3"; DestDir: "{cf64}\VST3\"; Components: VST364; Flags: ignoreversion
-;Source: "build\32\{#PluginName}.vst3"; DestDir: "{cf32}\VST3\"; Components: VST3; Flags: ignoreversion
+Source: "build\free\{#PluginName}.vst3"; DestDir: "{cf64}\VST3\"; Components: VST3; Flags: ignoreversion
+Source: "build\free\{#PluginName}.dll"; DestDir: {code:GetDir|0}; Components: VST; Flags: ignoreversion
+;Source: "build\free\{#PluginName}.clap"; DestDir: {code:GetDir|1}; Components: CLAP; Flags: ignoreversion
 
 [Icons]
 Name: {group}\Uninstall {#PluginName}; Filename: {uninstallexe}
@@ -43,15 +42,13 @@ Name: {group}\Uninstall {#PluginName}; Filename: {uninstallexe}
 Name: "custom"; Description: "Custom"; Flags: iscustom
 
 [Components]
-Name: "VST364"; Description: "64-bit VST3"; Types: custom; Check: Is64BitInstallMode
-Name: "VST64"; Description: "64-bit VST2"; Types: custom; Check: Is64BitInstallMode
-;Name: "VST3"; Description: "32-bit VST3"; Types: custom;
-;Name: "VST"; Description: "32-bit VST2"; Types: custom;
-
+Name: "VST3"; Description: "VST3"; Types: custom;
+Name: "VST"; Description: "VST"; Types: custom;
+;Name: "CLAP"; Description: "CLAP"; Types: custom;
 
 [Code]
 var
-  VST2DirPage: TInputDirWizardPage;
+  DirPage: TInputDirWizardPage;
   TypesComboOnChangePrev: TNotifyEvent;
 
 procedure ComponentsListCheckChanges;
@@ -77,37 +74,30 @@ begin
   TypesComboOnChangePrev := WizardForm.TypesCombo.OnChange;
   WizardForm.TypesCombo.OnChange := @TypesComboOnChange;
 
-  VST2DirPage := CreateInputDirPage(wpSelectComponents,
-  'Confirm VST2 Plugin Directory', '',
-  'Select the folder in which setup should install the VST2 Plugin, then click Next.',
+  DirPage := CreateInputDirPage(wpSelectComponents,
+  'Confirm Plugin Directory', '',
+  'Select the folder in which setup should install the plugins, then click Next.',
   False, '');
 
-  VST2DirPage.Add('64-bit folder');
-  VST2DirPage.Values[0] := GetPreviousData('VST64', ExpandConstant('{reg:HKLM\SOFTWARE\VST,VSTPluginsPath|{pf}\Steinberg\VSTPlugins}'));
-(*  VST2DirPage.Add('32-bit folder');
-  VST2DirPage.Values[1] := GetPreviousData('VST32', ExpandConstant('{reg:HKLM\SOFTWARE\WOW6432NODE\VST,VSTPluginsPath|{pf32}\Steinberg\VSTPlugins}'));
+  DirPage.Add('VST Folder');
+  DirPage.Values[0] := GetPreviousData('VST64', ExpandConstant('{reg:HKLM\SOFTWARE\VST,VSTPluginsPath|{pf}\Steinberg\VSTPlugins}'));
+//  DirPage.Add('CLAP folder');
+//  DirPage.Values[1] := GetPreviousData('CLAP', ExpandConstant('{reg:HKLM\SOFTWARE\CLAP,CLAPPluginsPath|{pf}\Common Files\CLAP}'));
 
-  If not Is64BitInstallMode then
-  begin
-    VST2DirPage.Values[1] := GetPreviousData('VST32', ExpandConstant('{reg:HKLM\SOFTWARE\VSTPluginsPath\VST,VSTPluginsPath|{pf}\Steinberg\VSTPlugins}'));
-    VST2DirPage.Buttons[0].Enabled := False;
-    VST2DirPage.PromptLabels[0].Enabled := VST2DirPage.Buttons[0].Enabled;
-    VST2DirPage.Edits[0].Enabled := VST2DirPage.Buttons[0].Enabled;
-  end;
-*)end;
+end;
 
 procedure CurPageChanged(CurPageID: Integer);
 begin
-  if CurPageID = VST2DirPage.ID then
+  if CurPageID = DirPage.ID then
   begin
-    VST2DirPage.Buttons[0].Enabled := IsComponentSelected('VST64');
-    VST2DirPage.PromptLabels[0].Enabled := VST2DirPage.Buttons[0].Enabled;
-    VST2DirPage.Edits[0].Enabled := VST2DirPage.Buttons[0].Enabled;
-(*
-    VST2DirPage.Buttons[1].Enabled := IsComponentSelected('VST');
-    VST2DirPage.PromptLabels[1].Enabled := VST2DirPage.Buttons[1].Enabled;
-    VST2DirPage.Edits[1].Enabled := VST2DirPage.Buttons[1].Enabled;
-*)  end;
+    DirPage.Buttons[0].Enabled := IsComponentSelected('VST');
+    DirPage.PromptLabels[0].Enabled := DirPage.Buttons[0].Enabled;
+    DirPage.Edits[0].Enabled := DirPage.Buttons[0].Enabled;
+
+//    DirPage.Buttons[1].Enabled := IsComponentSelected('CLAP');
+//    DirPage.PromptLabels[1].Enabled := DirPage.Buttons[1].Enabled;
+//    DirPage.Edits[1].Enabled := DirPage.Buttons[1].Enabled;
+  end;
 
   if CurPageID = wpSelectComponents then
   begin
@@ -117,22 +107,22 @@ end;
 
 function ShouldSkipPage(PageID: Integer): Boolean;
 begin
-  if PageID = VST2DirPage.ID then
+  if PageID = DirPage.ID then
   begin
-    If (not IsComponentSelected('VST')) and (not IsComponentSelected('VST64'))then
+    If (not IsComponentSelected('VST')) and (not IsComponentSelected('CLAP')) then
       begin
         Result := True
       end;
   end;
 end;
 
-function GetVST2Dir(Param: string): string;
+function GetDir(Param: string): string;
 begin
-    Result := VST2DirPage.Values[StrToInt(Param)];
+    Result := DirPage.Values[StrToInt(Param)];
 end;
 
 procedure RegisterPreviousData(PreviousDataKey: Integer);
 begin
-  SetPreviousData(PreviousDataKey, 'VST64', VST2DirPage.Values[0]);
-(*  SetPreviousData(PreviousDataKey, 'VST32', VST2DirPage.Values[1]);
-*)end;
+  SetPreviousData(PreviousDataKey, 'VST64', DirPage.Values[0]);
+//  SetPreviousData(PreviousDataKey, 'CLAP', DirPage.Values[1]);
+end;
