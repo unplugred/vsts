@@ -185,10 +185,10 @@ void CRMBLAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 	int prmscount = rmscount.get();
 
 	int delaybuffernumsamples = delaybuffer.getNumSamples();
-	float** channelData = buffer.getArrayOfWritePointers();
-	float** delayData = delaybuffer.getArrayOfWritePointers();
-	float** delayProcessData = delayprocessbuffer.getArrayOfWritePointers();
-	float** delaytimelerpData = delaytimelerp.getArrayOfWritePointers();
+	float* const* channelData = buffer.getArrayOfWritePointers();
+	float* const* delayData = delaybuffer.getArrayOfWritePointers();
+	float* const* delayProcessData = delayprocessbuffer.getArrayOfWritePointers();
+	float* const* delaytimelerpData = delaytimelerp.getArrayOfWritePointers();
 
 	double bpm = 120;
 	if(state.values[1] > 0) {
@@ -308,10 +308,16 @@ void CRMBLAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 		}
 		//pitch
 		if(!ispitchbypassed) {
-			AudioDataConverters::interleaveSamples(delayprocessbuffertwo.getArrayOfReadPointers(),pitchprocessbuffer.data(),upsamplednumsamples,channelnum);
+			using Format = AudioData::Format<AudioData::Float32, AudioData::NativeEndian>;
+
+			AudioData::interleaveSamples(
+				AudioData::NonInterleavedSource<Format>{delayprocessbuffertwo.getArrayOfReadPointers(),channelnum},
+				AudioData::InterleavedDest<Format>{&pitchprocessbuffer.front(),channelnum},upsamplednumsamples);
 			pitchshift.putSamples(pitchprocessbuffer.data(), upsamplednumsamples);
 			pitchshift.receiveSamples(pitchprocessbuffer.data(), upsamplednumsamples);
-			AudioDataConverters::deinterleaveSamples(pitchprocessbuffer.data(),delayProcessData,upsamplednumsamples,channelnum);
+			AudioData::deinterleaveSamples(
+				AudioData::InterleavedSource<Format>{&pitchprocessbuffer.front(),channelnum},
+				AudioData::NonInterleavedDest<Format>{delayProcessData,channelnum},upsamplednumsamples);
 		}
 
 		//----down sample----

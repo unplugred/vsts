@@ -154,7 +154,7 @@ void PisstortionAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBu
 		numsamples = osbuffer.getNumSamples();
 	}
 
-	float** channelData;
+	float* const* channelData;
 	if(params.oversampling) channelData = osbuffer.getArrayOfWritePointers();
 	else channelData = buffer.getArrayOfWritePointers();
 

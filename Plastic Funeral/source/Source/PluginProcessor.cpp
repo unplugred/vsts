@@ -148,7 +148,7 @@ void PFAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mid
 		numsamples = osbuffer.getNumSamples();
 	}
 
-	float** channelData;
+	float* const* channelData;
 	if(params.oversampling) channelData = osbuffer.getArrayOfWritePointers();
 	else channelData = buffer.getArrayOfWritePointers();
 

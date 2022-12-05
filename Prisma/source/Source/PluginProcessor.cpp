@@ -278,8 +278,8 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 	crossover[7].process(highmidcontext);	//LP HM
 	crossover[8].process(highcontext);		//HP H
 
-	float** wetChannelData[4];
-	float** dryChannelData[4];
+	float* const* wetChannelData[4];
+	float* const* dryChannelData[4];
 	for(int b = 0; b < 4; b++) {
 		wetbuffers[b] = filterbuffers[b];
 		wetChannelData[b] = wetbuffers[b].getArrayOfWritePointers();
@@ -564,7 +564,7 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 	}
 
 	if(dofft.get()) {
-		float** channelData = buffer.getArrayOfWritePointers();
+		float* const* channelData = buffer.getArrayOfWritePointers();
 		for (int s = 0; s < numsamples; ++s) {
 			float avg = 0;
 			for (int c = 0; c < channelnum; ++c) avg += channelData[c][s];

@@ -148,7 +148,7 @@ void ProtoAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 		numsamples = osbuffer.getNumSamples();
 	}
 
-	float** channelData;
+	float* const* channelData;
 	if(params.oversampling) channelData = osbuffer.getArrayOfWritePointers();
 	else channelData = buffer.getArrayOfWritePointers();
 
