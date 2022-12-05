@@ -132,7 +132,7 @@ void RedBassAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer
 	int numsamples = buffer.getNumSamples();
 	dsp::AudioBlock<float> block(buffer);
 
-	float** channelData = buffer.getArrayOfWritePointers();
+	float* const* channelData = buffer.getArrayOfWritePointers();
 
 	double sidechain = 0;
 	double osc = 0;

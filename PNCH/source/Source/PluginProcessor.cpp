@@ -102,7 +102,7 @@ void PNCHAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& m
 		numsamples = osbuffer.getNumSamples();
 	}
 
-	float** channelData;
+	float* const* channelData;
 	if(isoversampling) channelData = osbuffer.getArrayOfWritePointers();
 	else channelData = buffer.getArrayOfWritePointers();
 

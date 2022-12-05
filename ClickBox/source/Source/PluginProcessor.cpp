@@ -111,7 +111,7 @@ void ClickBoxAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer
 	for (auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
 		buffer.clear (i, 0, buffer.getNumSamples());
 
-	float** channelData = buffer.getArrayOfWritePointers();
+	float* const* channelData = buffer.getArrayOfWritePointers();
 	int channelnum = buffer.getNumChannels();
 
 	float ii = i.get();
