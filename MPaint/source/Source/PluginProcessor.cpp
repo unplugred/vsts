@@ -20,14 +20,25 @@ MPaintAudioProcessor::MPaintAudioProcessor() :
 	}
 
 	futurevoid = std::async(std::launch::async, [this] {
+		File dir = File::getSpecialLocation(File::currentApplicationFile);
+		File file = dir;
 		for(int i = 0; i < 15; i++) {
 			for(int n = 59; n <= 79; n++) {
 				if(loaded.get()) return;
 
-				File dir = File::getSpecialLocation(File::currentApplicationFile);
-				if(!dir.isDirectory()) dir = dir.getParentDirectory();
-				File file = dir.getChildFile("MPaint/" + ((String)i).paddedLeft('0',2) + "_" + ((String)n).paddedLeft('0',2) + ".wav");
-				if(!file.existsAsFile()) file = dir.getChildFile(((String)i).paddedLeft('0',2) + "_" + ((String)n).paddedLeft('0',2) + ".wav");
+				file = file.getSiblingFile(((String)i).paddedLeft('0',2) + "_" + ((String)n).paddedLeft('0',2) + ".wav");
+				if(!file.existsAsFile()) {
+					dir = File::getSpecialLocation(File::currentApplicationFile);
+					if(!dir.isDirectory()) dir = dir.getParentDirectory();
+					for(int f = 0; f < 5; f++) {
+						file = dir.getChildFile("MPaint/" + ((String)i).paddedLeft('0',2) + "_" + ((String)n).paddedLeft('0',2) + ".wav");
+						if(file.existsAsFile()) break;
+						else file = dir.getChildFile(((String)i).paddedLeft('0',2) + "_" + ((String)n).paddedLeft('0',2) + ".wav");
+						if(file.existsAsFile()) break;
+						else if(dir.isRoot()) break;
+						else dir = dir.getParentDirectory();
+					}
+				}
 				if(file.existsAsFile()) {
 
 					std::unique_ptr<AudioFormatReader> formatreader(formatmanager.createReaderFor(file));
