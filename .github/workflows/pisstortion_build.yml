@@ -49,15 +49,14 @@ jobs:
       name: configure
       id: pisstortion_configure
       run: |
-        ls
-        cd ~/Pisstortion/source
+        cd Pisstortion/source
         cmake -B build -G "Unix Makefiles"
 
     - if: startsWith(matrix.os, 'windows')
       name: configure windows
       id: pisstortion_configure_windows
       run: |
-        cd ~/Pisstortion/source
+        cd Pisstortion/source
         cmake -B build -G "Visual Studio 17 2022" -T host=x64 -A x64
 
     - name: build
