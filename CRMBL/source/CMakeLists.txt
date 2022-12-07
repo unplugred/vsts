@@ -22,16 +22,8 @@ option(JUCE_BUILD_EXAMPLES "Build examples" OFF)
 option(JUCE_ENABLE_MODULE_SOURCE_GROUPS "Enable module source groups" ON)
 option(JUCE_COPY_PLUGIN_AFTER_BUILD "Copy plugin after build" ON)
 
-if(MSVC)
-	juce_set_vst2_sdk_path(C:/vstsdk2.4)
-	set(vstdir "C:/docs/MEGA/vsts/64")
-	set(vstthreedir "C:/Program Files/Common Files/VST3")
-endif(MSVC)
-if(UNIX AND NOT APPLE)
-	juce_set_vst2_sdk_path(/home/unplugred/projects/JUUUCE/vstsdk2.4)
-	set(vstdir "/home/unplugred/MEGA/vsts/linux/vst2")
-	set(vstthreedir "/home/unplugred/MEGA/vsts/linux/vst3")
-endif()
+set(vstdir "../../../Setup/build/free")
+set(vstthreedir "../../../Setup/build/free")
 
 juce_add_plugin("${PROJECT_NAME}"
 	COMPANY_NAME "unplugred"

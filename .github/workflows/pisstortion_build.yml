@@ -62,26 +62,29 @@ jobs:
     - name: build
       id: pisstortion_build
       run: |
-        cmake --build build --config Release --target Pisstortion_VST
         cmake --build build --config Release --target Pisstortion_VST3
 
-    - if: ${{ !startsWith(matrix.os, 'windows') }}
+    - if: startsWith(matrix.os, 'ubuntu')
       name: package
       id: pisstortion_package
       run: |
-        mkdir -p "Pisstortion/VST"
         mkdir -p "Pisstortion/VST3"
-        mv "./build/Pisstortion_artefacts/VST/libPisstortion.so" "Pisstortion/VST/Pisstortion.so"
-        mv "./build/Pisstortion_artefacts/VST3/Pisstortion.vst3/Contents/x86_64-linux/Pisstortion.so" "Pisstortion/VST3/Pisstortion.so"
+        mv "../../Setup/build/free/Pisstortion.vst3/Contents/x86_64-linux/Pisstortion.so" "Pisstortion/VST3/Pisstortion.so"
 
     - if: startsWith(matrix.os, 'windows')
       name: package windows
       id: pisstortion_package_windows
       run: |
-        mkdir -p "Pisstortion/VST"
         mkdir -p "Pisstortion/VST3"
-        mv "./build/Pisstortion_artefacts/Release/VST/Pisstortion.dll" "Pisstortion/VST/Pisstortion.dll"
-        mv "./build/Pisstortion_artefacts/Release/VST3/Pisstortion.vst3/Contents/x86_64-win/Pisstortion.vst3" "Pisstortion/VST3/Pisstortion.vst3"
+        mv "../../Setup/build/free/Pisstortion.vst3/Contents/x86_64-win/Pisstortion.vst3" "Pisstortion/VST3/Pisstortion.vst3"
+
+    - if: startsWith(matrix.os, 'macos')
+      name: package windows
+      id: pisstortion_package_windows
+      run: |
+        mkdir -p "Pisstortion/VST3"
+        cd "../../Setup/build/free/Pisstortion.vst3/Contents"
+        ls
 
     - uses: actions/upload-artifact@v2
       with:
