@@ -29,7 +29,7 @@ juce_add_plugin("${PROJECT_NAME}"
 	COMPANY_NAME "unplugred"
 	COMPANY_WEBSITE "https://vst.unplug.red"
 	COMPANY_EMAIL "arihanan@proton.me"
-	FORMATS VST Standalone VST3
+	FORMATS Standalone VST3
 	IS_SYNTH TRUE
 	NEEDS_MIDI_INPUT TRUE
 	NEEDS_MIDI_OUTPUT FALSE
