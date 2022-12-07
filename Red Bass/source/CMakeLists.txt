@@ -2,7 +2,7 @@
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 ]]
 
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.21)
 project(RedBass VERSION 1.0.0)
 
 include(FetchContent)
@@ -27,6 +27,7 @@ set(vstthreedir "../../../Setup/build/free")
 
 juce_add_plugin("${PROJECT_NAME}"
 	PRODUCT_NAME "Red Bass"
+	BUNDLE_ID com.unplugred.redbass
 	COMPANY_NAME "unplugred"
 	COMPANY_WEBSITE "https://vst.unplug.red"
 	COMPANY_EMAIL "arihanan@proton.me"
