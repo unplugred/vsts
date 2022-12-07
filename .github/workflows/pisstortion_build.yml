@@ -45,13 +45,6 @@ jobs:
         sudo apt-get update
         sudo apt-get install g++ libasound2-dev libjack-jackd2-dev ladspa-sdk libcurl4-openssl-dev libfreetype6-dev libx11-dev libxcomposite-dev libxcursor-dev libxcursor-dev libxext-dev libxinerama-dev libxrandr-dev libxrender-dev libwebkit2gtk-4.0-dev libglu1-mesa-dev mesa-common-dev
 
-    - if: ${{ !startsWith(matrix.os, 'windows') }}
-      name: configure
-      id: pisstortion_configure
-      run: |
-        cd Pisstortion/source
-        cmake -B build -G "Unix Makefiles"
-
     - if: startsWith(matrix.os, 'windows')
       name: configure windows
       id: pisstortion_configure_windows
@@ -59,18 +52,25 @@ jobs:
         cd Pisstortion/source
         cmake -B build -G "Visual Studio 17 2022" -T host=x64 -A x64
 
+    - if: startsWith(matrix.os, 'ubuntu')
+      name: configure linux
+      id: pisstortion_configure_linux
+      run: |
+        cd Pisstortion/source
+        cmake -B build -G "Unix Makefiles"
+
+    - if: startsWith(matrix.os, 'mac')
+      name: configure mac
+      id: pisstortion_configure_mac
+      run: |
+        cd Pisstortion/source
+        cmake -B build -G Xcode
+
     - name: build
       id: pisstortion_build
       run: |
         cd Pisstortion/source
         cmake --build build --config Release --target Pisstortion_VST3
-
-    - if: startsWith(matrix.os, 'ubuntu')
-      name: package
-      id: pisstortion_package
-      run: |
-        mkdir -p "build/Pisstortion"
-        mv "Setup/build/free/Pisstortion.vst3" "build/Pisstortion/Pisstortion.vst3"
 
     - if: startsWith(matrix.os, 'windows')
       name: package windows
@@ -79,9 +79,9 @@ jobs:
         mkdir -p "build/Pisstortion"
         mv "Setup/build/free/Pisstortion.vst3/Contents/x86_64-win/Pisstortion.vst3" "build/Pisstortion/Pisstortion.vst3"
 
-    - if: startsWith(matrix.os, 'macos')
-      name: package mac
-      id: pisstortion_package_mac
+    - if: ${{ !startsWith(matrix.os, 'windows') }}
+      name: package
+      id: pisstortion_package
       run: |
         mkdir -p "build/Pisstortion"
         mv "Setup/build/free/Pisstortion.vst3" "build/Pisstortion/Pisstortion.vst3"
