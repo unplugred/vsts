@@ -70,14 +70,14 @@ jobs:
       id: pisstortion_package
       run: |
         mkdir -p "build/Pisstortion/VST3"
-        mv "Setup/build/free/Pisstortion.vst3/Contents/x86_64-linux/Pisstortion.so" "Pisstortion/VST3/Pisstortion.so"
+        mv "Setup/build/free/Pisstortion.vst3/Contents/x86_64-linux/Pisstortion.so" "build/Pisstortion/VST3/Pisstortion.so"
 
     - if: startsWith(matrix.os, 'windows')
       name: package windows
       id: pisstortion_package_windows
       run: |
         mkdir -p "build/Pisstortion/VST3"
-        mv "Setup/build/free/Pisstortion.vst3/Contents/x86_64-win/Pisstortion.vst3" "Pisstortion/VST3/Pisstortion.vst3"
+        mv "Setup/build/free/Pisstortion.vst3/Contents/x86_64-win/Pisstortion.vst3" "build/Pisstortion/VST3/Pisstortion.vst3"
 
     - if: startsWith(matrix.os, 'macos')
       name: package mac
