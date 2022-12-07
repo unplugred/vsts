@@ -80,7 +80,7 @@ jobs:
 
     - if: startsWith(matrix.os, 'macos')
       name: package windows
-      id: pisstortion_package_windows
+      id: pisstortion_package_mac
       run: |
         mkdir -p "Pisstortion/VST3"
         cd "../../Setup/build/free/Pisstortion.vst3/Contents"
