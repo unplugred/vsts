@@ -21,7 +21,7 @@ jobs:
       matrix:
         include:
         - {
-            name: "Windows MSVC",
+            name: "Win64",
             os: windows-latest,
             cc: "cl", cxx: "cl",
           }
@@ -69,23 +69,22 @@ jobs:
       name: package
       id: pisstortion_package
       run: |
-        mkdir -p "build/Pisstortion/VST3"
-        mv "Setup/build/free/Pisstortion.vst3/Contents/x86_64-linux/Pisstortion.so" "build/Pisstortion/VST3/Pisstortion.so"
+        mkdir -p "build/Pisstortion"
+        mv "Setup/build/free/Pisstortion.vst3" "build/Pisstortion/Pisstortion.vst3"
 
     - if: startsWith(matrix.os, 'windows')
       name: package windows
       id: pisstortion_package_windows
       run: |
-        mkdir -p "build/Pisstortion/VST3"
-        mv "Setup/build/free/Pisstortion.vst3/Contents/x86_64-win/Pisstortion.vst3" "build/Pisstortion/VST3/Pisstortion.vst3"
+        mkdir -p "build/Pisstortion"
+        mv "Setup/build/free/Pisstortion.vst3/Contents/x86_64-win/Pisstortion.vst3" "build/Pisstortion/Pisstortion.vst3"
 
     - if: startsWith(matrix.os, 'macos')
       name: package mac
       id: pisstortion_package_mac
       run: |
-        mkdir -p "build/Pisstortion/VST3"
-        cd "Setup/build/free/Pisstortion.vst3/Contents"
-        ls
+        mkdir -p "build/Pisstortion"
+        mv "Setup/build/free/Pisstortion.vst3" "build/Pisstortion/Pisstortion.vst3"
 
     - uses: actions/upload-artifact@v2
       with:
