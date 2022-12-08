@@ -2,7 +2,6 @@
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 ]]
 
-cmake_minimum_required(VERSION 3.15)
 cmake_minimum_required(VERSION 3.21)
 project(ClickBox VERSION 1.0.0)
 

@@ -25,8 +25,12 @@ option(JUCE_COPY_PLUGIN_AFTER_BUILD "Copy plugin after build" ON)
 set(vstdir "../../../Setup/build/free")
 set(vstthreedir "../../../Setup/build/free")
 
+if (APPLE)
+	set (CMAKE_OSX_DEPLOYMENT_TARGET "10.9" CACHE INTERNAL "")
+	set (CMAKE_OSX_ARCHITECTURES x86_64 arm64)
+endif()
+
 juce_add_plugin("${PROJECT_NAME}"
-	BUNDLE_ID com.unplugred.pisstortion
 	COMPANY_NAME "unplugred"
 	COMPANY_WEBSITE "https://vst.unplug.red"
 	COMPANY_EMAIL "arihanan@proton.me"
