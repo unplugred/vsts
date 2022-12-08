@@ -26,7 +26,6 @@ set(vstdir "../../../Setup/build/free")
 set(vstthreedir "../../../Setup/build/free")
 
 juce_add_plugin("${PROJECT_NAME}"
-	BUNDLE_ID com.unplugred.plasticfuneral
 	PRODUCT_NAME "Plastic Funeral"
 	COMPANY_NAME "unplugred"
 	COMPANY_WEBSITE "https://vst.unplug.red"

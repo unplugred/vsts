@@ -27,7 +27,6 @@ set(vstthreedir "../../../Setup/build/free")
 
 juce_add_plugin("${PROJECT_NAME}"
 	PRODUCT_NAME "Red Bass"
-	BUNDLE_ID com.unplugred.redbass
 	COMPANY_NAME "unplugred"
 	COMPANY_WEBSITE "https://vst.unplug.red"
 	COMPANY_EMAIL "arihanan@proton.me"

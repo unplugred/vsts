@@ -26,7 +26,6 @@ set(vstdir "../../../Setup/build/free")
 set(vstthreedir "../../../Setup/build/free")
 
 juce_add_plugin("${PROJECT_NAME}"
-	BUNDLE_ID com.unplugred.prisma
 	COMPANY_NAME "unplugred"
 	COMPANY_WEBSITE "https://vst.unplug.red"
 	COMPANY_EMAIL "arihanan@proton.me"

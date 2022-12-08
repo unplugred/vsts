@@ -29,10 +29,10 @@ jobs:
             name: "Linux",
             os: ubuntu-latest,
           }
-        - {
-            name: "Mac",
-            os: macos-latest,
-          }
+#        - {
+#            name: "Mac",
+#            os: macos-latest,
+#          }
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -77,30 +77,31 @@ jobs:
       id: pisstortion_package_windows
       run: |
         mkdir -p "build/Pisstortion"
-        cp -r "Setup/build/free/Pisstortion.vst3/Contents/x86_64-win/Pisstortion.vst3" "build/Pisstortion/Pisstortion.vst3"
+        mv "Setup/build/free/Pisstortion.vst3/Contents/x86_64-win/Pisstortion.vst3" "build/Pisstortion/Pisstortion.vst3"
+        cp "build/Pisstortion/Pisstortion.vst3" "Setup/build/free/Pisstortion.vst3"
 
     - if: ${{ !startsWith(matrix.os, 'windows') }}
       name: (max+linux) package
       id: pisstortion_package
       run: |
         mkdir -p "build/Pisstortion"
-        cp -r "Setup/build/free/Pisstortion.vst3" "build/Pisstortion/Pisstortion.vst3"
+        mv "Setup/build/free/Pisstortion.vst3" "build/Pisstortion/Pisstortion.vst3"
 
     - uses: actions/upload-artifact@v2
       with:
         name: Pisstortion ${{ matrix.name }}
         path: build/Pisstortion
 
-    - if: startsWith(matrix.os, 'windows')
-      name: (windows) build installer
-      id: pisstortion_installer
-      run: |
-        cd Setup
-        iscc "pisstortion free.iss"
+#    - if: startsWith(matrix.os, 'windows')
+#      name: (windows) build installer
+#      id: pisstortion_installer
+#      run: |
+#        cd Setup
+#        iscc "pisstortion free.iss"
 
-    - if: startsWith(matrix.os, 'windows')
-      uses: actions/upload-artifact@v2
-      with:
-        name: Pisstortion Installer
-        path: "Setup/Output/Pisstortion Installer.exe"
+#    - if: startsWith(matrix.os, 'windows')
+#      uses: actions/upload-artifact@v2
+#      with:
+#        name: Pisstortion Installer
+#        path: "Setup/Output/Pisstortion Installer.exe"
 
