@@ -99,6 +99,7 @@ jobs:
         iscc "pisstortion free.iss"
 
     - if: startsWith(matrix.os, 'windows')
+      uses: actions/upload-artifact@v2
       with:
         name: Pisstortion Installer
         path: "Setup/Output/Pisstortion Installer.exe"
