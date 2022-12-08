@@ -77,14 +77,14 @@ jobs:
       id: pisstortion_package_windows
       run: |
         mkdir -p "build/Pisstortion"
-        cp "Setup/build/free/Pisstortion.vst3/Contents/x86_64-win/Pisstortion.vst3" "build/Pisstortion/Pisstortion.vst3"
+        cp -r "Setup/build/free/Pisstortion.vst3/Contents/x86_64-win/Pisstortion.vst3" "build/Pisstortion/Pisstortion.vst3"
 
     - if: ${{ !startsWith(matrix.os, 'windows') }}
       name: (max+linux) package
       id: pisstortion_package
       run: |
         mkdir -p "build/Pisstortion"
-        cp "Setup/build/free/Pisstortion.vst3" "build/Pisstortion/Pisstortion.vst3"
+        cp -r "Setup/build/free/Pisstortion.vst3" "build/Pisstortion/Pisstortion.vst3"
 
     - uses: actions/upload-artifact@v2
       with:
