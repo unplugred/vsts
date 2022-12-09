@@ -13,12 +13,11 @@ on:
 env:
   CMAKE_VERSION: 3.22.1
   BUILD_TYPE: Release
-  upper: Pisstortion
-  lower: pisstortion
+  PLUG: Pisstortion
 
 jobs:
   build:
-    name: build pisstortion
+    name: build
     strategy:
       matrix:
         include:
@@ -42,41 +41,41 @@ jobs:
 
     - if: startsWith(matrix.os, 'ubuntu')
       name: (linux) install juce dependencies
-      id: pisstortion_juce_dependencies
+      id: juce_dependencies
       run: | 
         sudo apt-get update
         sudo apt-get install g++ libasound2-dev libjack-jackd2-dev ladspa-sdk libcurl4-openssl-dev libfreetype6-dev libx11-dev libxcomposite-dev libxcursor-dev libxcursor-dev libxext-dev libxinerama-dev libxrandr-dev libxrender-dev libwebkit2gtk-4.0-dev libglu1-mesa-dev mesa-common-dev
 
     - if: startsWith(matrix.os, 'windows')
       name: (windows) configure
-      id: ${{env.lower}}_configure_windows
+      id: configure_windows
       run: |
-        cd ${{env.upper}}/source
+        cd ${{env.PLUG}}/source
         cmake -B build -G "Visual Studio 17 2022" -T host=x64 -A x64
 
     - if: startsWith(matrix.os, 'ubuntu')
       name: (linux) configure
-      id: ${{env.lower}}_configure_linux
+      id: configure_linux
       run: |
-        cd ${{env.upper}}/source
+        cd ${{env.PLUG}}/source
         cmake -B build -G "Unix Makefiles"
 
     - if: startsWith(matrix.os, 'mac')
       name: (mac) configure
-      id: ${{env.lower}}_configure_mac
+      id: configure_mac
       run: |
-        cd ${{env.upper}}/source
+        cd ${{env.PLUG}}/source
         cmake -B build -G Xcode
 
     - name: build
-      id: ${{env.lower}}_build
+      id: build
       run: |
-        cd ${{env.upper}}/source
+        cd ${{env.PLUG}}/source
         cmake --build build --config Release --target Pisstortion_VST3
 
     - if: startsWith(matrix.os, 'windows')
       name: (windows) package
-      id: pisstortion_package_windows
+      id: package_windows
       run: |
         mkdir -p "build/Pisstortion"
         mv "Setup/build/free/Pisstortion.vst3/Contents/x86_64-win/Pisstortion.vst3" "build/Pisstortion/Pisstortion.vst3"
@@ -84,7 +83,7 @@ jobs:
 
     - if: ${{ !startsWith(matrix.os, 'windows') }}
       name: (max+linux) package
-      id: pisstortion_package
+      id: package
       run: |
         mkdir -p "build/Pisstortion"
         mv "Setup/build/free/Pisstortion.vst3" "build/Pisstortion/Pisstortion.vst3"
@@ -96,7 +95,7 @@ jobs:
 
 #    - if: startsWith(matrix.os, 'windows')
 #      name: (windows) build installer
-#      id: pisstortion_installer
+#      id: installer
 #      run: |
 #        cd Setup
 #        iscc "pisstortion free.iss"
