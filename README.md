@@ -10,6 +10,10 @@ However, these VSTs are an important source of income for me, and I'd appreciate
 
 That being said, pull requests are very much welcome.
 
+## License
+
 Code licensed under GNU General Public License v3.
+
 Image and audio assets are licensed under CC BY-NC.
+
 Rights for image and audio assets for MPaint are reserved for Nintendo.
