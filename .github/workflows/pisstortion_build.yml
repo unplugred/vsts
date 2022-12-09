@@ -1,4 +1,6 @@
 name: Pisstortion Build
+upper: Pisstortion
+lower: pisstortion
 
 on:
   push:
@@ -47,29 +49,29 @@ jobs:
 
     - if: startsWith(matrix.os, 'windows')
       name: (windows) configure
-      id: pisstortion_configure_windows
+      id: ${{lower}}_configure_windows
       run: |
-        cd Pisstortion/source
+        cd ${{upper}}/source
         cmake -B build -G "Visual Studio 17 2022" -T host=x64 -A x64
 
     - if: startsWith(matrix.os, 'ubuntu')
       name: (linux) configure
-      id: pisstortion_configure_linux
+      id: ${{lower}}_configure_linux
       run: |
-        cd Pisstortion/source
+        cd ${{upper}}/source
         cmake -B build -G "Unix Makefiles"
 
     - if: startsWith(matrix.os, 'mac')
       name: (mac) configure
-      id: pisstortion_configure_mac
+      id: ${{lower}}_configure_mac
       run: |
-        cd Pisstortion/source
+        cd ${{upper}}/source
         cmake -B build -G Xcode
 
     - name: build
-      id: pisstortion_build
+      id: ${{lower}}_build
       run: |
-        cd Pisstortion/source
+        cd ${{upper}}/source
         cmake --build build --config Release --target Pisstortion_VST3
 
     - if: startsWith(matrix.os, 'windows')
