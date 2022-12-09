@@ -49,9 +49,9 @@ jobs:
 
     - if: startsWith(matrix.os, 'windows')
       name: (windows) configure
-      id: $lower_configure_windows
+      id: {{lower}}_configure_windows
       run: |
-        cd $upper/source
+        cd {{upper}}/source
         cmake -B build -G "Visual Studio 17 2022" -T host=x64 -A x64
 
     - if: startsWith(matrix.os, 'ubuntu')
