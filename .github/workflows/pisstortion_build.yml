@@ -49,29 +49,29 @@ jobs:
 
     - if: startsWith(matrix.os, 'windows')
       name: (windows) configure
-      id: {{lower}}_configure_windows
+      id: ${{env.lower}}_configure_windows
       run: |
-        cd {{upper}}/source
+        cd ${{env.upper}}/source
         cmake -B build -G "Visual Studio 17 2022" -T host=x64 -A x64
 
     - if: startsWith(matrix.os, 'ubuntu')
       name: (linux) configure
-      id: {{lower}}_configure_linux
+      id: ${{env.lower}}_configure_linux
       run: |
-        cd {{upper}}/source
+        cd ${{env.upper}}/source
         cmake -B build -G "Unix Makefiles"
 
     - if: startsWith(matrix.os, 'mac')
       name: (mac) configure
-      id: {{lower}}_configure_mac
+      id: ${{env.lower}}_configure_mac
       run: |
-        cd {{upper}}/source
+        cd ${{env.upper}}/source
         cmake -B build -G Xcode
 
     - name: build
-      id: {{lower}}_build
+      id: ${{env.lower}}_build
       run: |
-        cd {{upper}}/source
+        cd ${{env.upper}}/source
         cmake --build build --config Release --target Pisstortion_VST3
 
     - if: startsWith(matrix.os, 'windows')
