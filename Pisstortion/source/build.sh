@@ -6,7 +6,29 @@ REPLY=${REPLY:-D}
 echo
 if [[ $REPLY =~ ^[Cc]$ ]]
 then
-	cmake -B build -G "Unix Makefiles"
+
+	vb=null
+	read -p "[f]ree/[P]aid/[b]eta: " -n 1 -r
+	REPLY=${REPLY:-P}
+	echo
+	if [[ $REPLY =~ ^[Pp]$ ]]
+	then
+		vb=0
+	else
+		if [[ $REPLY =~ ^[Ff]$ ]]
+		then
+			vb=1
+		else
+			if [[ $REPLY =~ ^[Bb]$ ]]
+			then
+				vb=2
+			else
+				exit 1
+			fi
+		fi
+	fi
+
+	cmake -DBANNERTYPE=${vb} -B build -G "Unix Makefiles"
 	exit 1
 else
 	if [[ $REPLY =~ ^[Dd]$ ]]

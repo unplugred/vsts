@@ -22,12 +22,22 @@ option(JUCE_BUILD_EXAMPLES "Build examples" OFF)
 option(JUCE_ENABLE_MODULE_SOURCE_GROUPS "Enable module source groups" ON)
 option(JUCE_COPY_PLUGIN_AFTER_BUILD "Copy plugin after build" ON)
 
-set(vstdir "../../../Setup/build/free")
-set(vstthreedir "../../../Setup/build/free")
 
 if (APPLE)
 	set (CMAKE_OSX_DEPLOYMENT_TARGET "10.9" CACHE INTERNAL "")
 	set (CMAKE_OSX_ARCHITECTURES x86_64 arm64)
+endif()
+
+if (BANNERTYPE GREATER 0)
+	add_compile_definitions(BANNER)
+	set(vstdir "../../../Setup/build/free")
+	set(vstthreedir "../../../Setup/build/free")
+	if (BANNERTYPE GREATER 1)
+		add_compile_definitions(BETA)
+	endif()
+else()
+	set(vstdir "../../../Setup/build/paid")
+	set(vstthreedir "../../../Setup/build/paid")
 endif()
 
 juce_add_plugin("${PROJECT_NAME}"

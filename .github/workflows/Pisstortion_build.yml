@@ -1,16 +1,16 @@
 name: Pisstortion Build
 
 env:
-  CMAKE_VERSION: 3.22.1
-  BUILD_TYPE: Release
   PLUG: Pisstortion
   NOSPACE: Pisstortion
 
 on:
   push:
     paths:
-      - '**${{PLUG}}**'
+      - '**Pisstortion**'
   pull_request:
+    paths:
+      - '**Pisstortion**'
     branches:
       - master
 
@@ -23,15 +23,17 @@ jobs:
         - {
             name: "Win64",
             os: windows-latest,
-            cc: "cl", cxx: "cl",
+            compiler: "Visual Studio 17 2022"
           }
         - {
             name: "Linux",
             os: ubuntu-latest,
+            compiler: "Unix Makefiles"
           }
 #        - {
 #            name: "Mac",
 #            os: macos-latest,
+#            compiler: "Xcode"
 #          }
     runs-on: ${{ matrix.os }}
 
@@ -50,21 +52,14 @@ jobs:
       id: configure_windows
       run: |
         cd ${{env.PLUG}}/source
-        cmake -B build -G "Visual Studio 17 2022" -T host=x64 -A x64
+        cmake -DBANNERTYPE=0 -B build -G "${{matrix.compiler}}" -T host=x64 -A x64
 
-    - if: startsWith(matrix.os, 'ubuntu')
-      name: (linux) configure
-      id: configure_linux
-      run: |
-        cd ${{env.PLUG}}/source
-        cmake -B build -G "Unix Makefiles"
-
-    - if: startsWith(matrix.os, 'mac')
-      name: (mac) configure
+    - if: ${{ !startsWith(matrix.os, 'windows') }}
+      name: (unix) configure
       id: configure_mac
       run: |
         cd ${{env.PLUG}}/source
-        cmake -B build -G Xcode
+        cmake -DBANNERTYPE=0 -B build -G "${{matrix.compiler}}"
 
     - name: build
       id: build
@@ -76,27 +71,70 @@ jobs:
       name: (windows) package
       id: package_windows
       run: |
-        mkdir -p "build/${{env.PLUG}}"
-        mv "Setup/build/free/${{env.PLUG}}.vst3/Contents/x86_64-win/${{env.PLUG}}.vst3" "build/${{env.PLUG}}/${{env.PLUG}}.vst3"
-        cp "build/${{env.PLUG}}/${{env.PLUG}}.vst3" "Setup/build/free/${{env.PLUG}}.vst3"
+        mkdir -p "build/paid/${{env.PLUG}}"
+        mv "Setup/build/paid/${{env.PLUG}}.vst3/Contents/x86_64-win/${{env.PLUG}}.vst3" "build/paid/${{env.PLUG}}/${{env.PLUG}}.vst3"
+        rm -r "Setup/build/paid/${{env.PLUG}}.vst3"
+        cp "build/paid/${{env.PLUG}}/${{env.PLUG}}.vst3" "Setup/build/paid/${{env.PLUG}}.vst3"
 
     - if: ${{ !startsWith(matrix.os, 'windows') }}
-      name: (max+linux) package
+      name: (unix) package
       id: package
       run: |
-        mkdir -p "build/${{env.PLUG}}"
-        mv "Setup/build/free/${{env.PLUG}}.vst3" "build/${{env.PLUG}}/${{env.PLUG}}.vst3"
+        mkdir -p "build/paid/${{env.PLUG}}"
+        mv "Setup/build/paid/${{env.PLUG}}.vst3" "build/paid/${{env.PLUG}}/${{env.PLUG}}.vst3"
 
     - uses: actions/upload-artifact@v2
       with:
         name: ${{env.PLUG}} ${{ matrix.name }}
-        path: build/${{env.PLUG}}
+        path: build/paid/${{env.PLUG}}
+
+    - if: startsWith(matrix.os, 'windows')
+      name: (windows) configure free
+      id: configure_windows_free
+      run: |
+        cd ${{env.PLUG}}/source
+        cmake -DBANNERTYPE=1 -B build -G "${{matrix.compiler}}" -T host=x64 -A x64
+
+    - if: ${{ !startsWith(matrix.os, 'windows') }}
+      name: (unix) configure free
+      id: configure_mac_free
+      run: |
+        cd ${{env.PLUG}}/source
+        cmake -DBANNERTYPE=1 -B build -G "${{matrix.compiler}}"
+
+    - name: build free
+      id: build_free
+      run: |
+        cd ${{env.PLUG}}/source
+        cmake --build build --config Release --target ${{env.NOSPACE}}_VST3
+
+    - if: startsWith(matrix.os, 'windows')
+      name: (windows) package free
+      id: package_windows_free
+      run: |
+        mkdir -p "build/free/${{env.PLUG}}"
+        mv "Setup/build/free/${{env.PLUG}}.vst3/Contents/x86_64-win/${{env.PLUG}}.vst3" "build/free/${{env.PLUG}}/${{env.PLUG}}.vst3"
+        rm -r "Setup/build/free/${{env.PLUG}}.vst3"
+        cp "build/free/${{env.PLUG}}/${{env.PLUG}}.vst3" "Setup/build/free/${{env.PLUG}}.vst3"
+
+    - if: ${{ !startsWith(matrix.os, 'windows') }}
+      name: (unix) package free
+      id: package_free
+      run: |
+        mkdir -p "build/free/${{env.PLUG}}"
+        mv "Setup/build/free/${{env.PLUG}}.vst3" "build/free/${{env.PLUG}}/${{env.PLUG}}.vst3"
+
+    - uses: actions/upload-artifact@v2
+      with:
+        name: ${{env.PLUG}} Free ${{ matrix.name }}
+        path: build/free/${{env.PLUG}}
 
 #    - if: startsWith(matrix.os, 'windows')
 #      name: (windows) build installer
 #      id: installer
 #      run: |
 #        cd Setup
+#        iscc "${{env.PLUG}}.iss"
 #        iscc "${{env.PLUG}} Free.iss"
 
 #    - if: startsWith(matrix.os, 'windows')
@@ -104,4 +142,10 @@ jobs:
 #      with:
 #        name: ${{env.PLUG}} Installer
 #        path: "Setup/Output/${{env.PLUG}} Installer.exe"
+
+#    - if: startsWith(matrix.os, 'windows')
+#      uses: actions/upload-artifact@v2
+#      with:
+#        name: ${{env.PLUG}} Free Installer
+#        path: "Setup/Output/${{env.PLUG}} Free Installer.exe"
 
