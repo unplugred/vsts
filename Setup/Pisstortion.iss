@@ -33,7 +33,7 @@ WizardSmallImageFile=assets\smallimage\{#PluginName}.bmp
 [Files]
 Source: "build\paid\{#PluginName}.vst3"; DestDir: "{cf64}\VST3\"; Components: VST3; Flags: ignoreversion
 Source: "build\paid\{#PluginName}.dll"; DestDir: {code:GetDir|0}; Components: VST; Flags: ignoreversion
-;Source: "build\paid\{#PluginName}.clap"; DestDir: {code:GetDir|1}; Components: CLAP; Flags: ignoreversion
+Source: "build\paid\{#PluginName}.clap"; DestDir: {code:GetDir|1}; Components: CLAP; Flags: ignoreversion
 
 [Icons]
 Name: {group}\Uninstall {#PluginName}; Filename: {uninstallexe}
@@ -44,7 +44,7 @@ Name: "custom"; Description: "Custom"; Flags: iscustom
 [Components]
 Name: "VST3"; Description: "VST3"; Types: custom;
 Name: "VST"; Description: "VST"; Types: custom;
-;Name: "CLAP"; Description: "CLAP"; Types: custom;
+Name: "CLAP"; Description: "CLAP"; Types: custom;
 
 [Code]
 var
@@ -81,8 +81,8 @@ begin
 
   DirPage.Add('VST Folder');
   DirPage.Values[0] := GetPreviousData('VST64', ExpandConstant('{reg:HKLM\SOFTWARE\VST,VSTPluginsPath|{pf}\Steinberg\VSTPlugins}'));
-//  DirPage.Add('CLAP folder');
-//  DirPage.Values[1] := GetPreviousData('CLAP', ExpandConstant('{reg:HKLM\SOFTWARE\CLAP,CLAPPluginsPath|{pf}\Common Files\CLAP}'));
+  DirPage.Add('CLAP folder');
+  DirPage.Values[1] := GetPreviousData('CLAP', ExpandConstant('{reg:HKLM\SOFTWARE\CLAP,CLAPPluginsPath|{pf}\Common Files\CLAP}'));
 
 end;
 
@@ -94,9 +94,9 @@ begin
     DirPage.PromptLabels[0].Enabled := DirPage.Buttons[0].Enabled;
     DirPage.Edits[0].Enabled := DirPage.Buttons[0].Enabled;
 
-//    DirPage.Buttons[1].Enabled := IsComponentSelected('CLAP');
-//    DirPage.PromptLabels[1].Enabled := DirPage.Buttons[1].Enabled;
-//    DirPage.Edits[1].Enabled := DirPage.Buttons[1].Enabled;
+    DirPage.Buttons[1].Enabled := IsComponentSelected('CLAP');
+    DirPage.PromptLabels[1].Enabled := DirPage.Buttons[1].Enabled;
+    DirPage.Edits[1].Enabled := DirPage.Buttons[1].Enabled;
   end;
 
   if CurPageID = wpSelectComponents then
@@ -124,5 +124,5 @@ end;
 procedure RegisterPreviousData(PreviousDataKey: Integer);
 begin
   SetPreviousData(PreviousDataKey, 'VST64', DirPage.Values[0]);
-//  SetPreviousData(PreviousDataKey, 'CLAP', DirPage.Values[1]);
+  SetPreviousData(PreviousDataKey, 'CLAP', DirPage.Values[1]);
 end;

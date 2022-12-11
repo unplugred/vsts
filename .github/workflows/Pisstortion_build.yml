@@ -66,27 +66,27 @@ jobs:
       run: |
         cd ${{env.PLUG}}/source
         cmake --build build --config Release --target ${{env.NOSPACE}}_VST3
+        cmake --build build --config Release --target ${{env.NOSPACE}}_CLAP
 
     - if: startsWith(matrix.os, 'windows')
       name: (windows) package
       id: package_windows
       run: |
-        mkdir -p "build/paid/${{env.PLUG}}"
-        mv "Setup/build/paid/${{env.PLUG}}.vst3/Contents/x86_64-win/${{env.PLUG}}.vst3" "build/paid/${{env.PLUG}}/${{env.PLUG}}.vst3"
+        mv "Setup/build/paid/${{env.PLUG}}.vst3/Contents/x86_64-win/${{env.PLUG}}.vst3" "Setup/${{env.PLUG}}.vst3"
         rm -r "Setup/build/paid/${{env.PLUG}}.vst3"
-        cp "build/paid/${{env.PLUG}}/${{env.PLUG}}.vst3" "Setup/build/paid/${{env.PLUG}}.vst3"
+        mv "Setup/${{env.PLUG}}.vst3" "Setup/build/paid/${{env.PLUG}}.vst3"
+        mv "${{env.PLUG}}/source/build/${{env.NOSPACE}}_artefacts/Release/CLAP/${{env.PLUG}}.clap" "Setup/build/paid/${{env.PLUG}}.clap"
 
     - if: ${{ !startsWith(matrix.os, 'windows') }}
       name: (unix) package
       id: package
       run: |
-        mkdir -p "build/paid/${{env.PLUG}}"
-        mv "Setup/build/paid/${{env.PLUG}}.vst3" "build/paid/${{env.PLUG}}/${{env.PLUG}}.vst3"
+        mv "${{env.PLUG}}/source/build/${{env.NOSPACE}}_artefacts/CLAP/${{env.PLUG}}.clap" "Setup/build/paid/${{env.PLUG}}.clap"
 
     - uses: actions/upload-artifact@v2
       with:
         name: ${{env.PLUG}} ${{ matrix.name }}
-        path: build/paid/${{env.PLUG}}
+        path: Setup/build/paid/${{env.PLUG}}
 
     - if: startsWith(matrix.os, 'windows')
       name: (windows) configure free
@@ -107,45 +107,45 @@ jobs:
       run: |
         cd ${{env.PLUG}}/source
         cmake --build build --config Release --target ${{env.NOSPACE}}_VST3
+        cmake --build build --config Release --target ${{env.NOSPACE}}_CLAP
 
     - if: startsWith(matrix.os, 'windows')
       name: (windows) package free
       id: package_windows_free
       run: |
-        mkdir -p "build/free/${{env.PLUG}}"
-        mv "Setup/build/free/${{env.PLUG}}.vst3/Contents/x86_64-win/${{env.PLUG}}.vst3" "build/free/${{env.PLUG}}/${{env.PLUG}}.vst3"
+        mv "Setup/build/free/${{env.PLUG}}.vst3/Contents/x86_64-win/${{env.PLUG}}.vst3" "Setup/${{env.PLUG}}.vst3"
         rm -r "Setup/build/free/${{env.PLUG}}.vst3"
-        cp "build/free/${{env.PLUG}}/${{env.PLUG}}.vst3" "Setup/build/free/${{env.PLUG}}.vst3"
+        mv "Setup/${{env.PLUG}}.vst3" "Setup/build/free/${{env.PLUG}}.vst3"
+        mv "${{env.PLUG}}/source/build/${{env.NOSPACE}}_artefacts/Release/CLAP/${{env.PLUG}}.clap" "Setup/build/free/${{env.PLUG}}.clap"
 
     - if: ${{ !startsWith(matrix.os, 'windows') }}
       name: (unix) package free
       id: package_free
       run: |
-        mkdir -p "build/free/${{env.PLUG}}"
-        mv "Setup/build/free/${{env.PLUG}}.vst3" "build/free/${{env.PLUG}}/${{env.PLUG}}.vst3"
+        mv "${{env.PLUG}}/source/build/${{env.NOSPACE}}_artefacts/CLAP/${{env.PLUG}}.clap" "Setup/build/free/${{env.PLUG}}.clap"
 
     - uses: actions/upload-artifact@v2
       with:
         name: ${{env.PLUG}} Free ${{ matrix.name }}
-        path: build/free/${{env.PLUG}}
+        path: Setup/build/free/${{env.PLUG}}
 
-#    - if: startsWith(matrix.os, 'windows')
-#      name: (windows) build installer
-#      id: installer
-#      run: |
-#        cd Setup
-#        iscc "${{env.PLUG}}.iss"
-#        iscc "${{env.PLUG}} Free.iss"
+    - if: startsWith(matrix.os, 'windows')
+      name: (windows) build installer
+      id: installer
+      run: |
+        cd Setup
+        iscc "${{env.PLUG}}.iss"
+        iscc "${{env.PLUG}} Free.iss"
 
-#    - if: startsWith(matrix.os, 'windows')
-#      uses: actions/upload-artifact@v2
-#      with:
-#        name: ${{env.PLUG}} Installer
-#        path: "Setup/Output/${{env.PLUG}} Installer.exe"
+    - if: startsWith(matrix.os, 'windows')
+      uses: actions/upload-artifact@v2
+      with:
+        name: ${{env.PLUG}} Installer
+        path: "Setup/Output/${{env.PLUG}} Installer.exe"
 
-#    - if: startsWith(matrix.os, 'windows')
-#      uses: actions/upload-artifact@v2
-#      with:
-#        name: ${{env.PLUG}} Free Installer
-#        path: "Setup/Output/${{env.PLUG}} Free Installer.exe"
+    - if: startsWith(matrix.os, 'windows')
+      uses: actions/upload-artifact@v2
+      with:
+        name: ${{env.PLUG}} Free Installer
+        path: "Setup/Output/${{env.PLUG}} Free Installer.exe"
 

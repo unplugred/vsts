@@ -5,6 +5,7 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 cmake_minimum_required(VERSION 3.21)
 project(Pisstortion VERSION 1.0.0)
 
+set(CMAKE_CXX_STANDARD 17)
 include(FetchContent)
 Set(FETCHCONTENT_QUIET FALSE)
 FetchContent_Declare(
@@ -14,6 +15,12 @@ FetchContent_Declare(
 	GIT_PROGRESS TRUE
 )
 FetchContent_MakeAvailable(JUCE)
+FetchContent_Declare(
+	clap-juce-extensions
+	GIT_REPOSITORY https://github.com/free-audio/clap-juce-extensions.git
+	GIT_TAG main
+)
+FetchContent_MakeAvailable(clap-juce-extensions)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 set_property(GLOBAL PROPERTY USE_FOLDERS YES)
@@ -58,6 +65,13 @@ juce_add_plugin("${PROJECT_NAME}"
 	COPY_PLUGIN_AFTER_BUILD TRUE
 	VST_COPY_DIR "${vstdir}"
 	VST3_COPY_DIR "${vstthreedir}")
+
+target_compile_features("${PROJECT_NAME}" PRIVATE cxx_std_17)
+
+clap_juce_extensions_plugin(TARGET "${PROJECT_NAME}"
+	CLAP_ID "com.unplugred.${PROJECT_NAME}"
+	CLAP_FEATURES audio-effect distortion mono stereo surround ambisonic
+	CLAP_USE_JUCE_PARAMETER_RANGES ALL)
 
 target_sources("${PROJECT_NAME}" PRIVATE
 	Source/CoolLogger.cpp
