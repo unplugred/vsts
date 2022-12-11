@@ -4,7 +4,7 @@ SET _n=Pisstortion
 SET _m=null
 :mode
 SET /P _mode="[c]onfigure/[D]ebug/[r]elease/[m]in size rel/rel [w]ith deb info: " || SET _mode=d
-If /I "%_mode%"=="c" goto configure
+If /I "%_mode%"=="c" goto banner
 If /I "%_mode%"=="d" SET _m=Debug
 If /I "%_mode%"=="r" SET _m=Release
 If /I "%_mode%"=="m" SET _m=MinSizeRel
@@ -36,8 +36,16 @@ cmake --build build --config %_m% --target %_p%
 If /I "%_r%"=="y" "./build/%_n%_artefacts/%_m%/Standalone/%_n%.exe"
 goto end
 
+:banner
+SET _b=null
+SET /P _banner="[f]ree/[P]aid/[b]eta: " || SET _banner=p
+If /I "%_banner%"=="p" SET _b=0
+If /I "%_banner%"=="f" SET _b=1
+If /I "%_banner%"=="b" SET _b=2
+If /I "%_b%"=="null" goto banner
+
 :configure
-cmake -B build -G "Visual Studio 17 2022" -T host=x64 -A x64
+cmake -DBANNERTYPE=%_b% -B build -G "Visual Studio 17 2022" -T host=x64 -A x64
 goto end
 
 :end
