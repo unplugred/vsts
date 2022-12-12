@@ -31,8 +31,8 @@ WizardImageStretch=false
 WizardSmallImageFile=assets\smallimage\{#PluginName}.bmp
 
 [Files]
-Source: "build\free\{#PluginName}.vst3"; DestDir: "{cf64}\VST3\"; Components: VST3; Flags: ignoreversion
-Source: "build\free\{#PluginName}.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
+Source: "build_windows\free\{#PluginName}.vst3"; DestDir: "{cf64}\VST3\"; Components: VST3; Flags: ignoreversion
+Source: "build_windows\free\{#PluginName}.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
 
 [Icons]
 Name: {group}\Uninstall {#PluginName}; Filename: {uninstallexe}

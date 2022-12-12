@@ -32,8 +32,8 @@ If /I "%_r%"=="n" goto compile
 goto run
 
 :compile
-cmake --build build --config %_m% --target %_p%
-If /I "%_r%"=="y" "./build/%_n%_artefacts/%_m%/Standalone/%_n%.exe"
+cmake --build build_windows --config %_m% --target %_p%
+If /I "%_r%"=="y" "./build_windows/%_n%_artefacts/%_m%/Standalone/%_n%.exe"
 goto end
 
 :banner
@@ -45,7 +45,7 @@ If /I "%_banner%"=="b" SET _b=2
 If /I "%_b%"=="null" goto banner
 
 :configure
-cmake -DBANNERTYPE=%_b% -B build -G "Visual Studio 17 2022" -T host=x64 -A x64
+cmake -DBANNERTYPE=%_b% -B build_windows -G "Visual Studio 17 2022" -T host=x64 -A x64
 goto end
 
 :end

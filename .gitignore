@@ -1,6 +1,9 @@
 **/.DS_Store
 Builds
 build
+build_linux
+build_windows
+build_mac
 .vscode
 JuceLibraryCode
 !JuceLibraryCode/AppData.h
