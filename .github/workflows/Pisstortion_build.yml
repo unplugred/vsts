@@ -23,17 +23,20 @@ jobs:
         - {
             name: "Win64",
             os: windows-latest,
-            compiler: "Visual Studio 17 2022"
+            compiler: "Visual Studio 17 2022",
+            folder: "build_windows"
           }
         - {
             name: "Linux",
             os: ubuntu-latest,
-            compiler: "Unix Makefiles"
+            compiler: "Unix Makefiles",
+            folder: "build_linux"
           }
 #        - {
 #            name: "Mac",
 #            os: macos-latest,
-#            compiler: "Xcode"
+#            compiler: "Xcode",
+#            folder: "build_mac"
 #          }
     runs-on: ${{ matrix.os }}
 
@@ -52,82 +55,82 @@ jobs:
       id: configure_windows
       run: |
         cd ${{env.PLUG}}/source
-        cmake -DBANNERTYPE=0 -B build -G "${{matrix.compiler}}" -T host=x64 -A x64
+        cmake -DBANNERTYPE=0 -B "${{folder}}" -G "${{matrix.compiler}}" -T host=x64 -A x64
 
     - if: ${{ !startsWith(matrix.os, 'windows') }}
       name: (unix) configure
       id: configure_mac
       run: |
         cd ${{env.PLUG}}/source
-        cmake -DBANNERTYPE=0 -B build -G "${{matrix.compiler}}"
+        cmake -DBANNERTYPE=0 -B "${{folder}}" -G "${{matrix.compiler}}"
 
     - name: build
       id: build
       run: |
         cd ${{env.PLUG}}/source
-        cmake --build build --config Release --target ${{env.NOSPACE}}_VST3
-        cmake --build build --config Release --target ${{env.NOSPACE}}_CLAP
+        cmake --build "${{folder}}" --config Release --target ${{env.NOSPACE}}_VST3
+        cmake --build "${{folder}}" --config Release --target ${{env.NOSPACE}}_CLAP
 
     - if: startsWith(matrix.os, 'windows')
       name: (windows) package
       id: package_windows
       run: |
-        mv "Setup/build/paid/${{env.PLUG}}.vst3/Contents/x86_64-win/${{env.PLUG}}.vst3" "Setup/${{env.PLUG}}.vst3"
-        rm -r "Setup/build/paid/${{env.PLUG}}.vst3"
-        mv "Setup/${{env.PLUG}}.vst3" "Setup/build/paid/${{env.PLUG}}.vst3"
-        mv "${{env.PLUG}}/source/build/${{env.NOSPACE}}_artefacts/Release/CLAP/${{env.PLUG}}.clap" "Setup/build/paid/${{env.PLUG}}.clap"
+        mv "Setup/${{folder}}/paid/${{env.PLUG}}.vst3/Contents/x86_64-win/${{env.PLUG}}.vst3" "Setup/${{env.PLUG}}.vst3"
+        rm -r "Setup/${{folder}}/paid/${{env.PLUG}}.vst3"
+        mv "Setup/${{env.PLUG}}.vst3" "Setup/${{folder}}/paid/${{env.PLUG}}.vst3"
+        mv "${{env.PLUG}}/source/${{folder}}/${{env.NOSPACE}}_artefacts/Release/CLAP/${{env.PLUG}}.clap" "Setup/${{folder}}/paid/${{env.PLUG}}.clap"
 
     - if: ${{ !startsWith(matrix.os, 'windows') }}
       name: (unix) package
       id: package
       run: |
-        mv "${{env.PLUG}}/source/build/${{env.NOSPACE}}_artefacts/CLAP/${{env.PLUG}}.clap" "Setup/build/paid/${{env.PLUG}}.clap"
+        mv "${{env.PLUG}}/source/${{folder}}/${{env.NOSPACE}}_artefacts/CLAP/${{env.PLUG}}.clap" "Setup/${{folder}}/paid/${{env.PLUG}}.clap"
 
     - uses: actions/upload-artifact@v2
       with:
         name: ${{env.PLUG}} ${{ matrix.name }}
-        path: Setup/build/paid/${{env.PLUG}}
+        path: Setup/${{folder}}/paid
 
     - if: startsWith(matrix.os, 'windows')
       name: (windows) configure free
       id: configure_windows_free
       run: |
         cd ${{env.PLUG}}/source
-        cmake -DBANNERTYPE=1 -B build -G "${{matrix.compiler}}" -T host=x64 -A x64
+        cmake -DBANNERTYPE=1 -B "${{folder}}" -G "${{matrix.compiler}}" -T host=x64 -A x64
 
     - if: ${{ !startsWith(matrix.os, 'windows') }}
       name: (unix) configure free
       id: configure_mac_free
       run: |
         cd ${{env.PLUG}}/source
-        cmake -DBANNERTYPE=1 -B build -G "${{matrix.compiler}}"
+        cmake -DBANNERTYPE=1 -B "${{folder}}" -G "${{matrix.compiler}}"
 
     - name: build free
       id: build_free
       run: |
         cd ${{env.PLUG}}/source
-        cmake --build build --config Release --target ${{env.NOSPACE}}_VST3
-        cmake --build build --config Release --target ${{env.NOSPACE}}_CLAP
+        cmake --build "${{folder}}" --config Release --target ${{env.NOSPACE}}_VST3
+        cmake --build "${{folder}}" --config Release --target ${{env.NOSPACE}}_CLAP
 
     - if: startsWith(matrix.os, 'windows')
       name: (windows) package free
       id: package_windows_free
       run: |
-        mv "Setup/build/free/${{env.PLUG}}.vst3/Contents/x86_64-win/${{env.PLUG}}.vst3" "Setup/${{env.PLUG}}.vst3"
-        rm -r "Setup/build/free/${{env.PLUG}}.vst3"
-        mv "Setup/${{env.PLUG}}.vst3" "Setup/build/free/${{env.PLUG}}.vst3"
-        mv "${{env.PLUG}}/source/build/${{env.NOSPACE}}_artefacts/Release/CLAP/${{env.PLUG}}.clap" "Setup/build/free/${{env.PLUG}}.clap"
+        mv "Setup/${{folder}}/free/${{env.PLUG}}.vst3/Contents/x86_64-win/${{env.PLUG}}.vst3" "Setup/${{env.PLUG}}.vst3"
+        rm -r "Setup/${{folder}}/free/${{env.PLUG}}.vst3"
+        mv "Setup/${{env.PLUG}}.vst3" "Setup/${{folder}}/free/${{env.PLUG}}.vst3"
+        mv "${{env.PLUG}}/source/${{folder}}/${{env.NOSPACE}}_artefacts/Release/CLAP/${{env.PLUG}}.clap" "Setup/${{folder}}/free/${{env.PLUG}}.clap"
 
     - if: ${{ !startsWith(matrix.os, 'windows') }}
       name: (unix) package free
       id: package_free
       run: |
-        mv "${{env.PLUG}}/source/build/${{env.NOSPACE}}_artefacts/CLAP/${{env.PLUG}}.clap" "Setup/build/free/${{env.PLUG}}.clap"
+        mv "${{env.PLUG}}/source/${{folder}}/${{env.NOSPACE}}_artefacts/CLAP/${{env.PLUG}}.clap" "Setup/${{folder}}/free/${{env.PLUG}}.clap"
 
     - uses: actions/upload-artifact@v2
       with:
         name: ${{env.PLUG}} Free ${{ matrix.name }}
-        path: Setup/build/free/${{env.PLUG}}
+        path: Setup/${{folder}}/free
 
     - if: startsWith(matrix.os, 'windows')
       name: (windows) build installer

@@ -1,4 +1,5 @@
 #!/bin/bash
+vs=Pisstortion
 vn=Pisstortion
 vm=null
 read -p "[c]onfigure/[D]ebug/[r]elease/[m]in size rel/rel [w]ith deb info: " -n 1 -r
@@ -28,7 +29,7 @@ then
 		fi
 	fi
 
-	cmake -DBANNERTYPE=${vb} -B build -G "Unix Makefiles"
+	cmake -DBANNERTYPE=${vb} -B build_linux -G "Unix Makefiles"
 	exit 1
 else
 	if [[ $REPLY =~ ^[Dd]$ ]]
@@ -56,7 +57,7 @@ fi
 
 vp=null
 vr=n
-read -p "[a]ll build/[S]tandalone/[v]st/vst[3]: " -n 1 -r
+read -p "[a]ll build/[S]tandalone/[v]st3/[c]lap: " -n 1 -r
 REPLY=${REPLY:-S}
 echo
 if [[ $REPLY =~ ^[Aa]$ ]]
@@ -71,11 +72,11 @@ else
 	else
 		if [[ $REPLY =~ ^[Vv]$ ]]
 		then
-			vp=${vn}_VST
+			vp=${vn}_VST3
 		else
-			if [[ $REPLY =~ ^[3t]$ ]]
+			if [[ $REPLY =~ ^[Cc]$ ]]
 			then
-				vp=${vn}_VST3
+				vp=${vn}_CLAP
 			else
 				exit 1
 			fi
@@ -101,8 +102,18 @@ then
 	fi
 fi
 
-cmake --build build --config ${vm} --target ${vp}
+cmake --build build_linux --config ${vm} --target ${vp}
+if [ $vp == ${vn}_All ]
+then
+	cmake --build build_linux --config ${vm} --target ${vn}_CLAP
+	cp "./build_linux/${vn}_artefacts/CLAP/${vs}.clap" "../../Setup/build_linux/paid/${vs}.clap"
+else
+	if [ $vp == ${vn}_CLAP ]
+	then
+		cp "./build_linux/${vn}_artefacts/CLAP/${vs}.clap" "../../Setup/build_linux/paid/${vs}.clap"
+	fi
+fi
 if [ $vr == y ]
 then
-	"./build/${vn}_artefacts/Standalone/${vn}"
+	"./build_linux/${vn}_artefacts/Standalone/${vs}"
 fi
