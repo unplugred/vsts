@@ -36,6 +36,7 @@ then
 			then
 				vb=2
 			else
+				read -p "done."
 				exit 1
 			fi
 		fi
@@ -52,6 +53,7 @@ then
 			cmake -DBANNERTYPE=${vb} -B ${vf} -G "Unix Makefiles"
 		fi
 	fi
+	read -p "done."
 	exit 1
 else
 	if [[ $REPLY =~ ^[Dd]$ ]]
@@ -70,6 +72,7 @@ else
 				then
 					vm=RelWithDebInfo
 				else
+					read -p "done."
 					exit 1
 				fi
 			fi
@@ -100,6 +103,7 @@ else
 			then
 				vp=${vn}_CLAP
 			else
+				read -p "done."
 				exit 1
 			fi
 		fi
@@ -119,6 +123,7 @@ then
 		then
 			vr=n
 		else
+			read -p "done."
 			exit 1
 		fi
 	fi
@@ -131,8 +136,10 @@ then
 	if [[ "$OSTYPE" =~ ^msys ]]
 	then
 		cp "./${vf}/${vn}_artefacts/${vm}/CLAP/${vs}.clap" "../../Setup/${vf}/paid/${vs}.clap"
+		cp "./${vf}/${vn}_artefacts/${vm}/Standalone/${vs}.exe" "../../Setup/${vf}/paid/${vs}.exe"
 	else
 		cp "./${vf}/${vn}_artefacts/CLAP/${vs}.clap" "../../Setup/${vf}/paid/${vs}.clap"
+		cp "./${vf}/${vn}_artefacts/Standalone/${vs}" "../../Setup/${vf}/paid/${vs}"
 	fi
 else
 	if [ $vp == ${vn}_CLAP ]
@@ -142,6 +149,13 @@ else
 			cp "./${vf}/${vn}_artefacts/${vm}/CLAP/${vs}.clap" "../../Setup/${vf}/paid/${vs}.clap"
 		else
 			cp "./${vf}/${vn}_artefacts/CLAP/${vs}.clap" "../../Setup/${vf}/paid/${vs}.clap"
+		fi
+	else
+		if [ $vp == ${vn}_Standalone ]
+		then
+			cp "./${vf}/${vn}_artefacts/${vm}/Standalone/${vs}.exe" "../../Setup/${vf}/free/${vs}.exe"
+		else
+			cp "./${vf}/${vn}_artefacts/Standalone/${vs}" "../../Setup/${vf}/free/${vs}"
 		fi
 	fi
 fi
@@ -154,3 +168,6 @@ then
 		"./${vf}/${vn}_artefacts/Standalone/${vs}"
 	fi
 fi
+
+read -p "done."
+exit 1

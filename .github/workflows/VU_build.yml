@@ -94,7 +94,7 @@ jobs:
       id: package
       run: |
         mv "${{env.PLUG}}/source/${{matrix.folder}}/${{env.NOSPACE}}_artefacts/CLAP/${{env.PLUG}}.clap" "Setup/${{matrix.folder}}/paid/${{env.PLUG}}.clap"
-        mv "${{env.PLUG}}/source/${{matrix.folder}}/${{env.NOSPACE}}_artefacts/Standalone/${{env.PLUG}}.exe" "Setup/${{matrix.folder}}/paid/${{env.PLUG}}.exe"
+        mv "${{env.PLUG}}/source/${{matrix.folder}}/${{env.NOSPACE}}_artefacts/Standalone/${{env.PLUG}}" "Setup/${{matrix.folder}}/paid/${{env.PLUG}}"
 
     - uses: actions/upload-artifact@v3
       with:
@@ -138,7 +138,7 @@ jobs:
       id: package_free
       run: |
         mv "${{env.PLUG}}/source/${{matrix.folder}}/${{env.NOSPACE}}_artefacts/CLAP/${{env.PLUG}}.clap" "Setup/${{matrix.folder}}/free/${{env.PLUG}}.clap"
-        mv "${{env.PLUG}}/source/${{matrix.folder}}/${{env.NOSPACE}}_artefacts/Standalone/${{env.PLUG}}.exe" "Setup/${{matrix.folder}}/free/${{env.PLUG}}.exe"
+        mv "${{env.PLUG}}/source/${{matrix.folder}}/${{env.NOSPACE}}_artefacts/Standalone/${{env.PLUG}}" "Setup/${{matrix.folder}}/free/${{env.PLUG}}"
 
     - uses: actions/upload-artifact@v3
       with:
