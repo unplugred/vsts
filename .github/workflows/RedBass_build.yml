@@ -63,20 +63,20 @@ jobs:
       name: (windows) configure
       id: configure_windows
       run: |
-        cd ${{env.PLUG}}/source
+        cd "${{env.PLUG}}/source"
         cmake -DBANNERTYPE=0 -B "${{matrix.folder}}" -G "${{matrix.compiler}}" -T host=x64 -A x64
 
     - if: ${{ !startsWith(matrix.os, 'windows') }}
       name: (unix) configure
       id: configure_mac
       run: |
-        cd ${{env.PLUG}}/source
+        cd "${{env.PLUG}}/source"
         cmake -DBANNERTYPE=0 -B "${{matrix.folder}}" -G "${{matrix.compiler}}"
 
     - name: build
       id: build
       run: |
-        cd ${{env.PLUG}}/source
+        cd "${{env.PLUG}}/source"
         cmake --build "${{matrix.folder}}" --config Release --target ${{env.NOSPACE}}_VST3
         cmake --build "${{matrix.folder}}" --config Release --target ${{env.NOSPACE}}_CLAP
 
@@ -104,20 +104,20 @@ jobs:
       name: (windows) configure free
       id: configure_windows_free
       run: |
-        cd ${{env.PLUG}}/source
+        cd "${{env.PLUG}}/source"
         cmake -DBANNERTYPE=1 -B "${{matrix.folder}}" -G "${{matrix.compiler}}" -T host=x64 -A x64
 
     - if: ${{ !startsWith(matrix.os, 'windows') }}
       name: (unix) configure free
       id: configure_mac_free
       run: |
-        cd ${{env.PLUG}}/source
+        cd "${{env.PLUG}}/source"
         cmake -DBANNERTYPE=1 -B "${{matrix.folder}}" -G "${{matrix.compiler}}"
 
     - name: build free
       id: build_free
       run: |
-        cd ${{env.PLUG}}/source
+        cd "${{env.PLUG}}/source"
         cmake --build "${{matrix.folder}}" --config Release --target ${{env.NOSPACE}}_VST3
         cmake --build "${{matrix.folder}}" --config Release --target ${{env.NOSPACE}}_CLAP
 
