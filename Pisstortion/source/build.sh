@@ -1,6 +1,18 @@
 #!/bin/bash
-vs=Pisstortion
 vn=Pisstortion
+vs=Pisstortion
+if [[ "$OSTYPE" =~ ^msys ]]
+then
+	vf=build_windows
+else
+	if [[ "$OSTYPE" =~ ^darwin ]]
+	then
+		vf=build_mac
+	else
+		vf=build_linux
+	fi
+fi
+
 vm=null
 read -p "[c]onfigure/[D]ebug/[r]elease/[m]in size rel/rel [w]ith deb info: " -n 1 -r
 REPLY=${REPLY:-D}
@@ -29,7 +41,17 @@ then
 		fi
 	fi
 
-	cmake -DBANNERTYPE=${vb} -B build_linux -G "Unix Makefiles"
+	if [[ "$OSTYPE" =~ ^msys ]]
+	then
+		cmake -DBANNERTYPE=${vb} -B ${vf} -G "Visual Studio 17 2022" -T host=x64 -A x64
+	else
+		if [[ "$OSTYPE" =~ ^darwin ]]
+		then
+			cmake -DBANNERTYPE=${vb} -B ${vf} -G "Xcode"
+		else
+			cmake -DBANNERTYPE=${vb} -B ${vf} -G "Unix Makefiles"
+		fi
+	fi
 	exit 1
 else
 	if [[ $REPLY =~ ^[Dd]$ ]]
@@ -102,18 +124,33 @@ then
 	fi
 fi
 
-cmake --build build_linux --config ${vm} --target ${vp}
+cmake --build ${vf} --config ${vm} --target ${vp}
 if [ $vp == ${vn}_All ]
 then
-	cmake --build build_linux --config ${vm} --target ${vn}_CLAP
-	cp "./build_linux/${vn}_artefacts/CLAP/${vs}.clap" "../../Setup/build_linux/paid/${vs}.clap"
+	cmake --build ${vf} --config ${vm} --target ${vn}_CLAP
+	if [[ "$OSTYPE" =~ ^msys ]]
+	then
+		cp "./${vf}/${vn}_artefacts/${vm}/CLAP/${vs}.clap" "../../Setup/${vf}/paid/${vs}.clap"
+	else
+		cp "./${vf}/${vn}_artefacts/CLAP/${vs}.clap" "../../Setup/${vf}/paid/${vs}.clap"
+	fi
 else
 	if [ $vp == ${vn}_CLAP ]
 	then
-		cp "./build_linux/${vn}_artefacts/CLAP/${vs}.clap" "../../Setup/build_linux/paid/${vs}.clap"
+		if [[ "$OSTYPE" =~ ^msys ]]
+		then
+			cp "./${vf}/${vn}_artefacts/${vm}/CLAP/${vs}.clap" "../../Setup/${vf}/paid/${vs}.clap"
+		else
+			cp "./${vf}/${vn}_artefacts/CLAP/${vs}.clap" "../../Setup/${vf}/paid/${vs}.clap"
+		fi
 	fi
 fi
 if [ $vr == y ]
 then
-	"./build_linux/${vn}_artefacts/Standalone/${vs}"
+	if [[ "$OSTYPE" =~ ^msys ]]
+	then
+		"./${vf}/${vn}_artefacts/${vm}/Standalone/${vs}.exe"
+	else
+		"./${vf}/${vn}_artefacts/Standalone/${vs}"
+	fi
 fi

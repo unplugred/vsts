@@ -31,14 +31,12 @@ WizardImageStretch=false
 WizardSmallImageFile=assets\smallimage\{#PluginName}.bmp
 
 [Files]
-Source: "build\free\{#PluginName}.vst3"; DestDir: "{cf64}\VST3\"; Components: VST3; Flags: ignoreversion
-Source: "build\other\{#PluginName}\*.*"; DestDir: "{cf64}\VST3\{#PluginName}"; Components: VST3; Flags: recursesubdirs onlyifdoesntexist
-Source: "build\free\{#PluginName}.dll"; DestDir: {code:GetDir|0}; Components: VST; Flags: ignoreversion
-Source: "build\other\{#PluginName}\*.*"; DestDir: "{code:GetDir|0}\{#PluginName}"; Components: VST; Flags: recursesubdirs onlyifdoesntexist
-;Source: "build\free\{#PluginName}.clap"; DestDir: {code:GetDir|1}; Components: CLAP; Flags: ignoreversion
-;Source: "build\other\{#PluginName}\*.*"; DestDir: "{code:GetDir|1}\{#PluginName}"; Components: CLAP; Flags: recursesubdirs onlyifdoesntexist
-Source: "build\free\{#PluginName}.exe"; DestDir: {code:GetDir|1}; Components: Standalone; Flags: ignoreversion
-Source: "build\other\{#PluginName}\*.*"; DestDir: "{code:GetDir|1}\{#PluginName}"; Components: Standalone; Flags: recursesubdirs onlyifdoesntexist
+Source: "build_windows\free\{#PluginName}.vst3"; DestDir: "{cf64}\VST3\"; Components: VST3; Flags: ignoreversion
+Source: "build_windows\other\{#PluginName}\*.*"; DestDir: "{cf64}\VST3\{#PluginName}"; Components: VST3; Flags: recursesubdirs onlyifdoesntexist
+Source: "build_windows\free\{#PluginName}.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
+Source: "build_windows\other\{#PluginName}\*.*"; DestDir: "{code:GetDir|0}\{#PluginName}"; Components: CLAP; Flags: recursesubdirs onlyifdoesntexist
+Source: "build_windows\free\{#PluginName}.exe"; DestDir: {code:GetDir|1}; Components: Standalone; Flags: ignoreversion
+Source: "build_windows\other\{#PluginName}\*.*"; DestDir: "{code:GetDir|1}\{#PluginName}"; Components: Standalone; Flags: recursesubdirs onlyifdoesntexist
 
 [Icons]
 Name: {group}\Uninstall {#PluginName}; Filename: {uninstallexe}
@@ -48,8 +46,7 @@ Name: "custom"; Description: "Custom"; Flags: iscustom
 
 [Components]
 Name: "VST3"; Description: "VST3"; Types: custom;
-Name: "VST"; Description: "VST"; Types: custom;
-;Name: "CLAP"; Description: "CLAP"; Types: custom;
+Name: "CLAP"; Description: "CLAP"; Types: custom;
 Name: "Standalone"; Description: "Standalone"; Types: custom;
 
 [Code]
@@ -85,12 +82,10 @@ begin
   'Select the folder in which setup should install the plugins, then click Next.',
   False, '');
 
-  DirPage.Add('VST Folder');
-  DirPage.Values[0] := GetPreviousData('VST64', ExpandConstant('{reg:HKLM\SOFTWARE\VST,VSTPluginsPath|{pf}\Steinberg\VSTPlugins}'));
-//  DirPage.Add('CLAP folder');
-//  DirPage.Values[1] := GetPreviousData('CLAP', ExpandConstant('{reg:HKLM\SOFTWARE\CLAP,CLAPPluginsPath|{pf}\Common Files\CLAP}'));
+  DirPage.Add('CLAP folder');
+  DirPage.Values[0] := GetPreviousData('CLAP', ExpandConstant('{reg:HKLM\SOFTWARE\CLAP,CLAPPluginsPath|{pf}\Common Files\CLAP}'));
   DirPage.Add('Standalone folder');
-  DirPage.Values[1] := GetPreviousData('Standalone', ExpandConstant('{reg:HKLM\SOFTWARE\VST,VSTPluginsPath|{pf}\Steinberg\VSTPlugins}'));
+  DirPage.Values[1] := GetPreviousData('Standalone', ExpandConstant('{reg:HKLM\SOFTWARE\CLAP,CLAPPluginsPath|{pf}\Common Files\CLAP}'));
 
 end;
 
@@ -98,13 +93,9 @@ procedure CurPageChanged(CurPageID: Integer);
 begin
   if CurPageID = DirPage.ID then
   begin
-    DirPage.Buttons[0].Enabled := IsComponentSelected('VST');
+    DirPage.Buttons[0].Enabled := IsComponentSelected('CLAP');
     DirPage.PromptLabels[0].Enabled := DirPage.Buttons[0].Enabled;
     DirPage.Edits[0].Enabled := DirPage.Buttons[0].Enabled;
-
-//    DirPage.Buttons[1].Enabled := IsComponentSelected('CLAP');
-//    DirPage.PromptLabels[1].Enabled := DirPage.Buttons[1].Enabled;
-//    DirPage.Edits[1].Enabled := DirPage.Buttons[1].Enabled;
 
     DirPage.Buttons[1].Enabled := IsComponentSelected('Standalone');
     DirPage.PromptLabels[1].Enabled := DirPage.Buttons[1].Enabled;
@@ -121,7 +112,7 @@ function ShouldSkipPage(PageID: Integer): Boolean;
 begin
   if PageID = DirPage.ID then
   begin
-    If (not IsComponentSelected('VST')) and (not IsComponentSelected('CLAP')) and (not IsComponentSelected('Standalone')) then
+    If (not IsComponentSelected('CLAP')) and (not IsComponentSelected('Standalone')) then
       begin
         Result := True
       end;
@@ -135,7 +126,6 @@ end;
 
 procedure RegisterPreviousData(PreviousDataKey: Integer);
 begin
-  SetPreviousData(PreviousDataKey, 'VST64', DirPage.Values[0]);
-//  SetPreviousData(PreviousDataKey, 'CLAP', DirPage.Values[1]);
+  SetPreviousData(PreviousDataKey, 'CLAP', DirPage.Values[0]);
   SetPreviousData(PreviousDataKey, 'Standalone', DirPage.Values[1]);
 end;
