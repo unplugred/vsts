@@ -1,12 +1,57 @@
 #!/bin/bash
 vn=RedBass
+vs=Red Bass
+if [[ "$OSTYPE" =~ ^msys ]]
+then
+	vf=build_windows
+else
+	if [[ "$OSTYPE" =~ ^darwin ]]
+	then
+		vf=build_mac
+	else
+		vf=build_linux
+	fi
+fi
+
 vm=null
 read -p "[c]onfigure/[D]ebug/[r]elease/[m]in size rel/rel [w]ith deb info: " -n 1 -r
 REPLY=${REPLY:-D}
 echo
 if [[ $REPLY =~ ^[Cc]$ ]]
 then
-	cmake -B build -G "Unix Makefiles"
+
+	vb=null
+	read -p "[f]ree/[P]aid/[b]eta: " -n 1 -r
+	REPLY=${REPLY:-P}
+	echo
+	if [[ $REPLY =~ ^[Pp]$ ]]
+	then
+		vb=0
+	else
+		if [[ $REPLY =~ ^[Ff]$ ]]
+		then
+			vb=1
+		else
+			if [[ $REPLY =~ ^[Bb]$ ]]
+			then
+				vb=2
+			else
+				exit 1
+			fi
+		fi
+	fi
+
+	if [[ "$OSTYPE" =~ ^msys ]]
+	then
+		cmake -DBANNERTYPE=${vb} -B ${vf} -G "Visual Studio 17 2022" -T host=x64 -A x64
+	else
+		if [[ "$OSTYPE" =~ ^darwin ]]
+		then
+			cmake -DBANNERTYPE=${vb} -B ${vf} -G "Xcode"
+		else
+			cmake -DBANNERTYPE=${vb} -B ${vf} -G "Unix Makefiles"
+		fi
+	fi
 	exit 1
 else
 	if [[ $REPLY =~ ^[Dd]$ ]]
@@ -34,7 +79,7 @@ fi
 
 vp=null
 vr=n
-read -p "[a]ll build/[S]tandalone/[v]st/vst[3]: " -n 1 -r
+read -p "[a]ll build/[S]tandalone/[v]st3/[c]lap: " -n 1 -r
 REPLY=${REPLY:-S}
 echo
 if [[ $REPLY =~ ^[Aa]$ ]]
@@ -49,11 +94,11 @@ else
 	else
 		if [[ $REPLY =~ ^[Vv]$ ]]
 		then
-			vp=${vn}_VST
+			vp=${vn}_VST3
 		else
-			if [[ $REPLY =~ ^[3t]$ ]]
+			if [[ $REPLY =~ ^[Cc]$ ]]
 			then
-				vp=${vn}_VST3
+				vp=${vn}_CLAP
 			else
 				exit 1
 			fi
@@ -79,8 +124,33 @@ then
 	fi
 fi
 
-cmake --build build --config ${vm} --target ${vp}
+cmake --build ${vf} --config ${vm} --target ${vp}
+if [ $vp == ${vn}_All ]
+then
+	cmake --build ${vf} --config ${vm} --target ${vn}_CLAP
+	if [[ "$OSTYPE" =~ ^msys ]]
+	then
+		cp "./${vf}/${vn}_artefacts/${vm}/CLAP/${vs}.clap" "../../Setup/${vf}/paid/${vs}.clap"
+	else
+		cp "./${vf}/${vn}_artefacts/CLAP/${vs}.clap" "../../Setup/${vf}/paid/${vs}.clap"
+	fi
+else
+	if [ $vp == ${vn}_CLAP ]
+	then
+		if [[ "$OSTYPE" =~ ^msys ]]
+		then
+			cp "./${vf}/${vn}_artefacts/${vm}/CLAP/${vs}.clap" "../../Setup/${vf}/paid/${vs}.clap"
+		else
+			cp "./${vf}/${vn}_artefacts/CLAP/${vs}.clap" "../../Setup/${vf}/paid/${vs}.clap"
+		fi
+	fi
+fi
 if [ $vr == y ]
 then
-	"./build/${vn}_artefacts/Standalone/Red Bass"
+	if [[ "$OSTYPE" =~ ^msys ]]
+	then
+		"./${vf}/${vn}_artefacts/${vm}/Standalone/${vs}.exe"
+	else
+		"./${vf}/${vn}_artefacts/Standalone/${vs}"
+	fi
 fi

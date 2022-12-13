@@ -29,7 +29,6 @@ option(JUCE_BUILD_EXAMPLES "Build examples" OFF)
 option(JUCE_ENABLE_MODULE_SOURCE_GROUPS "Enable module source groups" ON)
 option(JUCE_COPY_PLUGIN_AFTER_BUILD "Copy plugin after build" ON)
 
-
 if(APPLE)
 	set (CMAKE_OSX_DEPLOYMENT_TARGET "10.9" CACHE INTERNAL "")
 	set (CMAKE_OSX_ARCHITECTURES x86_64 arm64)
