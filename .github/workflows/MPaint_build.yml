@@ -97,7 +97,7 @@ jobs:
       id: package
       run: |
         mv "${{env.PLUG}}/source/${{matrix.folder}}/${{env.NOSPACE}}_artefacts/CLAP/${{env.PLUG}}.clap" "Setup/${{matrix.folder}}/free/${{env.PLUG}}.clap"
-        mv "${{env.PLUG}}/source/${{matrix.folder}}/${{env.NOSPACE}}_artefacts/Standalone/${{env.PLUG}}.exe" "Setup/${{matrix.folder}}/free/${{env.PLUG}}.exe"
+        mv "${{env.PLUG}}/source/${{matrix.folder}}/${{env.NOSPACE}}_artefacts/Standalone/${{env.PLUG}}" "Setup/${{matrix.folder}}/free/${{env.PLUG}} Standalone"
         cp -r "MPaint/source/Samples" "Setup/${{matrix.folder}}/free/${{env.PLUG}}"
         cp  "MPaint/source/how to install MPaint.txt" "Setup/${{matrix.folder}}/free/how to install MPaint.txt"
 
