@@ -61,22 +61,23 @@ jobs:
       name: (windows) configure
       id: configure_windows
       run: |
-        cd ${{env.PLUG}}/source
+        cd "${{env.PLUG}}/source"
         cmake -DBANNERTYPE=0 -B "${{matrix.folder}}" -G "${{matrix.compiler}}" -T host=x64 -A x64
 
     - if: ${{ !startsWith(matrix.os, 'windows') }}
       name: (unix) configure
       id: configure_mac
       run: |
-        cd ${{env.PLUG}}/source
+        cd "${{env.PLUG}}/source"
         cmake -DBANNERTYPE=0 -B "${{matrix.folder}}" -G "${{matrix.compiler}}"
 
     - name: build
       id: build
       run: |
-        cd ${{env.PLUG}}/source
+        cd "${{env.PLUG}}/source"
         cmake --build "${{matrix.folder}}" --config Release --target ${{env.NOSPACE}}_VST3
         cmake --build "${{matrix.folder}}" --config Release --target ${{env.NOSPACE}}_CLAP
+        cmake --build "${{matrix.folder}}" --config Release --target ${{env.NOSPACE}}_Standalone
 
     - if: startsWith(matrix.os, 'windows')
       name: (windows) package
@@ -86,6 +87,7 @@ jobs:
         rm -r "Setup/${{matrix.folder}}/free/${{env.PLUG}}.vst3"
         mv "Setup/${{env.PLUG}}.vst3" "Setup/${{matrix.folder}}/free/${{env.PLUG}}.vst3"
         mv "${{env.PLUG}}/source/${{matrix.folder}}/${{env.NOSPACE}}_artefacts/Release/CLAP/${{env.PLUG}}.clap" "Setup/${{matrix.folder}}/free/${{env.PLUG}}.clap"
+        mv "${{env.PLUG}}/source/${{matrix.folder}}/${{env.NOSPACE}}_artefacts/Release/Standalone/${{env.PLUG}}.exe" "Setup/${{matrix.folder}}/free/${{env.PLUG}}.exe"
         cp -r "MPaint/source/Samples" "Setup/${{matrix.folder}}/other/${{env.PLUG}}"
         cp -r "MPaint/source/Samples" "Setup/${{matrix.folder}}/free/${{env.PLUG}}"
         cp  "MPaint/source/how to install MPaint.txt" "Setup/${{matrix.folder}}/free/how to install MPaint.txt"
@@ -95,6 +97,7 @@ jobs:
       id: package
       run: |
         mv "${{env.PLUG}}/source/${{matrix.folder}}/${{env.NOSPACE}}_artefacts/CLAP/${{env.PLUG}}.clap" "Setup/${{matrix.folder}}/free/${{env.PLUG}}.clap"
+        mv "${{env.PLUG}}/source/${{matrix.folder}}/${{env.NOSPACE}}_artefacts/Standalone/${{env.PLUG}}.exe" "Setup/${{matrix.folder}}/free/${{env.PLUG}}.exe"
         cp -r "MPaint/source/Samples" "Setup/${{matrix.folder}}/free/${{env.PLUG}}"
         cp  "MPaint/source/how to install MPaint.txt" "Setup/${{matrix.folder}}/free/how to install MPaint.txt"
 
