@@ -3,9 +3,6 @@
 #include "DCFilter.h"
 #include "CoolLogger.h"
 
-#define BANNER
-//#define BETA
-
 struct pluginmodule {
 	SmoothedValue<float,ValueSmoothingTypes::Linear> value;
 };
