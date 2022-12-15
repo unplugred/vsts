@@ -54,27 +54,24 @@ jobs:
       id: cache_stuff
       uses: actions/cache@v3
       with:
-        path: "${{env.PLUG}}/source/${{matrix.folder}}"
-        key: "${{env.NOSPACE}}_${{matrix.folder}}"
+        path: "${{matrix.folder}}"
+        key: "${{matrix.folder}}"
 
     - if: startsWith(matrix.os, 'windows')
       name: (windows) configure
       id: configure_windows
       run: |
-        cd "${{env.PLUG}}/source"
         cmake -DBANNERTYPE=0 -B "${{matrix.folder}}" -G "${{matrix.compiler}}" -T host=x64 -A x64
 
     - if: ${{ !startsWith(matrix.os, 'windows') }}
       name: (unix) configure
       id: configure_mac
       run: |
-        cd "${{env.PLUG}}/source"
         cmake -DBANNERTYPE=0 -B "${{matrix.folder}}" -G "${{matrix.compiler}}"
 
     - name: build
       id: build
       run: |
-        cd "${{env.PLUG}}/source"
         cmake --build "${{matrix.folder}}" --config Release --target ${{env.NOSPACE}}_VST3
         cmake --build "${{matrix.folder}}" --config Release --target ${{env.NOSPACE}}_CLAP
 
@@ -85,13 +82,13 @@ jobs:
         mv "Setup/${{matrix.folder}}/paid/${{env.PLUG}}.vst3/Contents/x86_64-win/${{env.PLUG}}.vst3" "Setup/${{env.PLUG}}.vst3"
         rm -r "Setup/${{matrix.folder}}/paid/${{env.PLUG}}.vst3"
         mv "Setup/${{env.PLUG}}.vst3" "Setup/${{matrix.folder}}/paid/${{env.PLUG}}.vst3"
-        mv "${{env.PLUG}}/source/${{matrix.folder}}/${{env.NOSPACE}}_artefacts/Release/CLAP/${{env.PLUG}}.clap" "Setup/${{matrix.folder}}/paid/${{env.PLUG}}.clap"
+        mv "${{matrix.folder}}/Plugins/${{env.PLUG}}/${{env.NOSPACE}}_artefacts/Release/CLAP/${{env.PLUG}}.clap" "Setup/${{matrix.folder}}/paid/${{env.PLUG}}.clap"
 
     - if: ${{ !startsWith(matrix.os, 'windows') }}
       name: (unix) package
       id: package
       run: |
-        mv "${{env.PLUG}}/source/${{matrix.folder}}/${{env.NOSPACE}}_artefacts/CLAP/${{env.PLUG}}.clap" "Setup/${{matrix.folder}}/paid/${{env.PLUG}}.clap"
+        mv "${{matrix.folder}}/Plugins/${{env.PLUG}}/${{env.NOSPACE}}_artefacts/CLAP/${{env.PLUG}}.clap" "Setup/${{matrix.folder}}/paid/${{env.PLUG}}.clap"
 
     - uses: actions/upload-artifact@v3
       with:
@@ -102,20 +99,17 @@ jobs:
       name: (windows) configure free
       id: configure_windows_free
       run: |
-        cd "${{env.PLUG}}/source"
         cmake -DBANNERTYPE=1 -B "${{matrix.folder}}" -G "${{matrix.compiler}}" -T host=x64 -A x64
 
     - if: ${{ !startsWith(matrix.os, 'windows') }}
       name: (unix) configure free
       id: configure_mac_free
       run: |
-        cd "${{env.PLUG}}/source"
         cmake -DBANNERTYPE=1 -B "${{matrix.folder}}" -G "${{matrix.compiler}}"
 
     - name: build free
       id: build_free
       run: |
-        cd "${{env.PLUG}}/source"
         cmake --build "${{matrix.folder}}" --config Release --target ${{env.NOSPACE}}_VST3
         cmake --build "${{matrix.folder}}" --config Release --target ${{env.NOSPACE}}_CLAP
 
@@ -126,13 +120,13 @@ jobs:
         mv "Setup/${{matrix.folder}}/free/${{env.PLUG}}.vst3/Contents/x86_64-win/${{env.PLUG}}.vst3" "Setup/${{env.PLUG}}.vst3"
         rm -r "Setup/${{matrix.folder}}/free/${{env.PLUG}}.vst3"
         mv "Setup/${{env.PLUG}}.vst3" "Setup/${{matrix.folder}}/free/${{env.PLUG}}.vst3"
-        mv "${{env.PLUG}}/source/${{matrix.folder}}/${{env.NOSPACE}}_artefacts/Release/CLAP/${{env.PLUG}}.clap" "Setup/${{matrix.folder}}/free/${{env.PLUG}}.clap"
+        mv "${{matrix.folder}}/Plugins/${{env.PLUG}}/${{env.NOSPACE}}_artefacts/Release/CLAP/${{env.PLUG}}.clap" "Setup/${{matrix.folder}}/free/${{env.PLUG}}.clap"
 
     - if: ${{ !startsWith(matrix.os, 'windows') }}
       name: (unix) package free
       id: package_free
       run: |
-        mv "${{env.PLUG}}/source/${{matrix.folder}}/${{env.NOSPACE}}_artefacts/CLAP/${{env.PLUG}}.clap" "Setup/${{matrix.folder}}/free/${{env.PLUG}}.clap"
+        mv "${{matrix.folder}}/Plugins/${{env.PLUG}}/${{env.NOSPACE}}_artefacts/CLAP/${{env.PLUG}}.clap" "Setup/${{matrix.folder}}/free/${{env.PLUG}}.clap"
 
     - uses: actions/upload-artifact@v3
       with:
