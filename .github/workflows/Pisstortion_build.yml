@@ -32,12 +32,12 @@ jobs:
             compiler: "Unix Makefiles",
             folder: "build_linux"
           }
-#        - {
-#            name: "Mac",
-#            os: macos-latest,
-#            compiler: "Xcode",
-#            folder: "build_mac"
-#          }
+        - {
+            name: "Mac",
+            os: macos-latest,
+            compiler: "Xcode",
+            folder: "build_mac"
+          }
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -57,6 +57,14 @@ jobs:
         path: "${{matrix.folder}}"
         key: "${{matrix.folder}}"
 
+    - if: startsWith(matrix.os, 'macos')
+      name: (mac) import certificates
+      id: import_certificates
+      uses: apple-actions/import-codesign-certs@v1
+      with:
+        p12-file-base64: ${{ secrets.DEV_ID_APP_CERT }}
+        p12-password: ${{ secrets.DEV_ID_APP_PASSWORD }}
+
     - if: startsWith(matrix.os, 'windows')
       name: (windows) configure
       id: configure_windows
@@ -65,7 +73,7 @@ jobs:
 
     - if: ${{ !startsWith(matrix.os, 'windows') }}
       name: (unix) configure
-      id: configure_mac
+      id: configure
       run: |
         cmake -DBANNERTYPE=0 -B "${{matrix.folder}}" -G "${{matrix.compiler}}"
 
@@ -90,6 +98,29 @@ jobs:
       run: |
         mv "${{matrix.folder}}/Plugins/${{env.PLUG}}/${{env.NOSPACE}}_artefacts/CLAP/${{env.PLUG}}.clap" "Setup/${{matrix.folder}}/paid/${{env.PLUG}}.clap"
 
+    - if: startsWith(matrix.os, 'macos')
+      name: (mac) code signing
+      id: code_signing
+      run: |
+        codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION }}" -v "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.vst3" --deep --strict --options=runtime --timestamp
+        codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION }}" -v "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.clap" --deep --strict --options=runtime --timestamp
+        codesign -dv --verbose=4 "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.vst3"
+        codesign -dv --verbose=4 "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.clap"
+        zip -r "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}_vst3.zip" "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.vst3"
+        zip -r "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}_clap.zip" "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.clap"
+        rm -r "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.vst3"
+        rm -r "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.clap"
+        xcrun notarytool submit "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}_vst3.zip" --apple-id ${{ secrets.NOTARIZATION_USERNAME }} --password ${{ secrets.NOTARIZATION_PASSWORD }} --team-id ${{ secrets.TEAM_ID }} --wait
+        xcrun notarytool submit "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}_clap.zip" --apple-id ${{ secrets.NOTARIZATION_USERNAME }} --password ${{ secrets.NOTARIZATION_PASSWORD }} --team-id ${{ secrets.TEAM_ID }} --wait
+        unzip "Setup/${{ matrix.folder }}/paid/${{ env.plug }}_vst3.zip"
+        unzip "Setup/${{ matrix.folder }}/paid/${{ env.plug }}_clap.zip"
+        rm "Setup/${{ matrix.folder }}/paid/${{ env.plug }}_vst3.zip"
+        rm "Setup/${{ matrix.folder }}/paid/${{ env.plug }}_clap.zip"
+        xcrun stapler staple "Setup/${{ matrix.folder }}/paid/${{ env.plug }}.vst3"
+        xcrun stapler staple "Setup/${{ matrix.folder }}/paid/${{ env.plug }}.clap"
+        spctl -vvv --assess --type exec "Setup/${{ matrix.folder }}/paid/${{ env.plug }}.vst3"
+        spctl -vvv --assess --type exec "Setup/${{ matrix.folder }}/paid/${{ env.plug }}.clap"
+
     - uses: actions/upload-artifact@v3
       with:
         name: ${{env.PLUG}} ${{ matrix.name }}
@@ -103,7 +134,7 @@ jobs:
 
     - if: ${{ !startsWith(matrix.os, 'windows') }}
       name: (unix) configure free
-      id: configure_mac_free
+      id: configure_free
       run: |
         cmake -DBANNERTYPE=1 -B "${{matrix.folder}}" -G "${{matrix.compiler}}"
 
@@ -127,6 +158,29 @@ jobs:
       id: package_free
       run: |
         mv "${{matrix.folder}}/Plugins/${{env.PLUG}}/${{env.NOSPACE}}_artefacts/CLAP/${{env.PLUG}}.clap" "Setup/${{matrix.folder}}/free/${{env.PLUG}}.clap"
+
+    - if: startsWith(matrix.os, 'macos')
+      name: (mac) code signing free
+      id: code_signing_free
+      run: |
+        codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION }}" -v "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.vst3" --deep --strict --options=runtime --timestamp
+        codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION }}" -v "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.clap" --deep --strict --options=runtime --timestamp
+        codesign -dv --verbose=4 "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.vst3"
+        codesign -dv --verbose=4 "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.clap"
+        zip -r "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}_vst3.zip" "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.vst3"
+        zip -r "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}_clap.zip" "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.clap"
+        rm -r "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.vst3"
+        rm -r "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.clap"
+        xcrun notarytool submit "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}_vst3.zip" --apple-id ${{ secrets.NOTARIZATION_USERNAME }} --password ${{ secrets.NOTARIZATION_PASSWORD }} --team-id ${{ secrets.TEAM_ID }} --wait
+        xcrun notarytool submit "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}_clap.zip" --apple-id ${{ secrets.NOTARIZATION_USERNAME }} --password ${{ secrets.NOTARIZATION_PASSWORD }} --team-id ${{ secrets.TEAM_ID }} --wait
+        unzip "Setup/${{ matrix.folder }}/free/${{ env.plug }}_vst3.zip"
+        unzip "Setup/${{ matrix.folder }}/free/${{ env.plug }}_clap.zip"
+        rm "Setup/${{ matrix.folder }}/free/${{ env.plug }}_vst3.zip"
+        rm "Setup/${{ matrix.folder }}/free/${{ env.plug }}_clap.zip"
+        xcrun stapler staple "Setup/${{ matrix.folder }}/free/${{ env.plug }}.vst3"
+        xcrun stapler staple "Setup/${{ matrix.folder }}/free/${{ env.plug }}.clap"
+        spctl -vvv --assess --type exec "Setup/${{ matrix.folder }}/free/${{ env.plug }}.vst3"
+        spctl -vvv --assess --type exec "Setup/${{ matrix.folder }}/free/${{ env.plug }}.clap"
 
     - uses: actions/upload-artifact@v3
       with:
