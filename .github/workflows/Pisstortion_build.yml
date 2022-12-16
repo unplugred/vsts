@@ -110,8 +110,6 @@ jobs:
       run: |
         codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION }}" -v "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.vst3" --deep --strict --options=runtime --timestamp
         codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION }}" -v "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.clap" --deep --strict --options=runtime --timestamp
-        codesign -dv --verbose=4 "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.vst3"
-        codesign -dv --verbose=4 "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.clap"
         zip -r "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}_vst3.zip" "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.vst3"
         zip -r "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}_clap.zip" "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.clap"
         rm -r "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.vst3"
@@ -124,8 +122,6 @@ jobs:
         rm "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}_clap.zip"
         xcrun stapler staple "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.vst3"
         xcrun stapler staple "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.clap"
-        spctl -vvv --assess --type exec "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.vst3"
-        spctl -vvv --assess --type exec "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.clap"
 
     - uses: actions/upload-artifact@v3
       with:
@@ -177,22 +173,18 @@ jobs:
       run: |
         codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION }}" -v "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.vst3" --deep --strict --options=runtime --timestamp
         codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION }}" -v "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.clap" --deep --strict --options=runtime --timestamp
-        codesign -dv --verbose=4 "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.vst3"
-        codesign -dv --verbose=4 "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.clap"
         zip -r "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}_vst3.zip" "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.vst3"
         zip -r "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}_clap.zip" "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.clap"
         rm -r "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.vst3"
         rm -r "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.clap"
         xcrun notarytool submit "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}_vst3.zip" --apple-id ${{ secrets.NOTARIZATION_USERNAME }} --password ${{ secrets.NOTARIZATION_PASSWORD }} --team-id ${{ secrets.TEAM_ID }} --wait
         xcrun notarytool submit "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}_clap.zip" --apple-id ${{ secrets.NOTARIZATION_USERNAME }} --password ${{ secrets.NOTARIZATION_PASSWORD }} --team-id ${{ secrets.TEAM_ID }} --wait
-        unzip "Setup/${{ matrix.folder }}/free/${{ env.plug }}_vst3.zip"
-        unzip "Setup/${{ matrix.folder }}/free/${{ env.plug }}_clap.zip"
-        rm "Setup/${{ matrix.folder }}/free/${{ env.plug }}_vst3.zip"
-        rm "Setup/${{ matrix.folder }}/free/${{ env.plug }}_clap.zip"
-        xcrun stapler staple "Setup/${{ matrix.folder }}/free/${{ env.plug }}.vst3"
-        xcrun stapler staple "Setup/${{ matrix.folder }}/free/${{ env.plug }}.clap"
-        spctl -vvv --assess --type exec "Setup/${{ matrix.folder }}/free/${{ env.plug }}.vst3"
-        spctl -vvv --assess --type exec "Setup/${{ matrix.folder }}/free/${{ env.plug }}.clap"
+        unzip "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}_vst3.zip"
+        unzip "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}_clap.zip"
+        rm "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}_vst3.zip"
+        rm "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}_clap.zip"
+        xcrun stapler staple "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.vst3"
+        xcrun stapler staple "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.clap"
 
     - uses: actions/upload-artifact@v3
       with:
