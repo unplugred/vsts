@@ -6,7 +6,7 @@ void CoolLogger::init(OpenGLContext* ctx, int w, int h) {
 	width = w;
 	height = h;
 	textvert = 
-R"(#version 320 core
+R"(#version 410 core
 in vec2 aPos;
 uniform vec4 size;
 uniform vec2 pos;
@@ -17,7 +17,7 @@ void main(){
 	texcoord = (aPos+vec2(mod(letter,16),floor((letter+1)*-.0625)))*.0625;
 })";
 	textfrag =
-R"(#version 320 core
+R"(#version 410 core
 in vec2 texcoord;
 uniform sampler2D tex;
 void main(){

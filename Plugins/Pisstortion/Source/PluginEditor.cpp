@@ -58,7 +58,7 @@ PisstortionAudioProcessorEditor::~PisstortionAudioProcessorEditor() {
 void PisstortionAudioProcessorEditor::newOpenGLContextCreated() {
 	compileshader(baseshader,
 //BASE VERT
-R"(#version 320 core
+R"(#version 410 core
 in vec2 aPos;
 uniform float banner;
 uniform vec2 texscale;
@@ -70,7 +70,7 @@ void main(){
 	circlecoord = aPos;
 })",
 //BASE FRAG
-R"(#version 320 core
+R"(#version 410 core
 in vec2 v_TexCoord;
 in vec2 circlecoord;
 uniform sampler2D circletex;
@@ -89,7 +89,7 @@ void main(){
 
 	compileshader(knobshader,
 //KNOB VERT
-R"(#version 320 core
+R"(#version 410 core
 in vec2 aPos;
 uniform float banner;
 uniform vec2 texscale;
@@ -108,7 +108,7 @@ void main(){
 	circlecoord = vec2(gl_Position.x,(gl_Position.y-banner)/(1-banner))*.5+.5;
 })",
 //KNOB FRAG
-R"(#version 320 core
+R"(#version 410 core
 in vec2 v_TexCoord;
 in vec2 circlecoord;
 uniform sampler2D knobtex;
@@ -127,7 +127,7 @@ void main(){
 
 	compileshader(visshader,
 //VIS VERT
-R"(#version 320 core
+R"(#version 410 core
 in vec2 aPos;
 uniform float banner;
 uniform vec2 texscale;
@@ -137,7 +137,7 @@ void main(){
 	basecoord = vec2((aPos.x+1)*texscale.x*.5,1-(1-aPos.y)*texscale.y*.5);
 })",
 //VIS FRAG
-R"(#version 320 core
+R"(#version 410 core
 in vec2 basecoord;
 uniform sampler2D basetex;
 uniform float alpha;
@@ -148,7 +148,7 @@ void main(){
 
 	compileshader(oversamplingshader,
 //OVERSAMPLING VERT
-R"(#version 320 core
+R"(#version 410 core
 in vec2 aPos;
 uniform float banner;
 uniform vec2 texscale;
@@ -161,7 +161,7 @@ void main(){
 	highlightcoord = vec2((aPos.x-selection)*4.3214285714,aPos.y*3.3-1.1642857143);
 })",
 //OVERSAMPLING FRAG
-R"(#version 320 core
+R"(#version 410 core
 in vec2 basecoord;
 in vec2 highlightcoord;
 uniform sampler2D basetex;
@@ -181,7 +181,7 @@ void main(){
 
 	compileshader(creditsshader,
 //CREDITS VERT
-R"(#version 320 core
+R"(#version 410 core
 in vec2 aPos;
 uniform float banner;
 uniform vec2 texscale;
@@ -194,7 +194,7 @@ void main(){
 	basecoord = vec2(aPos.x*basescale.x,1-(1-aPos.y*(57./462.))*basescale.y);
 })",
 //CREDITS FRAG
-R"(#version 320 core
+R"(#version 410 core
 in vec2 v_TexCoord;
 in vec2 basecoord;
 uniform sampler2D basetex;
@@ -222,7 +222,7 @@ void main(){
 
 	compileshader(circleshader,
 //CIRCLE VERT
-R"(#version 320 core
+R"(#version 410 core
 in vec2 aPos;
 uniform vec2 pos;
 uniform float ratio;
@@ -233,7 +233,7 @@ void main(){
 	v_TexCoord = aPos*2-1;
 })",
 //CIRCLE FRAG
-R"(#version 320 core
+R"(#version 410 core
 in vec2 v_TexCoord;
 void main(){
 	float x = v_TexCoord.x*v_TexCoord.x+v_TexCoord.y*v_TexCoord.y;
@@ -270,7 +270,7 @@ void main(){
 #ifdef BANNER
 	compileshader(bannershader,
 //BANNER VERT
-R"(#version 320 core
+R"(#version 410 core
 in vec2 aPos;
 uniform vec2 texscale;
 uniform vec2 size;
@@ -280,7 +280,7 @@ void main(){
 	uv = vec2(aPos.x*size.x,1-(1-aPos.y)*texscale.y);
 })",
 //BANNER FRAG
-R"(#version 320 core
+R"(#version 410 core
 in vec2 uv;
 uniform sampler2D tex;
 uniform vec2 texscale;
