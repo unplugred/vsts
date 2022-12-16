@@ -43,8 +43,8 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - if: startsWith(matrix.os, 'ubuntu')
-      name: (linux) install juce dependencies
+    - name: (linux) install juce dependencies
+      if: startsWith(matrix.os, 'ubuntu')
       id: juce_dependencies
       run: | 
         sudo apt-get update
@@ -57,22 +57,22 @@ jobs:
         path: "${{matrix.folder}}"
         key: "${{matrix.folder}}"
 
-    - if: startsWith(matrix.os, 'macos')
-      name: (mac) import certificates
+    - name: (mac) import certificates
+      if: startsWith(matrix.os, 'macos')
       id: import_certificates
       uses: apple-actions/import-codesign-certs@v1
       with:
         p12-file-base64: ${{ secrets.DEV_ID_APP_CERT }}
         p12-password: ${{ secrets.DEV_ID_APP_PASSWORD }}
 
-    - if: startsWith(matrix.os, 'windows')
-      name: (windows) configure
+    - name: (windows) configure
+      if: startsWith(matrix.os, 'windows')
       id: configure_windows
       run: |
         cmake -DBANNERTYPE=0 -B "${{matrix.folder}}" -G "${{matrix.compiler}}" -T host=x64 -A x64
 
-    - if: ${{ !startsWith(matrix.os, 'windows') }}
-      name: (unix) configure
+    - name: (unix) configure
+      if: ${{ !startsWith(matrix.os, 'windows') }}
       id: configure
       run: |
         cmake -DBANNERTYPE=0 -B "${{matrix.folder}}" -G "${{matrix.compiler}}"
@@ -83,8 +83,8 @@ jobs:
         cmake --build "${{matrix.folder}}" --config Release --target ${{env.NOSPACE}}_VST3
         cmake --build "${{matrix.folder}}" --config Release --target ${{env.NOSPACE}}_CLAP
 
-    - if: startsWith(matrix.os, 'windows')
-      name: (windows) package
+    - name: (windows) package
+      if: startsWith(matrix.os, 'windows')
       id: package_windows
       run: |
         mv "Setup/${{matrix.folder}}/paid/${{env.PLUG}}.vst3/Contents/x86_64-win/${{env.PLUG}}.vst3" "Setup/${{env.PLUG}}.vst3"
@@ -92,20 +92,20 @@ jobs:
         mv "Setup/${{env.PLUG}}.vst3" "Setup/${{matrix.folder}}/paid/${{env.PLUG}}.vst3"
         mv "${{matrix.folder}}/Plugins/${{env.PLUG}}/${{env.NOSPACE}}_artefacts/Release/CLAP/${{env.PLUG}}.clap" "Setup/${{matrix.folder}}/paid/${{env.PLUG}}.clap"
 
-    - if: startsWith(matrix.os, 'linux')
-      name: (linux) package
+    - name: (linux) package
+      if: startsWith(matrix.os, 'linux')
       id: package_linux
       run: |
         mv "${{matrix.folder}}/Plugins/${{env.PLUG}}/${{env.NOSPACE}}_artefacts/CLAP/${{env.PLUG}}.clap" "Setup/${{matrix.folder}}/paid/${{env.PLUG}}.clap"
 
-    - if: startsWith(matrix.os, 'macos')
-      name: (mac) package
+    - name: (mac) package
+      if: startsWith(matrix.os, 'macos')
       id: package_mac
       run: |
         mv "${{matrix.folder}}/Plugins/${{env.PLUG}}/${{env.NOSPACE}}_artefacts/Release/CLAP/${{env.PLUG}}.clap" "Setup/${{matrix.folder}}/paid/${{env.PLUG}}.clap"
 
-    - if: startsWith(matrix.os, 'macos')
-      name: (mac) code signing
+    - name: (mac) code signing
+      if: startsWith(matrix.os, 'macos')
       id: code_signing
       run: |
         codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION }}" -v "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.vst3" --deep --strict --options=runtime --timestamp
@@ -132,14 +132,14 @@ jobs:
         name: ${{env.PLUG}} ${{ matrix.name }}
         path: Setup/${{matrix.folder}}/paid
 
-    - if: startsWith(matrix.os, 'windows')
-      name: (windows) configure free
+    - name: (windows) configure free
+      if: startsWith(matrix.os, 'windows')
       id: configure_windows_free
       run: |
         cmake -DBANNERTYPE=1 -B "${{matrix.folder}}" -G "${{matrix.compiler}}" -T host=x64 -A x64
 
-    - if: ${{ !startsWith(matrix.os, 'windows') }}
-      name: (unix) configure free
+    - name: (unix) configure free
+      if: ${{ !startsWith(matrix.os, 'windows') }}
       id: configure_free
       run: |
         cmake -DBANNERTYPE=1 -B "${{matrix.folder}}" -G "${{matrix.compiler}}"
@@ -150,8 +150,8 @@ jobs:
         cmake --build "${{matrix.folder}}" --config Release --target ${{env.NOSPACE}}_VST3
         cmake --build "${{matrix.folder}}" --config Release --target ${{env.NOSPACE}}_CLAP
 
-    - if: startsWith(matrix.os, 'windows')
-      name: (windows) package free
+    - name: (windows) package free
+      if: startsWith(matrix.os, 'windows')
       id: package_windows_free
       run: |
         mv "Setup/${{matrix.folder}}/free/${{env.PLUG}}.vst3/Contents/x86_64-win/${{env.PLUG}}.vst3" "Setup/${{env.PLUG}}.vst3"
@@ -159,20 +159,20 @@ jobs:
         mv "Setup/${{env.PLUG}}.vst3" "Setup/${{matrix.folder}}/free/${{env.PLUG}}.vst3"
         mv "${{matrix.folder}}/Plugins/${{env.PLUG}}/${{env.NOSPACE}}_artefacts/Release/CLAP/${{env.PLUG}}.clap" "Setup/${{matrix.folder}}/free/${{env.PLUG}}.clap"
 
-    - if: startsWith(matrix.os, 'linux')
-      name: (linux) package free
+    - name: (linux) package free
+      if: startsWith(matrix.os, 'linux')
       id: package_linux_free
       run: |
         mv "${{matrix.folder}}/Plugins/${{env.PLUG}}/${{env.NOSPACE}}_artefacts/CLAP/${{env.PLUG}}.clap" "Setup/${{matrix.folder}}/free/${{env.PLUG}}.clap"
 
-    - if: startsWith(matrix.os, 'macos')
-      name: (mac) package free
+    - name: (mac) package free
+      if: startsWith(matrix.os, 'macos')
       id: package_mac_free
       run: |
         mv "${{matrix.folder}}/Plugins/${{env.PLUG}}/${{env.NOSPACE}}_artefacts/Release/CLAP/${{env.PLUG}}.clap" "Setup/${{matrix.folder}}/free/${{env.PLUG}}.clap"
 
-    - if: startsWith(matrix.os, 'macos')
-      name: (mac) code signing free
+    - name: (mac) code signing free
+      if: startsWith(matrix.os, 'macos')
       id: code_signing_free
       run: |
         codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION }}" -v "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.vst3" --deep --strict --options=runtime --timestamp
@@ -199,22 +199,22 @@ jobs:
         name: ${{env.PLUG}} Free ${{ matrix.name }}
         path: Setup/${{matrix.folder}}/free
 
-    - if: startsWith(matrix.os, 'windows')
-      name: (windows) build installer
+    - name: (windows) build installer
+      if: startsWith(matrix.os, 'windows')
       id: installer
       run: |
         cd Setup
         iscc "${{env.PLUG}}.iss"
         iscc "${{env.PLUG}} Free.iss"
 
-    - if: startsWith(matrix.os, 'windows')
-      uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v3
+      if: startsWith(matrix.os, 'windows')
       with:
         name: ${{env.PLUG}} Installer
         path: "Setup/Output/${{env.PLUG}} Installer.exe"
 
-    - if: startsWith(matrix.os, 'windows')
-      uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v3
+      if: startsWith(matrix.os, 'windows')
       with:
         name: ${{env.PLUG}} Free Installer
         path: "Setup/Output/${{env.PLUG}} Free Installer.exe"
