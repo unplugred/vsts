@@ -20,9 +20,10 @@ void main(){
 R"(#version 150 core
 in vec2 texcoord;
 uniform sampler2D tex;
+out vec4 fragColor;
 void main(){
-	gl_FragColor = vec4(texture2D(tex,texcoord).r);
-	gl_FragColor.a = 1-(1-gl_FragColor.a)*.5;
+	fragColor = vec4(texture(tex,texcoord).r);
+	fragColor.a = 1-(1-fragColor.a)*.5;
 })";
 	textshader.reset(new OpenGLShaderProgram(*context));
 	textshader->addVertexShader(textvert);
