@@ -76,15 +76,16 @@ in vec2 circlecoord;
 uniform sampler2D circletex;
 uniform sampler2D basetex;
 uniform float dpi;
+out vec4 fragColor;
 void main(){
-	float bubbles = texture2D(circletex,circlecoord).r;
-	vec3 c = max(min((texture2D(basetex,v_TexCoord).rgb-.5)*dpi+.5,1),0);
+	float bubbles = texture(circletex,circlecoord).r;
+	vec3 c = max(min((texture(basetex,v_TexCoord).rgb-.5)*dpi+.5,1),0);
 	if(c.g >= 1) c.b = 0;
 	if(bubbles > 0 && v_TexCoord.y > .7)
 		c = vec3(c.r,c.g*(1-bubbles),c.b+c.g*bubbles);
 	float gradient = (1-v_TexCoord.y)*.5+bubbles*.3;
 	float grayscale = c.g*.95+c.b*.85+(1-c.r-c.g-c.b)*.05;
-	gl_FragColor = vec4(vec3(grayscale)+c.r*gradient+c.r*(1-gradient)*vec3(0.984,0.879,0.426),1);
+	fragColor = vec4(vec3(grayscale)+c.r*gradient+c.r*(1-gradient)*vec3(0.984,0.879,0.426),1);
 })");
 
 	compileshader(knobshader,
@@ -114,15 +115,16 @@ in vec2 circlecoord;
 uniform sampler2D knobtex;
 uniform sampler2D circletex;
 uniform float hover;
+out vec4 fragColor;
 void main(){
-	vec3 c = texture2D(knobtex,v_TexCoord).rgb;
+	vec3 c = texture(knobtex,v_TexCoord).rgb;
 	if(c.r > 0) {
-		float bubbles = texture2D(circletex,circlecoord).r;
+		float bubbles = texture(circletex,circlecoord).r;
 		float col = max(min(c.g*4-(1-hover)*3,1),0);
 		col = (1-col)*bubbles+col;
 		col = .05 + c.b*.8 + col*.1;
-		gl_FragColor = vec4(vec3(col),c.r);
-	} else gl_FragColor = vec4(0);
+		fragColor = vec4(vec3(col),c.r);
+	} else fragColor = vec4(0);
 })");
 
 	compileshader(visshader,
@@ -141,9 +143,10 @@ R"(#version 150 core
 in vec2 basecoord;
 uniform sampler2D basetex;
 uniform float alpha;
+out vec4 fragColor;
 void main(){
-	float base = texture2D(basetex,basecoord).r;
-	gl_FragColor = vec4(.05,.05,.05,base <= 0 ? alpha : 0.0);
+	float base = texture(basetex,basecoord).r;
+	fragColor = vec4(.05,.05,.05,base <= 0 ? alpha : 0.0);
 })");
 
 	compileshader(oversamplingshader,
@@ -167,15 +170,16 @@ in vec2 highlightcoord;
 uniform sampler2D basetex;
 uniform float alpha;
 uniform float dpi;
+out vec4 fragColor;
 void main(){
-	vec3 tex = texture2D(basetex,basecoord).rgb;
+	vec3 tex = texture(basetex,basecoord).rgb;
 	if(tex.r <= 0) {
 		float bleh = 0;
 		if(tex.g >= .99 && tex.b > .02) bleh = min(max((tex.b-.5)*dpi+.5,0),1);
 		if(highlightcoord.x>0&&highlightcoord.x<1&&highlightcoord.y>0&&highlightcoord.y<1)bleh=1-bleh;
-		gl_FragColor = vec4(.05,.05,.05,bleh*alpha);
+		fragColor = vec4(.05,.05,.05,bleh*alpha);
 	} else {
-		gl_FragColor = vec4(0);
+		fragColor = vec4(0);
 	}
 })");
 
@@ -202,22 +206,23 @@ uniform sampler2D creditstex;
 uniform float alpha;
 uniform float shineprog;
 uniform float dpi;
+out vec4 fragColor;
 void main(){
 	float y = (v_TexCoord.y+alpha)*1.1875;
 	float creditols = 0;
 	float shine = 0;
-	vec3 base = texture2D(basetex,basecoord).rgb;
+	vec3 base = texture(basetex,basecoord).rgb;
 	if(base.r <= 0) {
 		if(y < 1)
-			creditols = texture2D(creditstex,vec2(v_TexCoord.x,y)).b;
+			creditols = texture(creditstex,vec2(v_TexCoord.x,y)).b;
 		else if(y > 1.1875 && y < 2.1875) {
 			y -= 1.1875;
-			creditols = texture2D(creditstex,vec2(v_TexCoord.x,y)).r;
+			creditols = texture(creditstex,vec2(v_TexCoord.x,y)).r;
 			if(v_TexCoord.x+shineprog < 1 && v_TexCoord.x+shineprog > .582644628099)
-				shine = max(min((texture2D(creditstex,vec2(v_TexCoord.x+shineprog,y)).g*min(base.g+base.b,1)-.5)*dpi+.5,1),0);
+				shine = max(min((texture(creditstex,vec2(v_TexCoord.x+shineprog,y)).g*min(base.g+base.b,1)-.5)*dpi+.5,1),0);
 		}
 	}
-	gl_FragColor = vec4(vec3(.05+shine*.8),max(min((creditols-.5)*dpi+.5,1),0));
+	fragColor = vec4(vec3(.05+shine*.8),max(min((creditols-.5)*dpi+.5,1),0));
 })");
 
 	compileshader(circleshader,
@@ -235,10 +240,11 @@ void main(){
 //CIRCLE FRAG
 R"(#version 150 core
 in vec2 v_TexCoord;
+out vec4 fragColor;
 void main(){
 	float x = v_TexCoord.x*v_TexCoord.x+v_TexCoord.y*v_TexCoord.y;
 	float f = .5;
-	gl_FragColor = vec4(1,1,1,(x>(1-(1-f)*.5)?(1-x):(x-f))*100);
+	fragColor = vec4(1,1,1,(x>(1-(1-f)*.5)?(1-x):(x-f))*100);
 })");
 
 	framebuffer.initialise(context, 242*dpi, 462*dpi);
@@ -287,9 +293,10 @@ uniform vec2 texscale;
 uniform float pos;
 uniform float free;
 uniform float dpi;
+out vec4 fragColor;
 void main(){
-	vec2 col = max(min((texture2D(tex,vec2(mod(uv.x+pos,1)*texscale.x,uv.y)).rg-.5)*dpi+.5,1),0);
-	gl_FragColor = vec4(vec3(col.r*free+col.g*(1-free)),1);
+	vec2 col = max(min((texture(tex,vec2(mod(uv.x+pos,1)*texscale.x,uv.y)).rg-.5)*dpi+.5,1),0);
+	fragColor = vec4(vec3(col.r*free+col.g*(1-free)),1);
 })");
 
 	bannertex.loadImage(ImageCache::getFromMemory(BinaryData::banner_png, BinaryData::banner_pngSize));
