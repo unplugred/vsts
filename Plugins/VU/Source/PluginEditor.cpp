@@ -17,6 +17,8 @@ VuAudioProcessorEditor::VuAudioProcessorEditor(VuAudioProcessor& p, int paramcou
 	multiplier = 1.f/Decibels::decibelsToGain(knobs[0].value);
 	stereodamp = knobs[2].value;
 
+	setOpaque(true);
+	context.setOpenGLVersionRequired(OpenGLContext::OpenGLVersion::openGL3_2);
 	context.setRenderer(this);
 	context.attachTo(*this);
 
@@ -74,7 +76,7 @@ void VuAudioProcessorEditor::newOpenGLContextCreated() {
 
 	vushader.reset(new OpenGLShaderProgram(context));
 	if(!vushader->addVertexShader(
-R"(#version 330 core
+R"(#version 150 core
 in vec2 aPos;
 uniform float rotation;
 uniform float right;
@@ -113,7 +115,7 @@ void main(){
 })"))
 		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Vertex shader error",vushader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at arihanan@proton.me. THANKS!","OK!");
 	if(!vushader->addFragmentShader(
-R"(#version 330 core
+R"(#version 150 core
 in vec2 v_TexCoord;
 in vec2 metercoords;
 in vec2 txtcoords;
@@ -129,36 +131,37 @@ uniform float pause;
 uniform sampler2D vutex;
 uniform sampler2D mptex;
 uniform sampler2D lgtex;
+out vec4 fragColor;
 void main(){
 
-	if(peak >= .999) gl_FragColor = texture2D(vutex,v_TexCoord+vec2(0,1-size.y*2));
+	if(peak >= .999) fragColor = texture(vutex,v_TexCoord+vec2(0,1-size.y*2));
 	else {
-		gl_FragColor = texture2D(vutex,v_TexCoord+vec2(0,1-size.y));
-		if(peak > .001) gl_FragColor = gl_FragColor*(1-peak)+texture2D(vutex,v_TexCoord+vec2(0,1-size.y*2))*peak;
+		fragColor = texture(vutex,v_TexCoord+vec2(0,1-size.y));
+		if(peak > .001) fragColor = fragColor*(1-peak)+texture(vutex,v_TexCoord+vec2(0,1-size.y*2))*peak;
 	}
-	vec4 mask = texture2D(vutex,v_TexCoord+vec2(0,1-size.y*3));
-	vec4 ids = texture2D(vutex,v_TexCoord+vec2(0,1-size.y*4));
+	vec4 mask = texture(vutex,v_TexCoord+vec2(0,1-size.y*3));
+	vec4 ids = texture(vutex,v_TexCoord+vec2(0,1-size.y*4));
 	if(right < .5 && stereo > .001 && stereo < .999) {
-		vec3 single = texture2D(vutex,v_TexCoord+vec2(size.x*2,1-size.y)).rgb;
-		if(peak >= .999) single = texture2D(vutex,v_TexCoord+vec2(size.x*2,1-size.y*2)).rgb;
-		else single = single*(1-peak)+texture2D(vutex,v_TexCoord+vec2(size.x*2,1-size.y*2)).rgb*peak;
-		gl_FragColor = v_TexCoord.x>size.x?gl_FragColor:(gl_FragColor*stereo+vec4(single,1.)*(1-stereo));
-		mask = mask*stereo+texture2D(vutex,v_TexCoord+vec2(size.x*2,1-size.y*3))*(1-stereo);
-		ids = ids*stereo+texture2D(vutex,v_TexCoord+vec2(size.x*2,1-size.y*4))*(1-stereo);
+		vec3 single = texture(vutex,v_TexCoord+vec2(size.x*2,1-size.y)).rgb;
+		if(peak >= .999) single = texture(vutex,v_TexCoord+vec2(size.x*2,1-size.y*2)).rgb;
+		else single = single*(1-peak)+texture(vutex,v_TexCoord+vec2(size.x*2,1-size.y*2)).rgb*peak;
+		fragColor = v_TexCoord.x>size.x?fragColor:(fragColor*stereo+vec4(single,1.)*(1-stereo));
+		mask = mask*stereo+texture(vutex,v_TexCoord+vec2(size.x*2,1-size.y*3))*(1-stereo);
+		ids = ids*stereo+texture(vutex,v_TexCoord+vec2(size.x*2,1-size.y*4))*(1-stereo);
 	}
 
 	vec3 meter = vec3(0.);
 	if(metercoords.x > .001 && metercoords.y > .001 && metercoords.x < .999 && metercoords.y < .999)
-		meter = texture2D(vutex,min(max(metercoords,0),1)*vec2(size.x*.59375,size.y)+vec2(size.x*3,1-size.y)).rgb*ids.b;
+		meter = texture(vutex,min(max(metercoords,0),1)*vec2(size.x*.59375,size.y)+vec2(size.x*3,1-size.y)).rgb*ids.b;
 	vec3 shadow = vec3(1.);
 	if(metercoords.x > .016 && metercoords.y > -.014 && metercoords.x < 1.14 && metercoords.y < .984)
-		shadow = 1-texture2D(vutex,min(max(metercoords+vec2(-.015,.015),0),1)*vec2(size.x*.59375,size.y)+vec2(size.x*3,1-size.y*2)).rgb*ids.r*.15;
-	gl_FragColor = vec4(gl_FragColor.rgb*(1-meter)*shadow+mask.rgb*meter,1.);
+		shadow = 1-texture(vutex,min(max(metercoords+vec2(-.015,.015),0),1)*vec2(size.x*.59375,size.y)+vec2(size.x*3,1-size.y*2)).rgb*ids.r*.15;
+	fragColor = vec4(fragColor.rgb*(1-meter)*shadow+mask.rgb*meter,1.);
 
 	if(pause > .001) {
 		vec2 txdiv = vec2(3.8,7.4);
 		float bg = ids.g*pause;
-		if(stereo > .001) bg = texture2D(vutex,vec2(min(max(v_TexCoord.x+size.x*(2-stereo*.5),size.x*2),size.x*3),v_TexCoord.y+(1-size.y*4))).g*pause;
+		if(stereo > .001) bg = texture(vutex,vec2(min(max(v_TexCoord.x+size.x*(2-stereo*.5),size.x*2),size.x*3),v_TexCoord.y+(1-size.y*4))).g*pause;
 		if(abs(txtcoords.x-.5) <= 1/txdiv.x && abs(txtcoords.y-.5) <= 1.5/txdiv.y) {
 			bool highlight = false;
 			float line = 0;
@@ -174,16 +177,16 @@ void main(){
 				line = .5+lines.y;
 				highlight = lineht.y>=.5;
 			}
-			vec3 txcoordss = texture2D(mptex,((txtcoords-.5)*txdiv-vec2(1,line))*vec2(.5,.03125)).rgb;
-			float tx = texture2D(vutex,(txcoordss.rg+mod(((txtcoords-.5)*txdiv*vec2(8,1)-vec2(0,.5)),1.)*vec2(.125,.25))*txtsize+vec2(size.x*3,1-size.y*3)).g*(1-txcoordss.b*(highlight?0.4:0.0));
+			vec3 txcoordss = texture(mptex,((txtcoords-.5)*txdiv-vec2(1,line))*vec2(.5,.03125)).rgb;
+			float tx = texture(vutex,(txcoordss.rg+mod(((txtcoords-.5)*txdiv*vec2(8,1)-vec2(0,.5)),1.)*vec2(.125,.25))*txtsize+vec2(size.x*3,1-size.y*3)).g*(1-txcoordss.b*(highlight?0.4:0.0));
 
-			gl_FragColor = abs(gl_FragColor-bg)*(1-tx)+max(gl_FragColor-bg,0)*tx;
-		} else gl_FragColor = abs(gl_FragColor-bg);
+			fragColor = abs(fragColor-bg)*(1-tx)+max(fragColor-bg,0)*tx;
+		} else fragColor = abs(fragColor-bg);
 
 		if(lgcoords.x > 0 && lgcoords.y > 0 && lgcoords.y < 1) {
-			vec2 lg = texture2D(lgtex,lgcoords).rb;
-			if(lineht.w > -1) gl_FragColor = gl_FragColor*(1-lg.g)+(1-(1-vec4(1.,.4549,.2588,1.))*(1-texture2D(lgtex,lgcoords+vec2(lineht.w,0)).g))*lg.r;
-			else gl_FragColor = gl_FragColor*(1-lg.g)+vec4(1.,.4549,.2588,1.)*lg.r;
+			vec2 lg = texture(lgtex,lgcoords).rb;
+			if(lineht.w > -1) fragColor = fragColor*(1-lg.g)+(1-(1-vec4(1.,.4549,.2588,1.))*(1-texture(lgtex,lgcoords+vec2(lineht.w,0)).g))*lg.r;
+			else fragColor = fragColor*(1-lg.g)+vec4(1.,.4549,.2588,1.)*lg.r;
 		}
 	}
 })"))
@@ -215,7 +218,7 @@ void main(){
 	bannershader.reset(new OpenGLShaderProgram(context));
 	if(!bannershader->addVertexShader(
 //BANNER VERT
-R"(#version 330 core
+R"(#version 150 core
 in vec2 aPos;
 uniform vec2 texscale;
 uniform vec2 size;
@@ -227,16 +230,17 @@ void main(){
 		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Vertex shader error",bannershader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at arihanan@proton.me. THANKS!","OK!");
 	if(!bannershader->addFragmentShader(
 //BANNER FRAG
-R"(#version 330 core
+R"(#version 150 core
 in vec2 uv;
 uniform sampler2D tex;
 uniform vec2 texscale;
 uniform float pos;
 uniform float free;
 uniform float dpi;
+out vec4 fragColor;
 void main(){
-	vec2 col = max(min((texture2D(tex,vec2(mod(uv.x+pos,1)*texscale.x,uv.y)).rg-.5)*dpi+.5,1),0);
-	gl_FragColor = vec4(vec3(col.r*free+col.g*(1-free)),1);
+	vec2 col = max(min((texture(tex,vec2(mod(uv.x+pos,1)*texscale.x,uv.y)).rg-.5)*dpi+.5,1),0);
+	fragColor = vec4(vec3(col.r*free+col.g*(1-free)),1);
 })"))
 		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Fragment shader error",bannershader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at arihanan@proton.me. THANKS!","OK!");
 	bannershader->link();

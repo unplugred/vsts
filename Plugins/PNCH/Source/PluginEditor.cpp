@@ -23,6 +23,7 @@ PNCHAudioProcessorEditor::PNCHAudioProcessorEditor (PNCHAudioProcessor& p, float
 		dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->dpi/96.f;
 
 	setOpaque(true);
+	context.setOpenGLVersionRequired(OpenGLContext::OpenGLVersion::openGL3_2);
 	context.setRenderer(this);
 	context.attachTo(*this);
 
@@ -37,7 +38,7 @@ PNCHAudioProcessorEditor::~PNCHAudioProcessorEditor() {
 void PNCHAudioProcessorEditor::newOpenGLContextCreated() {
 	compileshader(baseshader,
 //BASE VERT
-R"(#version 330 core
+R"(#version 150 core
 in vec2 aPos;
 uniform vec2 letterscale;
 uniform float banner;
@@ -47,13 +48,14 @@ void main(){
 	uv = vec2((aPos.x-.0078125)*letterscale.x,1-(1-aPos.y)*letterscale.y);
 })",
 //BASE FRAG
-R"(#version 330 core
+R"(#version 150 core
 in vec2 uv;
 uniform sampler2D tex;
 uniform float amount;
 uniform vec2 texscale;
 uniform vec3 colone;
 uniform vec3 coltwo;
+out vec4 fragColor;
 void main(){
 	float id = 0;
 	if(uv.x < 0 || uv.x > 5) id = 6;
@@ -61,16 +63,16 @@ void main(){
 		if(uv.y < 0 || uv.x > 1) id = max(floor(uv.x)-floor(uv.y)*5-amount+1,1);
 		if(amount >= 1 && id == 5) id = 6;
 	}
-	if(id >= 6) gl_FragColor = vec4(coltwo,1);
+	if(id >= 6) fragColor = vec4(coltwo,1);
 	else {
 		float o = texture2D(tex,vec2(mod(uv.x,1)*texscale.x,1-(1-(mod(uv.y,1)-id))*texscale.y)).r;
-		gl_FragColor = vec4(o*colone+(1-o)*coltwo,1);
+		fragColor = vec4(o*colone+(1-o)*coltwo,1);
 	}
 })");
 
 	compileshader(knobshader,
 //KNOB VERT
-R"(#version 330 core
+R"(#version 150 core
 in vec2 aPos;
 uniform vec2 texscale;
 uniform vec2 knobrot;
@@ -84,22 +86,23 @@ void main(){
 	balluv = vec2(aPos.x*texscale.x,1-(1-aPos.y)*texscale.y)-knobrot;
 })",
 //KNOB FRAG
-R"(#version 330 core
+R"(#version 150 core
 in vec2 uv;
 in vec2 balluv;
 uniform sampler2D tex;
 uniform vec3 colone;
 uniform vec3 coltwo;
+out vec4 fragColor;
 void main(){
 	vec2 c = texture2D(tex,uv).gb;
 	vec2 ball = texture2D(tex,balluv).gb;
 	float o = (c.r==c.g?1:0)+(ball.r>.5&&ball.g<.5?1:0);
-	gl_FragColor = vec4(o*colone+(1-o)*coltwo,((c.r+c.g)>.5)?1:0);
+	fragColor = vec4(o*colone+(1-o)*coltwo,((c.r+c.g)>.5)?1:0);
 })");
 
 	compileshader(creditsshader,
 //CREDITS VERT
-R"(#version 330 core
+R"(#version 150 core
 in vec2 aPos;
 uniform vec2 texscale;
 uniform float banner;
@@ -109,16 +112,17 @@ void main(){
 	uv = vec2(aPos.x*texscale.x,1-(1-aPos.y)*texscale.y);
 })",
 //CREDITS FRAG
-R"(#version 330 core
+R"(#version 150 core
 in vec2 uv;
 uniform sampler2D creditstex;
 uniform float hover;
 uniform vec3 colone;
 uniform vec3 coltwo;
+out vec4 fragColor;
 void main(){
 	vec3 c = texture2D(creditstex,uv).rgb;
 	float o = (hover==1?c.r:0.0)+c.g+(hover==2?c.b:0.0);
-	gl_FragColor = vec4(o*colone+(1-o)*coltwo,1);
+	fragColor = vec4(o*colone+(1-o)*coltwo,1);
 })");
 
 	basetex.loadImage(ImageCache::getFromMemory(BinaryData::base_png, BinaryData::base_pngSize));
@@ -138,7 +142,7 @@ void main(){
 #ifdef BANNER
 	compileshader(bannershader,
 //BANNER VERT
-R"(#version 330 core
+R"(#version 150 core
 in vec2 aPos;
 uniform vec2 texscale;
 uniform vec2 size;
@@ -148,16 +152,17 @@ void main(){
 	uv = vec2(aPos.x*size.x,1-(1-aPos.y)*texscale.y);
 })",
 //BANNER FRAG
-R"(#version 330 core
+R"(#version 150 core
 in vec2 uv;
 uniform sampler2D tex;
 uniform vec2 texscale;
 uniform float pos;
 uniform float free;
 uniform float dpi;
+out vec4 fragColor;
 void main(){
 	vec2 col = max(min((texture2D(tex,vec2(mod(uv.x+pos,1)*texscale.x,uv.y)).rg-.5)*dpi+.5,1),0);
-	gl_FragColor = vec4(vec3(col.r*free+col.g*(1-free)),1);
+	fragColor = vec4(vec3(col.r*free+col.g*(1-free)),1);
 })");
 
 	bannertex.loadImage(ImageCache::getFromMemory(BinaryData::banner_png, BinaryData::banner_pngSize));

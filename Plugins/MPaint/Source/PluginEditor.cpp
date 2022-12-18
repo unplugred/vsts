@@ -11,10 +11,11 @@ MPaintAudioProcessorEditor::MPaintAudioProcessorEditor(MPaintAudioProcessor& p, 
 
 	setSize(468, error?180:40);
 	setResizable(false, false);
-	setOpaque(true);
 	if((SystemStats::getOperatingSystemType() & SystemStats::OperatingSystemType::Windows) != 0)
 		dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->dpi/96.f;
 
+	setOpaque(true);
+	context.setOpenGLVersionRequired(OpenGLContext::OpenGLVersion::openGL3_2);
 	context.setRenderer(this);
 	context.attachTo(*this);
 
@@ -29,7 +30,7 @@ MPaintAudioProcessorEditor::~MPaintAudioProcessorEditor() {
 void MPaintAudioProcessorEditor::newOpenGLContextCreated() {
 	shader.reset(new OpenGLShaderProgram(context));
 	if(!shader->addVertexShader(
-R"(#version 330 core
+R"(#version 150 core
 in vec2 aPos;
 uniform vec2 texscale;
 uniform vec4 pos;
@@ -41,12 +42,13 @@ void main(){
 })"))
 		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Vertex shader error",shader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at arihanan@proton.me. THANKS!","OK!");
 	if(!shader->addFragmentShader(
-R"(#version 330 core
+R"(#version 150 core
 in vec2 uv;
 uniform sampler2D tex;
 uniform int errorhover;
 uniform float dpi;
 uniform vec2 res;
+out vec4 fragColor;
 void main(){
 	vec2 nuv = uv*res;
 	if(mod(nuv.x,1)>.5) nuv.x = floor(nuv.x)+(1-min((1-mod(nuv.x,1))*dpi*2,.5));
@@ -54,9 +56,9 @@ void main(){
 	if(mod(nuv.y,1)>.5) nuv.y = floor(nuv.y)+(1-min((1-mod(nuv.y,1))*dpi*2,.5));
 	else nuv.y = floor(nuv.y)+min(mod(nuv.y,1)*dpi*2,.5);
 	nuv /= res;
-	gl_FragColor = texture2D(tex,nuv);
+	fragColor = texture2D(tex,nuv);
 	if((errorhover < .5 || uv.x < .8 || uv.y > .15) && res.y > 80)
-		gl_FragColor.r = gl_FragColor.g;
+		fragColor.r = fragColor.g;
 })"))
 		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Fragment shader error",shader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at arihanan@proton.me. THANKS!","OK!");
 	shader->link();
