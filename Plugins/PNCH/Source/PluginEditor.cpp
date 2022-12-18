@@ -65,7 +65,7 @@ void main(){
 	}
 	if(id >= 6) fragColor = vec4(coltwo,1);
 	else {
-		float o = texture2D(tex,vec2(mod(uv.x,1)*texscale.x,1-(1-(mod(uv.y,1)-id))*texscale.y)).r;
+		float o = texture(tex,vec2(mod(uv.x,1)*texscale.x,1-(1-(mod(uv.y,1)-id))*texscale.y)).r;
 		fragColor = vec4(o*colone+(1-o)*coltwo,1);
 	}
 })");
@@ -94,8 +94,8 @@ uniform vec3 colone;
 uniform vec3 coltwo;
 out vec4 fragColor;
 void main(){
-	vec2 c = texture2D(tex,uv).gb;
-	vec2 ball = texture2D(tex,balluv).gb;
+	vec2 c = texture(tex,uv).gb;
+	vec2 ball = texture(tex,balluv).gb;
 	float o = (c.r==c.g?1:0)+(ball.r>.5&&ball.g<.5?1:0);
 	fragColor = vec4(o*colone+(1-o)*coltwo,((c.r+c.g)>.5)?1:0);
 })");
@@ -120,7 +120,7 @@ uniform vec3 colone;
 uniform vec3 coltwo;
 out vec4 fragColor;
 void main(){
-	vec3 c = texture2D(creditstex,uv).rgb;
+	vec3 c = texture(creditstex,uv).rgb;
 	float o = (hover==1?c.r:0.0)+c.g+(hover==2?c.b:0.0);
 	fragColor = vec4(o*colone+(1-o)*coltwo,1);
 })");
@@ -161,7 +161,7 @@ uniform float free;
 uniform float dpi;
 out vec4 fragColor;
 void main(){
-	vec2 col = max(min((texture2D(tex,vec2(mod(uv.x+pos,1)*texscale.x,uv.y)).rg-.5)*dpi+.5,1),0);
+	vec2 col = max(min((texture(tex,vec2(mod(uv.x+pos,1)*texscale.x,uv.y)).rg-.5)*dpi+.5,1),0);
 	fragColor = vec4(vec3(col.r*free+col.g*(1-free)),1);
 })");
 

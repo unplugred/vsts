@@ -120,7 +120,7 @@ uniform float value;
 uniform float hover;
 out vec4 fragColor;
 void main() {
-	vec2 t = texture2D(tex,texcoord).rb;
+	vec2 t = texture(tex,texcoord).rb;
 	vec3 color = col;
 	float alpha = 0;
 
@@ -162,14 +162,14 @@ uniform vec3 color;
 uniform float htback;
 out vec4 fragColor;
 void main() {
-	vec4 map = texture2D(tex,texcoord);
+	vec4 map = texture(tex,texcoord);
 
 	if(map.a < .5) {
 		fragColor = vec4(color+htback,1);
 	} else if(map.r > .5) {
 		float ht = 0;
 		if(map.b > .5 && (texcoord.x - htpos) < 1 && (texcoord.x - htpos) > 0)
-			ht = texture2D(tex,texcoord-vec2(htpos,0)).g;
+			ht = texture(tex,texcoord-vec2(htpos,0)).g;
 
 		if(ht > .5) {
 			fragColor = vec4(color+.8,1);
@@ -213,12 +213,12 @@ uniform vec4 randomstwo;
 uniform float randomsblend;
 out vec4 fragColor;
 void main() {
-	vec4 col = texture2D(tex,texcoord);
+	vec4 col = texture(tex,texcoord);
 
 	if(col.r > .2 || col.g > .2 || col.b > .2) {
-		float noise = texture2D(noisetex,texcoord+randomsone.xy).g;
-		noise += texture2D(noisetex,texcoord+randomsone.zw).g;
-		noise += texture2D(noisetex,texcoord+randomstwo.xy).g*(1-randomsblend)+texture2D(noisetex,texcoord+randomstwo.zw).g*randomsblend;
+		float noise = texture(noisetex,texcoord+randomsone.xy).g;
+		noise += texture(noisetex,texcoord+randomsone.zw).g;
+		noise += texture(noisetex,texcoord+randomstwo.xy).g*(1-randomsblend)+texture(noisetex,texcoord+randomstwo.zw).g*randomsblend;
 		noise /= 3;
 
 		vec2 coord = texcoord;
@@ -230,7 +230,7 @@ void main() {
 			else if(noise > (1-intensity)) coord.y += .00390625;
 		}
 
-		col = texture2D(tex,coord);
+		col = texture(tex,coord);
 	}
 
 	fragColor = vec4(col.rgb*col.a+.10546875*(1-col.a),1);
@@ -261,8 +261,8 @@ out vec4 fragColor;
 void main() {
 	if(clamp > .5 && basecoord.y < .5546875) fragColor = vec4(0);
 	else {
-		vec2 texx = texture2D(tex,texcoord).rg;
-		if(clamp > .5) texx.g *= texture2D(base,basecoord).b;
+		vec2 texx = texture(tex,texcoord).rg;
+		if(clamp > .5) texx.g *= texture(base,basecoord).b;
 		fragColor = vec4(texx.g>.5?col:(clamp<.5?(col+.8):vec3(.10546875)),texx.r>.5?1:0);
 	}
 })");

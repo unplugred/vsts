@@ -344,7 +344,7 @@ void main(){
 		puv.x += (mod(p.x*4-preset+1,1)-mod(p.x*4,1))*.2384937238;
 	}
 	if((1-s) < mod(p.x*4,1)) fragColor = vec4(0,0,0,1);
-	else fragColor = texture2D(basetex,puv);
+	else fragColor = texture(basetex,puv);
 	if(fragColor.g > 0 && p.x > 0 && p.y < 1) {
 		if(((fragColor.b*.8) > fragColor.r || (p.x < .25 && p.y > 0) || (p.x < .25 && p.y < 0 && (fragColor.b*.9) > fragColor.r)) && grayscale.x < 1) fragColor.rgb = fragColor.rgb*grayscale.x+(fragColor.r+fragColor.g+fragColor.b)*vec3(.4846328383,.4846328383,.463644802)*(1-grayscale.x);
 		else if((fragColor.g*.8) > fragColor.r && grayscale.y < 1) fragColor.rgb = fragColor.rgb*grayscale.y+(fragColor.r+fragColor.g+fragColor.b)*vec3(.4532214506,.4532214506,.43359375)*(1-grayscale.y);
@@ -384,7 +384,7 @@ out vec4 fragColor;
 void main(){
 	if(clip.x > clipuv.x || clip.y < clipuv.x) fragColor = vec4(0);
 	else {
-		vec4 col = max(min((texture2D(tex,uv)*channels-.5)*dpi+.5,1),0);
+		vec4 col = max(min((texture(tex,uv)*channels-.5)*dpi+.5,1),0);
 		fragColor = vec4(color,col.r+col.g+col.b+col.a);
 	}
 })");
@@ -423,7 +423,7 @@ uniform float grayscale;
 uniform float dpi;
 out vec4 fragColor;
 void main(){
-	vec4 col = texture2D(tex,uv);
+	vec4 col = texture(tex,uv);
 	if(ht > -100) {
 		if(ht < 0 || ht > 1) col.g = 0;
 		else {
@@ -486,9 +486,9 @@ out vec4 fragColor;
 void main(){
 	if(moduleclip.x < 0 || moduleclip.x > 1) fragColor = vec4(0);
 	else {
-		vec4 col = max(min((texture2D(tex,uv)-.5)*dpi+.5,1),0);
+		vec4 col = max(min((texture(tex,uv)-.5)*dpi+.5,1),0);
 		fragColor = vec4(bg*col.r+tx*col.g+kn*col.b,col.a);
-		if(moduleid >= 0) fragColor *= texture2D(moduletex,moduleuv).b;
+		if(moduleid >= 0) fragColor *= texture(moduletex,moduleuv).b;
 	}
 	if(grayscale < 1) fragColor.rgb = fragColor.rgb*grayscale+(fragColor.r+fragColor.g+fragColor.b)*vec3(.3307291667,.3307291667,.31640625)*(1-grayscale);
 })");
@@ -559,8 +559,8 @@ uniform float offset;
 uniform vec2 texscale;
 out vec4 fragColor;
 void main(){
-	fragColor = texture2D(tex,uv);
-	if(fragColor.r > .5) fragColor = vec4(vec3(.7421875),texture2D(tex,uv+vec2(offset*texscale.x,0)).g);
+	fragColor = texture(tex,uv);
+	if(fragColor.r > .5) fragColor = vec4(vec3(.7421875),texture(tex,uv+vec2(offset*texscale.x,0)).g);
 	else fragColor = vec4(0);
 })");
 
@@ -618,7 +618,7 @@ uniform sampler2D tex;
 uniform float dpi;
 out vec4 fragColor;
 void main(){
-	vec4 col = max(min((texture2D(tex,uv)-.5)*dpi+.5,1),0);
+	vec4 col = max(min((texture(tex,uv)-.5)*dpi+.5,1),0);
 	float l = col.r*btn.r+col.g*btn.g+col.b*btn.b;
 	fragColor = vec4(clr*(1-l)+hlt*l,col.a);
 })");
@@ -673,7 +673,7 @@ uniform float free;
 uniform float dpi;
 out vec4 fragColor;
 void main(){
-	vec2 col = max(min((texture2D(tex,vec2(mod(uv.x+pos,1)*texscale.x,uv.y)).rg-.5)*dpi+.5,1),0);
+	vec2 col = max(min((texture(tex,vec2(mod(uv.x+pos,1)*texscale.x,uv.y)).rg-.5)*dpi+.5,1),0);
 	fragColor = vec4(vec3(col.r*free+col.g*(1-free)),1);
 })");
 

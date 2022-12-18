@@ -69,7 +69,7 @@ uniform vec2 texscale;
 uniform float offset;
 out vec4 fragColor;
 void main(){
-	fragColor = texture2D(basetex,vec2(mod(uv.x*texscale.x+offset,1),1-(1-uv.y)*texscale.y));
+	fragColor = texture(basetex,vec2(mod(uv.x*texscale.x+offset,1),1-(1-uv.y)*texscale.y));
 })");
 
 	compileshader(textshader,
@@ -81,7 +81,7 @@ uniform sampler2D tex;
 uniform int hoverstate;
 out vec4 fragColor;
 void main(){
-	fragColor = vec4(vec2(texture2D(tex,texcoord).r),hoverstate,1);
+	fragColor = vec4(vec2(texture(tex,texcoord).r),hoverstate,1);
 })");
 
 	compileshader(knobshader,
@@ -158,7 +158,7 @@ in vec2 highlightcoord;
 uniform sampler2D ostex;
 out vec4 fragColor;
 void main(){
-	float tex = texture2D(ostex,uv).b;
+	float tex = texture(ostex,uv).b;
 	if(highlightcoord.x>0&&highlightcoord.x<1&&highlightcoord.y>0&&highlightcoord.y<1)tex=1-tex;
 	fragColor = vec4(1,1,1,tex);
 })");
@@ -184,10 +184,10 @@ uniform sampler2D creditstex;
 uniform float shineprog;
 out vec4 fragColor;
 void main(){
-	vec2 creditols = texture2D(creditstex,uv).rb;
+	vec2 creditols = texture(creditstex,uv).rb;
 	float shine = 0;
 	if(xpos+shineprog < .65 && xpos+shineprog > 0)
-		shine = texture2D(creditstex,uv+vec2(shineprog,0)).g;
+		shine = texture(creditstex,uv+vec2(shineprog,0)).g;
 	fragColor = vec4(vec2(creditols.r),shine,creditols.g);
 })");
 
@@ -234,7 +234,7 @@ uniform float free;
 uniform float dpi;
 out vec4 fragColor;
 void main(){
-	vec2 col = max(min((texture2D(tex,vec2(mod(uv.x+pos,1)*texscale.x,uv.y)).rg-.5)*dpi+.5,1),0);
+	vec2 col = max(min((texture(tex,vec2(mod(uv.x+pos,1)*texscale.x,uv.y)).rg-.5)*dpi+.5,1),0);
 	fragColor = vec4(vec3(col.r*free+col.g*(1-free)),1);
 })");
 

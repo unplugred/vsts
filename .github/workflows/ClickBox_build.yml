@@ -92,11 +92,17 @@ jobs:
         mv "Setup/${{env.PLUG}}.vst3" "Setup/${{matrix.folder}}/free/${{env.PLUG}}.vst3"
         mv "${{matrix.folder}}/Plugins/${{env.PLUG}}/${{env.NOSPACE}}_artefacts/Release/CLAP/${{env.PLUG}}.clap" "Setup/${{matrix.folder}}/free/${{env.PLUG}}.clap"
 
-    - name: (unix) package
-      if: ${{ !startsWith(matrix.os, 'windows') }}
-      id: package
+    - name: (linux) package
+      if: startsWith(matrix.os, 'linux')
+      id: package_linux
       run: |
         mv "${{matrix.folder}}/Plugins/${{env.PLUG}}/${{env.NOSPACE}}_artefacts/CLAP/${{env.PLUG}}.clap" "Setup/${{matrix.folder}}/free/${{env.PLUG}}.clap"
+
+    - name: (mac) package
+      if: startsWith(matrix.os, 'macos')
+      id: package_mac
+      run: |
+        mv "${{matrix.folder}}/Plugins/${{env.PLUG}}/${{env.NOSPACE}}_artefacts/Release/CLAP/${{env.PLUG}}.clap" "Setup/${{matrix.folder}}/free/${{env.PLUG}}.clap"
 
     - name: (mac) code signing
       if: startsWith(matrix.os, 'macos')

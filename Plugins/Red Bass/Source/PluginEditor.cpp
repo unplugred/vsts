@@ -72,7 +72,7 @@ uniform float vis;
 out vec4 fragColor;
 void main(){
 	if(uv.x > 1) fragColor = vec4(vis,vis,vis,1);
-	else fragColor = texture2D(buffertex,uv);
+	else fragColor = texture(buffertex,uv);
 })");
 
 	compileshader(baseshader,
@@ -98,7 +98,7 @@ uniform float hover;
 uniform float vis;
 out vec4 fragColor;
 void main(){
-	vec3 c = texture2D(basetex,texuv).rgb;
+	vec3 c = texture(basetex,texuv).rgb;
 	if(c.r > .5) {
 		if(uv.x > .2 && uv.x < .8) {
 			if((hover > ((uv.x-.42236024844720496894409937888199)*4.5352112676056338028169014084507) && c.b > .5) || vis > uv.y) {
@@ -114,7 +114,7 @@ void main(){
 	} else if(c.b > .5) {
 		fragColor = vec4(0,0,0,1);
 	} else {
-		fragColor = texture2D(buffertex,vec2((uv.x>.5?(1-uv.x):(uv.x))*2,uv.y))*vec4(.5,.5,.5,1);
+		fragColor = texture(buffertex,vec2((uv.x>.5?(1-uv.x):(uv.x))*2,uv.y))*vec4(.5,.5,.5,1);
 	}
 })");
 
@@ -161,7 +161,7 @@ uniform sampler2D basetex;
 uniform float toggle;
 out vec4 fragColor;
 void main(){
-	vec2 c = texture2D(basetex,basecoord).rb;
+	vec2 c = texture(basetex,basecoord).rb;
 	if(toggle > .5)
 		c.r *= (1-c.g);
 	else
@@ -188,7 +188,7 @@ in vec2 uv;
 uniform sampler2D tex;
 out vec4 fragColor;
 void main(){
-	fragColor = vec4(1,1,1,texture2D(tex,uv).r);
+	fragColor = vec4(1,1,1,texture(tex,uv).r);
 })");
 
 	basetex.loadImage(ImageCache::getFromMemory(BinaryData::base_png, BinaryData::base_pngSize));
@@ -232,7 +232,7 @@ uniform float free;
 uniform float dpi;
 out vec4 fragColor;
 void main(){
-	vec2 col = max(min((texture2D(tex,vec2(mod(uv.x+pos,1)*texscale.x,uv.y)).rg-.5)*dpi+.5,1),0);
+	vec2 col = max(min((texture(tex,vec2(mod(uv.x+pos,1)*texscale.x,uv.y)).rg-.5)*dpi+.5,1),0);
 	fragColor = vec4(vec3(col.r*free+col.g*(1-free)),1);
 })");
 
