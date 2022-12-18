@@ -96,6 +96,10 @@ case $REPLY in
 		vn=PNCH
 		vs=PNCH
 		;;
+	po)
+		vn=Proto
+		vs=Proto
+		;;
 	re)
 		vn=RedBass
 		vs="Red Bass"
