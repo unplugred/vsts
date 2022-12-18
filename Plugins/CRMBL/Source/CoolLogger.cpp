@@ -6,7 +6,7 @@ void CoolLogger::init(OpenGLContext* ctx, int w, int h) {
 	width = w;
 	height = h;
 	textvert = 
-R"(#version 330 core
+R"(#version 150 core
 in vec2 aPos;
 uniform vec4 size;
 uniform vec2 pos;
@@ -17,12 +17,13 @@ void main(){
 	texcoord = (aPos+vec2(mod(letter,16),floor((letter+1)*-.0625)))*.0625;
 })";
 	textfrag =
-R"(#version 330 core
+R"(#version 150 core
 in vec2 texcoord;
 uniform sampler2D tex;
+out vec4 fragColor;
 void main(){
-	gl_FragColor = vec4(texture2D(tex,texcoord).r);
-	gl_FragColor.a = 1-(1-gl_FragColor.a)*.5;
+	fragColor = vec4(texture(tex,texcoord).r);
+	fragColor.a = 1-(1-fragColor.a)*.5;
 })";
 	textshader.reset(new OpenGLShaderProgram(*context));
 	textshader->addVertexShader(textvert);

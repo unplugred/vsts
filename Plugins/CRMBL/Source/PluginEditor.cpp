@@ -127,6 +127,7 @@ CRMBLAudioProcessorEditor::CRMBLAudioProcessorEditor (CRMBLAudioProcessor& p, in
 		dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->dpi/96.f;
 
 	setOpaque(true);
+	context.setOpenGLVersionRequired(OpenGLContext::OpenGLVersion::openGL3_2);
 	context.setRenderer(this);
 	context.attachTo(*this);
 
@@ -150,7 +151,7 @@ void CRMBLAudioProcessorEditor::newOpenGLContextCreated() {
 
 	compileshader(baseshader,
 //BASE VERT
-R"(#version 330 core
+R"(#version 150 core
 in vec2 aPos;
 uniform vec2 texscale;
 uniform float banner;
@@ -161,29 +162,30 @@ void main(){
 	uv = vec2(aPos.x*texscale.x,1-(1-aPos.y)*texscale.y);
 })",
 //BASE FRAG
-R"(#version 330 core
+R"(#version 150 core
 in vec2 uv;
 uniform sampler2D basetex;
 uniform float r;
 uniform float gb;
 uniform float dpi;
+out vec4 fragColor;
 void main(){
 	vec4 col = texture2D(basetex,uv);
 	col.r /= col.a;
 	col.gba = max(min((col.gba-.5)*dpi+.5,1),0);
-	gl_FragColor = vec4(0);
+	fragColor = vec4(0);
 	if(col.r <= (r+.033)) {
 		if(col.r >= (r-.03))
-			gl_FragColor = vec4(gb>.5?col.g:col.b,0,1,col.a);
+			fragColor = vec4(gb>.5?col.g:col.b,0,1,col.a);
 		else if(col.r >= (r-.031))
-			gl_FragColor = vec4(0,0,1,col.a);
-		if(col.r >= .7) gl_FragColor.g = gl_FragColor.r;
+			fragColor = vec4(0,0,1,col.a);
+		if(col.r >= .7) fragColor.g = fragColor.r;
 	}
 })");
 
 	compileshader(logoshader,
 //LOGO VERT
-R"(#version 330 core
+R"(#version 150 core
 in vec2 aPos;
 uniform float banner;
 uniform vec2 texscale;
@@ -193,23 +195,24 @@ void main(){
 	uv = vec2(aPos.x*texscale.x,1-(1-aPos.y)*texscale.y);
 })",
 //LOGO FRAG
-R"(#version 330 core
+R"(#version 150 core
 in vec2 uv;
 uniform sampler2D basetex;
 uniform float websiteht;
 uniform float dpi;
+out vec4 fragColor;
 void main(){
 	vec4 col = texture2D(basetex,uv);
 	col.r /= col.a;
 	col.ga = max(min((col.ga-.5)*dpi+.5,1),0);
-	gl_FragColor = vec4(0);
+	fragColor = vec4(0);
 	if(col.r >= .85)
-		gl_FragColor = vec4(vec2(col.g*(1-max(min((texture2D(basetex,vec2(min(uv.x+websiteht,.3),uv.y)).b-.5)*dpi+.5,1),0)*.5)),1,col.a);
+		fragColor = vec4(vec2(col.g*(1-max(min((texture2D(basetex,vec2(min(uv.x+websiteht,.3),uv.y)).b-.5)*dpi+.5,1),0)*.5)),1,col.a);
 })");
 
 	compileshader(knobshader,
 //KNOB VERT
-R"(#version 330 core
+R"(#version 150 core
 in vec2 aPos;
 uniform float banner;
 uniform float knobrot;
@@ -223,7 +226,7 @@ void main(){
 		(aPos.x-.5)*sin(knobrot)+(aPos.y-.5)*cos(knobrot))*2;
 })",
 //KNOB FRAG
-R"(#version 330 core
+R"(#version 150 core
 in vec2 uv;
 uniform int hoverstate;
 uniform float thickness;
@@ -232,6 +235,7 @@ uniform vec2 knobscale;
 uniform float circle;
 uniform float bright;
 uniform int dark;
+out vec4 fragColor;
 void main(){
 	float d = 0;
 	if(circle > .5) {
@@ -240,20 +244,20 @@ void main(){
 			float y = uv.y;
 			if(y > 0) y = max(y-lineheight,0);
 			d = max(d-thickness,0)*100*knobscale.y+max(1-sqrt(y*y+uv.x*uv.x)*2/(1-thickness),0)*2.5;
-			gl_FragColor = vec4(min(d,1),1,1,1);
-		} else gl_FragColor = vec4(1,1,1,min((1-d)*100*knobscale.y,1));
+			fragColor = vec4(min(d,1),1,1,1);
+		} else fragColor = vec4(1,1,1,min((1-d)*100*knobscale.y,1));
 	} else {
 		float y = uv.y;
 		if(y > 0) y = max(y-lineheight,0);
-		gl_FragColor = vec4(1,1,1,min(max(1-sqrt(y*y+uv.x*uv.x)*2/(1-thickness),0)*2.5,1));
+		fragColor = vec4(1,1,1,min(max(1-sqrt(y*y+uv.x*uv.x)*2/(1-thickness),0)*2.5,1));
 	}
-	gl_FragColor.r = 1-(1-gl_FragColor.r)*bright;
-	if(dark > .5) gl_FragColor = vec4(gl_FragColor.r,gl_FragColor.r,gl_FragColor.r,gl_FragColor.a);
+	fragColor.r = 1-(1-fragColor.r)*bright;
+	if(dark > .5) fragColor = vec4(fragColor.r,fragColor.r,fragColor.r,fragColor.a);
 })");
 
 	compileshader(feedbackshader,
 //FEEDBACK VERT
-R"(#version 330 core
+R"(#version 150 core
 in vec2 aPos;
 uniform float pitch;
 uniform float banner;
@@ -267,7 +271,7 @@ void main(){
 		(aPos.x-.5)*sin(pitch)+(aPos.y-.5)*cos(pitch))+.5;
 })",
 //FEEDBACK FRAG
-R"(#version 330 core
+R"(#version 150 core
 in vec2 uv;
 in vec2 ruv;
 uniform sampler2D feedbacktex;
@@ -278,6 +282,7 @@ uniform float lowpass;
 uniform float chew;
 uniform float ratio;
 uniform vec2 res;
+out vec4 fragColor;
 vec2 hash(vec2 x) {
 	const vec2 k = vec2(0.3183099, 0.3678794);
 	x = x*k + k.yx;
@@ -303,19 +308,19 @@ void main(){
 	if(chew > 0) nuv += vec2(noise(ruv*4),noise((ruv+2)*4))*chew;
 	vec2 col1 = sample(maintex,nuv+vec2(time.x*ratio,time.x)).rg;
 	vec2 col2 = sample(maintex,nuv+vec2(time.y*ratio,time.y)).rg;
-	gl_FragColor   = sample(feedbacktex,nuv+vec2(time.z*ratio,time.z));
-	gl_FragColor.g = sample(feedbacktex,nuv+vec2((time.w-.004*lowpass)*ratio,time.w)).g;
+	fragColor   = sample(feedbacktex,nuv+vec2(time.z*ratio,time.z));
+	fragColor.g = sample(feedbacktex,nuv+vec2((time.w-.004*lowpass)*ratio,time.w)).g;
 	if(lowpass > 0) {
-		gl_FragColor.r = gl_FragColor.r*.5+sample(feedbacktex,nuv+vec2((time.z+.008*lowpass)*ratio,time.z)).r*.5;
-		gl_FragColor.g = gl_FragColor.g*.5+sample(feedbacktex,nuv+vec2((time.w+.004*lowpass)*ratio,time.w)).g*.5;
-		gl_FragColor.b = gl_FragColor.b*.5+sample(feedbacktex,nuv+vec2((time.z-.008*lowpass)*ratio,time.z)).b*.5;
+		fragColor.r = fragColor.r*.5+sample(feedbacktex,nuv+vec2((time.z+.008*lowpass)*ratio,time.z)).r*.5;
+		fragColor.g = fragColor.g*.5+sample(feedbacktex,nuv+vec2((time.w+.004*lowpass)*ratio,time.w)).g*.5;
+		fragColor.b = fragColor.b*.5+sample(feedbacktex,nuv+vec2((time.z-.008*lowpass)*ratio,time.z)).b*.5;
 	}
-	gl_FragColor   = vec4(vec3(col1.r,col2.r,col1.r)*vec3(col1.g,col2.g,col1.g)+(1-vec3(col1.g,col2.g,col1.g))*feedback*gl_FragColor.rgb,1);
+	fragColor   = vec4(vec3(col1.r,col2.r,col1.r)*vec3(col1.g,col2.g,col1.g)+(1-vec3(col1.g,col2.g,col1.g))*feedback*fragColor.rgb,1);
 })");
 
 	compileshader(buffershader,
 //BUFFER VERT
-R"(#version 330 core
+R"(#version 150 core
 in vec2 aPos;
 uniform float banner;
 out vec2 uv;
@@ -324,23 +329,24 @@ void main(){
 	uv = aPos;
 })",
 //BUFFER FRAG
-R"(#version 330 core
+R"(#version 150 core
 in vec2 uv;
 uniform sampler2D feedbacktex;
 uniform sampler2D maintex;
 uniform float wet;
 uniform float reverse;
+out vec4 fragColor;
 void main(){
 	vec4 col = texture2D(maintex,uv);
-	gl_FragColor = vec4(vec3(col.r),1);
+	fragColor = vec4(vec3(col.r),1);
 	if(col.g < 1)
-		gl_FragColor = gl_FragColor*col.b+texture2D(feedbacktex,uv)*vec4(vec3(wet),1)*(1-col.b);
-	gl_FragColor = vec4(abs(gl_FragColor.rgb*gl_FragColor.a-vec3(pow(reverse,.5),reverse,pow(reverse,2.))),1);
+		fragColor = fragColor*col.b+texture2D(feedbacktex,uv)*vec4(vec3(wet),1)*(1-col.b);
+	fragColor = vec4(abs(fragColor.rgb*fragColor.a-vec3(pow(reverse,.5),reverse,pow(reverse,2.))),1);
 })");
 
 	compileshader(numbershader,
 //NUMBER VERT
-R"(#version 330 core
+R"(#version 150 core
 in vec2 aPos;
 uniform float banner;
 uniform vec2 size;
@@ -353,12 +359,13 @@ void main(){
 	uv = (aPos+index)*vec2(.0625*length,.5);
 })",
 //NUMBER FRAG
-R"(#version 330 core
+R"(#version 150 core
 in vec2 uv;
 uniform sampler2D numbertex;
 uniform vec3 col;
+out vec4 fragColor;
 void main(){
-	gl_FragColor = vec4(texture2D(numbertex,uv).r)*vec4(col,1);
+	fragColor = vec4(texture2D(numbertex,uv).r)*vec4(col,1);
 })");
 
 	basetex.loadImage(ImageCache::getFromMemory(BinaryData::map_png, BinaryData::map_pngSize));
@@ -388,7 +395,7 @@ void main(){
 #ifdef BANNER
 	compileshader(bannershader,
 //BANNER VERT
-R"(#version 330 core
+R"(#version 150 core
 in vec2 aPos;
 uniform vec2 texscale;
 uniform vec2 size;
@@ -398,16 +405,17 @@ void main(){
 	uv = vec2(aPos.x*size.x,1-(1-aPos.y)*texscale.y);
 })",
 //BANNER FRAG
-R"(#version 330 core
+R"(#version 150 core
 in vec2 uv;
 uniform sampler2D tex;
 uniform vec2 texscale;
 uniform float pos;
 uniform float free;
 uniform float dpi;
+out vec4 fragColor;
 void main(){
 	vec2 col = max(min((texture2D(tex,vec2(mod(uv.x+pos,1)*texscale.x,uv.y)).rg-.5)*dpi+.5,1),0);
-	gl_FragColor = vec4(vec3(col.r*free+col.g*(1-free)),1);
+	fragColor = vec4(vec3(col.r*free+col.g*(1-free)),1);
 })");
 
 	bannertex.loadImage(ImageCache::getFromMemory(BinaryData::banner_png, BinaryData::banner_pngSize));

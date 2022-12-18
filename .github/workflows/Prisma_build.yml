@@ -32,19 +32,19 @@ jobs:
             compiler: "Unix Makefiles",
             folder: "build_linux"
           }
-#        - {
-#            name: "Mac",
-#            os: macos-latest,
-#            compiler: "Xcode",
-#            folder: "build_mac"
-#          }
+        - {
+            name: "Mac",
+            os: macos-latest,
+            compiler: "Xcode",
+            folder: "build_mac"
+          }
     runs-on: ${{ matrix.os }}
 
     steps:
     - uses: actions/checkout@v3
 
-    - if: startsWith(matrix.os, 'ubuntu')
-      name: (linux) install juce dependencies
+    - name: (linux) install juce dependencies
+      if: startsWith(matrix.os, 'ubuntu')
       id: juce_dependencies
       run: | 
         sudo apt-get update
@@ -57,15 +57,23 @@ jobs:
         path: "${{matrix.folder}}"
         key: "${{matrix.folder}}"
 
-    - if: startsWith(matrix.os, 'windows')
-      name: (windows) configure
+    - name: (mac) import certificates
+      if: startsWith(matrix.os, 'macos')
+      id: import_certificates
+      uses: apple-actions/import-codesign-certs@v1
+      with:
+        p12-file-base64: ${{ secrets.DEV_ID_APP_CERT }}
+        p12-password: ${{ secrets.DEV_ID_APP_PASSWORD }}
+
+    - name: (windows) configure
+      if: startsWith(matrix.os, 'windows')
       id: configure_windows
       run: |
         cmake -DBANNERTYPE=0 -B "${{matrix.folder}}" -G "${{matrix.compiler}}" -T host=x64 -A x64
 
-    - if: ${{ !startsWith(matrix.os, 'windows') }}
-      name: (unix) configure
-      id: configure_mac
+    - name: (unix) configure
+      if: ${{ !startsWith(matrix.os, 'windows') }}
+      id: configure
       run: |
         cmake -DBANNERTYPE=0 -B "${{matrix.folder}}" -G "${{matrix.compiler}}"
 
@@ -75,8 +83,8 @@ jobs:
         cmake --build "${{matrix.folder}}" --config Release --target ${{env.NOSPACE}}_VST3
         cmake --build "${{matrix.folder}}" --config Release --target ${{env.NOSPACE}}_CLAP
 
-    - if: startsWith(matrix.os, 'windows')
-      name: (windows) package
+    - name: (windows) package
+      if: startsWith(matrix.os, 'windows')
       id: package_windows
       run: |
         mv "Setup/${{matrix.folder}}/paid/${{env.PLUG}}.vst3/Contents/x86_64-win/${{env.PLUG}}.vst3" "Setup/${{env.PLUG}}.vst3"
@@ -84,26 +92,51 @@ jobs:
         mv "Setup/${{env.PLUG}}.vst3" "Setup/${{matrix.folder}}/paid/${{env.PLUG}}.vst3"
         mv "${{matrix.folder}}/Plugins/${{env.PLUG}}/${{env.NOSPACE}}_artefacts/Release/CLAP/${{env.PLUG}}.clap" "Setup/${{matrix.folder}}/paid/${{env.PLUG}}.clap"
 
-    - if: ${{ !startsWith(matrix.os, 'windows') }}
-      name: (unix) package
-      id: package
+    - name: (linux) package
+      if: startsWith(matrix.os, 'linux')
+      id: package_linux
       run: |
         mv "${{matrix.folder}}/Plugins/${{env.PLUG}}/${{env.NOSPACE}}_artefacts/CLAP/${{env.PLUG}}.clap" "Setup/${{matrix.folder}}/paid/${{env.PLUG}}.clap"
+
+    - name: (mac) package
+      if: startsWith(matrix.os, 'macos')
+      id: package_mac
+      run: |
+        mv "${{matrix.folder}}/Plugins/${{env.PLUG}}/${{env.NOSPACE}}_artefacts/Release/CLAP/${{env.PLUG}}.clap" "Setup/${{matrix.folder}}/paid/${{env.PLUG}}.clap"
+
+    - name: (mac) code signing
+      if: startsWith(matrix.os, 'macos')
+      id: code_signing
+      run: |
+        codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION }}" -v "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.vst3" --deep --strict --options=runtime --timestamp
+        codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION }}" -v "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.clap" --deep --strict --options=runtime --timestamp
+        zip -r "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}_vst3.zip" "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.vst3"
+        zip -r "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}_clap.zip" "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.clap"
+        rm -r "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.vst3"
+        rm -r "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.clap"
+        xcrun notarytool submit "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}_vst3.zip" --apple-id ${{ secrets.NOTARIZATION_USERNAME }} --password ${{ secrets.NOTARIZATION_PASSWORD }} --team-id ${{ secrets.TEAM_ID }} --wait
+        xcrun notarytool submit "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}_clap.zip" --apple-id ${{ secrets.NOTARIZATION_USERNAME }} --password ${{ secrets.NOTARIZATION_PASSWORD }} --team-id ${{ secrets.TEAM_ID }} --wait
+        unzip "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}_vst3.zip"
+        unzip "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}_clap.zip"
+        rm "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}_vst3.zip"
+        rm "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}_clap.zip"
+        xcrun stapler staple "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.vst3"
+        xcrun stapler staple "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.clap"
 
     - uses: actions/upload-artifact@v3
       with:
         name: ${{env.PLUG}} ${{ matrix.name }}
         path: Setup/${{matrix.folder}}/paid
 
-    - if: startsWith(matrix.os, 'windows')
-      name: (windows) configure free
+    - name: (windows) configure free
+      if: startsWith(matrix.os, 'windows')
       id: configure_windows_free
       run: |
         cmake -DBANNERTYPE=1 -B "${{matrix.folder}}" -G "${{matrix.compiler}}" -T host=x64 -A x64
 
-    - if: ${{ !startsWith(matrix.os, 'windows') }}
-      name: (unix) configure free
-      id: configure_mac_free
+    - name: (unix) configure free
+      if: ${{ !startsWith(matrix.os, 'windows') }}
+      id: configure_free
       run: |
         cmake -DBANNERTYPE=1 -B "${{matrix.folder}}" -G "${{matrix.compiler}}"
 
@@ -113,8 +146,8 @@ jobs:
         cmake --build "${{matrix.folder}}" --config Release --target ${{env.NOSPACE}}_VST3
         cmake --build "${{matrix.folder}}" --config Release --target ${{env.NOSPACE}}_CLAP
 
-    - if: startsWith(matrix.os, 'windows')
-      name: (windows) package free
+    - name: (windows) package free
+      if: startsWith(matrix.os, 'windows')
       id: package_windows_free
       run: |
         mv "Setup/${{matrix.folder}}/free/${{env.PLUG}}.vst3/Contents/x86_64-win/${{env.PLUG}}.vst3" "Setup/${{env.PLUG}}.vst3"
@@ -122,33 +155,58 @@ jobs:
         mv "Setup/${{env.PLUG}}.vst3" "Setup/${{matrix.folder}}/free/${{env.PLUG}}.vst3"
         mv "${{matrix.folder}}/Plugins/${{env.PLUG}}/${{env.NOSPACE}}_artefacts/Release/CLAP/${{env.PLUG}}.clap" "Setup/${{matrix.folder}}/free/${{env.PLUG}}.clap"
 
-    - if: ${{ !startsWith(matrix.os, 'windows') }}
-      name: (unix) package free
-      id: package_free
+    - name: (linux) package free
+      if: startsWith(matrix.os, 'linux')
+      id: package_linux_free
       run: |
         mv "${{matrix.folder}}/Plugins/${{env.PLUG}}/${{env.NOSPACE}}_artefacts/CLAP/${{env.PLUG}}.clap" "Setup/${{matrix.folder}}/free/${{env.PLUG}}.clap"
+
+    - name: (mac) package free
+      if: startsWith(matrix.os, 'macos')
+      id: package_mac_free
+      run: |
+        mv "${{matrix.folder}}/Plugins/${{env.PLUG}}/${{env.NOSPACE}}_artefacts/Release/CLAP/${{env.PLUG}}.clap" "Setup/${{matrix.folder}}/free/${{env.PLUG}}.clap"
+
+    - name: (mac) code signing free
+      if: startsWith(matrix.os, 'macos')
+      id: code_signing_free
+      run: |
+        codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION }}" -v "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.vst3" --deep --strict --options=runtime --timestamp
+        codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION }}" -v "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.clap" --deep --strict --options=runtime --timestamp
+        zip -r "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}_vst3.zip" "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.vst3"
+        zip -r "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}_clap.zip" "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.clap"
+        rm -r "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.vst3"
+        rm -r "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.clap"
+        xcrun notarytool submit "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}_vst3.zip" --apple-id ${{ secrets.NOTARIZATION_USERNAME }} --password ${{ secrets.NOTARIZATION_PASSWORD }} --team-id ${{ secrets.TEAM_ID }} --wait
+        xcrun notarytool submit "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}_clap.zip" --apple-id ${{ secrets.NOTARIZATION_USERNAME }} --password ${{ secrets.NOTARIZATION_PASSWORD }} --team-id ${{ secrets.TEAM_ID }} --wait
+        unzip "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}_vst3.zip"
+        unzip "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}_clap.zip"
+        rm "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}_vst3.zip"
+        rm "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}_clap.zip"
+        xcrun stapler staple "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.vst3"
+        xcrun stapler staple "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.clap"
 
     - uses: actions/upload-artifact@v3
       with:
         name: ${{env.PLUG}} Free ${{ matrix.name }}
         path: Setup/${{matrix.folder}}/free
 
-    - if: startsWith(matrix.os, 'windows')
-      name: (windows) build installer
+    - name: (windows) build installer
+      if: startsWith(matrix.os, 'windows')
       id: installer
       run: |
         cd Setup
         iscc "${{env.PLUG}}.iss"
         iscc "${{env.PLUG}} Free.iss"
 
-    - if: startsWith(matrix.os, 'windows')
-      uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v3
+      if: startsWith(matrix.os, 'windows')
       with:
         name: ${{env.PLUG}} Installer
         path: "Setup/Output/${{env.PLUG}} Installer.exe"
 
-    - if: startsWith(matrix.os, 'windows')
-      uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v3
+      if: startsWith(matrix.os, 'windows')
       with:
         name: ${{env.PLUG}} Free Installer
         path: "Setup/Output/${{env.PLUG}} Free Installer.exe"

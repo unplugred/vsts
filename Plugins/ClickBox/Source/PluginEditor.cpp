@@ -67,6 +67,8 @@ ClickBoxAudioProcessorEditor::ClickBoxAudioProcessorEditor (ClickBoxAudioProcess
 	if((SystemStats::getOperatingSystemType() & SystemStats::OperatingSystemType::Windows) != 0)
 		dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->dpi/96.f;
 
+	setOpaque(true);
+	context.setOpenGLVersionRequired(OpenGLContext::OpenGLVersion::openGL3_2);
 	context.setRenderer(this);
 	context.attachTo(*this);
 
@@ -83,20 +85,21 @@ void ClickBoxAudioProcessorEditor::newOpenGLContextCreated() {
 
 	compileshader(clearshader,
 //CLEAR VERT
-R"(#version 330 core
+R"(#version 150 core
 in vec2 aPos;
 void main() {
 	gl_Position = vec4(aPos*2-1,0,1);
 })",
 //CLEAR FRAG
-R"(#version 330 core
+R"(#version 150 core
+out vec4 fragColor;
 void main() {
-	gl_FragColor = vec4(.10546875,.10546875,.10546875,.15);
+	fragColor = vec4(.10546875,.10546875,.10546875,.15);
 })");
 
 	compileshader(slidershader,
 //SLIDER VERT
-R"(#version 330 core
+R"(#version 150 core
 in vec2 aPos;
 uniform vec4 texscale;
 uniform vec2 margin;
@@ -108,13 +111,14 @@ void main() {
 	sliderpos = aPos.x*margin.x-margin.y;
 })",
 //SLIDER FRAG
-R"(#version 330 core
+R"(#version 150 core
 in vec2 texcoord;
 in float sliderpos;
 uniform sampler2D tex;
 uniform vec3 col;
 uniform float value;
 uniform float hover;
+out vec4 fragColor;
 void main() {
 	vec2 t = texture2D(tex,texcoord).rb;
 	vec3 color = col;
@@ -127,12 +131,12 @@ void main() {
 		color += .8;
 	}
 
-	gl_FragColor = vec4(color,alpha);
+	fragColor = vec4(color,alpha);
 })");
 
 	compileshader(creditsshader,
 //CREDITS VERT
-R"(#version 330 core
+R"(#version 150 core
 in vec2 aPos;
 uniform float texscale;
 uniform vec3 rot;
@@ -147,7 +151,7 @@ void main() {
 	texcoord = gl_Position.xy*.5+.5;
 })",
 //CREDITS FRAG
-R"(#version 330 core
+R"(#version 150 core
 in vec2 texcoord;
 in vec2 shadercoord;
 uniform sampler2D tex;
@@ -156,18 +160,19 @@ uniform vec3 rot;
 uniform float lineoffset;
 uniform vec3 color;
 uniform float htback;
+out vec4 fragColor;
 void main() {
 	vec4 map = texture2D(tex,texcoord);
 
 	if(map.a < .5) {
-		gl_FragColor = vec4(color+htback,1);
+		fragColor = vec4(color+htback,1);
 	} else if(map.r > .5) {
 		float ht = 0;
 		if(map.b > .5 && (texcoord.x - htpos) < 1 && (texcoord.x - htpos) > 0)
 			ht = texture2D(tex,texcoord-vec2(htpos,0)).g;
 
 		if(ht > .5) {
-			gl_FragColor = vec4(color+.8,1);
+			fragColor = vec4(color+.8,1);
 		} else {
 			vec3 ro = vec3(rot.x,0,rot.y);
 			vec3 cu = normalize(cross(-ro,vec3(sin(.35),cos(.35),0)));
@@ -182,14 +187,14 @@ void main() {
 			}
 
 			if(map.b < .5) col = 1-col;
-			gl_FragColor = vec4(col>.5?color:vec3(.10546875),1);
+			fragColor = vec4(col>.5?color:vec3(.10546875),1);
 		}
-	} else gl_FragColor = vec4(0);
+	} else fragColor = vec4(0);
 })");
 
 	compileshader(ppshader,
 //PP VERT
-R"(#version 330 core
+R"(#version 150 core
 in vec2 aPos;
 uniform vec2 texscale;
 out vec2 texcoord;
@@ -198,7 +203,7 @@ void main() {
 	texcoord = aPos;
 })",
 //PP FRAG
-R"(#version 330 core
+R"(#version 150 core
 in vec2 texcoord;
 uniform sampler2D tex;
 uniform sampler2D noisetex;
@@ -206,6 +211,7 @@ uniform float intensity;
 uniform vec4 randomsone;
 uniform vec4 randomstwo;
 uniform float randomsblend;
+out vec4 fragColor;
 void main() {
 	vec4 col = texture2D(tex,texcoord);
 
@@ -227,12 +233,12 @@ void main() {
 		col = texture2D(tex,coord);
 	}
 
-	gl_FragColor = vec4(col.rgb*col.a+.10546875*(1-col.a),1);
+	fragColor = vec4(col.rgb*col.a+.10546875*(1-col.a),1);
 })");
 
 	compileshader(cursorshader,
 //CURSOR VERT
-R"(#version 330 core
+R"(#version 150 core
 in vec2 aPos;
 uniform vec2 pos;
 uniform float automated;
@@ -244,19 +250,20 @@ void main() {
 	basecoord = gl_Position.xy*.5+.5;
 })",
 //CURSOR FRAG
-R"(#version 330 core
+R"(#version 150 core
 in vec2 texcoord;
 in vec2 basecoord;
 uniform sampler2D tex;
 uniform sampler2D base;
 uniform vec3 col;
 uniform float clamp;
+out vec4 fragColor;
 void main() {
-	if(clamp > .5 && basecoord.y < .5546875) gl_FragColor = vec4(0);
+	if(clamp > .5 && basecoord.y < .5546875) fragColor = vec4(0);
 	else {
 		vec2 texx = texture2D(tex,texcoord).rg;
 		if(clamp > .5) texx.g *= texture2D(base,basecoord).b;
-		gl_FragColor = vec4(texx.g>.5?col:(clamp<.5?(col+.8):vec3(.10546875)),texx.r>.5?1:0);
+		fragColor = vec4(texx.g>.5?col:(clamp<.5?(col+.8):vec3(.10546875)),texx.r>.5?1:0);
 	}
 })");
 
