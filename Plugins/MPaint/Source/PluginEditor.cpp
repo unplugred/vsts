@@ -56,7 +56,7 @@ void main(){
 	if(mod(nuv.y,1)>.5) nuv.y = floor(nuv.y)+(1-min((1-mod(nuv.y,1))*dpi*2,.5));
 	else nuv.y = floor(nuv.y)+min(mod(nuv.y,1)*dpi*2,.5);
 	nuv /= res;
-	fragColor = texture2D(tex,nuv);
+	fragColor = texture(tex,nuv);
 	if((errorhover < .5 || uv.x < .8 || uv.y > .15) && res.y > 80)
 		fragColor.r = fragColor.g;
 })"))

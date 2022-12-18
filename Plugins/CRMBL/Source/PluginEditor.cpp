@@ -170,7 +170,7 @@ uniform float gb;
 uniform float dpi;
 out vec4 fragColor;
 void main(){
-	vec4 col = texture2D(basetex,uv);
+	vec4 col = texture(basetex,uv);
 	col.r /= col.a;
 	col.gba = max(min((col.gba-.5)*dpi+.5,1),0);
 	fragColor = vec4(0);
@@ -202,12 +202,12 @@ uniform float websiteht;
 uniform float dpi;
 out vec4 fragColor;
 void main(){
-	vec4 col = texture2D(basetex,uv);
+	vec4 col = texture(basetex,uv);
 	col.r /= col.a;
 	col.ga = max(min((col.ga-.5)*dpi+.5,1),0);
 	fragColor = vec4(0);
 	if(col.r >= .85)
-		fragColor = vec4(vec2(col.g*(1-max(min((texture2D(basetex,vec2(min(uv.x+websiteht,.3),uv.y)).b-.5)*dpi+.5,1),0)*.5)),1,col.a);
+		fragColor = vec4(vec2(col.g*(1-max(min((texture(basetex,vec2(min(uv.x+websiteht,.3),uv.y)).b-.5)*dpi+.5,1),0)*.5)),1,col.a);
 })");
 
 	compileshader(knobshader,
@@ -301,7 +301,7 @@ float noise(in vec2 p){
 }
 vec4 sample(in sampler2D tex, in vec2 puv) {
 	if(puv.x < 0 || puv.x > 1 || puv.y < 0 || puv.y > 1) return vec4(0,0,0,1);
-	else return texture2D(tex,puv)*min(puv.x*res.x,1)*min(puv.y*res.y,1)*min((1-puv.x)*res.x,1)*min((1-puv.y)*res.y,1);
+	else return texture(tex,puv)*min(puv.x*res.x,1)*min(puv.y*res.y,1)*min((1-puv.x)*res.x,1)*min((1-puv.y)*res.y,1);
 }
 void main(){
 	vec2 nuv = uv;
@@ -337,10 +337,10 @@ uniform float wet;
 uniform float reverse;
 out vec4 fragColor;
 void main(){
-	vec4 col = texture2D(maintex,uv);
+	vec4 col = texture(maintex,uv);
 	fragColor = vec4(vec3(col.r),1);
 	if(col.g < 1)
-		fragColor = fragColor*col.b+texture2D(feedbacktex,uv)*vec4(vec3(wet),1)*(1-col.b);
+		fragColor = fragColor*col.b+texture(feedbacktex,uv)*vec4(vec3(wet),1)*(1-col.b);
 	fragColor = vec4(abs(fragColor.rgb*fragColor.a-vec3(pow(reverse,.5),reverse,pow(reverse,2.))),1);
 })");
 
@@ -365,7 +365,7 @@ uniform sampler2D numbertex;
 uniform vec3 col;
 out vec4 fragColor;
 void main(){
-	fragColor = vec4(texture2D(numbertex,uv).r)*vec4(col,1);
+	fragColor = vec4(texture(numbertex,uv).r)*vec4(col,1);
 })");
 
 	basetex.loadImage(ImageCache::getFromMemory(BinaryData::map_png, BinaryData::map_pngSize));
@@ -414,7 +414,7 @@ uniform float free;
 uniform float dpi;
 out vec4 fragColor;
 void main(){
-	vec2 col = max(min((texture2D(tex,vec2(mod(uv.x+pos,1)*texscale.x,uv.y)).rg-.5)*dpi+.5,1),0);
+	vec2 col = max(min((texture(tex,vec2(mod(uv.x+pos,1)*texscale.x,uv.y)).rg-.5)*dpi+.5,1),0);
 	fragColor = vec4(vec3(col.r*free+col.g*(1-free)),1);
 })");
 
