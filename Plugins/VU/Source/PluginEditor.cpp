@@ -18,7 +18,8 @@ VuAudioProcessorEditor::VuAudioProcessorEditor(VuAudioProcessor& p, int paramcou
 	stereodamp = knobs[2].value;
 
 	setOpaque(true);
-	context.setOpenGLVersionRequired(OpenGLContext::OpenGLVersion::openGL3_2);
+	if((SystemStats::getOperatingSystemType() & SystemStats::OperatingSystemType::MacOSX != 0)
+		context.setOpenGLVersionRequired(OpenGLContext::OpenGLVersion::openGL3_2);
 	context.setRenderer(this);
 	context.attachTo(*this);
 
@@ -34,8 +35,7 @@ VuAudioProcessorEditor::VuAudioProcessorEditor(VuAudioProcessor& p, int paramcou
 #endif
 	setResizeLimits(3,2,3200,950);
 	//getConstrainer()->setFixedAspectRatio((audioProcessor.stereo?64.f:32.f)/19.f);
-	if((SystemStats::getOperatingSystemType() & SystemStats::OperatingSystemType::Windows) != 0)
-		dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->dpi/96.f;
+	dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->scale;
 
 	startTimerHz(30);
 }
