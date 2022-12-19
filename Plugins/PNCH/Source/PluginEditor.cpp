@@ -22,7 +22,7 @@ PNCHAudioProcessorEditor::PNCHAudioProcessorEditor (PNCHAudioProcessor& p, float
 	dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->scale;
 
 	setOpaque(true);
-	if((SystemStats::getOperatingSystemType() & SystemStats::OperatingSystemType::MacOSX != 0)
+	if((SystemStats::getOperatingSystemType() & SystemStats::OperatingSystemType::MacOSX) != 0)
 		context.setOpenGLVersionRequired(OpenGLContext::OpenGLVersion::openGL3_2);
 	context.setRenderer(this);
 	context.attachTo(*this);
