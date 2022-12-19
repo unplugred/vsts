@@ -126,7 +126,8 @@ CRMBLAudioProcessorEditor::CRMBLAudioProcessorEditor (CRMBLAudioProcessor& p, in
 	dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->scale;
 
 	setOpaque(true);
-	//context.setOpenGLVersionRequired(OpenGLContext::OpenGLVersion::openGL3_2);
+	//if((SystemStats::getOperatingSystemType() & SystemStats::OperatingSystemType::MacOSX != 0)
+		context.setOpenGLVersionRequired(OpenGLContext::OpenGLVersion::openGL3_2);
 	audioProcessor.logger.debug((String)"DPI " + (String)Desktop::getInstance().getDisplays().getPrimaryDisplay()->dpi);
 	audioProcessor.logger.debug((String)"Scale display " + (String)Desktop::getInstance().getDisplays().getPrimaryDisplay()->scale);
 	audioProcessor.logger.debug((String)"Scale global " + (String)Desktop::getInstance().getGlobalScaleFactor());
