@@ -19,11 +19,11 @@ PNCHAudioProcessorEditor::PNCHAudioProcessorEditor (PNCHAudioProcessor& p, float
 	setSize(128,148);
 #endif
 	setResizable(false, false);
-	if((SystemStats::getOperatingSystemType() & SystemStats::OperatingSystemType::Windows) != 0)
-		dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->dpi/96.f;
+	dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->scale;
 
 	setOpaque(true);
-	context.setOpenGLVersionRequired(OpenGLContext::OpenGLVersion::openGL3_2);
+	if((SystemStats::getOperatingSystemType() & SystemStats::OperatingSystemType::MacOSX != 0)
+		context.setOpenGLVersionRequired(OpenGLContext::OpenGLVersion::openGL3_2);
 	context.setRenderer(this);
 	context.attachTo(*this);
 
