@@ -240,11 +240,12 @@ void main(){
 //CIRCLE FRAG
 R"(#version 150 core
 in vec2 v_TexCoord;
+uniform float dpi;
 out vec4 fragColor;
 void main(){
 	float x = sqrt(v_TexCoord.x*v_TexCoord.x+v_TexCoord.y*v_TexCoord.y);
 	float f = .7071;
-	fragColor = vec4(1,1,1,(x>(1-(1-f)*.5)?(1-x):(x-f))*12);
+	fragColor = vec4(1,1,1,(x>(1-(1-f)*.5)?(1-x):(x-f))*dpi*12);
 })");
 
 	framebuffer.initialise(context, 242*dpi, 462*dpi);
@@ -335,6 +336,7 @@ void PisstortionAudioProcessorEditor::renderOpenGL() {
 	OpenGLHelpers::clear(Colour::fromRGB(0,0,0));
 	circleshader->use();
 	circleshader->setUniform("ratio",((float)getWidth())/getHeight());
+	circleshader->setUniform("dpi",(float)fmax(dpi,1));
 	coord = context.extensions.glGetAttribLocation(circleshader->getProgramID(),"aPos");
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
