@@ -185,7 +185,8 @@ float PisstortionAudioProcessor::pisstortion(float source, int channel, int chan
 
 	double channeloffset = 0;
 	if(channelcount > 1) channeloffset = ((double)channel/(channelcount-1))-.5;
-	double f = sin(((double)source)*50*(stt.values[0]+stt.values[4]*stt.values[0]*channeloffset*(source>0?1:-1)));
+	double ampamount = 50*(stt.values[0]+stt.values[4]*stt.values[0]*channeloffset*(source>0?1:-1));
+	double f = sin(((double)source)*ampamount)+source*fmax(1-ampamount,0);
 
 	if(stt.values[3] >= 1) {
 		if(f > 0) f = 1;
