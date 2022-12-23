@@ -242,9 +242,9 @@ R"(#version 150 core
 in vec2 v_TexCoord;
 out vec4 fragColor;
 void main(){
-	float x = v_TexCoord.x*v_TexCoord.x+v_TexCoord.y*v_TexCoord.y;
-	float f = .5;
-	fragColor = vec4(1,1,1,(x>(1-(1-f)*.5)?(1-x):(x-f))*100);
+	float x = sqrt(v_TexCoord.x*v_TexCoord.x+v_TexCoord.y*v_TexCoord.y);
+	float f = .7071;
+	fragColor = vec4(1,1,1,(x>(1-(1-f)*.5)?(1-x):(x-f))*12);
 })");
 
 	framebuffer.initialise(context, 242*dpi, 462*dpi);
