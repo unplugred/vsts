@@ -95,7 +95,7 @@ jobs:
         mv "${{matrix.folder}}/Plugins/${{env.PLUG}}/${{env.NOSPACE}}_artefacts/Release/CLAP/${{env.PLUG}}.clap" "Setup/${{matrix.folder}}/paid/${{env.PLUG}}.clap"
 
     - name: (linux) package
-      if: startsWith(matrix.os, 'linux')
+      if: startsWith(matrix.os, 'ubuntu')
       id: package_linux
       run: |
         mv "${{matrix.folder}}/Plugins/${{env.PLUG}}/${{env.NOSPACE}}_artefacts/CLAP/${{env.PLUG}}.clap" "Setup/${{matrix.folder}}/paid/${{env.PLUG}}.clap"
@@ -158,7 +158,7 @@ jobs:
         mv "${{matrix.folder}}/Plugins/${{env.PLUG}}/${{env.NOSPACE}}_artefacts/Release/CLAP/${{env.PLUG}}.clap" "Setup/${{matrix.folder}}/free/${{env.PLUG}}.clap"
 
     - name: (linux) package free
-      if: startsWith(matrix.os, 'linux')
+      if: startsWith(matrix.os, 'ubuntu')
       id: package_linux_free
       run: |
         mv "${{matrix.folder}}/Plugins/${{env.PLUG}}/${{env.NOSPACE}}_artefacts/CLAP/${{env.PLUG}}.clap" "Setup/${{matrix.folder}}/free/${{env.PLUG}}.clap"
