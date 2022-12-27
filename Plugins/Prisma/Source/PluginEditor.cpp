@@ -266,19 +266,37 @@ PrismaAudioProcessorEditor::PrismaAudioProcessorEditor(PrismaAudioProcessor& p, 
 	dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->scale;
 
 	setOpaque(true);
-	if((SystemStats::getOperatingSystemType() & SystemStats::OperatingSystemType::MacOSX) != 0)
-		context.setOpenGLVersionRequired(OpenGLContext::OpenGLVersion::openGL3_2);
+	context.setOpenGLVersionRequired(OpenGLContext::OpenGLVersion::openGL3_2);
 	context.setRenderer(this);
 	context.attachTo(*this);
 
 	for(int i = 0; i < 330; i++) {
-		vispolygon[i*4] = i/329.f;
-		//vispolygon[i*4+1] = sin(i*.02f)*.3f+.5f;
-		vispolygon[i*4+1] = -.2f;
-		vispolygon[i*4+2] = i/329.f;
-		vispolygon[i*4+3] = -.2f;
-		visline[i*2] = vispolygon[i*4];
-		visline[i*2+1] = vispolygon[i*4+1];
+		vispoly[i*6  ] = i/329.f;
+		vispoly[i*6+3] = i/329.f;
+		vispoly[i*6+1] = -.1f;
+		vispoly[i*6+4] = -.1f;
+		vispoly[i*6+2] = 1.f;
+		vispoly[i*6+5] = 1.f;
+	}
+	vispoly[1980] = 1.f;
+	vispoly[1983] = 1.f;
+	vispoly[1986] = 0.f;
+	vispoly[1989] = 0.f;
+	vispoly[1981] = -.1f;
+	vispoly[1984] = -.1f;
+	vispoly[1987] = -.1f;
+	vispoly[1990] = -.1f;
+	vispoly[1982] = 0.f;
+	vispoly[1985] = 0.f;
+	vispoly[1988] = 0.f;
+	vispoly[1991] = 0.f;
+	for(int i = 332; i < 662; i++) {
+		vispoly[i*6  ] = vispoly[(i-332)*6];
+		vispoly[i*6+3] = vispoly[(i-332)*6];
+		vispoly[i*6+1] = vispoly[(i-332)*6+1];
+		vispoly[i*6+4] = vispoly[(i-332)*6+1];
+		vispoly[i*6+2] = 1.f;
+		vispoly[i*6+5] = 0.f;
 	}
 
 	startTimerHz(30);
@@ -567,17 +585,20 @@ void main(){
 	compileshader(visshader,
 //VIS VERT
 R"(#version 150 core
-in vec2 aPos;
+in vec3 aPos;
 uniform vec2 size;
 uniform vec2 pos;
 out vec2 uv;
+out float opacity;
 void main(){
-	gl_Position = vec4((aPos*size+pos)*2-1,0,1);
-	uv = aPos;
+	gl_Position = vec4((aPos.xy*size+pos)*2-1,0,1);
+	uv = aPos.xy;
+	opacity = aPos.z;
 })",
 //VIS FRAG
 R"(#version 150 core
 in vec2 uv;
+in float opacity;
 uniform vec3 low;
 uniform vec3 lowmid;
 uniform vec3 highmid;
@@ -591,7 +612,7 @@ void main(){
 		else if(uv.x < cutoff.y) fragColor = vec4(lowmid,1);
 		else if(uv.x < cutoff.z) fragColor = vec4(highmid,1);
 		else fragColor = vec4(high,1);
-		fragColor = vec4(fragColor.rgb*min(min(min(abs(uv.x-cutoff.x),abs(uv.x-cutoff.y)),abs(uv.x-cutoff.z))*250,1),1);
+		fragColor = vec4(fragColor.rgb*min(min(min(abs(uv.x-cutoff.x),abs(uv.x-cutoff.y)),abs(uv.x-cutoff.z))*250,1),opacity);
 	}
 })");
 
@@ -995,7 +1016,8 @@ void PrismaAudioProcessorEditor::renderOpenGL() {
 	visshader->use();
 	coord = context.extensions.glGetAttribLocation(visshader->getProgramID(),"aPos");
 	context.extensions.glEnableVertexAttribArray(coord);
-	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+	context.extensions.glVertexAttribPointer(coord,3,GL_FLOAT,GL_FALSE,0,0);
+	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*12, opsquare, GL_DYNAMIC_DRAW);
 	visshader->setUniform("size",330.f/getWidth(),52.f/getHeight());
 	visshader->setUniform("pos",74.f/getWidth(),486.f/getHeight()+banneroffset);
 	visshader->setUniform("low",activecolors[0][0][0],activecolors[0][0][1],activecolors[0][0][2]);
@@ -1012,14 +1034,9 @@ void PrismaAudioProcessorEditor::renderOpenGL() {
 	visshader->setUniform("highmid",activecolors[2][1][0],activecolors[2][1][1],activecolors[2][1][2]);
 	visshader->setUniform("high",activecolors[3][1][0],activecolors[3][1][1],activecolors[3][1][2]);
 	context.extensions.glEnableVertexAttribArray(coord);
-	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
-	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*1320, vispolygon, GL_DYNAMIC_DRAW);
-	glDrawArrays(GL_TRIANGLE_STRIP,0,660);
-	context.extensions.glDisableVertexAttribArray(coord);
-	context.extensions.glEnableVertexAttribArray(coord);
-	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
-	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*660, visline, GL_DYNAMIC_DRAW);
-	glDrawArrays(GL_LINE_STRIP,0,330);
+	context.extensions.glVertexAttribPointer(coord,3,GL_FLOAT,GL_FALSE,0,0);
+	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*3972, vispoly, GL_DYNAMIC_DRAW);
+	glDrawArrays(GL_TRIANGLE_STRIP,0,1324);
 	context.extensions.glDisableVertexAttribArray(coord);
 	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
 
@@ -1192,20 +1209,36 @@ void PrismaAudioProcessorEditor::timerCallback() {
 	eyelerpy = eyelerpy*.7f+eyey*.3f;
 
 	fftdelta++;
+	bool redraw = false;
 	if(audioProcessor.nextFFTBlockReady.get()) {
+		redraw = true;
 		audioProcessor.drawNextFrameOfSpectrum(fftdelta);
 		for(int i = 0; i < 330; i++) {
-			vispolygon[i*4+1] = audioProcessor.scopeData[i];
-			if(vispolygon[i*4+1] <= .001f) vispolygon[i*4+1] = -.2f;
-			visline[i*2+1] = vispolygon[i*4+1];
+			vispoly[i*6+1] = audioProcessor.scopeData[i];
+			if(vispoly[i*6+1] <= .001f) vispoly[i*6+1] = -.1f;
 		}
 		audioProcessor.nextFFTBlockReady = false;
 		fftdelta = 0;
-	} else if(fftdelta > 10) for(int i = 0; i < 330; i++) {
-		if(vispolygon[i*4+1] > .001f)
-			vispolygon[i*4+1] = vispolygon[i*4+1]*.95f;
-		else vispolygon[i*4+1] = -.2f;
-		visline[i*2+1] = vispolygon[i*4+1];
+	} else if(fftdelta > 10) {
+		redraw = true;
+		for(int i = 0; i < 330; i++) {
+			if(vispoly[i*6+1] > .001f)
+				vispoly[i*6+1] = vispoly[i*6+1]*.95f;
+			else vispoly[i*6+1] = -.1f;
+		}
+	}
+	if(redraw) for(int i = 0; i < 330; i++) {
+		vispoly[(i+332)*6+1] = vispoly[i*6+1];
+		double angle1 = std::atan2(vispoly[i*6+1]-vispoly[i*6-5], 1/329.f);
+		double angle2 = std::atan2(vispoly[i*6+1]-vispoly[i*6+7],-1/329.f);
+		if(i == 0) angle1 = angle2;
+		else if(i == 329) angle2 = angle1;
+		while((angle1-angle2)<(-1.5707963268))angle1+=3.1415926535*2;
+		while((angle1-angle2)>( 1.5707963268))angle1-=3.1415926535*2;
+		double angle = (angle1+angle2)*.5;
+		vispoly[(i+332)*6+3] = vispoly[i*6  ]+cos(angle)/(330.f*.8f*dpi);
+		vispoly[(i+332)*6+4] = vispoly[i*6+1]+sin(angle)/(52.f*.8f*dpi);
+		if(i > 0) vispoly[(i+332)*6+3] = fmax(vispoly[(i+332)*6+3],vispoly[(i+332)*6-3]);
 	}
 
 #ifdef BANNER
