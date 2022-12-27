@@ -47,7 +47,7 @@ public:
 
 	knob knobs[6];
 	int knobcount = 0;
-	float visline[2][452];
+	float visline[2][2712];
 	bool isStereo = false;
 private:
 	PFAudioProcessor& audioProcessor;

@@ -41,8 +41,7 @@ PisstortionAudioProcessorEditor::PisstortionAudioProcessorEditor (PisstortionAud
 	dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->scale;
 
 	setOpaque(true);
-	if((SystemStats::getOperatingSystemType() & SystemStats::OperatingSystemType::MacOSX) != 0)
-		context.setOpenGLVersionRequired(OpenGLContext::OpenGLVersion::openGL3_2);
+	context.setOpenGLVersionRequired(OpenGLContext::OpenGLVersion::openGL3_2);
 	context.setRenderer(this);
 	context.attachTo(*this);
 
@@ -130,23 +129,26 @@ void main(){
 	compileshader(visshader,
 //VIS VERT
 R"(#version 150 core
-in vec2 aPos;
+in vec3 aPos;
 uniform float banner;
 uniform vec2 texscale;
 out vec2 basecoord;
+out float linepos;
 void main(){
 	gl_Position = vec4(aPos.x,aPos.y*(1-banner)+banner,0,1);
 	basecoord = vec2((aPos.x+1)*texscale.x*.5,1-(1-aPos.y)*texscale.y*.5);
+	linepos = aPos.z;
 })",
 //VIS FRAG
 R"(#version 150 core
 in vec2 basecoord;
+in float linepos;
 uniform sampler2D basetex;
 uniform float alpha;
+uniform float dpi;
 out vec4 fragColor;
 void main(){
-	float base = texture(basetex,basecoord).r;
-	fragColor = vec4(.05,.05,.05,base <= 0 ? alpha : 0.0);
+	fragColor = vec4(.05,.05,.05,texture(basetex,basecoord).r<=0?alpha*min((1-abs(linepos*2-1))*dpi*1.3,1):0.0);
 })");
 
 	compileshader(oversamplingshader,
@@ -325,7 +327,6 @@ void PisstortionAudioProcessorEditor::renderOpenGL() {
 	glEnable(GL_TEXTURE_2D);
 	glDisable(GL_LIGHTING);
 	glDisable(GL_DEPTH_TEST);
-	glEnable(GL_LINE_SMOOTH);
 
 	context.extensions.glBindBuffer(GL_ARRAY_BUFFER, arraybuffer);
 	auto coord = context.extensions.glGetAttribLocation(baseshader->getProgramID(),"aPos");
@@ -391,7 +392,6 @@ void PisstortionAudioProcessorEditor::renderOpenGL() {
 	if(oversamplingalpha < 1) {
 		if(oversamplingalpha > 0)
 			osalpha = oversamplingalpha<0.5?4*oversamplingalpha*oversamplingalpha*oversamplingalpha:1-(float)pow(2-2*oversamplingalpha,3)/2;
-		glLineWidth(1.3*dpi);
 		visshader->use();
 		coord = context.extensions.glGetAttribLocation(visshader->getProgramID(),"aPos");
 		context.extensions.glActiveTexture(GL_TEXTURE0);
@@ -399,14 +399,15 @@ void PisstortionAudioProcessorEditor::renderOpenGL() {
 		visshader->setUniform("basetex",0);
 		visshader->setUniform("banner",banneroffset);
 		visshader->setUniform("alpha",1-osalpha);
+		visshader->setUniform("dpi",(float)fmax(dpi,1));
 		visshader->setUniform("texscale",242.f/basetex.getWidth(),462.f/basetex.getHeight());
 		context.extensions.glEnableVertexAttribArray(coord);
-		context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
-		context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*452, visline[0], GL_DYNAMIC_DRAW);
-		glDrawArrays(GL_LINE_STRIP,0,226);
+		context.extensions.glVertexAttribPointer(coord,3,GL_FLOAT,GL_FALSE,0,0);
+		context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*2712, visline[0], GL_DYNAMIC_DRAW);
+		glDrawArrays(GL_TRIANGLE_STRIP,0,904);
 		if(isStereo) {
-			context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*452, visline[1], GL_DYNAMIC_DRAW);
-			glDrawArrays(GL_LINE_STRIP,0,226);
+			context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*2712, visline[1], GL_DYNAMIC_DRAW);
+			glDrawArrays(GL_TRIANGLE_STRIP,0,904);
 		}
 		context.extensions.glDisableVertexAttribArray(coord);
 		context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
@@ -501,10 +502,31 @@ void PisstortionAudioProcessorEditor::calcvis() {
 	pluginpreset pp;
 	for(int i = 0; i < knobcount; i++)
 		pp.values[i] = knobs[i].inflate(knobs[i].value);
+	double prevy = 48;
+	double currenty = 48;
+	double nexty = 48;
+	double nextnexty = 48;
 	for(int c = 0; c < (isStereo ? 2 : 1); c++) {
-		for(int i = 0; i < 226; i++) {
-			visline[c][i*2] = (i+8)/121.f-1;
-			visline[c][i*2+1] = 1-(48+audioProcessor.pisstortion(sin(i/35.8098621957f)*.8f,c,2,pp,false)*38)/231.f;
+		for(int i = 0; i < 452; i++) {
+			if((i%2)==0) {
+				nexty = nextnexty;
+			} else {
+				nextnexty = 48+audioProcessor.pisstortion(sin((i*.5+.5)/35.8098621957f)*.8f,c,2,pp,false)*38;
+				nexty = (currenty+nextnexty)*.5;
+			}
+			double angle1 = std::atan2(currenty-prevy, .5);
+			double angle2 = std::atan2(currenty-nexty,-.5);
+			while((angle1-angle2)<(-1.5707963268))angle1+=3.1415926535*2;
+			while((angle1-angle2)>( 1.5707963268))angle1-=3.1415926535*2;
+			double angle = (angle1+angle2)*.5;
+			visline[c][i*6  ] = (i*.5+8+cos(angle)*1.3f)/121.f-1;
+			visline[c][i*6+3] = (i*.5+8-cos(angle)*1.3f)/121.f-1;
+			visline[c][i*6+1] = 1-(currenty+sin(angle)*1.3f)/231.f;
+			visline[c][i*6+4] = 1-(currenty-sin(angle)*1.3f)/231.f;
+			visline[c][i*6+2] = 0.f;
+			visline[c][i*6+5] = 1.f;
+			prevy = currenty;
+			currenty = nexty;
 		}
 	}
 }

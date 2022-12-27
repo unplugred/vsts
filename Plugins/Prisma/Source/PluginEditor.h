@@ -72,6 +72,11 @@ private:
 		1.f,0.f,
 		0.f,1.f,
 		1.f,1.f};
+	float opsquare[12]{
+		0.f,0.f,1.f,
+		1.f,0.f,1.f,
+		0.f,1.f,1.f,
+		1.f,1.f,1.f};
 
 	float eyex = -6;
 	float eyey = 67;
@@ -120,8 +125,7 @@ private:
 	float websiteht = -1;
 	std::unique_ptr<OpenGLShaderProgram> logoshader;
 
-	float vispolygon[1320];
-	float visline[660];
+	float vispoly[3972];
 	int fftdelta = 0;
 	std::unique_ptr<OpenGLShaderProgram> visshader;
 
