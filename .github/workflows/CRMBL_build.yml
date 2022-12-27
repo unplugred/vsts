@@ -28,7 +28,7 @@ jobs:
           }
         - {
             name: "Linux",
-            os: ubuntu-latest,
+            os: ubuntu-20.04,
             compiler: "Unix Makefiles",
             folder: "build_linux"
           }
