@@ -31,8 +31,8 @@ WizardImageStretch=false
 WizardSmallImageFile=assets\smallimage\{#PluginName}.bmp
 
 [Files]
-Source: "build_windows\free\{#PluginName}.vst3"; DestDir: "{cf64}\VST3\"; Components: VST3; Flags: ignoreversion
-Source: "build_windows\other\{#PluginName}\*.*"; DestDir: "{cf64}\VST3\{#PluginName}"; Components: VST3; Flags: recursesubdirs onlyifdoesntexist
+Source: "build_windows\free\{#PluginName}.vst3"; DestDir: "{cf64}\VST3\UnplugRed\"; Components: VST3; Flags: ignoreversion
+Source: "build_windows\other\{#PluginName}\*.*"; DestDir: "{cf64}\VST3\UnplugRed\{#PluginName}"; Components: VST3; Flags: recursesubdirs onlyifdoesntexist
 Source: "build_windows\free\{#PluginName}.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
 Source: "build_windows\other\{#PluginName}\*.*"; DestDir: "{code:GetDir|0}\{#PluginName}"; Components: CLAP; Flags: recursesubdirs onlyifdoesntexist
 Source: "build_windows\free\{#PluginName}.exe"; DestDir: {code:GetDir|1}; Components: Standalone; Flags: ignoreversion
@@ -83,9 +83,9 @@ begin
   False, '');
 
   DirPage.Add('CLAP folder');
-  DirPage.Values[0] := GetPreviousData('CLAP', ExpandConstant('{reg:HKLM\SOFTWARE\CLAP,CLAPPluginsPath|{pf}\Common Files\CLAP}'));
+  DirPage.Values[0] := GetPreviousData('CLAP', ExpandConstant('{reg:HKLM\SOFTWARE\CLAP,CLAPPluginsPath|{pf}\Common Files\CLAP\UnplugRed}'));
   DirPage.Add('Standalone folder');
-  DirPage.Values[1] := GetPreviousData('Standalone', ExpandConstant('{reg:HKLM\SOFTWARE\CLAP,CLAPPluginsPath|{pf}\Common Files\CLAP}'));
+  DirPage.Values[1] := GetPreviousData('Standalone', ExpandConstant('{reg:HKLM\SOFTWARE\CLAP,CLAPPluginsPath|{pf}\Common Files\CLAP\UnplugRed}'));
 
 end;
 

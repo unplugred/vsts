@@ -31,16 +31,16 @@ WizardImageStretch=false
 WizardSmallImageFile=assets\smallimage\{#PluginName}.bmp
 
 [Files]
-Source: "build_windows\paid\Plastic Funeral.vst3"; DestDir: "{cf64}\VST3\"; Components: VST3; Flags: ignoreversion
-Source: "build_windows\paid\VU.vst3"; DestDir: "{cf64}\VST3\"; Components: VST3; Flags: ignoreversion
-Source: "build_windows\free\ClickBox.vst3"; DestDir: "{cf64}\VST3\"; Components: VST3; Flags: ignoreversion
-Source: "build_windows\paid\Pisstortion.vst3"; DestDir: "{cf64}\VST3\"; Components: VST3; Flags: ignoreversion
-Source: "build_windows\paid\PNCH.vst3"; DestDir: "{cf64}\VST3\"; Components: VST3; Flags: ignoreversion
-Source: "build_windows\paid\Red Bass.vst3"; DestDir: "{cf64}\VST3\"; Components: VST3; Flags: ignoreversion
-Source: "build_windows\free\MPaint.vst3"; DestDir: "{cf64}\VST3\"; Components: VST3; Flags: ignoreversion
-Source: "build_windows\other\MPaint\*.*"; DestDir: "{cf64}\VST3\MPaint"; Components: VST3; Flags: recursesubdirs onlyifdoesntexist
-Source: "build_windows\paid\CRMBL.vst3"; DestDir: "{cf64}\VST3\"; Components: VST3; Flags: ignoreversion
-Source: "build_windows\paid\Prisma.vst3"; DestDir: "{cf64}\VST3\"; Components: VST3; Flags: ignoreversion
+Source: "build_windows\paid\Plastic Funeral.vst3"; DestDir: "{cf64}\VST3\UnplugRed\"; Components: VST3; Flags: ignoreversion
+Source: "build_windows\paid\VU.vst3"; DestDir: "{cf64}\VST3\UnplugRed\"; Components: VST3; Flags: ignoreversion
+Source: "build_windows\free\ClickBox.vst3"; DestDir: "{cf64}\VST3\UnplugRed\"; Components: VST3; Flags: ignoreversion
+Source: "build_windows\paid\Pisstortion.vst3"; DestDir: "{cf64}\VST3\UnplugRed\"; Components: VST3; Flags: ignoreversion
+Source: "build_windows\paid\PNCH.vst3"; DestDir: "{cf64}\VST3\UnplugRed\"; Components: VST3; Flags: ignoreversion
+Source: "build_windows\paid\Red Bass.vst3"; DestDir: "{cf64}\VST3\UnplugRed\"; Components: VST3; Flags: ignoreversion
+Source: "build_windows\free\MPaint.vst3"; DestDir: "{cf64}\VST3\UnplugRed\"; Components: VST3; Flags: ignoreversion
+Source: "build_windows\other\MPaint\*.*"; DestDir: "{cf64}\VST3\UnplugRed\MPaint"; Components: VST3; Flags: recursesubdirs onlyifdoesntexist
+Source: "build_windows\paid\CRMBL.vst3"; DestDir: "{cf64}\VST3\Unplugred\"; Components: VST3; Flags: ignoreversion
+Source: "build_windows\paid\Prisma.vst3"; DestDir: "{cf64}\VST3\UnplugRed\"; Components: VST3; Flags: ignoreversion
 Source: "build_windows\paid\Plastic Funeral.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
 Source: "build_windows\paid\VU.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
 Source: "build_windows\free\ClickBox.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
@@ -100,9 +100,9 @@ begin
   False, '');
 
   DirPage.Add('CLAP folder');
-  DirPage.Values[0] := GetPreviousData('CLAP', ExpandConstant('{reg:HKLM\SOFTWARE\CLAP,CLAPPluginsPath|{pf}\Common Files\CLAP}'));
+  DirPage.Values[0] := GetPreviousData('CLAP', ExpandConstant('{reg:HKLM\SOFTWARE\CLAP,CLAPPluginsPath|{pf}\Common Files\CLAP\UnplugRed}'));
   DirPage.Add('Standalone folder');
-  DirPage.Values[1] := GetPreviousData('Standalone', ExpandConstant('{reg:HKLM\SOFTWARE\CLAP,CLAPPluginsPath|{pf}\Common Files\CLAP}'));
+  DirPage.Values[1] := GetPreviousData('Standalone', ExpandConstant('{reg:HKLM\SOFTWARE\CLAP,CLAPPluginsPath|{pf}\Common Files\CLAP\UnplugRed}'));
 
 end;
 
