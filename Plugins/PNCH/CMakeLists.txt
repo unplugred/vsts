@@ -28,9 +28,9 @@ clap_juce_extensions_plugin(TARGET "${BaseTargetName}"
 	CLAP_USE_JUCE_PARAMETER_RANGES ALL)
 
 target_sources("${BaseTargetName}" PRIVATE
-	Source/CoolLogger.cpp
 	Source/PluginEditor.cpp
-	Source/PluginProcessor.cpp)
+	Source/PluginProcessor.cpp
+	../../Shared/Source/CoolLogger.cpp)
 
 target_compile_definitions("${BaseTargetName}" PUBLIC
 	JUCE_DISPLAY_SPLASH_SCREEN=0
@@ -48,10 +48,10 @@ target_compile_definitions("${BaseTargetName}" PUBLIC
 	JUCE_USE_CAMERA=0)
 
 juce_add_binary_data("${BaseTargetName}BinaryData" HEADER_NAME BinaryData.h NAMESPACE BinaryData SOURCES
-	Resources/banner.png
 	Resources/base.png
 	Resources/credits.png
-	Resources/dbg_txt.png)
+	../../Shared/Resources/banner.png
+	../../Shared/Resources/dbg_txt.png)
 set_target_properties("${BaseTargetName}BinaryData" PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 
 target_link_libraries("${BaseTargetName}" PRIVATE
