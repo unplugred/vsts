@@ -31,8 +31,7 @@ target_sources("${BaseTargetName}" PRIVATE
 	Source/DCFilter.cpp
 	Source/functions.cpp
 	Source/PluginEditor.cpp
-	Source/PluginProcessor.cpp
-	../../Shared/Source/CoolLogger.cpp)
+	Source/PluginProcessor.cpp)
 
 target_compile_definitions("${BaseTargetName}" PUBLIC
 	JUCE_DISPLAY_SPLASH_SCREEN=0
@@ -52,13 +51,11 @@ target_compile_definitions("${BaseTargetName}" PUBLIC
 juce_add_binary_data("${BaseTargetName}BinaryData" HEADER_NAME BinaryData.h NAMESPACE BinaryData SOURCES
 	Resources/map.png
 	Resources/numbers.png
-	../../Shared/Resources/banner.png
-	../../Shared/Resources/dbg_txt.png)
+	../../Resources/banner.png)
 set_target_properties("${BaseTargetName}BinaryData" PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 
-juce_add_module(Modules/ea_soundtouch)
-
 target_link_libraries("${BaseTargetName}" PRIVATE
+	cool_logger
 	ea_soundtouch
 	juce::juce_audio_devices
 	juce::juce_audio_plugin_client

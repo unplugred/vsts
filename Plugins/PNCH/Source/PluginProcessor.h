@@ -1,6 +1,5 @@
 #pragma once
 #include "includes.h"
-#include "CoolLogger.h"
 
 class PNCHAudioProcessor : public AudioProcessor, public AudioProcessorValueTreeState::Listener {
 public:
