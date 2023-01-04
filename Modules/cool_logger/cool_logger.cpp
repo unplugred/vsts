@@ -1,4 +1,4 @@
-#include "CoolLogger.h"
+#include "cool_logger.h"
 
 void CoolLogger::init(OpenGLContext* ctx, int w, int h) {
 #ifdef ENABLE_TEXT
@@ -30,7 +30,7 @@ void main(){
 	textshader->addFragmentShader(textfrag);
 	textshader->link();
 
-	texttex.loadImage(ImageCache::getFromMemory(BinaryData::dbg_txt_png,BinaryData::dbg_txt_pngSize));
+	texttex.loadImage(ImageCache::getFromMemory(dbg_txt_png,dbg_txt_pngSize));
 	texttex.bind();
 	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);

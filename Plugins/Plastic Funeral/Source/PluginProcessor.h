@@ -1,6 +1,5 @@
 #pragma once
 #include "includes.h"
-#include "CoolLogger.h"
 
 struct potentiometer {
 public:

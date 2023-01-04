@@ -1,7 +1,6 @@
 #pragma once
 #include "includes.h"
 #include "DCFilter.h"
-#include "CoolLogger.h"
 
 struct pluginmodule {
 	SmoothedValue<float,ValueSmoothingTypes::Linear> value;

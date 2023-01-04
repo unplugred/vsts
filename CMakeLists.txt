@@ -64,4 +64,5 @@ else()
 	endif()
 endif()
 
+add_subdirectory(Modules)
 add_subdirectory(Plugins)

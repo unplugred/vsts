@@ -1,6 +1,5 @@
 #pragma once
 #include "includes.h"
-#include "CoolLogger.h"
 #include "functions.h"
 #include "DCFilter.h"
 

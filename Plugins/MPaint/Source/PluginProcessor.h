@@ -1,6 +1,5 @@
 #pragma once
 #include "includes.h"
-#include "CoolLogger.h"
 #include <future>
 
 class MPaintAudioProcessor : public AudioProcessor, public AudioProcessorValueTreeState::Listener {
