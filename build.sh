@@ -3,6 +3,9 @@ case $OSTYPE in
 	msys)
 		vf=build_windows
 		;;
+	cygwin)
+		vf=build_windows
+		;;
 	darwin)
 		vf=build_mac
 		;;
@@ -11,6 +14,7 @@ case $OSTYPE in
 		;;
 esac
 
+read  -n 1 -r
 vm=null
 read -p "[c]onfigure/[D]ebug/[r]elease/[m]in size rel/rel [w]ith deb info: " -n 1 -r
 REPLY=${REPLY:-d}
@@ -39,6 +43,9 @@ case $REPLY in
 
 		case $OSTYPE in
 			msys)
+				cmake -DBANNERTYPE=${vb} -B ${vf} -G "Visual Studio 17 2022" -T host=x64 -A x64
+				;;
+			cygwin)
 				cmake -DBANNERTYPE=${vb} -B ${vf} -G "Visual Studio 17 2022" -T host=x64 -A x64
 				;;
 			darwin)
@@ -173,7 +180,7 @@ cmake --build ${vf} --config ${vm} --target ${vp}
 if [ $vp == ${vn}_All ]
 then
 	cmake --build ${vf} --config ${vm} --target ${vn}_CLAP
-	if [[ "$OSTYPE" =~ ^msys ]]
+	if [[ "$OSTYPE" =~ ^msys ]] || [[ "$OSTYPE" =~ ^cygwin ]]
 	then
 		cp "./${vf}/Plugins/${vs}/${vn}_artefacts/${vm}/CLAP/${vs}.clap" "./Setup/${vf}/${va}/${vs}.clap"
 		if [ $vc == y ]
@@ -190,7 +197,7 @@ then
 else
 	if [ $vp == ${vn}_CLAP ]
 	then
-		if [[ "$OSTYPE" =~ ^msys ]]
+		if [[ "$OSTYPE" =~ ^msys ]] || [[ "$OSTYPE" =~ ^cygwin ]]
 		then
 			cp "./${vf}/Plugins/${vs}/${vn}_artefacts/${vm}/CLAP/${vs}.clap" "./Setup/${vf}/${va}/${vs}.clap"
 		else
@@ -201,7 +208,7 @@ else
 		then
 			if [ $vc == y ]
 			then
-				if [[ "$OSTYPE" =~ ^msys ]]
+				if [[ "$OSTYPE" =~ ^msys ]] || [[ "$OSTYPE" =~ ^cygwin ]]
 				then
 					cp "./${vf}/Plugins/${vs}/${vn}_artefacts/${vm}/Standalone/${vs}.exe" "./Setup/${vf}/${va}/${vs}.exe"
 				else
@@ -213,7 +220,7 @@ else
 fi
 if [ $vr == y ]
 then
-	if [[ "$OSTYPE" =~ ^msys ]]
+	if [[ "$OSTYPE" =~ ^msys ]] || [[ "$OSTYPE" =~ ^cygwin ]]
 	then
 		"./${vf}/Plugins/${vs}/${vn}_artefacts/${vm}/Standalone/${vs}.exe"
 	else
