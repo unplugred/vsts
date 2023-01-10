@@ -32,7 +32,10 @@ ProtoAudioProcessorEditor::ProtoAudioProcessorEditor(ProtoAudioProcessor& p, int
 #endif
 	setResizable(false, false);
 	calcvis();
-	dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->scale;
+	if((SystemStats::getOperatingSystemType() & SystemStats::OperatingSystemType::Windows) != 0)
+		dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->dpi/96.f;
+	else
+		dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->scale;
 
 	setOpaque(true);
 	context.setOpenGLVersionRequired(OpenGLContext::OpenGLVersion::openGL3_2);
