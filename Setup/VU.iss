@@ -12,7 +12,7 @@ AppUpdatesURL=https://vst.unplug.red/
 AppVerName={#PluginName}
 AppVersion=1.0
 Compression=lzma2/ultra64
-DefaultDirName={pf}\UnplugRed\
+DefaultDirName={commonpf}\UnplugRed\
 DefaultGroupName=UnplugRed
 DisableReadyPage=false
 DisableWelcomePage=no
@@ -31,7 +31,7 @@ WizardImageStretch=false
 WizardSmallImageFile=assets\smallimage\{#PluginName}.bmp
 
 [Files]
-Source: "build_windows\paid\{#PluginName}.vst3"; DestDir: "{cf64}\VST3\UnplugRed\"; Components: VST3; Flags: ignoreversion
+Source: "build_windows\paid\{#PluginName}.vst3"; DestDir: "{commoncf64}\VST3\UnplugRed\"; Components: VST3; Flags: ignoreversion
 Source: "build_windows\paid\{#PluginName}.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
 Source: "build_windows\paid\{#PluginName}.exe"; DestDir: {code:GetDir|1}; Components: Standalone; Flags: ignoreversion
 
@@ -80,9 +80,9 @@ begin
   False, '');
 
   DirPage.Add('CLAP folder');
-  DirPage.Values[0] := GetPreviousData('CLAP', ExpandConstant('{reg:HKLM\SOFTWARE\CLAP,CLAPPluginsPath|{pf}\Common Files\CLAP\UnplugRed}'));
+  DirPage.Values[0] := GetPreviousData('CLAP', ExpandConstant('{reg:HKLM\SOFTWARE\CLAP,CLAPPluginsPath|{commonpf}\Common Files\CLAP\UnplugRed}'));
   DirPage.Add('Standalone folder');
-  DirPage.Values[1] := GetPreviousData('Standalone', ExpandConstant('{reg:HKLM\SOFTWARE\CLAP,CLAPPluginsPath|{pf}\Common Files\CLAP\UnplugRed}'));
+  DirPage.Values[1] := GetPreviousData('Standalone', ExpandConstant('{reg:HKLM\SOFTWARE\CLAP,CLAPPluginsPath|{commonpf}\Common Files\CLAP\UnplugRed}'));
 
 end;
 
@@ -90,11 +90,11 @@ procedure CurPageChanged(CurPageID: Integer);
 begin
   if CurPageID = DirPage.ID then
   begin
-    DirPage.Buttons[0].Enabled := IsComponentSelected('CLAP');
+    DirPage.Buttons[0].Enabled := WizardIsComponentSelected('CLAP');
     DirPage.PromptLabels[0].Enabled := DirPage.Buttons[0].Enabled;
     DirPage.Edits[0].Enabled := DirPage.Buttons[0].Enabled;
 
-    DirPage.Buttons[1].Enabled := IsComponentSelected('Standalone');
+    DirPage.Buttons[1].Enabled := WizardIsComponentSelected('Standalone');
     DirPage.PromptLabels[1].Enabled := DirPage.Buttons[1].Enabled;
     DirPage.Edits[1].Enabled := DirPage.Buttons[1].Enabled;
   end;
@@ -109,7 +109,7 @@ function ShouldSkipPage(PageID: Integer): Boolean;
 begin
   if PageID = DirPage.ID then
   begin
-    If (not IsComponentSelected('CLAP')) and (not IsComponentSelected('Standalone')) then
+    If (not WizardIsComponentSelected('CLAP')) and (not WizardIsComponentSelected('Standalone')) then
       begin
         Result := True
       end;
