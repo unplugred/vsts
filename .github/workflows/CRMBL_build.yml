@@ -86,6 +86,7 @@ jobs:
     - name: (mac) build
       if: startsWith(matrix.os, 'macos')
       id: build_mac
+      run: |
         cmake --build "${{matrix.folder}}" --config Release --target ${{env.NOSPACE}}_AU
 
     - name: (windows) package
@@ -161,6 +162,7 @@ jobs:
     - name: (mac) build free
       if: startsWith(matrix.os, 'macos')
       id: build_mac_free
+      run: |
         cmake --build "${{matrix.folder}}" --config Release --target ${{env.NOSPACE}}_AU
 
     - name: (windows) package free
