@@ -5,7 +5,7 @@ juce_add_plugin("${BaseTargetName}"
 	COMPANY_NAME "unplugred"
 	COMPANY_WEBSITE "https://vst.unplug.red"
 	COMPANY_EMAIL "arihanan@proton.me"
-	FORMATS Standalone VST3
+	FORMATS Standalone VST3 AU
 	IS_SYNTH FALSE
 	NEEDS_MIDI_INPUT FALSE
 	NEEDS_MIDI_OUTPUT FALSE
@@ -16,9 +16,11 @@ juce_add_plugin("${BaseTargetName}"
 	PLUGIN_CODE Piss
 	VST3_CATEGORY Distortion
 	VST2_CATEGORY kPlugCategEffect
+	AU_MAIN_TYPE kAudioUnitType_Effect
 	COPY_PLUGIN_AFTER_BUILD TRUE
+	VST3_COPY_DIR "${outdir}"
 	VST_COPY_DIR "${outdir}"
-	VST3_COPY_DIR "${outdir}")
+	AU_COPY_DIR "${outdir}")
 
 target_compile_features("${BaseTargetName}" PRIVATE cxx_std_17)
 

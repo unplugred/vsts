@@ -5,7 +5,7 @@ juce_add_plugin("${BaseTargetName}"
 	COMPANY_NAME "unplugred"
 	COMPANY_WEBSITE "https://vst.unplug.red"
 	COMPANY_EMAIL "arihanan@proton.me"
-	FORMATS Standalone VST3
+	FORMATS Standalone VST3 AU
 	IS_SYNTH FALSE
 	NEEDS_MIDI_INPUT FALSE
 	NEEDS_MIDI_OUTPUT FALSE
@@ -16,9 +16,11 @@ juce_add_plugin("${BaseTargetName}"
 	PLUGIN_CODE Prtt
 	VST3_CATEGORY Tools
 	VST2_CATEGORY kPlugCategEffect
+	AU_MAIN_TYPE kAudioUnitType_Effect
 	COPY_PLUGIN_AFTER_BUILD TRUE
+	VST3_COPY_DIR "${freedir}"
 	VST_COPY_DIR "${freedir}"
-	VST3_COPY_DIR "${freedir}")
+	AU_COPY_DIR "${freedir}")
 
 target_compile_features("${BaseTargetName}" PRIVATE cxx_std_17)
 
