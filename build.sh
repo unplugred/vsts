@@ -124,6 +124,10 @@ case $REPLY in
 		vn=Prisma
 		vs=Prisma
 		;;
+	su)
+		vn=SunBurnt
+		vs=SunBurnt
+		;;
 	*)
 		read -p "done."
 		exit 1
