@@ -58,9 +58,10 @@ void ProtoAudioProcessorEditor::newOpenGLContextCreated() {
 //BASE VERT
 R"(#version 150 core
 in vec2 aPos;
+uniform float banner;
 out vec2 uv;
 void main(){
-	gl_Position = vec4(aPos*2-1,0,1);
+	gl_Position = vec4(vec2(aPos.x,aPos.y*(1-banner)+banner)*2-1,0,1);
 	uv = aPos;
 })",
 //BASE FRAG
@@ -273,6 +274,7 @@ void ProtoAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glActiveTexture(GL_TEXTURE0);
 	basetex.bind();
 	baseshader->setUniform("basetex",0);
+	baseshader->setUniform("banner",banneroffset);
 	baseshader->setUniform("offset",time);
 	baseshader->setUniform("texscale",242.f/basetex.getWidth(),462.f/basetex.getHeight());
 	context.extensions.glEnableVertexAttribArray(coord);
