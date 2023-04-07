@@ -9,10 +9,12 @@ on:
     paths:
       - '**Red Bass**'
       - '**RedBass**'
+      - 'rebuild_all.txt'
   pull_request:
     paths:
       - '**Red Bass**'
       - '**RedBass**'
+      - 'rebuild_all.txt'
     branches:
       - master
 

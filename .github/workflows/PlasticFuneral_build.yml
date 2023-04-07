@@ -9,10 +9,12 @@ on:
     paths:
       - '**Plastic Funeral**'
       - '**PlasticFuneral**'
+      - 'rebuild_all.txt'
   pull_request:
     paths:
       - '**Plastic Funeral**'
       - '**PlasticFuneral**'
+      - 'rebuild_all.txt'
     branches:
       - master
 
