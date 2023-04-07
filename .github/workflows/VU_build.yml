@@ -208,7 +208,7 @@ jobs:
         codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION }}" -v "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.vst3" --deep --strict --options=runtime --timestamp
         codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION }}" -v "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.clap" --deep --strict --options=runtime --timestamp
         codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION }}" -v "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.app" --deep --strict --options=runtime --timestamp
-        codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION }}" -v "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.componenet" --deep --strict --options=runtime --timestamp
+        codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION }}" -v "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.component" --deep --strict --options=runtime --timestamp
         zip -r "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}_vst3.zip" "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.vst3"
         zip -r "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}_clap.zip" "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.clap"
         zip -r "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}_standalone.zip" "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.app"
