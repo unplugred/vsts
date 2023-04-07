@@ -119,7 +119,7 @@ jobs:
         mv "${{matrix.folder}}/Plugins/${{env.PLUG}}/${{env.NOSPACE}}_artefacts/Release/CLAP/${{env.PLUG}}.clap" "Setup/${{matrix.folder}}/free/${{env.PLUG}}.clap"
         mv "${{matrix.folder}}/Plugins/${{env.PLUG}}/${{env.NOSPACE}}_artefacts/Release/Standalone/${{env.PLUG}}.app" "Setup/${{matrix.folder}}/free/${{env.PLUG}}.app"
         cp -r "Plugins/MPaint/Samples" "Setup/${{matrix.folder}}/free/${{env.PLUG}}"
-        cp  "Plugins/MPaint/how to install MPaint.txt" "Setup/${{matrix.folder}}/free/how to install MPaint.txt"
+        cp  "Plugins/MPaint/how to install MPaint (mac).txt" "Setup/${{matrix.folder}}/free/how to install MPaint.txt"
 
     - name: (mac) code signing
       if: startsWith(matrix.os, 'macos')
