@@ -14,7 +14,6 @@ case $OSTYPE in
 		;;
 esac
 
-read  -n 1 -r
 vm=null
 read -p "[c]onfigure/[D]ebug/[r]elease/[m]in size rel/rel [w]ith deb info: " -n 1 -r
 REPLY=${REPLY:-d}
