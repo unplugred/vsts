@@ -312,9 +312,9 @@ void SunBurntAudioProcessorEditor::compileshader(std::unique_ptr<OpenGLShaderPro
 	shader->link();
 }
 void SunBurntAudioProcessorEditor::renderOpenGL() {
+	//glEnable(GL_TEXTURE_2D);
+	//glDisable(GL_LIGHTING);
 	glEnable(GL_BLEND);
-	glEnable(GL_TEXTURE_2D);
-	glDisable(GL_LIGHTING);
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_LINE_SMOOTH);
 

@@ -306,9 +306,9 @@ void ClickBoxAudioProcessorEditor::compileshader(std::unique_ptr<OpenGLShaderPro
 	shader->link();
 }
 void ClickBoxAudioProcessorEditor::renderOpenGL() {
+	//glEnable(GL_TEXTURE_2D);
+	//glDisable(GL_LIGHTING);
 	glEnable(GL_BLEND);
-	glEnable(GL_TEXTURE_2D);
-	glDisable(GL_LIGHTING);
 	glDisable(GL_DEPTH_TEST);
 
 	context.extensions.glBindBuffer(GL_ARRAY_BUFFER,arraybuffer);
