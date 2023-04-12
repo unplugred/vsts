@@ -139,13 +139,20 @@ void CRMBLAudioProcessor::reseteverything() {
 	resetdampenings = true;
 
 	//soundtouch
+	if(samplerate <= 96000) {
+		pitchshift.setSampleRate(samplerate*(params.oversampling?2:1));
+		pitchprocessbuffer.resize(samplerate*blocksizething*(params.oversampling?2:1));
+	} else {
+		pitchshift.setSampleRate(fmin(samplerate,192000));
+		pitchprocessbuffer.resize(fmin(samplerate,192000)*blocksizething);
+	}
 	pitchshift.setChannels(channelnum);
-	pitchshift.setSampleRate(samplerate);
 	pitchshift.setPitchSemiTones(state.values[9]);
-	pitchprocessbuffer.resize(samplerate*blocksizething);
 
 	//delay buffer
-	delaybuffer.setSize(channelnum,samplerate*MAX_DLY+blocksizething+257,true,true,false);
+	int delaybuffernumsamples = samplerate*MAX_DLY+blocksizething+257;
+	delaybuffer.setSize(channelnum,delaybuffernumsamples,true,true,false);
+	delaybufferindex = delaybufferindex%delaybuffernumsamples;
 	delayprocessbuffer.setSize(channelnum,blocksizething,true,true,false);
 	delaypointerarray.resize(channelnum);
 
@@ -307,8 +314,10 @@ void CRMBLAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 			}
 		}
 
-		//----down sample----
-		if(params.oversampling) {
+		bool pitchpre = samplerate <= 96000;
+
+		//----down sample part 1----
+		if(params.oversampling && !pitchpre) {
 			for(int i = 0; i < channelnum; i++) delaypointerarray[i] = delayprocessbuffer.getWritePointer(i);
 				delayprocessbuffertwo = AudioBuffer<float>(delaypointerarray.data(), channelnum, static_cast<int>(numsamples));
 			dsp::AudioBlock<float> delayprocessblocktwo(delayprocessbuffertwo);
@@ -318,16 +327,26 @@ void CRMBLAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 
 		//pitch
 		if(!ispitchbypassed) {
+			int pitchnumsamples = pitchpre?upsamplednumsamples:numsamples;
 			using Format = AudioData::Format<AudioData::Float32, AudioData::NativeEndian>;
 
 			AudioData::interleaveSamples(
 				AudioData::NonInterleavedSource<Format>{delayprocessbuffertwo.getArrayOfReadPointers(),channelnum},
-				AudioData::InterleavedDest<Format>{&pitchprocessbuffer.front(),channelnum},numsamples);
-			pitchshift.putSamples(pitchprocessbuffer.data(), numsamples);
-			pitchshift.receiveSamples(pitchprocessbuffer.data(), numsamples);
+				AudioData::InterleavedDest<Format>{&pitchprocessbuffer.front(),channelnum},pitchnumsamples);
+			pitchshift.putSamples(pitchprocessbuffer.data(), pitchnumsamples);
+			pitchshift.receiveSamples(pitchprocessbuffer.data(), pitchnumsamples);
 			AudioData::deinterleaveSamples(
 				AudioData::InterleavedSource<Format>{&pitchprocessbuffer.front(),channelnum},
-				AudioData::NonInterleavedDest<Format>{delayProcessData,channelnum},numsamples);
+				AudioData::NonInterleavedDest<Format>{delayProcessData,channelnum},pitchnumsamples);
+		}
+
+		//----down sample part 2----
+		if(params.oversampling && pitchpre) {
+			for(int i = 0; i < channelnum; i++) delaypointerarray[i] = delayprocessbuffer.getWritePointer(i);
+				delayprocessbuffertwo = AudioBuffer<float>(delaypointerarray.data(), channelnum, static_cast<int>(numsamples));
+			dsp::AudioBlock<float> delayprocessblocktwo(delayprocessbuffertwo);
+			os->processSamplesDown(delayprocessblocktwo);
+			delayProcessData = delayprocessbuffertwo.getArrayOfWritePointers();
 		}
 
 		//lowpass
@@ -425,6 +444,10 @@ void CRMBLAudioProcessor::setoversampling(bool toggle) {
 	params.pots[8].smooth.reset(samplerate*(toggle?2:1),params.pots[8].smoothtime);
 	damplimiter.v_samplerate = samplerate*(toggle?2:1);
 	dcfilter.init(samplerate*(toggle?2:1),channelnum);
+	if(samplerate <= 96000) {
+		pitchshift.setSampleRate(samplerate*(toggle?2:1));
+		pitchprocessbuffer.resize(samplerate*blocksizething*(toggle?2:1));
+	}
 }
 
 bool CRMBLAudioProcessor::hasEditor() const { return true; }
