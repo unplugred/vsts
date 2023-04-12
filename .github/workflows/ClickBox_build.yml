@@ -144,8 +144,8 @@ jobs:
       run: |
         cd Setup
         iscc "${{env.PLUG}}.iss"
-        mkdir "${{matrix.folder}}/free/Manual Install"
-        mv "${{matrix.folder}}/free/*.*" "${{matrix.folder}}/free/Manual Install"
+        mkdir "${{matrix.folder}}/free/Manual install"
+        mv "${{matrix.folder}}/free/*" "${{matrix.folder}}/free/Manual install/"
         mv "Output/${{env.PLUG}} Installer.exe" "${{matrix.folder}}/free"
 
     - uses: actions/upload-artifact@v3

@@ -238,10 +238,10 @@ jobs:
         cd Setup
         iscc "${{env.PLUG}}.iss"
         iscc "${{env.PLUG}} Free.iss"
-        mkdir "${{matrix.folder}}/paid/Manual Install"
-        mkdir "${{matrix.folder}}/free/Manual Install"
-        mv "${{matrix.folder}}/paid/*.*" "${{matrix.folder}}/paid/Manual Install"
-        mv "${{matrix.folder}}/free/*.*" "${{matrix.folder}}/free/Manual Install"
+        mkdir "${{matrix.folder}}/paid/Manual install"
+        mkdir "${{matrix.folder}}/free/Manual install"
+        mv "${{matrix.folder}}/paid/*" "${{matrix.folder}}/paid/Manual install/"
+        mv "${{matrix.folder}}/free/*" "${{matrix.folder}}/free/Manual install/"
         mv "Output/${{env.PLUG}} Installer.exe" "${{matrix.folder}}/paid"
         mv "Output/${{env.PLUG}} Free Installer.exe" "${{matrix.folder}}/free"
 
