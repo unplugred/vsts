@@ -156,9 +156,9 @@ void main(){
 
 }
 void RedVJAudioProcessorEditor::renderOpenGL() {
+	//glEnable(GL_TEXTURE_2D);
+	//glDisable(GL_LIGHTING);
 	glEnable(GL_BLEND);
-	glEnable(GL_TEXTURE_2D);
-	glDisable(GL_LIGHTING);
 	glDisable(GL_DEPTH_TEST);
 
 	//free textures
