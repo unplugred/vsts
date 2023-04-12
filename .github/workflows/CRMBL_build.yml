@@ -216,12 +216,12 @@ jobs:
         cd Setup
         iscc "${{env.PLUG}}.iss"
         iscc "${{env.PLUG}} Free.iss"
-        mkdir "Setup/${{matrix.folder}}/paid/Manual Install"
-        mkdir "Setup/${{matrix.folder}}/free/Manual Install"
-        mv "Setup/${{matrix.folder}}/paid/*.*" "Setup/${{matrix.folder}}/paid/Manual Install"
-        mv "Setup/${{matrix.folder}}/free/*.*" "Setup/${{matrix.folder}}/free/Manual Install"
-        mv "Setup/Output/${{env.PLUG}} Installer.exe" "Setup/${{matrix.folder}}/paid"
-        mv "Setup/Output/${{env.PLUG}} Free Installer.exe" "Setup/${{matrix.folder}}/free"
+        mkdir "${{matrix.folder}}/paid/Manual Install"
+        mkdir "${{matrix.folder}}/free/Manual Install"
+        mv "${{matrix.folder}}/paid/*.*" "${{matrix.folder}}/paid/Manual Install"
+        mv "${{matrix.folder}}/free/*.*" "${{matrix.folder}}/free/Manual Install"
+        mv "Output/${{env.PLUG}} Installer.exe" "${{matrix.folder}}/paid"
+        mv "Output/${{env.PLUG}} Free Installer.exe" "${{matrix.folder}}/free"
 
     - uses: actions/upload-artifact@v3
       with:
