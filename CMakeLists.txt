@@ -14,7 +14,7 @@ Set(FETCHCONTENT_QUIET FALSE)
 FetchContent_Declare(
 	JUCE
 	GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
-	GIT_TAG 7.0.5
+	GIT_TAG master
 	GIT_PROGRESS TRUE
 )
 FetchContent_MakeAvailable(JUCE)
