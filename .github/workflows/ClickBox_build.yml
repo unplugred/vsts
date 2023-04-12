@@ -138,21 +138,17 @@ jobs:
         xcrun stapler staple "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.clap"
         xcrun stapler staple "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.component"
 
-    - uses: actions/upload-artifact@v3
-      with:
-        name: ${{env.PLUG}} ${{ matrix.name }}
-        path: Setup/${{matrix.folder}}/free
-
     - name: (windows) build installer
       if: startsWith(matrix.os, 'windows')
       id: installer
       run: |
         cd Setup
         iscc "${{env.PLUG}}.iss"
+        mkdir "${{matrix.folder}}/free/Manual Install"
+        mv "${{matrix.folder}}/free/*.*" "${{matrix.folder}}/free/Manual Install"
+        mv "Output/${{env.PLUG}} Installer.exe" "${{matrix.folder}}/free"
 
     - uses: actions/upload-artifact@v3
-      if: startsWith(matrix.os, 'windows')
       with:
-        name: ${{env.PLUG}} Installer
-        path: "Setup/Output/${{env.PLUG}} Installer.exe"
-
+        name: ${{env.PLUG}} ${{ matrix.name }}
+        path: Setup/${{matrix.folder}}/free
