@@ -47,13 +47,10 @@ SunBurntAudioProcessorEditor::SunBurntAudioProcessorEditor(SunBurntAudioProcesso
 		else if(i < 16) s++;
 		i++;
 	}
+	setSize(pw*uiscales[uiscaleindex],ph*uiscales[uiscaleindex]);
 	looknfeel.scale = uiscales[uiscaleindex];
-
 #ifdef BANNER
-	setSize(pw*uiscales[uiscaleindex],ph*uiscales[uiscaleindex]);
 	banneroffset = 21.f/1.5f*uiscales[uiscaleindex]/getHeight();
-#else
-	setSize(pw*uiscales[uiscaleindex],ph*uiscales[uiscaleindex]);
 #endif
 	setResizable(false, false);
 
@@ -317,10 +314,11 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 	glEnable(GL_BLEND);
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_LINE_SMOOTH);
+	float scaleddpi = uiscales[uiscaleindex]*dpi;
 
 	if(prevuiscaleindex != uiscaleindex) {
 		framebuffer.release();
-		framebuffer.initialise(context, 368*uiscales[uiscaleindex]*dpi, 334*uiscales[uiscaleindex]*dpi);
+		framebuffer.initialise(context, 368*scaleddpi, 334*scaleddpi);
 		glBindTexture(GL_TEXTURE_2D, framebuffer.getTextureID());
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -349,7 +347,7 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 	baseshader->setUniform("randomx",randomdir[0],randomdir[1],randomdir[2],randomdir[3]);
 	baseshader->setUniform("randomy",randomdir[4],randomdir[5],randomdir[6],randomdir[7]);
 	baseshader->setUniform("randomblend",randomblend[0],randomblend[1],randomblend[2],randomblend[3]);
-	baseshader->setUniform("dpi",(float)fmax(uiscales[uiscaleindex]*dpi*.5f,1.f));
+	baseshader->setUniform("dpi",(float)fmax(scaleddpi*.5f,1.f));
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
@@ -360,7 +358,7 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 	coord = context.extensions.glGetAttribLocation(visshader->getProgramID(),"aPos");
 	visshader->setUniform("banner",banneroffset);
-	visshader->setUniform("dpi",uiscales[uiscaleindex]*dpi);
+	visshader->setUniform("dpi",scaleddpi);
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,3,GL_FLOAT,GL_FALSE,0,0);
 	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*3408, visline, GL_DYNAMIC_DRAW);
@@ -376,7 +374,7 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 	circleshader->setUniform("colin",1.f,0.f,0.f);
 	circleshader->setUniform("colout",1.f,0.f,0.f);
 	circleshader->setUniform("knobscale",17.364f*uiscales[uiscaleindex]/getWidth(),17.364f*uiscales[uiscaleindex]/getHeight());
-	circleshader->setUniform("size",8.682f*uiscales[uiscaleindex]*dpi);
+	circleshader->setUniform("size",8.682f*scaleddpi);
 	circleshader->setUniform("fill",.5f);
 	int nextpoint = 0;
 	for(int i = 0; i < (curves[curveselection].points.size()-1); ++i) {
@@ -393,7 +391,7 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 	//control points
 	circleshader->setUniform("colin",1.f,1.f,0.f);
 	circleshader->setUniform("knobscale",25.364f*uiscales[uiscaleindex]/getWidth(),25.364f*uiscales[uiscaleindex]/getHeight());
-	circleshader->setUniform("size",12.682f*uiscales[uiscaleindex]*dpi);
+	circleshader->setUniform("size",12.682f*scaleddpi);
 	circleshader->setUniform("fill",1-9.f/12.682f);
 	for(int i = 0; i < curves[curveselection].points.size(); ++i) {
 		if(!curves[curveselection].points[i].enabled) continue;
@@ -404,7 +402,7 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 	}
 	//knob bg
 	circleshader->setUniform("knobscale",83.26f*uiscales[uiscaleindex]/getWidth(),83.26f*uiscales[uiscaleindex]/getHeight());
-	circleshader->setUniform("size",41.63f*uiscales[uiscaleindex]*dpi);
+	circleshader->setUniform("size",41.63f*scaleddpi);
 	circleshader->setUniform("fill",1-9.f/41.63f);
 	for(int i = 0; i < knobcount; ++i) {
 		float x = i*121.2f+23.38f;
@@ -420,7 +418,7 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 	//knob dots
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	circleshader->setUniform("knobscale",25.f*uiscales[uiscaleindex]/getWidth(),25.f*uiscales[uiscaleindex]/getHeight());
-	circleshader->setUniform("size",12.5f*uiscales[uiscaleindex]*dpi);
+	circleshader->setUniform("size",12.5f*scaleddpi);
 	circleshader->setUniform("colin",1.f,0.f,0.f);
 	circleshader->setUniform("colout",1.f,0.f,0.f);
 	for(int i = 0; i < knobcount; i++) {
@@ -436,7 +434,7 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 	}
 	//curve enable
 	circleshader->setUniform("knobscale",33.f*uiscales[uiscaleindex]/getWidth(),33.f*uiscales[uiscaleindex]/getHeight());
-	circleshader->setUniform("size",16.5f*uiscales[uiscaleindex]*dpi);
+	circleshader->setUniform("size",16.5f*scaleddpi);
 	circleshader->setUniform("fill",1-5.f/16.5f);
 	for(int i = 0; i < 4; i++) {
 		float x = 643.5f;
@@ -485,7 +483,7 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glActiveTexture(GL_TEXTURE0);
 	bannertex.bind();
 	bannershader->setUniform("tex",0);
-	bannershader->setUniform("dpi",(float)fmax(dpi*uiscales[uiscaleindex],1.f));
+	bannershader->setUniform("dpi",(float)fmax(scaleddpi,1.f));
 #ifdef BETA
 	bannershader->setUniform("texscale",494.f/bannertex.getWidth(),21.f/bannertex.getHeight());
 	bannershader->setUniform("size",getWidth()/(494.f/1.5f*uiscales[uiscaleindex]),21.f/1.5f*uiscales[uiscaleindex]/getHeight());
@@ -525,7 +523,8 @@ void SunBurntAudioProcessorEditor::openGLContextClosing() {
 	context.extensions.glDeleteBuffers(1,&arraybuffer);
 }
 void SunBurntAudioProcessorEditor::calcvis() {
-	curveiterator iterator = curveiterator(curves[curveselection],283);
+	curveiterator iterator;
+	iterator.reset(curves[curveselection],283);
 	double prevy = 74+iterator.next()*200;
 	double currenty = prevy;
 	double nexty = prevy;
@@ -556,14 +555,6 @@ void SunBurntAudioProcessorEditor::paint (Graphics& g) { }
 
 void SunBurntAudioProcessorEditor::timerCallback() {
 	if(websiteht >= -.65761f) websiteht -= .03f;
-
-	if(audioProcessor.rmscount.get() > 0) {
-		rms = sqrt(audioProcessor.rmsadd.get()/audioProcessor.rmscount.get());
-		if(knobs[5].value > .4f) rms = rms/knobs[5].value;
-		else rms *= 2.5f;
-		audioProcessor.rmsadd = 0;
-		audioProcessor.rmscount = 0;
-	} else rms *= .9f;
 
 	time += .1f;
 	if(time >= 1) {
@@ -672,7 +663,7 @@ void SunBurntAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 			} else {
 				i = (i-1)/2;
 				initialvalue[0] = curves[curveselection].points[i].tension;
-				initialdotvalue[0] = curve::calctension(.5,initialvalue[0]);
+				initialdotvalue[0] = initialvalue[0];
 			}
 		} else {
 			initialvalue[0] = knobs[hover].value;
@@ -843,6 +834,11 @@ void SunBurntAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 			if((i%2) == 0) {
 				i /= 2;
 				axislock = -1;
+				if((fabs(initialdotvalue[0]-curves[curveselection].points[i].x)+fabs(initialdotvalue[1]-curves[curveselection].points[i].y)) < .00001) {
+					curves[curveselection].points[i].x = initialdotvalue[0];
+					curves[curveselection].points[i].y = initialdotvalue[1];
+					return;
+				}
 				dragpos.x += (curves[curveselection].points[i].x-initialdotvalue[0])*uiscales[uiscaleindex]*284;
 				dragpos.y += (initialdotvalue[1]-curves[curveselection].points[i].y)*uiscales[uiscaleindex]*200;
 				if(!curves[curveselection].points[i].enabled) {
@@ -851,7 +847,11 @@ void SunBurntAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 				} else audioProcessor.movepoint(i,curves[curveselection].points[i].x,curves[curveselection].points[i].y);
 			} else {
 				i = (i-1)/2;
-				float interp = curve::calctension(.5,curves[curveselection].points[i].tension)-initialdotvalue[0];
+				if(fabs(initialdotvalue[0]-curves[curveselection].points[i].tension) < .00001) {
+					curves[curveselection].points[i].tension = initialdotvalue[0];
+					return;
+				}
+				float interp = curve::calctension(.5,curves[curveselection].points[i].tension)-curve::calctension(.5,initialdotvalue[0]);
 				dragpos.y += (curves[curveselection].points[i].y-curves[curveselection].points[i+1].y)*interp*uiscales[uiscaleindex]*200.f;
 				audioProcessor.movetension(i,curves[curveselection].points[i].tension);
 			}
@@ -887,6 +887,7 @@ void SunBurntAudioProcessorEditor::mouseDoubleClick(const MouseEvent& event) {
 		curves[curveselection].points.insert(curves[curveselection].points.begin()+i,point(x,y,curves[curveselection].points[i-1].tension));
 		audioProcessor.addpoint(i,x,y);
 		calcvis();
+		hover = recalchover(event.x,event.y);
 		return;
 	}
 	if(hover <= -1) return;
@@ -899,10 +900,13 @@ void SunBurntAudioProcessorEditor::mouseDoubleClick(const MouseEvent& event) {
 				audioProcessor.deletepoint(i);
 			}
 		} else {
-			curves[curveselection].points[(i-1)/2].tension = .5f;
+			i = (i-1)/2;
+			if(fabs(curves[curveselection].points[i].tension-.5) < .00001f) return;
+			curves[curveselection].points[i].tension = .5f;
 			audioProcessor.movetension(i,.5f);
 		}
 		calcvis();
+		hover = recalchover(event.x,event.y);
 	} else {
 		audioProcessor.undoManager.setCurrentTransactionName((String)"Reset " += knobs[hover].name);
 		audioProcessor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(knobs[hover].defaultvalue);
