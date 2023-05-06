@@ -11,10 +11,10 @@ juce_add_plugin("${BaseTargetName}"
 	NEEDS_MIDI_OUTPUT FALSE
 	IS_MIDI_EFFECT FALSE
 	EDITOR_WANTS_KEYBOARD_FOCUS FALSE
-	DESCRIPTION "A prototyping plugin for internal use."
+	DESCRIPTION "Multi-curve reverb delay."
 	PLUGIN_MANUFACTURER_CODE Ured
-	PLUGIN_CODE Prtt
-	VST3_CATEGORY Tools
+	PLUGIN_CODE Snbt
+	VST3_CATEGORY Reverb
 	VST2_CATEGORY kPlugCategEffect
 	AU_MAIN_TYPE kAudioUnitType_Effect
 	COPY_PLUGIN_AFTER_BUILD TRUE
