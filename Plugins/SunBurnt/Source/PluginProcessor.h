@@ -1,8 +1,8 @@
 #pragma once
 #include "includes.h"
 
-//#define BANNER
-//#define BETA
+#define BANNER
+#define BETA
 
 struct point {
 	point(float px, float py, float ptension = .5f) {
@@ -23,13 +23,14 @@ struct curve {
 };
 class curveiterator {
 public:
-	curveiterator(curve inputcurve, int wwidth);
+	curveiterator() { }
+	void reset(curve inputcurve, int wwidth);
 	double next();
 	bool pointhit = true;
+	int width = 284;
+	int x = 99999;
 private:
 	std::vector<point> points;
-	int width = 284;
-	int x = -1;
 	int nextpoint = 1;
 	int currentpoint = 0;
 };
@@ -76,7 +77,7 @@ struct pluginpreset {
 	String name = "";
 	curve curves[5];
 	float values[6];
-	float resonance[2] = {0,0};
+	float resonance[2] = {.3f,.3f};
 	pluginpreset(String pname = "", float val1 = 0.f, float val2 = 0.f, float val3 = 0.f, float val4 = 0.f, float val5 = 0.f, float val6 = 0.f, bool enablehighpass = true, bool enablelowpass = true, bool enablepan = true, bool enableshimmer = false) {
 		name = pname;
 		values[0] = val1;
@@ -90,7 +91,7 @@ struct pluginpreset {
 		curves[3].enabled = enablepan;
 		curves[4].enabled = enableshimmer;
 		curves[0].points.push_back(point(0,0,.2f));
-		curves[0].points.push_back(point(.2f,.8f,.7f));
+		curves[0].points.push_back(point(.07f,1,.7f));
 		curves[0].points.push_back(point(1,0,.5f));
 		curves[1].points.push_back(point(0,0,.5f));
 		curves[1].points.push_back(point(1,0,.5f));
@@ -113,11 +114,10 @@ public:
 	void reseteverything();
 	void releaseResources() override;
 
-	bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
+	bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
 
-	void processBlock (AudioBuffer<float>&, MidiBuffer&) override;
-	float plasticfuneral(float source, int channel, int channelcount, pluginpreset stt, float nrm);
-	float normalizegain(float fat, float dry);
+	void processBlock(AudioBuffer<float>&, MidiBuffer&) override;
+	void genbuffer();
 
 	AudioProcessorEditor* createEditor() override;
 	bool hasEditor() const override;
@@ -133,12 +133,12 @@ public:
 
 	int getNumPrograms() override;
 	int getCurrentProgram() override;
-	void setCurrentProgram (int index) override;
-	const String getProgramName (int index) override;
-	void changeProgramName (int index, const String& newName) override;
+	void setCurrentProgram(int index) override;
+	const String getProgramName(int index) override;
+	void changeProgramName(int index, const String& newName) override;
 
-	void getStateInformation (MemoryBlock& destData) override;
-	void setStateInformation (const void* data, int sizeInBytes) override;
+	void getStateInformation(MemoryBlock& destData) override;
+	void setStateInformation(const void* data, int sizeInBytes) override;
 	virtual void parameterChanged(const String& parameterID, float newValue);
 	void movepoint(int index, float x, float y);
 	void movetension(int index, float tension);
@@ -147,9 +147,6 @@ public:
  
 	AudioProcessorValueTreeState apvts;
 	UndoManager undoManager;
-
-	Atomic<float> rmsadd = 0;
-	Atomic<int> rmscount = 0;
 
 	int version = 0;
 	const int paramcount = 6;
@@ -170,9 +167,21 @@ private:
 	int samplesperblock = 0;
 	int samplerate = 44100;
 
-	float curfat = -1000;
-	float curdry = -1000;
-	double curnorm = 1;
+	Random random;
+	curveiterator iterator[5];
+
+	std::vector<dsp::StateVariableFilter::Filter<float>> highpassfilters;
+	std::vector<dsp::StateVariableFilter::Filter<float>> lowpassfilters; 
+	std::vector<std::unique_ptr<dsp::Convolution>> convolver;
+	//soundtouch::SoundTouch pitchshift;
+
+	Atomic<bool> updatedcurve;
+	std::vector<AudioBuffer<float>> impulsebuffer;
+	std::vector<float*> impulsechanneldata;
+	std::vector<float*> wetchanneldata;
+	AudioBuffer<float> wetbuffer; //ew
+	int revlength = 0;
+	int readx = 0;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SunBurntAudioProcessor)
 };

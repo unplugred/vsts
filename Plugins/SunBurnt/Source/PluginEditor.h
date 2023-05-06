@@ -100,8 +100,6 @@ private:
 	OpenGLFrameBuffer framebuffer;
 	std::unique_ptr<OpenGLShaderProgram> ppshader;
 
-	float rms = 0;
-
 	float time = 1000;
 	Random random;
 	char randomid[4] {0,0,0,0};
