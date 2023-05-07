@@ -12,8 +12,11 @@ void curveiterator::reset(curve inputcurve, int wwidth) {
 	while(!points[nextpoint].enabled) ++nextpoint;
 }
 double curveiterator::next() {
-	double xx = ((double)++x)/width;
-	if(xx >= 1) return points[points.size()-1].y;
+	double xx = ((double)++x)/(width-1);
+	if(xx >= 1) {
+		if((((double)x-1)/(width-1)) < 1) pointhit = true;
+		return points[points.size()-1].y;
+	}
 	if(xx >= points[nextpoint].x) {
 		pointhit = true;
 		currentpoint = nextpoint;
