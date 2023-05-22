@@ -123,15 +123,6 @@ CRMBLAudioProcessorEditor::CRMBLAudioProcessorEditor (CRMBLAudioProcessor& p, in
 	setSize(507,465);
 #endif
 	setResizable(false, false);
-	if(audioProcessor.wrapperType == AudioProcessor::WrapperType::wrapperType_Undefined)
-		dpi = 1;
-	else if((SystemStats::getOperatingSystemType() & SystemStats::OperatingSystemType::Windows) != 0)
-		dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->dpi/96.f;
-	else
-		dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->scale;
-	audioProcessor.logger.debug("DPI: "+(String)(Desktop::getInstance().getDisplays().getPrimaryDisplay()->dpi/96.f));
-	audioProcessor.logger.debug("DISPLAY SCALE: "+(String)(Desktop::getInstance().getDisplays().getPrimaryDisplay()->scale));
-	audioProcessor.logger.debug("FORMAT: "+(String)(AudioProcessor::getWrapperTypeDescription(audioProcessor.wrapperType)));
 
 	setOpaque(true);
 	context.setOpenGLVersionRequired(OpenGLContext::OpenGLVersion::openGL3_2);
@@ -449,6 +440,20 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 	glEnable(GL_BLEND);
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_LINE_SMOOTH);
+
+	if(context.getRenderingScale() != dpi) {
+		dpi = context.getRenderingScale();
+		feedbackbuffer.release();
+		feedbackbuffer.initialise(context, 507*dpi, 465*dpi);
+		glBindTexture(GL_TEXTURE_2D, feedbackbuffer.getTextureID());
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		mainbuffer.release();
+		mainbuffer.initialise(context, 507*dpi, 465*dpi);
+		glBindTexture(GL_TEXTURE_2D, mainbuffer.getTextureID());
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	}
 
 	context.extensions.glBindBuffer(GL_ARRAY_BUFFER, arraybuffer);
 	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
