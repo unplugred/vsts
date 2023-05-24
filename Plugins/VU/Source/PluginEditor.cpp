@@ -34,10 +34,6 @@ VuAudioProcessorEditor::VuAudioProcessorEditor(VuAudioProcessor& p, int paramcou
 #endif
 	setResizeLimits(3,2,3200,950);
 	//getConstrainer()->setFixedAspectRatio((audioProcessor.stereo?64.f:32.f)/19.f);
-	if((SystemStats::getOperatingSystemType() & SystemStats::OperatingSystemType::Windows) != 0)
-		dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->dpi/96.f;
-	else
-		dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->scale;
 
 	startTimerHz(30);
 }
@@ -263,6 +259,10 @@ void VuAudioProcessorEditor::renderOpenGL() {
 	glDisable(GL_BLEND);
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_ALPHA_TEST);
+
+	if(context.getRenderingScale() != dpi) {
+		dpi = context.getRenderingScale();
+	}
 
 	context.extensions.glBindBuffer(GL_ARRAY_BUFFER, arraybuffer);
 	vushader->use();

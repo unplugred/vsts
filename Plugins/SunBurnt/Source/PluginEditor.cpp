@@ -21,10 +21,7 @@ SunBurntAudioProcessorEditor::SunBurntAudioProcessorEditor(SunBurntAudioProcesso
 		if(i > 0) audioProcessor.apvts.addParameterListener(audioProcessor.curveid[i],this);
 	}
 
-	if((SystemStats::getOperatingSystemType() & SystemStats::OperatingSystemType::Windows) != 0)
-		dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->dpi/((double)96);
-	else
-		dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->scale;
+	dpi = context.getRenderingScale(); //TODO: AAAAAAAAA
 	int i = 0;
 	double s = 1.f;
 	double dif = 100;

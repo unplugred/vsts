@@ -38,10 +38,6 @@ PisstortionAudioProcessorEditor::PisstortionAudioProcessorEditor (PisstortionAud
 #endif
 	setResizable(false, false);
 	calcvis();
-	if((SystemStats::getOperatingSystemType() & SystemStats::OperatingSystemType::Windows) != 0)
-		dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->dpi/96.f;
-	else
-		dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->scale;
 
 	setOpaque(true);
 	context.setOpenGLVersionRequired(OpenGLContext::OpenGLVersion::openGL3_2);
@@ -330,6 +326,15 @@ void PisstortionAudioProcessorEditor::renderOpenGL() {
 	//glDisable(GL_LIGHTING);
 	glEnable(GL_BLEND);
 	glDisable(GL_DEPTH_TEST);
+
+	if(context.getRenderingScale() != dpi) {
+		dpi = context.getRenderingScale();
+		framebuffer.release();
+		framebuffer.initialise(context, 242*dpi, 462*dpi);
+		glBindTexture(GL_TEXTURE_2D, framebuffer.getTextureID());
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	}
 
 	context.extensions.glBindBuffer(GL_ARRAY_BUFFER, arraybuffer);
 	auto coord = context.extensions.glGetAttribLocation(baseshader->getProgramID(),"aPos");
