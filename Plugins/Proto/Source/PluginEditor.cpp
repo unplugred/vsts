@@ -32,10 +32,6 @@ ProtoAudioProcessorEditor::ProtoAudioProcessorEditor(ProtoAudioProcessor& p, int
 #endif
 	setResizable(false, false);
 	calcvis();
-	if((SystemStats::getOperatingSystemType() & SystemStats::OperatingSystemType::Windows) != 0)
-		dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->dpi/96.f;
-	else
-		dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->scale;
 
 	setOpaque(true);
 	context.setOpenGLVersionRequired(OpenGLContext::OpenGLVersion::openGL3_2);
@@ -265,6 +261,10 @@ void ProtoAudioProcessorEditor::renderOpenGL() {
 	glEnable(GL_BLEND);
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_LINE_SMOOTH);
+
+	if(context.getRenderingScale() != dpi) {
+		dpi = context.getRenderingScale();
+	}
 
 	context.extensions.glBindBuffer(GL_ARRAY_BUFFER, arraybuffer);
 	auto coord = context.extensions.glGetAttribLocation(baseshader->getProgramID(),"aPos");

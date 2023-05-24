@@ -263,10 +263,6 @@ PrismaAudioProcessorEditor::PrismaAudioProcessorEditor(PrismaAudioProcessor& p, 
 	setSize(478,561);
 #endif
 	setResizable(false, false);
-	if((SystemStats::getOperatingSystemType() & SystemStats::OperatingSystemType::Windows) != 0)
-		dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->dpi/96.f;
-	else
-		dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->scale;
 
 	setOpaque(true);
 	context.setOpenGLVersionRequired(OpenGLContext::OpenGLVersion::openGL3_2);
@@ -752,6 +748,10 @@ void PrismaAudioProcessorEditor::renderOpenGL() {
 	glEnable(GL_BLEND);
 	glDisable(GL_DEPTH_TEST);
 	glEnable(GL_LINE_SMOOTH);
+
+	if(context.getRenderingScale() != dpi) {
+		dpi = context.getRenderingScale();
+	}
 
 	context.extensions.glBindBuffer(GL_ARRAY_BUFFER, arraybuffer);
 	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);

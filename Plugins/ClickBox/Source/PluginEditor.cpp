@@ -62,12 +62,8 @@ ClickBoxAudioProcessorEditor::ClickBoxAudioProcessorEditor (ClickBoxAudioProcess
 
 	for(int i = 0; i < 8; i++) randoms[i] = random.nextFloat();
 
-	setSize (256, 256);
+	setSize(256,256);
 	setResizable(false,false);
-	if((SystemStats::getOperatingSystemType() & SystemStats::OperatingSystemType::Windows) != 0)
-		dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->dpi/96.f;
-	else
-		dpi = Desktop::getInstance().getDisplays().getPrimaryDisplay()->scale;
 
 	setOpaque(true);
 	context.setOpenGLVersionRequired(OpenGLContext::OpenGLVersion::openGL3_2);
@@ -283,7 +279,7 @@ void main() {
 	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
 
-	framebuffer.initialise(context,getWidth()*dpi,getHeight()*dpi);
+	framebuffer.initialise(context,256*dpi,256*dpi);
 	glBindTexture(GL_TEXTURE_2D, framebuffer.getTextureID());
 	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
@@ -310,6 +306,15 @@ void ClickBoxAudioProcessorEditor::renderOpenGL() {
 	//glDisable(GL_LIGHTING);
 	glEnable(GL_BLEND);
 	glDisable(GL_DEPTH_TEST);
+
+	if(context.getRenderingScale() != dpi) {
+		dpi = context.getRenderingScale();
+		framebuffer.release();
+		framebuffer.initialise(context,256*dpi,256*dpi);
+		glBindTexture(GL_TEXTURE_2D, framebuffer.getTextureID());
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
+	}
 
 	context.extensions.glBindBuffer(GL_ARRAY_BUFFER,arraybuffer);
 	glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
