@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<installer-gui-script minSpecVersion="1">
+	<title>CRMBL Install</title>
+	<domains enable_anywhere="false" enable_currentUserHome="false" enable_localSystem="true"/>
+	<background file="image/CRMBL.bmp" alignment="left" mime-type="image/bmp" scaline="proportional"/>
+	<allowed-os-versions>
+		<os-version min="10.13"/>
+	</allowed-os-versions>
+	<options customize="always" require-scripts="false" rootVolumeOnly="true"/>
+	<welcome    file="pages/welcome.html"    mime-type="text/html"/>
+	<conclusion file="pages/conclusion.html" mime-type="text/html"/>
+	<choices-outline>
+		<line choice="au"/>
+		<line choice="vst3"/>
+		<line choice="clap"/>
+	</choices-outline>
+	<choice id="au"   title="Audio Unit" description="For Logic and Garageband">
+		<pkg-ref id="com.unplugred.crmbl-au">crmbl-au.pkg</pkg-ref>
+	</choice>
+	<choice id="clap" title="CLAP"       description="For Reaper and Bitwig">
+		<pkg-ref id="com.unplugred.crmbl-clap">crmbl-clap.pkg</pkg-ref>
+	</choice>
+	<choice id="vst3" title="VST3"       description="For everything else">
+		<pkg-ref id="com.unplugred.crmbl-vst3">crmbl-vst3.pkg</pkg-ref>
+	</choice>
+</installer-gui-script>
