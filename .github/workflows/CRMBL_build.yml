@@ -229,10 +229,10 @@ jobs:
       id: installer_mac
       run: |
         cd Setup
-        pkgbuild --install-location "/Library/Audio/Plug-Ins/Components" --idenifier com.unplugred.${{matrix.LOWERCASE}}-au.pkg --version 1.1.1 --component "${{matrix.folder}}/paid/${{matrix.PLUG}}.component" ${{matrix.LOWERCASE}}-au.pkg
-        pkgbuild --install-location "/Library/Audio/Plug-Ins/VST3" --idenifier com.unplugred.${{matrix.LOWERCASE}}-vst3.pkg --version 1.1.1 --component "${{matrix.folder}}/paid/${{matrix.PLUG}}.vst3" ${{matrix.LOWERCASE}}-vst3.pkg
-        pkgbuild --install-location "/Library/Audio/Plug-Ins/CLAP" --idenifier com.unplugred.${{matrix.LOWERCASE}}-clap.pkg --version 1.1.1 --component "${{matrix.folder}}/paid/${{matrix.PLUG}}.clap" ${{matrix.LOWERCASE}}-clap.pkg
-        productbuild --synthesize --package ${{matrix.LOWERCASE}}-au.pkg --package ${{matrix.LOWERCASE}}-clap.pkg --package ${{matrix.LOWERCASE}}-vst3.pkg distribution.xml
+        pkgbuild --install-location "/Library/Audio/Plug-Ins/Components" --idenifier com.unplugred.${{env.LOWERCASE}}-au.pkg --version 1.1.1 --component "${{matrix.folder}}/paid/${{env.PLUG}}.component" ${{env.LOWERCASE}}-au.pkg
+        pkgbuild --install-location "/Library/Audio/Plug-Ins/VST3" --idenifier com.unplugred.${{env.LOWERCASE}}-vst3.pkg --version 1.1.1 --component "${{matrix.folder}}/paid/${{env.PLUG}}.vst3" ${{env.LOWERCASE}}-vst3.pkg
+        pkgbuild --install-location "/Library/Audio/Plug-Ins/CLAP" --idenifier com.unplugred.${{env.LOWERCASE}}-clap.pkg --version 1.1.1 --component "${{matrix.folder}}/paid/${{env.PLUG}}.clap" ${{env.LOWERCASE}}-clap.pkg
+        productbuild --synthesize --package ${{env.LOWERCASE}}-au.pkg --package ${{env.LOWERCASE}}-clap.pkg --package ${{env.LOWERCASE}}-vst3.pkg distribution.xml
         productbuild --distribution distribution.xml --resources "${{env.PLUG}} Installer.pkg"
         mkdir "${{matrix.folder}}/paid/Manual install"
         mkdir "${{matrix.folder}}/free/Manual install"
