@@ -229,11 +229,11 @@ jobs:
       id: installer_mac
       run: |
         cd Setup
-        pkgbuild --install-location "/Library/Audio/Plug-Ins/Components" --idenifier com.unplugred.${{env.LOWERCASE}}-au.pkg --version 1.1.1 --component "${{matrix.folder}}/paid/${{env.PLUG}}.component" ${{env.LOWERCASE}}-au.pkg
-        pkgbuild --install-location "/Library/Audio/Plug-Ins/VST3" --idenifier com.unplugred.${{env.LOWERCASE}}-vst3.pkg --version 1.1.1 --component "${{matrix.folder}}/paid/${{env.PLUG}}.vst3" ${{env.LOWERCASE}}-vst3.pkg
-        pkgbuild --install-location "/Library/Audio/Plug-Ins/CLAP" --idenifier com.unplugred.${{env.LOWERCASE}}-clap.pkg --version 1.1.1 --component "${{matrix.folder}}/paid/${{env.PLUG}}.clap" ${{env.LOWERCASE}}-clap.pkg
-        productbuild --synthesize --package ${{env.LOWERCASE}}-au.pkg --package ${{env.LOWERCASE}}-clap.pkg --package ${{env.LOWERCASE}}-vst3.pkg distribution.xml
-        productbuild --distribution distribution.xml --resources "${{env.PLUG}} Installer.pkg"
+        pkgbuild --install-location "/Library/Audio/Plug-Ins/Components" --identifier com.unplugred.${{env.LOWERCASE}}-au.pkg --version 1.1.1 --component "${{matrix.folder}}/paid/${{env.PLUG}}.component" ${{env.LOWERCASE}}-au.pkg
+        pkgbuild --install-location "/Library/Audio/Plug-Ins/VST3" --identifier com.unplugred.${{env.LOWERCASE}}-vst3.pkg --version 1.1.1 --component "${{matrix.folder}}/paid/${{env.PLUG}}.vst3" ${{env.LOWERCASE}}-vst3.pkg
+        pkgbuild --install-location "/Library/Audio/Plug-Ins/CLAP" --identifier com.unplugred.${{env.LOWERCASE}}-clap.pkg --version 1.1.1 --component "${{matrix.folder}}/paid/${{env.PLUG}}.clap" ${{env.LOWERCASE}}-clap.pkg
+        productbuild --synthesize --package ${{env.LOWERCASE}}-au.pkg --package ${{env.LOWERCASE}}-clap.pkg --package ${{env.LOWERCASE}}-vst3.pkg CRMBL.xml
+        productbuild --distribution CRMBL.xml --resources ./assets
         mkdir "${{matrix.folder}}/paid/Manual install"
         mkdir "${{matrix.folder}}/free/Manual install"
         mv "${{matrix.folder}}/paid/*.*" "${{matrix.folder}}/paid/Manual install/"
