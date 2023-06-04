@@ -233,8 +233,10 @@ jobs:
         pkgbuild --install-location "/Library/Audio/Plug-Ins/VST3" --identifier com.unplugred.${{env.LOWERCASE}}-vst3.pkg --version 1.1.1 --component "${{matrix.folder}}/paid/${{env.PLUG}}.vst3" ${{env.LOWERCASE}}-vst3.pkg
         pkgbuild --install-location "/Library/Audio/Plug-Ins/CLAP" --identifier com.unplugred.${{env.LOWERCASE}}-clap.pkg --version 1.1.1 --component "${{matrix.folder}}/paid/${{env.PLUG}}.clap" ${{env.LOWERCASE}}-clap.pkg
         productbuild --distribution CRMBL.xml --resources ./assets/ "${{env.PLUG}} Installer.pkg"
-        mkdir "${{matrix.folder}}/paid/Manual install"
-        mkdir "${{matrix.folder}}/free/Manual install"
+        mkdir -pv "${{matrix.folder}}/paid/Manual install"
+        mkdir -pv "${{matrix.folder}}/free/Manual install"
+        mv -v "${{matrix.folder}}/paid/*.*" "${{matrix.folder}}/paid/Manual install/"
+        mv -v "${{matrix.folder}}/free/*.*" "${{matrix.folder}}/free/Manual install/"
         mv "${{env.PLUG}} Installer.pkg" "${{matrix.folder}}/paid"
 
     - uses: actions/upload-artifact@v3
