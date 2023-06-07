@@ -245,8 +245,9 @@ jobs:
         pkgbuild --install-location "/Library/Audio/Plug-Ins/Components" --identifier com.unplugred.${{env.LOWERCASE}}-au.pkg --version 1.1.1 --component "${{matrix.folder}}/paid/${{env.PLUG}}.component" ${{env.LOWERCASE}}-au.pkg
         pkgbuild --install-location "/Library/Audio/Plug-Ins/VST3" --identifier com.unplugred.${{env.LOWERCASE}}-vst3.pkg --version 1.1.1 --component "${{matrix.folder}}/paid/${{env.PLUG}}.vst3" ${{env.LOWERCASE}}-vst3.pkg
         pkgbuild --install-location "/Library/Audio/Plug-Ins/CLAP" --identifier com.unplugred.${{env.LOWERCASE}}-clap.pkg --version 1.1.1 --component "${{matrix.folder}}/paid/${{env.PLUG}}.clap" ${{env.LOWERCASE}}-clap.pkg
-        productbuild --distribution "${{env.PLUG}}.xml" --resources ./assets/ "${{env.PLUG}} Installer.pkg"
-        productsign --timestamp --sign "${{ secrets.DEVELOPER_ID_INSTALLER }}" "${{env.PLUG}} Installer.pkg"
+        productbuild --distribution "${{env.PLUG}}.xml" --resources ./assets/ "${{env.PLUG}} Installer Unsigned.pkg"
+        productsign --timestamp --sign "${{ secrets.DEVELOPER_ID_INSTALLER }}" "${{env.PLUG}} Installer Unsigned.pkg" "${{env.PLUG}} Installer.pkg"
+        rm "${{env.PLUG}} Installer Unsigned.pkg"
         xcrun notarytool submit "${{env.PLUG}} Installer.pkg" --apple-id ${{ secrets.NOTARIZATION_USERNAME }} --password ${{ secrets.NOTARIZATION_PASSWORD }} --team-id ${{ secrets.TEAM_ID }} --wait
         xcrun stapler staple "${{env.PLUG}} Installer.pkg"
         mkdir -pv "${{matrix.folder}}/paid/Manual install"
