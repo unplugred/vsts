@@ -65,6 +65,8 @@ jobs:
       id: import_certificates
       uses: apple-actions/import-codesign-certs@v2
       with:
+        keychain: unplugred
+        keychain-password: ${{ secrets.KEYCHAIN_PASSWORD }}
         p12-file-base64: ${{ secrets.DEV_ID_APP_CERT }}
         p12-password: ${{ secrets.DEV_ID_APP_PASSWORD }}
 
@@ -229,8 +231,11 @@ jobs:
       id: import_installer_certificates
       uses: apple-actions/import-codesign-certs@v2
       with:
+        keychain: unplugred
+        keychain-password: ${{ secrets.KEYCHAIN_PASSWORD }}
         p12-file-base64: ${{ secrets.DEV_ID_INSTALL_CERT }}
         p12-password: ${{ secrets.DEV_ID_INSTALL_PASSWORD }}
+        create-keychain: false
 
     - name: (mac) build installer
       if: startsWith(matrix.os, 'macos')
