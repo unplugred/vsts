@@ -3,7 +3,6 @@ name: CRMBL Build
 env:
   PLUG: CRMBL
   NOSPACE: CRMBL
-  LOWERCASE: crmbl
 
 on:
   push:
@@ -242,16 +241,16 @@ jobs:
       id: installer_mac
       run: |
         cd Setup
-        pkgbuild --install-location "/Library/Audio/Plug-Ins/Components/UnplugRed" --identifier "com.unplugred.${{env.LOWERCASE}}-au.pkg" --scripts "./assets/scripts" --version 1.1.1 --component "${{matrix.folder}}/paid/${{env.PLUG}}.component" "${{env.LOWERCASE}}-au.pkg"
-        pkgbuild --install-location "/Library/Audio/Plug-Ins/Components/UnplugRed" --identifier "com.unplugred.${{env.LOWERCASE}}-au.pkg" --scripts "./assets/scripts" --version 1.1.1 --component "${{matrix.folder}}/free/${{env.PLUG}}.component" "${{env.LOWERCASE}}-free-au.pkg"
-        pkgbuild --install-location "/Library/Audio/Plug-Ins/VST3/UnplugRed" --identifier "com.unplugred.${{env.LOWERCASE}}-vst3.pkg" --version 1.1.1 --component "${{matrix.folder}}/paid/${{env.PLUG}}.vst3" "${{env.LOWERCASE}}-vst3.pkg"
-        pkgbuild --install-location "/Library/Audio/Plug-Ins/VST3/UnplugRed" --identifier "com.unplugred.${{env.LOWERCASE}}-vst3.pkg" --version 1.1.1 --component "${{matrix.folder}}/free/${{env.PLUG}}.vst3" "${{env.LOWERCASE}}-free-vst3.pkg"
-        pkgbuild --install-location "/Library/Audio/Plug-Ins/CLAP/UnplugRed" --identifier "com.unplugred.${{env.LOWERCASE}}-clap.pkg" --version 1.1.1 --component "${{matrix.folder}}/paid/${{env.PLUG}}.clap" "${{env.LOWERCASE}}-clap.pkg"
-        pkgbuild --install-location "/Library/Audio/Plug-Ins/CLAP/UnplugRed" --identifier "com.unplugred.${{env.LOWERCASE}}-clap.pkg" --version 1.1.1 --component "${{matrix.folder}}/free/${{env.PLUG}}.clap" "${{env.LOWERCASE}}-free-clap.pkg"
+        pkgbuild --install-location "/Library/Audio/Plug-Ins/Components/UnplugRed" --identifier "com.unplugred.${{env.NOSPACE}}-au.pkg" --scripts "./assets/scripts" --version 1.1.1 --component "${{matrix.folder}}/paid/${{env.PLUG}}.component" "${{env.NOSPACE}}-au.pkg"
+        pkgbuild --install-location "/Library/Audio/Plug-Ins/Components/UnplugRed" --identifier "com.unplugred.${{env.NOSPACE}}-free-au.pkg" --scripts "./assets/scripts" --version 1.1.1 --component "${{matrix.folder}}/free/${{env.PLUG}}.component" "${{env.NOSPACE}}-free-au.pkg"
+        pkgbuild --install-location "/Library/Audio/Plug-Ins/VST3/UnplugRed" --identifier "com.unplugred.${{env.NOSPACE}}-vst3.pkg" --version 1.1.1 --component "${{matrix.folder}}/paid/${{env.PLUG}}.vst3" "${{env.NOSPACE}}-vst3.pkg"
+        pkgbuild --install-location "/Library/Audio/Plug-Ins/VST3/UnplugRed" --identifier "com.unplugred.${{env.NOSPACE}}-free-vst3.pkg" --version 1.1.1 --component "${{matrix.folder}}/free/${{env.PLUG}}.vst3" "${{env.NOSPACE}}-free-vst3.pkg"
+        pkgbuild --install-location "/Library/Audio/Plug-Ins/CLAP/UnplugRed" --identifier "com.unplugred.${{env.NOSPACE}}-clap.pkg" --version 1.1.1 --component "${{matrix.folder}}/paid/${{env.PLUG}}.clap" "${{env.NOSPACE}}-clap.pkg"
+        pkgbuild --install-location "/Library/Audio/Plug-Ins/CLAP/UnplugRed" --identifier "com.unplugred.${{env.NOSPACE}}-free-clap.pkg" --version 1.1.1 --component "${{matrix.folder}}/free/${{env.PLUG}}.clap" "${{env.NOSPACE}}-free-clap.pkg"
         python3 productbuild.py --pluginname "CRMBL" --version "paid"
         python3 productbuild.py --pluginname "CRMBL" --version "free"
         productbuild --timestamp --sign "${{ secrets.DEVELOPER_ID_INSTALLER }}" --distribution "${{env.PLUG}}.xml" --resources "./assets/" "${{env.PLUG}} Installer.pkg"
-        productbuild --timestamp --sign "${{ secrets.DEVELOPER_ID_INSTALLER }}" --distribution "${{env.PLUG}}-free.xml" --resources "./assets/" "${{env.PLUG}} Free Installer.pkg"
+        productbuild --timestamp --sign "${{ secrets.DEVELOPER_ID_INSTALLER }}" --distribution "${{env.PLUG}} free.xml" --resources "./assets/" "${{env.PLUG}} Free Installer.pkg"
         xcrun notarytool submit "${{env.PLUG}} Installer.pkg" --apple-id ${{ secrets.NOTARIZATION_USERNAME }} --password ${{ secrets.NOTARIZATION_PASSWORD }} --team-id ${{ secrets.TEAM_ID }} --wait
         xcrun notarytool submit "${{env.PLUG}} Free Installer.pkg" --apple-id ${{ secrets.NOTARIZATION_USERNAME }} --password ${{ secrets.NOTARIZATION_PASSWORD }} --team-id ${{ secrets.TEAM_ID }} --wait
         xcrun stapler staple "${{env.PLUG}} Installer.pkg"

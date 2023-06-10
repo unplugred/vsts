@@ -7,27 +7,50 @@ def execute():
 	standalone = False
 
 	for i in range(len(sys.argv)):
-		match sys.argv[i]:
-			case "--pluginname":
-				pluginname = sys.argv[i+1]
-			case "--version":
-				version = sys.argv[i+1]
-			case "--nopaid":
-				nopaid = True
-			case "--standalone":
-				standalone = True
+		if sys.argv[i] == "--pluginname":
+			pluginname = sys.argv[i+1]
+		elif sys.argv[i] == "--version":
+			version = sys.argv[i+1]
+		elif sys.argv[i] == "--nopaid":
+			nopaid = True
+		elif sys.argv[i] == "--standalone":
+			standalone = True
+	if pluginname == "":
+		print("No --pluginname argument provided")
+		return
 	if pluginname == "" or version == "":
+		print("No --version argument provided")
 		return
 
 	if nopaid or version == "paid":
 		version_tag = ""
+		file = open(pluginname+".xml","w")
 	else:
 		version_tag = "-free"
-	file = open(pluginname+version_tag+".xml","w")
+		file = open(pluginname+" free.xml","w")
+	formats = [{
+			"id": "au",
+			"name": "Audio Unit",
+			"description": "For Logic and GarageBand"
+		},{
+			"id": "clap",
+			"name": "CLAP",
+			"description": "For Reaper and Bitwig (currently)"
+		},{
+			"id": "vst3",
+			"name": "VST3",
+			"description": "For everything else"
+	}]
+	if standalone:
+		formats.append({
+			"id": "standalone",
+			"name": "Standalone",
+			"description": "For you. No DAW required"
+		})
 
-	file.write("""<?xml version="1.0" encoding="utf-8"?>
+	file.write('''<?xml version="1.0" encoding="utf-8"?>
 <installer-gui-script minSpecVersion="1">
-	<title>"""+pluginname+""" Install</title>
+	<title>'''+pluginname+''' Install</title>
 	<domains enable_anywhere="false" enable_currentUserHome="false" enable_localSystem="true"/>
 	<allowed-os-versions>
 		<os-version min="10.13"/>
@@ -35,28 +58,20 @@ def execute():
 	<options customize="always" require-scripts="false" rootVolumeOnly="true"/>
 	<welcome file="pages/welcome.html" mime-type="text/html"/>
 	<conclusion file="pages/conclusion.html" mime-type="text/html"/>
-	<choices-outline>
-		<line choice="au"/>
-		<line choice="vst3"/>
-		<line choice="clap"/>
-	</choices-outline>
-	<choice id="au" title="Audio Unit" description="For Logic and Garageband">
-		<pkg-ref id="com.unplugred."""+pluginname.lower()+version_tag+"""-au"  >"""+pluginname.lower()+version_tag+"""-au.pkg</pkg-ref>
-	</choice>
-	<choice id="clap" title="CLAP" description="For Reaper and Bitwig">
-		<pkg-ref id="com.unplugred."""+pluginname.lower()+version_tag+"""-clap">"""+pluginname.lower()+version_tag+"""-clap.pkg</pkg-ref>
-	</choice>
-	<choice id="vst3" title="VST3" description="For everything else">
-		<pkg-ref id="com.unplugred."""+pluginname.lower()+version_tag+"""-vst3">"""+pluginname.lower()+version_tag+"""-vst3.pkg</pkg-ref>
-	</choice>""")
-	if standalone:
-		file.write("""
-	<choice id="standalone" title="Standalone" description="For you.">
-		<pkg-ref id="com.unplugred."""+pluginname.lower()+version_tag+"""-standalone">"""+pluginname.lower()+version_tag+"""-standalone.pkg</pkg-ref>
-	</choice>""")
-	file.write("""
+	<choices-outline>''')
+	for e in formats:
+		file.write('''
+		<line choice="'''+e['id']+'''"/>''')
+	file.write('''
+	</choices-outline>''')
+	for e in formats:
+		file.write('''
+	<choice id="'''+e['id']+'" title="'+e['name']+'" description="'+e['description']+'''">
+		<pkg-ref id="com.unplugred.'''+pluginname.replace(" ","")+version_tag+'-'+e['id']+'">'+pluginname.replace(" ","")+version_tag+'-'+e['id']+'''.pkg</pkg-ref>
+	</choice>''')
+	file.write('''
 </installer-gui-script>
-""")
+''')
 
 	file.close()
 execute()
