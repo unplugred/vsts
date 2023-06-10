@@ -217,8 +217,8 @@ jobs:
       id: installer_windows
       run: |
         cd Setup
-        iscc "${{env.PLUG}}.iss"
-        iscc "${{env.PLUG}} Free.iss"
+        iscc "innosetup.iss" "/DPluginName=${{env.PLUG}}" "/DVersion=paid"
+        iscc "innosetup.iss" "/DPluginName=${{env.PLUG}}" "/DVersion=free"
         mkdir "${{matrix.folder}}/paid/Manual install"
         mkdir "${{matrix.folder}}/free/Manual install"
         mv "${{matrix.folder}}/paid/*.*" "${{matrix.folder}}/paid/Manual install/"
@@ -242,23 +242,30 @@ jobs:
       id: installer_mac
       run: |
         cd Setup
-        pkgbuild --install-location "/Library/Audio/Plug-Ins/Components" --identifier com.unplugred.${{env.LOWERCASE}}-au.pkg --version 1.1.1 --component "${{matrix.folder}}/paid/${{env.PLUG}}.component" ${{env.LOWERCASE}}-au.pkg
-        pkgbuild --install-location "/Library/Audio/Plug-Ins/VST3" --identifier com.unplugred.${{env.LOWERCASE}}-vst3.pkg --version 1.1.1 --component "${{matrix.folder}}/paid/${{env.PLUG}}.vst3" ${{env.LOWERCASE}}-vst3.pkg
-        pkgbuild --install-location "/Library/Audio/Plug-Ins/CLAP" --identifier com.unplugred.${{env.LOWERCASE}}-clap.pkg --version 1.1.1 --component "${{matrix.folder}}/paid/${{env.PLUG}}.clap" ${{env.LOWERCASE}}-clap.pkg
-        productbuild --distribution "${{env.PLUG}}.xml" --resources ./assets/ "${{env.PLUG}} Installer Unsigned.pkg"
-        productsign --timestamp --sign "${{ secrets.DEVELOPER_ID_INSTALLER }}" "${{env.PLUG}} Installer Unsigned.pkg" "${{env.PLUG}} Installer.pkg"
-        rm "${{env.PLUG}} Installer Unsigned.pkg"
+        pkgbuild --install-location "/Library/Audio/Plug-Ins/Components/UnplugRed" --identifier "com.unplugred.${{env.LOWERCASE}}-au.pkg" --scripts "./assets/scripts" --version 1.1.1 --component "${{matrix.folder}}/paid/${{env.PLUG}}.component" "${{env.LOWERCASE}}-au.pkg"
+        pkgbuild --install-location "/Library/Audio/Plug-Ins/Components/UnplugRed" --identifier "com.unplugred.${{env.LOWERCASE}}-au.pkg" --scripts "./assets/scripts" --version 1.1.1 --component "${{matrix.folder}}/free/${{env.PLUG}}.component" "${{env.LOWERCASE}}-free-au.pkg"
+        pkgbuild --install-location "/Library/Audio/Plug-Ins/VST3/UnplugRed" --identifier "com.unplugred.${{env.LOWERCASE}}-vst3.pkg" --version 1.1.1 --component "${{matrix.folder}}/paid/${{env.PLUG}}.vst3" "${{env.LOWERCASE}}-vst3.pkg"
+        pkgbuild --install-location "/Library/Audio/Plug-Ins/VST3/UnplugRed" --identifier "com.unplugred.${{env.LOWERCASE}}-vst3.pkg" --version 1.1.1 --component "${{matrix.folder}}/free/${{env.PLUG}}.vst3" "${{env.LOWERCASE}}-free-vst3.pkg"
+        pkgbuild --install-location "/Library/Audio/Plug-Ins/CLAP/UnplugRed" --identifier "com.unplugred.${{env.LOWERCASE}}-clap.pkg" --version 1.1.1 --component "${{matrix.folder}}/paid/${{env.PLUG}}.clap" "${{env.LOWERCASE}}-clap.pkg"
+        pkgbuild --install-location "/Library/Audio/Plug-Ins/CLAP/UnplugRed" --identifier "com.unplugred.${{env.LOWERCASE}}-clap.pkg" --version 1.1.1 --component "${{matrix.folder}}/free/${{env.PLUG}}.clap" "${{env.LOWERCASE}}-free-clap.pkg"
+        python productbuild.py --pluginname "CRMBL" --version "paid"
+        python productbuild.py --pluginname "CRMBL" --version "free"
+        productbuild --timestamp --sign "${{ secrets.DEVELOPER_ID_INSTALLER }}" --distribution "${{env.PLUG}}.xml" --resources "./assets/" "${{env.PLUG}} Installer.pkg"
+        productbuild --timestamp --sign "${{ secrets.DEVELOPER_ID_INSTALLER }}" --distribution "${{env.PLUG}}-free.xml" --resources "./assets/" "${{env.PLUG}} Free Installer.pkg"
         xcrun notarytool submit "${{env.PLUG}} Installer.pkg" --apple-id ${{ secrets.NOTARIZATION_USERNAME }} --password ${{ secrets.NOTARIZATION_PASSWORD }} --team-id ${{ secrets.TEAM_ID }} --wait
+        xcrun notarytool submit "${{env.PLUG}} Free Installer.pkg" --apple-id ${{ secrets.NOTARIZATION_USERNAME }} --password ${{ secrets.NOTARIZATION_PASSWORD }} --team-id ${{ secrets.TEAM_ID }} --wait
         xcrun stapler staple "${{env.PLUG}} Installer.pkg"
+        xcrun stapler staple "${{env.PLUG}} Free Installer.pkg"
         mkdir -pv "${{matrix.folder}}/paid/Manual install"
         mkdir -pv "${{matrix.folder}}/free/Manual install"
         mv -v "${{matrix.folder}}/paid/${{env.PLUG}}.component" "${{matrix.folder}}/paid/Manual install/"
-        mv -v "${{matrix.folder}}/paid/${{env.PLUG}}.vst3" "${{matrix.folder}}/paid/Manual install/"
-        mv -v "${{matrix.folder}}/paid/${{env.PLUG}}.clap" "${{matrix.folder}}/paid/Manual install/"
         mv -v "${{matrix.folder}}/free/${{env.PLUG}}.component" "${{matrix.folder}}/free/Manual install/"
+        mv -v "${{matrix.folder}}/paid/${{env.PLUG}}.vst3" "${{matrix.folder}}/paid/Manual install/"
         mv -v "${{matrix.folder}}/free/${{env.PLUG}}.vst3" "${{matrix.folder}}/free/Manual install/"
+        mv -v "${{matrix.folder}}/paid/${{env.PLUG}}.clap" "${{matrix.folder}}/paid/Manual install/"
         mv -v "${{matrix.folder}}/free/${{env.PLUG}}.clap" "${{matrix.folder}}/free/Manual install/"
         mv "${{env.PLUG}} Installer.pkg" "${{matrix.folder}}/paid"
+        mv "${{env.PLUG}} Free Installer.pkg" "${{matrix.folder}}/free"
 
     - uses: actions/upload-artifact@v3
       with:

@@ -1,7 +1,5 @@
 ;BASED ON DISCODSP'S INNO SETUP SCRIPT
 
-#define PluginName "CRMBL"
-
 [Setup]
 DisableDirPage=yes
 ArchitecturesInstallIn64BitMode=x64
@@ -17,7 +15,13 @@ DefaultGroupName=UnplugRed
 DisableReadyPage=false
 DisableWelcomePage=no
 LanguageDetectionMethod=uilanguage
+#ifdef NoPaid
 OutputBaseFilename={#PluginName} Installer
+#elif "paid" == Version
+OutputBaseFilename={#PluginName} Installer
+#else
+OutputBaseFilename={#PluginName} Free Installer
+#endif
 SetupIconFile=assets\icon.ico
 ShowLanguageDialog=no
 VersionInfoCompany=UnplugRed
@@ -31,8 +35,18 @@ WizardImageStretch=false
 WizardSmallImageFile=assets\smallimage\{#PluginName}.bmp
 
 [Files]
-Source: "build_windows\paid\{#PluginName}.vst3"; DestDir: "{commoncf64}\VST3\UnplugRed\"; Components: VST3; Flags: ignoreversion
-Source: "build_windows\paid\{#PluginName}.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
+Source: "build_windows\{#Version}\{#PluginName}.vst3"; DestDir: "{commoncf64}\VST3\UnplugRed\"; Components: VST3; Flags: ignoreversion
+Source: "build_windows\{#Version}\{#PluginName}.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
+#ifdef Standalone
+Source: "build_windows\{#Version}\{#PluginName}.exe"; DestDir: {code:GetDir|1}; Components: Standalone; Flags: ignoreversion
+#endif
+#ifdef OtherData
+Source: "build_windows\other\{#PluginName}\*.*"; DestDir: "{commoncf64}\VST3\UnplugRed\{#PluginName}"; Components: VST3; Flags: recursesubdirs onlyifdoesntexist
+Source: "build_windows\other\{#PluginName}\*.*"; DestDir: "{code:GetDir|0}\{#PluginName}"; Components: CLAP; Flags: recursesubdirs onlyifdoesntexist
+#ifdef Standalone
+Source: "build_windows\other\{#PluginName}\*.*"; DestDir: "{code:GetDir|1}\{#PluginName}"; Components: Standalone; Flags: recursesubdirs onlyifdoesntexist
+#endif
+#endif
 
 [Icons]
 Name: {group}\Uninstall {#PluginName}; Filename: {uninstallexe}
@@ -43,6 +57,9 @@ Name: "custom"; Description: "Custom"; Flags: iscustom
 [Components]
 Name: "VST3"; Description: "VST3"; Types: custom;
 Name: "CLAP"; Description: "CLAP"; Types: custom;
+#ifdef Standalone
+Name: "Standalone"; Description: "Standalone"; Types: custom;
+#endif
 
 [Code]
 var
@@ -79,6 +96,10 @@ begin
 
   DirPage.Add('CLAP folder');
   DirPage.Values[0] := GetPreviousData('CLAP', ExpandConstant('{reg:HKLM\SOFTWARE\CLAP,CLAPPluginsPath|{commonpf}\Common Files\CLAP\UnplugRed}'));
+#ifdef Standalone
+  DirPage.Add('Standalone folder');
+  DirPage.Values[1] := GetPreviousData('Standalone', ExpandConstant('{reg:HKLM\SOFTWARE\CLAP,CLAPPluginsPath|{commonpf}\Common Files\CLAP\UnplugRed}'));
+#endif
 
 end;
 
@@ -89,6 +110,12 @@ begin
     DirPage.Buttons[0].Enabled := WizardIsComponentSelected('CLAP');
     DirPage.PromptLabels[0].Enabled := DirPage.Buttons[0].Enabled;
     DirPage.Edits[0].Enabled := DirPage.Buttons[0].Enabled;
+
+#ifdef Standalone
+    DirPage.Buttons[1].Enabled := WizardIsComponentSelected('Standalone');
+    DirPage.PromptLabels[1].Enabled := DirPage.Buttons[1].Enabled;
+    DirPage.Edits[1].Enabled := DirPage.Buttons[1].Enabled;
+#endif
   end;
 
   if CurPageID = wpSelectComponents then
@@ -101,7 +128,11 @@ function ShouldSkipPage(PageID: Integer): Boolean;
 begin
   if PageID = DirPage.ID then
   begin
+#ifdef Standalone
+    If (not WizardIsComponentSelected('CLAP')) and (not WizardIsComponentSelected('Standalone')) then
+#else
     If (not WizardIsComponentSelected('CLAP')) then
+#endif
       begin
         Result := True
       end;
@@ -116,4 +147,7 @@ end;
 procedure RegisterPreviousData(PreviousDataKey: Integer);
 begin
   SetPreviousData(PreviousDataKey, 'CLAP', DirPage.Values[0]);
+#ifdef Standalone
+  SetPreviousData(PreviousDataKey, 'Standalone', DirPage.Values[1]);
+#endif
 end;
