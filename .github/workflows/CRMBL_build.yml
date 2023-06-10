@@ -248,10 +248,8 @@ jobs:
         pkgbuild --install-location "/Library/Audio/Plug-Ins/VST3/UnplugRed" --identifier "com.unplugred.${{env.LOWERCASE}}-vst3.pkg" --version 1.1.1 --component "${{matrix.folder}}/free/${{env.PLUG}}.vst3" "${{env.LOWERCASE}}-free-vst3.pkg"
         pkgbuild --install-location "/Library/Audio/Plug-Ins/CLAP/UnplugRed" --identifier "com.unplugred.${{env.LOWERCASE}}-clap.pkg" --version 1.1.1 --component "${{matrix.folder}}/paid/${{env.PLUG}}.clap" "${{env.LOWERCASE}}-clap.pkg"
         pkgbuild --install-location "/Library/Audio/Plug-Ins/CLAP/UnplugRed" --identifier "com.unplugred.${{env.LOWERCASE}}-clap.pkg" --version 1.1.1 --component "${{matrix.folder}}/free/${{env.PLUG}}.clap" "${{env.LOWERCASE}}-free-clap.pkg"
-        python --version
-        python3 --version
-        python productbuild.py --pluginname "CRMBL" --version "paid"
-        python productbuild.py --pluginname "CRMBL" --version "free"
+        python3 productbuild.py --pluginname "CRMBL" --version "paid"
+        python3 productbuild.py --pluginname "CRMBL" --version "free"
         productbuild --timestamp --sign "${{ secrets.DEVELOPER_ID_INSTALLER }}" --distribution "${{env.PLUG}}.xml" --resources "./assets/" "${{env.PLUG}} Installer.pkg"
         productbuild --timestamp --sign "${{ secrets.DEVELOPER_ID_INSTALLER }}" --distribution "${{env.PLUG}}-free.xml" --resources "./assets/" "${{env.PLUG}} Free Installer.pkg"
         xcrun notarytool submit "${{env.PLUG}} Installer.pkg" --apple-id ${{ secrets.NOTARIZATION_USERNAME }} --password ${{ secrets.NOTARIZATION_PASSWORD }} --team-id ${{ secrets.TEAM_ID }} --wait
