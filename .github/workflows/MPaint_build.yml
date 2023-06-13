@@ -186,6 +186,7 @@ jobs:
       id: installer_mac
       run: |
         cd Setup
+        chmod +rx "./assets/scripts/postinstall"
         pkgbuild --install-location "/Library/Audio/Plug-Ins/Components/UnplugRed" --identifier "com.unplugred.${{env.NOSPACE}}-au.pkg" --scripts "./assets/scripts" --version 1.1.1 --component "${{matrix.folder}}/free/${{env.PLUG}}.component" --component "${{matrix.folder}}/free/${{env.PLUG}}" "${{env.NOSPACE}}-au.pkg"
         pkgbuild --install-location "/Library/Audio/Plug-Ins/VST3/UnplugRed" --identifier "com.unplugred.${{env.NOSPACE}}-vst3.pkg" --version 1.1.1 --component "${{matrix.folder}}/free/${{env.PLUG}}.vst3" --component "${{matrix.folder}}/free/${{env.PLUG}}" "${{env.NOSPACE}}-vst3.pkg"
         pkgbuild --install-location "/Library/Audio/Plug-Ins/CLAP/UnplugRed" --identifier "com.unplugred.${{env.NOSPACE}}-clap.pkg" --version 1.1.1 --component "${{matrix.folder}}/free/${{env.PLUG}}.clap" --component "${{matrix.folder}}/free/${{env.PLUG}}" "${{env.NOSPACE}}-clap.pkg"
