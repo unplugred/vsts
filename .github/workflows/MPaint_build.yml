@@ -199,7 +199,7 @@ jobs:
         pkgbuild --install-location "/Library/Audio/Plug-Ins/CLAP/UnplugRed" --identifier "com.unplugred.${{env.NOSPACE}}-clap.pkg" --version 1.1.1 --root "${{matrix.folder}}/free/Manual install" "${{env.NOSPACE}}-clap.pkg"
         mv "${{matrix.folder}}/free/Manual install/${{env.PLUG}}.clap" "${{matrix.folder}}/free/"
         mv "${{matrix.folder}}/free/${{env.PLUG}}.app" "${{matrix.folder}}/free/Manual install/"
-        pkgbuild --install-location "/Applications/UnplugRed" --identifier "com.unplugred.${{env.NOSPACE}}-standalone.pkg" --version 1.1.1 --root "${{matrix.folder}}/free/Manual install" "${{env.NOSPACE}}-standalone.pkg"
+        pkgbuild --install-location "/Applications" --identifier "com.unplugred.${{env.NOSPACE}}-standalone.pkg" --version 1.1.1 --root "${{matrix.folder}}/free/Manual install" "${{env.NOSPACE}}-standalone.pkg"
         python3 productbuild.py --pluginname "${{env.PLUG}}" --version "free" --nopaid --standalone --otherdata
         productbuild --timestamp --sign "${{ secrets.DEVELOPER_ID_INSTALLER }}" --distribution "${{env.PLUG}}.xml" --resources "./assets/" "${{env.PLUG}} Installer.pkg"
         xcrun notarytool submit "${{env.PLUG}} Installer.pkg" --apple-id ${{ secrets.NOTARIZATION_USERNAME }} --password ${{ secrets.NOTARIZATION_PASSWORD }} --team-id ${{ secrets.TEAM_ID }} --wait

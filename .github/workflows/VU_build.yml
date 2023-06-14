@@ -271,8 +271,8 @@ jobs:
         pkgbuild --install-location "/Library/Audio/Plug-Ins/VST3/UnplugRed" --identifier "com.unplugred.${{env.NOSPACE}}-free-vst3.pkg" --version 1.1.1 --component "${{matrix.folder}}/free/${{env.PLUG}}.vst3" "${{env.NOSPACE}}-free-vst3.pkg"
         pkgbuild --install-location "/Library/Audio/Plug-Ins/CLAP/UnplugRed" --identifier "com.unplugred.${{env.NOSPACE}}-clap.pkg" --version 1.1.1 --component "${{matrix.folder}}/paid/${{env.PLUG}}.clap" "${{env.NOSPACE}}-clap.pkg"
         pkgbuild --install-location "/Library/Audio/Plug-Ins/CLAP/UnplugRed" --identifier "com.unplugred.${{env.NOSPACE}}-free-clap.pkg" --version 1.1.1 --component "${{matrix.folder}}/free/${{env.PLUG}}.clap" "${{env.NOSPACE}}-free-clap.pkg"
-        pkgbuild --install-location "/Applications/UnplugRed" --identifier "com.unplugred.${{env.NOSPACE}}-standalone.pkg" --version 1.1.1 --component "${{matrix.folder}}/paid/${{env.PLUG}}.app" "${{env.NOSPACE}}-standalone.pkg"
-        pkgbuild --install-location "/Applications/UnplugRed" --identifier "com.unplugred.${{env.NOSPACE}}-free-standalone.pkg" --version 1.1.1 --component "${{matrix.folder}}/free/${{env.PLUG}}.app" "${{env.NOSPACE}}-free-standalone.pkg"
+        pkgbuild --install-location "/Applications" --identifier "com.unplugred.${{env.NOSPACE}}-standalone.pkg" --version 1.1.1 --component "${{matrix.folder}}/paid/${{env.PLUG}}.app" "${{env.NOSPACE}}-standalone.pkg"
+        pkgbuild --install-location "/Applications" --identifier "com.unplugred.${{env.NOSPACE}}-free-standalone.pkg" --version 1.1.1 --component "${{matrix.folder}}/free/${{env.PLUG}}.app" "${{env.NOSPACE}}-free-standalone.pkg"
         python3 productbuild.py --pluginname "${{env.PLUG}}" --version "paid" --standalone
         python3 productbuild.py --pluginname "${{env.PLUG}}" --version "free" --standalone
         productbuild --timestamp --sign "${{ secrets.DEVELOPER_ID_INSTALLER }}" --distribution "${{env.PLUG}}.xml" --resources "./assets/" "${{env.PLUG}} Installer.pkg"
