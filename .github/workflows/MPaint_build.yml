@@ -187,6 +187,7 @@ jobs:
       run: |
         cd Setup
         chmod +rx "./assets/scripts/postinstall"
+        mkdir -p "${{matrix.folder}}/free/Manual install"
         mv "${{matrix.folder}}/free/${{env.PLUG}}/" "${{matrix.folder}}/free/Manual install/"
         mv "${{matrix.folder}}/free/${{env.PLUG}}.component" "${{matrix.folder}}/free/Manual install/"
         pkgbuild --install-location "/Library/Audio/Plug-Ins/Components/UnplugRed" --identifier "com.unplugred.${{env.NOSPACE}}-au.pkg" --scripts "./assets/scripts" --version 1.1.1 --root "${{matrix.folder}}/free/Manual install" "${{env.NOSPACE}}-au.pkg"
@@ -203,7 +204,6 @@ jobs:
         productbuild --timestamp --sign "${{ secrets.DEVELOPER_ID_INSTALLER }}" --distribution "${{env.PLUG}}.xml" --resources "./assets/" "${{env.PLUG}} Installer.pkg"
         xcrun notarytool submit "${{env.PLUG}} Installer.pkg" --apple-id ${{ secrets.NOTARIZATION_USERNAME }} --password ${{ secrets.NOTARIZATION_PASSWORD }} --team-id ${{ secrets.TEAM_ID }} --wait
         xcrun stapler staple "${{env.PLUG}} Installer.pkg"
-        mkdir -p "${{matrix.folder}}/free/Manual install"
         mv "${{matrix.folder}}/free/${{env.PLUG}}.component" "${{matrix.folder}}/free/Manual install/"
         mv "${{matrix.folder}}/free/${{env.PLUG}}.vst3" "${{matrix.folder}}/free/Manual install/"
         mv "${{matrix.folder}}/free/${{env.PLUG}}.clap" "${{matrix.folder}}/free/Manual install/"
