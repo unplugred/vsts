@@ -181,16 +181,6 @@ jobs:
         p12-password: ${{ secrets.DEV_ID_INSTALL_PASSWORD }}
         create-keychain: false
 
-    - name: (mac) check if native
-      if: startsWith(matrix.os, 'macos')
-      id: native_check_mac
-      run: |
-        cd "Setup/${{matrix.folder}}/free"
-        lipo -archs "${{env.PLUG}}.component/Contents/MacOS/${{env.PLUG}}"
-        lipo -archs "${{env.PLUG}}.vst3/Contents/MacOS/${{env.PLUG}}"
-        lipo -archs "${{env.PLUG}}.clap/Contents/MacOS/${{env.PLUG}}"
-        lipo -archs "${{env.PLUG}}.app/Contents/MacOS/${{env.PLUG}}"
-
     - name: (mac) build installer
       if: startsWith(matrix.os, 'macos')
       id: installer_mac
