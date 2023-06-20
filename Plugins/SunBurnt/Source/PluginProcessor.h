@@ -76,8 +76,10 @@ struct pluginparams {
 struct pluginpreset {
 	String name = "";
 	curve curves[5];
+	int sync = 0;
 	float values[6];
 	float resonance[2] = {.3f,.3f};
+	int shimmerpitch = 12;
 	pluginpreset(String pname = "", float val1 = 0.f, float val2 = 0.f, float val3 = 0.f, float val4 = 0.f, float val5 = 0.f, float val6 = 0.f, bool enablehighpass = true, bool enablelowpass = true, bool enablepan = true, bool enableshimmer = false) {
 		name = pname;
 		values[0] = val1;
@@ -171,15 +173,21 @@ private:
 	curveiterator iterator[5];
 
 	std::vector<dsp::StateVariableFilter::Filter<float>> highpassfilters;
-	std::vector<dsp::StateVariableFilter::Filter<float>> lowpassfilters; 
+	std::vector<dsp::StateVariableFilter::Filter<float>> lowpassfilters;
 	std::vector<std::unique_ptr<dsp::Convolution>> convolver;
-	//soundtouch::SoundTouch pitchshift;
+
+	std::vector<std::unique_ptr<dsp::Convolution>> convolvereffect;
+	soundtouch::SoundTouch pitchshift;
+	std::vector<float> pitchprocessbuffer;
+	int prevpitch = 0;
 
 	Atomic<bool> updatedcurve;
 	std::vector<AudioBuffer<float>> impulsebuffer;
+	std::vector<AudioBuffer<float>> impulseeffectbuffer;
 	std::vector<float*> impulsechanneldata;
-	std::vector<float*> wetchanneldata;
-	AudioBuffer<float> wetbuffer; //ew
+	std::vector<float*> impulseeffectchanneldata;
+	AudioBuffer<float> wetbuffer;
+	AudioBuffer<float> effectbuffer;
 	int revlength = 0;
 	int readx = 0;
 
