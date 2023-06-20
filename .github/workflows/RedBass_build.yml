@@ -38,7 +38,7 @@ jobs:
           }
         - {
             name: "Mac",
-            os: macos-latest,
+            os: macos-13,
             compiler: "Xcode",
             folder: "build_mac"
           }
