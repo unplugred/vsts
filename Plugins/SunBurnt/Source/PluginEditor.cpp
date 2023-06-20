@@ -20,6 +20,10 @@ SunBurntAudioProcessorEditor::SunBurntAudioProcessorEditor(SunBurntAudioProcesso
 		curves[i] = state.curves[i];
 		if(i > 0) audioProcessor.apvts.addParameterListener(audioProcessor.curveid[i],this);
 	}
+	audioProcessor.apvts.addParameterListener("sync",this);
+	audioProcessor.apvts.addParameterListener("highpassres",this);
+	audioProcessor.apvts.addParameterListener("lowpassres",this);
+	audioProcessor.apvts.addParameterListener("shimmerpitch",this);
 
 	dpi = context.getRenderingScale(); //TODO: AAAAAAAAA
 	int i = 0;
@@ -61,7 +65,11 @@ SunBurntAudioProcessorEditor::SunBurntAudioProcessorEditor(SunBurntAudioProcesso
 }
 SunBurntAudioProcessorEditor::~SunBurntAudioProcessorEditor() {
 	for(int i = 0; i < knobcount; i++) audioProcessor.apvts.removeParameterListener(knobs[i].id,this);
-	for(int i = 1; i < 5; i++) audioProcessor.apvts.addParameterListener(audioProcessor.curveid[i],this);
+	for(int i = 1; i < 5; i++) audioProcessor.apvts.removeParameterListener(audioProcessor.curveid[i],this);
+	audioProcessor.apvts.removeParameterListener("sync",this);
+	audioProcessor.apvts.removeParameterListener("highpassres",this);
+	audioProcessor.apvts.removeParameterListener("lowpassres",this);
+	audioProcessor.apvts.removeParameterListener("shimmerpitch",this);
 	stopTimer();
 	context.detach();
 }
