@@ -1,8 +1,11 @@
 #pragma once
 #include "includes.h"
+#include "functions.h"
 
 #define BANNER
 #define BETA
+
+#define MAX_VIBRATO 1.0
 
 struct point {
 	point(float px, float py, float ptension = .5f) {
@@ -18,7 +21,6 @@ struct point {
 struct curve {
 	curve() { }
 	std::vector<point> points;
-	bool enabled = true;
 	static double calctension(double interp, double tension);
 };
 class curveiterator {
@@ -75,34 +77,48 @@ struct pluginparams {
 
 struct pluginpreset {
 	String name = "";
-	curve curves[5];
+	curve curves[8];
+	int curveindex[5] = {0,1,3,5,7};
 	int sync = 0;
 	float values[6];
+	float filter[2] = {0.f,1.f};
 	float resonance[2] = {.3f,.3f};
 	int shimmerpitch = 12;
-	pluginpreset(String pname = "", float val1 = 0.f, float val2 = 0.f, float val3 = 0.f, float val4 = 0.f, float val5 = 0.f, float val6 = 0.f, bool enablehighpass = true, bool enablelowpass = true, bool enablepan = true, bool enableshimmer = false) {
+	float shimmerdist = .2f;
+	pluginpreset(String pname = "", float val1 = 0.f, float val2 = 0.f, float val3 = 0.f, float val4 = 0.f, float val5 = 0.f, float val6 = 0.f) {
 		name = pname;
+
 		values[0] = val1;
 		values[1] = val2;
 		values[2] = val3;
 		values[3] = val4;
 		values[4] = val5;
 		values[5] = val6;
-		curves[1].enabled = enablehighpass;
-		curves[2].enabled = enablelowpass;
-		curves[3].enabled = enablepan;
-		curves[4].enabled = enableshimmer;
+
 		curves[0].points.push_back(point(0,0,.2f));
 		curves[0].points.push_back(point(.07f,1,.7f));
 		curves[0].points.push_back(point(1,0,.5f));
+
 		curves[1].points.push_back(point(0,0,.5f));
 		curves[1].points.push_back(point(1,0,.5f));
-		curves[2].points.push_back(point(0,1,.5f));
-		curves[2].points.push_back(point(1,1,.5f));
-		curves[3].points.push_back(point(0,.5f,.5f));
-		curves[3].points.push_back(point(1,.5f,.5f));
-		curves[4].points.push_back(point(0,0,.2f));
-		curves[4].points.push_back(point(1,1,.5f));
+
+		curves[2].points.push_back(point(0,.3f,.5f));
+		curves[2].points.push_back(point(1,.3f,.5f));
+
+		curves[3].points.push_back(point(0,1,.5f));
+		curves[3].points.push_back(point(1,1,.5f));
+
+		curves[4].points.push_back(point(0,.3f,.5f));
+		curves[4].points.push_back(point(1,.3f,.5f));
+
+		curves[5].points.push_back(point(0,.5f,.5f));
+		curves[5].points.push_back(point(1,.5f,.5f));
+
+		curves[6].points.push_back(point(0,.5f,.5f));
+		curves[6].points.push_back(point(1,.5f,.5f));
+
+		curves[7].points.push_back(point(0,0,.35f));
+		curves[7].points.push_back(point(1,.5f,.5f));
 	}
 };
 
@@ -110,6 +126,8 @@ class SunBurntAudioProcessor : public AudioProcessor, public AudioProcessorValue
 public:
 	SunBurntAudioProcessor();
 	~SunBurntAudioProcessor() override;
+
+	int findcurve(int index);
 
 	void prepareToPlay(double sampleRate, int samplesPerBlock) override;
 	void changechannelnum(int newchannelnum);
@@ -120,6 +138,7 @@ public:
 
 	void processBlock(AudioBuffer<float>&, MidiBuffer&) override;
 	void genbuffer();
+	float interpolatesamples(float* buffer, float position, int buffersize);
 
 	AudioProcessorEditor* createEditor() override;
 	bool hasEditor() const override;
@@ -155,8 +174,7 @@ public:
 
 	pluginpreset state;
 	pluginparams params;
-	const String curvename[5] { "Volume","High Pass","Low Pass","Pan","Shimmer" };
-	const String curveid[5] { "volume","highpass","lowpass","pan","shimmer" };
+	const String curvename[8] { "None","High Pass","HP Resonance","Low Pass","LP Resonance","Pan","Density","Shimmer" };
 
 	CoolLogger logger;
 private:
@@ -181,7 +199,9 @@ private:
 	std::vector<float> pitchprocessbuffer;
 	int prevpitch = 0;
 
-	Atomic<bool> updatedcurve;
+	Atomic<bool> updatedcurve = true;
+	Atomic<float> updatedcurvecooldown = -1;
+	AudioBuffer<float> vibratobuffer;
 	std::vector<AudioBuffer<float>> impulsebuffer;
 	std::vector<AudioBuffer<float>> impulseeffectbuffer;
 	std::vector<float*> impulsechanneldata;
@@ -189,7 +209,9 @@ private:
 	AudioBuffer<float> wetbuffer;
 	AudioBuffer<float> effectbuffer;
 	int revlength = 0;
-	int readx = 0;
+	int vibratoindex = 0;
+	double vibratophase = 0;
+	functions::dampendvalue dampvibratodepth;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SunBurntAudioProcessor)
 };

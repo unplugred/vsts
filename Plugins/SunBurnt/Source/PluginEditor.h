@@ -58,7 +58,8 @@ public:
 	int recalchover(float x, float y);
 
 	knob knobs[6];
-	curve curves[5];
+	curve curves[8];
+	int curveindex[5] = {0,1,3,5,7};
 	int knobcount = 0;
 	float visline[3408];
 private:
