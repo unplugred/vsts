@@ -16,14 +16,20 @@ SunBurntAudioProcessorEditor::SunBurntAudioProcessorEditor(SunBurntAudioProcesso
 		knobcount++;
 		audioProcessor.apvts.addParameterListener(knobs[i].id,this);
 	}
-	for(int i = 0; i < 5; i++) {
+	for(int i = 1; i < 5; i++) {
+		curveindex[i] = state.curveindex[i];
+		audioProcessor.apvts.addParameterListener("curve"+(String)(i),this);
+	}
+	for(int i = 0; i < 8; i++) {
 		curves[i] = state.curves[i];
-		if(i > 0) audioProcessor.apvts.addParameterListener(audioProcessor.curveid[i],this);
 	}
 	audioProcessor.apvts.addParameterListener("sync",this);
+	audioProcessor.apvts.addParameterListener("highpass",this);
+	audioProcessor.apvts.addParameterListener("lowpass",this);
 	audioProcessor.apvts.addParameterListener("highpassres",this);
 	audioProcessor.apvts.addParameterListener("lowpassres",this);
 	audioProcessor.apvts.addParameterListener("shimmerpitch",this);
+	audioProcessor.apvts.addParameterListener("shimmerdist",this);
 
 	dpi = context.getRenderingScale(); //TODO: AAAAAAAAA
 	int i = 0;
@@ -65,11 +71,14 @@ SunBurntAudioProcessorEditor::SunBurntAudioProcessorEditor(SunBurntAudioProcesso
 }
 SunBurntAudioProcessorEditor::~SunBurntAudioProcessorEditor() {
 	for(int i = 0; i < knobcount; i++) audioProcessor.apvts.removeParameterListener(knobs[i].id,this);
-	for(int i = 1; i < 5; i++) audioProcessor.apvts.removeParameterListener(audioProcessor.curveid[i],this);
+	for(int i = 1; i < 5; i++) audioProcessor.apvts.removeParameterListener("curve"+(String)i,this);
 	audioProcessor.apvts.removeParameterListener("sync",this);
+	audioProcessor.apvts.removeParameterListener("highpass",this);
+	audioProcessor.apvts.removeParameterListener("lowpass",this);
 	audioProcessor.apvts.removeParameterListener("highpassres",this);
 	audioProcessor.apvts.removeParameterListener("lowpassres",this);
 	audioProcessor.apvts.removeParameterListener("shimmerpitch",this);
+	audioProcessor.apvts.removeParameterListener("shimmerdist",this);
 	stopTimer();
 	context.detach();
 }
@@ -335,6 +344,7 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
 	framebuffer.makeCurrentRenderingTarget();
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
 	//base
 	baseshader->use();
 	context.extensions.glActiveTexture(GL_TEXTURE0);
@@ -372,6 +382,8 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
 
 	//tension points
+	int curveid = curveindex[curveselection];
+	if(curveid == 0) curveid = fmax(curveselection*2-1,0);
 	circleshader->use();
 	coord = context.extensions.glGetAttribLocation(circleshader->getProgramID(),"aPos");
 	context.extensions.glEnableVertexAttribArray(coord);
@@ -382,29 +394,31 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 	circleshader->setUniform("size",8.682f*scaleddpi);
 	circleshader->setUniform("fill",.5f);
 	int nextpoint = 0;
-	for(int i = 0; i < (curves[curveselection].points.size()-1); ++i) {
-		if(!curves[curveselection].points[i].enabled) continue;
+	for(int i = 0; i < (curves[curveid].points.size()-1); ++i) {
+		if(!curves[curveid].points[i].enabled) continue;
 		++nextpoint;
-		while(!curves[curveselection].points[nextpoint].enabled) ++nextpoint;
-		if(((curves[curveselection].points[nextpoint].x-curves[curveselection].points[i].x)*1.42f) <= .02 || fabs(curves[curveselection].points[nextpoint].y-curves[curveselection].points[i].y) <= .02) continue;
-		double interp = curve::calctension(.5,curves[curveselection].points[i].tension);
+		while(!curves[curveid].points[nextpoint].enabled) ++nextpoint;
+		if(((curves[curveid].points[nextpoint].x-curves[curveid].points[i].x)*1.42f) <= .02 || fabs(curves[curveid].points[nextpoint].y-curves[curveid].points[i].y) <= .02) continue;
+		double interp = curve::calctension(.5,curves[curveid].points[i].tension);
 		circleshader->setUniform("knobpos",
-			(((curves[curveselection].points[i].x+curves[curveselection].points[nextpoint].x)*284.f+24.f-8.682f)*uiscales[uiscaleindex])/getWidth()-1,
-			(((curves[curveselection].points[i].y*(1-interp)+curves[curveselection].points[nextpoint].y*interp)*400.f+148.f-8.682f)*uiscales[uiscaleindex])/getHeight()-1);
+			(((curves[curveid].points[i].x+curves[curveid].points[nextpoint].x)*284.f+24.f-8.682f)*uiscales[uiscaleindex])/getWidth()-1,
+			(((curves[curveid].points[i].y*(1-interp)+curves[curveid].points[nextpoint].y*interp)*400.f+148.f-8.682f)*uiscales[uiscaleindex])/getHeight()-1);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	}
+
 	//control points
 	circleshader->setUniform("colin",1.f,1.f,0.f);
 	circleshader->setUniform("knobscale",25.364f*uiscales[uiscaleindex]/getWidth(),25.364f*uiscales[uiscaleindex]/getHeight());
 	circleshader->setUniform("size",12.682f*scaleddpi);
 	circleshader->setUniform("fill",1-9.f/12.682f);
-	for(int i = 0; i < curves[curveselection].points.size(); ++i) {
-		if(!curves[curveselection].points[i].enabled) continue;
+	for(int i = 0; i < curves[curveid].points.size(); ++i) {
+		if(!curves[curveid].points[i].enabled) continue;
 		circleshader->setUniform("knobpos",
-			((curves[curveselection].points[i].x*568.f+24.f-12.682f)*uiscales[uiscaleindex])/getWidth()-1,
-			((curves[curveselection].points[i].y*400.f+148.f-12.682f)*uiscales[uiscaleindex])/getHeight()-1);
+			((curves[curveid].points[i].x*568.f+24.f-12.682f)*uiscales[uiscaleindex])/getWidth()-1,
+			((curves[curveid].points[i].y*400.f+148.f-12.682f)*uiscales[uiscaleindex])/getHeight()-1);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	}
+
 	//knob bg
 	circleshader->setUniform("knobscale",83.26f*uiscales[uiscaleindex]/getWidth(),83.26f*uiscales[uiscaleindex]/getHeight());
 	circleshader->setUniform("size",41.63f*scaleddpi);
@@ -420,6 +434,7 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 		circleshader->setUniform("knobpos",(x*uiscales[uiscaleindex])/getWidth()-1,(y*uiscales[uiscaleindex])/getHeight()-1);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	}
+
 	//knob dots
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	circleshader->setUniform("knobscale",25.f*uiscales[uiscaleindex]/getWidth(),25.f*uiscales[uiscaleindex]/getHeight());
@@ -437,6 +452,7 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 		circleshader->setUniform("knobpos",(x*uiscales[uiscaleindex])/getWidth()-1,(y*uiscales[uiscaleindex])/getHeight()-1);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	}
+
 	//curve enable
 	circleshader->setUniform("knobscale",33.f*uiscales[uiscaleindex]/getWidth(),33.f*uiscales[uiscaleindex]/getHeight());
 	circleshader->setUniform("size",16.5f*scaleddpi);
@@ -452,8 +468,8 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 			break;
 		}
 		circleshader->setUniform("knobpos",(x*uiscales[uiscaleindex])/getWidth()-1,(y*uiscales[uiscaleindex])/getHeight()-1);
-		circleshader->setUniform("colin",1.f,curves[i+1].enabled?1.f:0.f,0.f);
-		circleshader->setUniform("colout",1.f,curves[i+1].enabled?0.f:1.f,0.f);
+		circleshader->setUniform("colin",1.f,curveindex[i+1]==0?0.f:1.f,0.f);
+		circleshader->setUniform("colout",1.f,curveindex[i+1]==0?1.f:0.f,0.f);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	}
 	context.extensions.glDisableVertexAttribArray(coord);
@@ -529,7 +545,10 @@ void SunBurntAudioProcessorEditor::openGLContextClosing() {
 }
 void SunBurntAudioProcessorEditor::calcvis() {
 	curveiterator iterator;
-	iterator.reset(curves[curveselection],283);
+	if(curveindex[curveselection] == 0)
+		iterator.reset(curves[(int)fmax(curveselection*2-1,0)],283);
+	else
+		iterator.reset(curves[curveindex[curveselection]],283);
 	double prevy = 74+iterator.next()*200;
 	double currenty = prevy;
 	double nexty = prevy;
@@ -597,8 +616,9 @@ void SunBurntAudioProcessorEditor::parameterChanged(const String& parameterID, f
 		knobs[i].value = knobs[i].normalize(newValue);
 		return;
 	}
-	for(int i = 1; i < 5; i++) if(parameterID == audioProcessor.curveid[i]) {
-		curves[i].enabled = newValue>.5;
+	for(int i = 1; i < 5; i++) if(parameterID == ("curve"+(String)i)) {
+		curveindex[i] = newValue;
+		if(i == curveselection) calcvis();
 		return;
 	}
 }
@@ -660,14 +680,14 @@ void SunBurntAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 			int i = round(initialdrag-knobcount);
 			if((i%2) == 0) {
 				i /= 2;
-				initialvalue[0] = curves[curveselection].points[i].x;
-				initialvalue[1] = curves[curveselection].points[i].y;
+				initialvalue[0] = curves[curveindex[curveselection]].points[i].x;
+				initialvalue[1] = curves[curveindex[curveselection]].points[i].y;
 				initialdotvalue[0] = initialvalue[0];
 				initialdotvalue[1] = initialvalue[1];
 				valueoffset[1] = 0;
 			} else {
 				i = (i-1)/2;
-				initialvalue[0] = curves[curveselection].points[i].tension;
+				initialvalue[0] = curves[curveindex[curveselection]].points[i].tension;
 				initialdotvalue[0] = initialvalue[0];
 			}
 		} else {
@@ -676,14 +696,15 @@ void SunBurntAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		}
 	} else if(hover >= -10 && hover <= -2) {
 		if((hover+9)%2 == 0 || hover == -10) {
-			curveselection = ceil((hover+10)*.5f);
+			curveselection = ceil(hover*.5+5);
 			audioProcessor.params.curveselection = curveselection;
 			calcvis();
 		} else {
 			int id = (int)(hover*.5)+5;
-			bool val = !curves[id].enabled;
-			audioProcessor.apvts.getParameter(audioProcessor.curveid[id])->setValueNotifyingHost(val?1.f:0.f);
-			audioProcessor.undoManager.setCurrentTransactionName((String)"Turned "+audioProcessor.curvename[id]+(val?" on":" off"));
+			int val = 0;
+			if(curveindex[id] == 0) val = fmax(id*2-1,0);
+			audioProcessor.apvts.getParameter("curve"+(String)id)->setValueNotifyingHost(val/7.f);
+			audioProcessor.undoManager.setCurrentTransactionName((String)"Changed curve "+(String)id+" to "+audioProcessor.curvename[val]);
 			audioProcessor.undoManager.beginNewTransaction();
 		}
 	}
@@ -706,7 +727,7 @@ void SunBurntAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 			float valuey = initialvalue[1]-event.getDistanceFromDragStartY()*(finemode?.0005f:.005f)*1.42f;
 			float pointy = valuey-valueoffset[1];
 
-			if(i > 0 && i < (curves[curveselection].points.size()-1)) {
+			if(i > 0 && i < (curves[curveindex[curveselection]].points.size()-1)) {
 				float valuex = initialvalue[0]+event.getDistanceFromDragStartX()*(finemode?.0005f:.005f);
 				float pointx = valuex-valueoffset[0];
 
@@ -734,18 +755,18 @@ void SunBurntAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 				} else axislock = -1;
 
 				if(event.mods.isShiftDown()) { // free mode
-					if((i > 1 && pointx < curves[curveselection].points[i-1].x) || (i < (curves[curveselection].points.size()-2) && pointx > curves[curveselection].points[i+1].x)) {
-						point pnt = curves[curveselection].points[i];
+					if((i > 1 && pointx < curves[curveindex[curveselection]].points[i-1].x) || (i < (curves[curveindex[curveselection]].points.size()-2) && pointx > curves[curveindex[curveselection]].points[i+1].x)) {
+						point pnt = curves[curveindex[curveselection]].points[i];
 						int n = 1;
-						for(n = 1; n < (curves[curveselection].points.size()-1); ++n) //finding new position
-							if(pnt.x < curves[curveselection].points[n].x) break;
+						for(n = 1; n < (curves[curveindex[curveselection]].points.size()-1); ++n) //finding new position
+							if(pnt.x < curves[curveindex[curveselection]].points[n].x) break;
 						if(n > i) { // move points back
 							n--;
 							for(int f = i; f <= n; f++)
-								curves[curveselection].points[f] = curves[curveselection].points[f+1];
+								curves[curveindex[curveselection]].points[f] = curves[curveindex[curveselection]].points[f+1];
 						} else { //move points forward
 							for(int f = i; f >= n; f--)
-								curves[curveselection].points[f] = curves[curveselection].points[f-1];
+								curves[curveindex[curveselection]].points[f] = curves[curveindex[curveselection]].points[f-1];
 						}
 						i = n;
 						initialdrag = i*2+knobcount;
@@ -762,16 +783,16 @@ void SunBurntAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 				float xright = 1;
 				if(!event.mods.isShiftDown()) { // free mode
 					if(i > 1) {
-						xleft = curves[curveselection].points[i-1].x;
-						if(pointx <= curves[curveselection].points[i-1].x) {
-							pointx = curves[curveselection].points[i-1].x;
+						xleft = curves[curveindex[curveselection]].points[i-1].x;
+						if(pointx <= curves[curveindex[curveselection]].points[i-1].x) {
+							pointx = curves[curveindex[curveselection]].points[i-1].x;
 							clamppedx = true;
 						}
 					}
-					if(i < (curves[curveselection].points.size()-2)) {
-						xright = curves[curveselection].points[i+1].x;
-						if(pointx >= curves[curveselection].points[i+1].x) {
-							pointx = curves[curveselection].points[i+1].x;
+					if(i < (curves[curveindex[curveselection]].points.size()-2)) {
+						xright = curves[curveindex[curveselection]].points[i+1].x;
+						if(pointx >= curves[curveindex[curveselection]].points[i+1].x) {
+							pointx = curves[curveindex[curveselection]].points[i+1].x;
 							clamppedx = true;
 						}
 					}
@@ -786,19 +807,19 @@ void SunBurntAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 				if(clamppedy)
 					amioutofbounds[1] += preclampy-pointy-fmin(fmax(amioutofbounds[1],-.1f),.1f);
 				else amioutofbounds[1] = 0;
-				curves[curveselection].points[i].enabled = (fabs(amioutofbounds[0])+fabs(amioutofbounds[1])) < .8;
+				curves[curveindex[curveselection]].points[i].enabled = (fabs(amioutofbounds[0])+fabs(amioutofbounds[1])) < .8;
 
-				curves[curveselection].points[i].x = pointx;
+				curves[curveindex[curveselection]].points[i].x = pointx;
 				if(axislock != 2)
 					valueoffset[0] = fmax(fmin(valueoffset[0],valuex-xleft+.1f),valuex-xright-.1f);
 			}
-			curves[curveselection].points[i].y = fmax(fmin(pointy,1),0);
+			curves[curveindex[curveselection]].points[i].y = fmax(fmin(pointy,1),0);
 			if(axislock != 1)
 				valueoffset[1] = fmax(fmin(valueoffset[1],valuey+.1f),valuey-1.1f);
 
 		} else { //dragging tension
 			i = (i-1)/2;
-			int dir = curves[curveselection].points[i].y > curves[curveselection].points[i+1].y ? -1 : 1;
+			int dir = curves[curveindex[curveselection]].points[i].y > curves[curveindex[curveselection]].points[i+1].y ? -1 : 1;
 			if(!finemode && (event.mods.isShiftDown() || event.mods.isAltDown())) {
 				finemode = true;
 				initialvalue[0] -= dir*event.getDistanceFromDragStartY()*.0045f;
@@ -808,7 +829,7 @@ void SunBurntAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 			}
 
 			float value = initialvalue[0]-dir*event.getDistanceFromDragStartY()*(finemode?.0005f:.005f);
-			curves[curveselection].points[i].tension = fmin(fmax(value-valueoffset[0],0),1);
+			curves[curveindex[curveselection]].points[i].tension = fmin(fmax(value-valueoffset[0],0),1);
 
 			valueoffset[0] = fmax(fmin(valueoffset[0],value+.1f),value-1.1f);
 		}
@@ -839,26 +860,26 @@ void SunBurntAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 			if((i%2) == 0) {
 				i /= 2;
 				axislock = -1;
-				if((fabs(initialdotvalue[0]-curves[curveselection].points[i].x)+fabs(initialdotvalue[1]-curves[curveselection].points[i].y)) < .00001) {
-					curves[curveselection].points[i].x = initialdotvalue[0];
-					curves[curveselection].points[i].y = initialdotvalue[1];
+				if((fabs(initialdotvalue[0]-curves[curveindex[curveselection]].points[i].x)+fabs(initialdotvalue[1]-curves[curveindex[curveselection]].points[i].y)) < .00001) {
+					curves[curveindex[curveselection]].points[i].x = initialdotvalue[0];
+					curves[curveindex[curveselection]].points[i].y = initialdotvalue[1];
 					return;
 				}
-				dragpos.x += (curves[curveselection].points[i].x-initialdotvalue[0])*uiscales[uiscaleindex]*284;
-				dragpos.y += (initialdotvalue[1]-curves[curveselection].points[i].y)*uiscales[uiscaleindex]*200;
-				if(!curves[curveselection].points[i].enabled) {
-					curves[curveselection].points.erase(curves[curveselection].points.begin()+i);
+				dragpos.x += (curves[curveindex[curveselection]].points[i].x-initialdotvalue[0])*uiscales[uiscaleindex]*284;
+				dragpos.y += (initialdotvalue[1]-curves[curveindex[curveselection]].points[i].y)*uiscales[uiscaleindex]*200;
+				if(!curves[curveindex[curveselection]].points[i].enabled) {
+					curves[curveindex[curveselection]].points.erase(curves[curveindex[curveselection]].points.begin()+i);
 					audioProcessor.deletepoint(i);
-				} else audioProcessor.movepoint(i,curves[curveselection].points[i].x,curves[curveselection].points[i].y);
+				} else audioProcessor.movepoint(i,curves[curveindex[curveselection]].points[i].x,curves[curveindex[curveselection]].points[i].y);
 			} else {
 				i = (i-1)/2;
-				if(fabs(initialdotvalue[0]-curves[curveselection].points[i].tension) < .00001) {
-					curves[curveselection].points[i].tension = initialdotvalue[0];
+				if(fabs(initialdotvalue[0]-curves[curveindex[curveselection]].points[i].tension) < .00001) {
+					curves[curveindex[curveselection]].points[i].tension = initialdotvalue[0];
 					return;
 				}
-				float interp = curve::calctension(.5,curves[curveselection].points[i].tension)-curve::calctension(.5,initialdotvalue[0]);
-				dragpos.y += (curves[curveselection].points[i].y-curves[curveselection].points[i+1].y)*interp*uiscales[uiscaleindex]*200.f;
-				audioProcessor.movetension(i,curves[curveselection].points[i].tension);
+				float interp = curve::calctension(.5,curves[curveindex[curveselection]].points[i].tension)-curve::calctension(.5,initialdotvalue[0]);
+				dragpos.y += (curves[curveindex[curveselection]].points[i].y-curves[curveindex[curveselection]].points[i+1].y)*interp*uiscales[uiscaleindex]*200.f;
+				audioProcessor.movetension(i,curves[curveindex[curveselection]].points[i].tension);
 			}
 		}
 		event.source.enableUnboundedMouseMovement(false);
@@ -887,9 +908,9 @@ void SunBurntAudioProcessorEditor::mouseDoubleClick(const MouseEvent& event) {
 		float x = fmin(fmax((((float)event.x)/uiscales[uiscaleindex]-12)/284.f,0),1);
 		float y = fmin(fmax(1-(((float)event.y)/uiscales[uiscaleindex]-60)/200.f,0),1);
 		int i = 1;
-		for(i = 1; i < curves[curveselection].points.size(); ++i)
-			if(x < curves[curveselection].points[i].x) break;
-		curves[curveselection].points.insert(curves[curveselection].points.begin()+i,point(x,y,curves[curveselection].points[i-1].tension));
+		for(i = 1; i < curves[curveindex[curveselection]].points.size(); ++i)
+			if(x < curves[curveindex[curveselection]].points[i].x) break;
+		curves[curveindex[curveselection]].points.insert(curves[curveindex[curveselection]].points.begin()+i,point(x,y,curves[curveindex[curveselection]].points[i-1].tension));
 		audioProcessor.addpoint(i,x,y);
 		calcvis();
 		hover = recalchover(event.x,event.y);
@@ -900,14 +921,14 @@ void SunBurntAudioProcessorEditor::mouseDoubleClick(const MouseEvent& event) {
 		int i = initialdrag-knobcount;
 		if((i%2) == 0) {
 			i /= 2;
-			if(i > 0 && i < (curves[curveselection].points.size()-1)) {
-				curves[curveselection].points.erase(curves[curveselection].points.begin()+i);
+			if(i > 0 && i < (curves[curveindex[curveselection]].points.size()-1)) {
+				curves[curveindex[curveselection]].points.erase(curves[curveindex[curveselection]].points.begin()+i);
 				audioProcessor.deletepoint(i);
 			}
 		} else {
 			i = (i-1)/2;
-			if(fabs(curves[curveselection].points[i].tension-.5) < .00001f) return;
-			curves[curveselection].points[i].tension = .5f;
+			if(fabs(curves[curveindex[curveselection]].points[i].tension-.5) < .00001f) return;
+			curves[curveindex[curveselection]].points[i].tension = .5f;
 			audioProcessor.movetension(i,.5f);
 		}
 		calcvis();
@@ -936,16 +957,16 @@ int SunBurntAudioProcessorEditor::recalchover(float x, float y) {
 		if(x < 300) {
 			x -= 12;
 			y -= 60;
-			for(int i = 0; i < curves[curveselection].points.size(); ++i) {
-				float xx = x-curves[curveselection].points[i].x*284;
-				float yy = y-(1-curves[curveselection].points[i].y)*200;
+			for(int i = 0; i < curves[curveindex[curveselection]].points.size(); ++i) {
+				float xx = x-curves[curveindex[curveselection]].points[i].x*284;
+				float yy = y-(1-curves[curveindex[curveselection]].points[i].y)*200;
 				//dot
 				if((xx*xx+yy*yy)<=37.1) return i*2+knobcount;
 
-				if(i < (curves[curveselection].points.size()-1)) {
-					float interp = curve::calctension(.5,curves[curveselection].points[i].tension);
-					xx = x-(curves[curveselection].points[i].x+curves[curveselection].points[i+1].x)*.5f*284.f;
-					yy = y-(1-(curves[curveselection].points[i].y*(1-interp)+curves[curveselection].points[i+1].y*interp))*200.f;
+				if(i < (curves[curveindex[curveselection]].points.size()-1)) {
+					float interp = curve::calctension(.5,curves[curveindex[curveselection]].points[i].tension);
+					xx = x-(curves[curveindex[curveselection]].points[i].x+curves[curveindex[curveselection]].points[i+1].x)*.5f*284.f;
+					yy = y-(1-(curves[curveindex[curveselection]].points[i].y*(1-interp)+curves[curveindex[curveselection]].points[i+1].y*interp))*200.f;
 					//tension
 					if((xx*xx+yy*yy)<=16.7) return i*2+1+knobcount;
 				}

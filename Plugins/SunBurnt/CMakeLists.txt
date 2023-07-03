@@ -30,6 +30,7 @@ clap_juce_extensions_plugin(TARGET "${BaseTargetName}"
 	CLAP_USE_JUCE_PARAMETER_RANGES ALL)
 
 target_sources("${BaseTargetName}" PRIVATE
+	Source/functions.cpp
 	Source/PluginEditor.cpp
 	Source/PluginProcessor.cpp)
 
