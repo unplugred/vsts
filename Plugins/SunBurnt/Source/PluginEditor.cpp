@@ -544,20 +544,14 @@ void SunBurntAudioProcessorEditor::openGLContextClosing() {
 void SunBurntAudioProcessorEditor::calcvis() {
 	curveiterator iterator;
 	if(curveindex[curveselection] == 0)
-		iterator.reset(curves[(int)fmax(curveselection*2-1,0)],283);
+		iterator.reset(curves[(int)fmax(curveselection*2-1,0)],568);
 	else
-		iterator.reset(curves[curveindex[curveselection]],283);
+		iterator.reset(curves[curveindex[curveselection]],568);
 	double prevy = 74+iterator.next()*200;
 	double currenty = prevy;
 	double nexty = prevy;
-	double nextnexty = prevy;
 	for(int i = 0; i < 568; i++) {
-		if((i%2)==0) {
-			nexty = nextnexty;
-		} else {
-			nextnexty = 74+iterator.next()*200;
-			nexty = (currenty+nextnexty)*.5;
-		}
+		nexty = 74+iterator.next()*200;
 		double angle1 = std::atan2(currenty-prevy,.5)+1.5707963268;
 		double angle2 = std::atan2(nexty-currenty,.5)+1.5707963268;
 		double angle = (angle1+angle2)*.5;

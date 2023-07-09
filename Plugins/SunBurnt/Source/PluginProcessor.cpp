@@ -17,7 +17,7 @@ double curveiterator::next() {
 		if((((double)x-1)/(width-1)) < 1) pointhit = true;
 		return points[points.size()-1].y;
 	}
-	if(xx >= points[nextpoint].x) {
+	if(xx >= points[nextpoint].x || (width-x) <= (points.size()-nextpoint)) {
 		pointhit = true;
 		currentpoint = nextpoint;
 		++nextpoint;
