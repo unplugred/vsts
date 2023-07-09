@@ -558,11 +558,15 @@ void SunBurntAudioProcessorEditor::calcvis() {
 			nextnexty = 74+iterator.next()*200;
 			nexty = (currenty+nextnexty)*.5;
 		}
-		double angle1 = std::atan2(currenty-prevy, .5);
-		double angle2 = std::atan2(currenty-nexty,-.5);
-		while((angle1-angle2)<(-1.5707963268))angle1+=3.1415926535*2;
-		while((angle1-angle2)>( 1.5707963268))angle1-=3.1415926535*2;
+		double angle1 = std::atan2(currenty-prevy,.5)+1.5707963268;
+		double angle2 = std::atan2(nexty-currenty,.5)+1.5707963268;
 		double angle = (angle1+angle2)*.5;
+		if(fabs(angle1-angle2)>1) {
+			if(fabs(currenty-prevy) > fabs(nexty-currenty))
+				angle = angle1;
+			else
+				angle = angle2;
+		}
 		visline[i*6  ] = (i*.5+12+cos(angle)*2.3f)/368.f;
 		visline[i*6+3] = (i*.5+12-cos(angle)*2.3f)/368.f;
 		visline[i*6+1] = (currenty+sin(angle)*2.3f)/334.f;
