@@ -29,7 +29,6 @@ SunBurntAudioProcessorEditor::SunBurntAudioProcessorEditor(SunBurntAudioProcesso
 	audioProcessor.apvts.addParameterListener("highpassres",this);
 	audioProcessor.apvts.addParameterListener("lowpassres",this);
 	audioProcessor.apvts.addParameterListener("shimmerpitch",this);
-	audioProcessor.apvts.addParameterListener("shimmerdist",this);
 
 	dpi = context.getRenderingScale(); //TODO: AAAAAAAAA
 	int i = 0;
@@ -78,7 +77,6 @@ SunBurntAudioProcessorEditor::~SunBurntAudioProcessorEditor() {
 	audioProcessor.apvts.removeParameterListener("highpassres",this);
 	audioProcessor.apvts.removeParameterListener("lowpassres",this);
 	audioProcessor.apvts.removeParameterListener("shimmerpitch",this);
-	audioProcessor.apvts.removeParameterListener("shimmerdist",this);
 	stopTimer();
 	context.detach();
 }

@@ -102,8 +102,6 @@ SunBurntAudioProcessor::SunBurntAudioProcessor() :
 	apvts.addParameterListener("lowpassres",this);
 	presets[currentpreset].shimmerpitch = apvts.getParameter("shimmerpitch")->getValue()*48-24;
 	apvts.addParameterListener("shimmerpitch",this);
-	presets[currentpreset].shimmerdist = apvts.getParameter("shimmerdist")->getValue();
-	apvts.addParameterListener("shimmerdist",this);
 }
 
 SunBurntAudioProcessor::~SunBurntAudioProcessor(){
@@ -115,7 +113,6 @@ SunBurntAudioProcessor::~SunBurntAudioProcessor(){
 	apvts.removeParameterListener("highpassres",this);
 	apvts.removeParameterListener("lowpassres",this);
 	apvts.removeParameterListener("shimmerpitch",this);
-	apvts.removeParameterListener("shimmerdist",this);
 }
 
 const String SunBurntAudioProcessor::getName() const { return "SunBurnt"; }
@@ -498,7 +495,7 @@ void SunBurntAudioProcessor::getStateInformation (MemoryBlock& destData) {
 		data << presets[i].name << linebreak;
 		for(int v = 0; v < paramcount; ++v)
 			data << presets[i].values[v] << linebreak;
-		data << presets[i].sync << linebreak << presets[i].filter[0] << linebreak << presets[i].filter[1] << linebreak << presets[i].resonance[0] << linebreak << presets[i].resonance[1] << linebreak << presets[i].shimmerpitch << linebreak << presets[i].shimmerdist << linebreak;
+		data << presets[i].sync << linebreak << presets[i].filter[0] << linebreak << presets[i].filter[1] << linebreak << presets[i].resonance[0] << linebreak << presets[i].resonance[1] << linebreak << presets[i].shimmerpitch << linebreak;
 		for(int c = 1; c < 5; ++c) {
 			data << presets[i].curveindex[c] << linebreak;
 		}
@@ -546,8 +543,6 @@ void SunBurntAudioProcessor::setStateInformation (const void* data, int sizeInBy
 			presets[i].resonance[1] = std::stof(token);
 			std::getline(ss, token, '\n');
 			presets[i].shimmerpitch = std::stoi(token);
-			std::getline(ss, token, '\n');
-			presets[i].shimmerdist = std::stoi(token);
 			for(int c = 1; c < 5; ++c) {
 				std::getline(ss, token, '\n');
 				presets[i].curveindex[c] = std::stoi(token);
@@ -594,7 +589,6 @@ void SunBurntAudioProcessor::setStateInformation (const void* data, int sizeInBy
 	apvts.getParameter("highpassres")->setValueNotifyingHost(presets[currentpreset].resonance[0]);
 	apvts.getParameter("lowpassres")->setValueNotifyingHost(presets[currentpreset].resonance[1]);
 	apvts.getParameter("shimmerpitch")->setValueNotifyingHost((presets[currentpreset].shimmerpitch+24)/48.f);
-	apvts.getParameter("shimmerdist")->setValueNotifyingHost(presets[currentpreset].shimmerdist);
 	updatedcurve = true;
 }
 void SunBurntAudioProcessor::parameterChanged(const String& parameterID, float newValue) {
@@ -644,10 +638,6 @@ void SunBurntAudioProcessor::parameterChanged(const String& parameterID, float n
 		presets[currentpreset].shimmerpitch = newValue;
 		return;
 	}
-	if(parameterID == "shimmerdist") { //TODO
-		presets[currentpreset].shimmerdist = newValue;
-		return;
-	}
 }
 void SunBurntAudioProcessor::movepoint(int index, float x, float y) {
 	int i = presets[currentpreset].curveindex[params.curveselection];
@@ -695,6 +685,5 @@ AudioProcessorValueTreeState::ParameterLayout SunBurntAudioProcessor::createPara
 	parameters.push_back(std::make_unique<AudioParameterFloat	>("lowpass"		,"Low Pass"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),1.0f	));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>("lowpassres"	,"LP Resonance"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.3f	));
 	parameters.push_back(std::make_unique<AudioParameterInt		>("shimmerpitch","Shimmer Pitch"										,-24.0f	,24.0f	 ,12.0f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("shimmerdist"	,"Shimmer Distortion"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.2f	));
 	return { parameters.begin(), parameters.end() };
 }
