@@ -84,7 +84,6 @@ struct pluginpreset {
 	float filter[2] = {0.f,1.f};
 	float resonance[2] = {.3f,.3f};
 	int shimmerpitch = 12;
-	float shimmerdist = .2f;
 	pluginpreset(String pname = "", float val1 = 0.f, float val2 = 0.f, float val3 = 0.f, float val4 = 0.f, float val5 = 0.f, float val6 = 0.f) {
 		name = pname;
 
