@@ -48,6 +48,7 @@ public:
 	void timerCallback() override;
 
 	virtual void parameterChanged(const String& parameterID, float newValue);
+	void recalclabels();
 	void mouseMove(const MouseEvent& event) override;
 	void mouseExit(const MouseEvent& event) override;
 	void mouseDown(const MouseEvent& event) override;
@@ -96,6 +97,9 @@ private:
 	int axislock = -1;
 	Point<int> dragpos = Point<int>(0,0);
 	std::unique_ptr<OpenGLShaderProgram> circleshader;
+
+	float length = .65f;
+	int sync = 0;
 
 	OpenGLTexture overlaytex;
 	OpenGLFrameBuffer framebuffer;
