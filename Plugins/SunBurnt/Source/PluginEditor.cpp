@@ -6,29 +6,27 @@ SunBurntAudioProcessorEditor::SunBurntAudioProcessorEditor(SunBurntAudioProcesso
 	jpmode = params.jpmode;
 	curveselection = params.curveselection;
 
-	for(int i = 0; i < paramcount; i++) {
-		knobs[i].id = params.pots[i].id;
-		knobs[i].name = params.pots[i].name;
-		knobs[i].value = params.pots[i].normalize(state.values[i]);
-		knobs[i].minimumvalue = params.pots[i].minimumvalue;
-		knobs[i].maximumvalue = params.pots[i].maximumvalue;
-		knobs[i].defaultvalue = params.pots[i].normalize(params.pots[i].defaultvalue);
+	for(int i = 0; i < paramcount; i++)
+		audioProcessor.apvts.addParameterListener(params.pots[i].id,this);
+	for(int i = 0; i < 7; i++) {
+		if(i == 4) {
+			sync = state.values[i];
+			continue;
+		} else if(i == 3) time = state.values[i];
+		int newi = i>4?i-1:i;
+		knobs[newi].id = params.pots[i].id;
+		knobs[newi].name = params.pots[i].name;
+		knobs[newi].value = params.pots[i].normalize(state.values[i]);
+		knobs[newi].minimumvalue = params.pots[i].minimumvalue;
+		knobs[newi].maximumvalue = params.pots[i].maximumvalue;
+		knobs[newi].defaultvalue = params.pots[i].normalize(params.pots[i].defaultvalue);
 		knobcount++;
-		audioProcessor.apvts.addParameterListener(knobs[i].id,this);
 	}
-	for(int i = 1; i < 5; i++) {
-		curveindex[i] = state.curveindex[i];
-		audioProcessor.apvts.addParameterListener("curve"+(String)(i),this);
-	}
-	for(int i = 0; i < 8; i++) {
+	recalclabels();
+	for(int i = 1; i < 5; i++)
+		curveindex[i] = state.values[6+i];
+	for(int i = 0; i < 8; i++)
 		curves[i] = state.curves[i];
-	}
-	audioProcessor.apvts.addParameterListener("sync",this);
-	audioProcessor.apvts.addParameterListener("highpass",this);
-	audioProcessor.apvts.addParameterListener("lowpass",this);
-	audioProcessor.apvts.addParameterListener("highpassres",this);
-	audioProcessor.apvts.addParameterListener("lowpassres",this);
-	audioProcessor.apvts.addParameterListener("shimmerpitch",this);
 
 	dpi = context.getRenderingScale(); //TODO: AAAAAAAAA
 	int i = 0;
@@ -608,6 +606,16 @@ void SunBurntAudioProcessorEditor::timerCallback() {
 }
 
 void SunBurntAudioProcessorEditor::parameterChanged(const String& parameterID, float newValue) {
+	if(parameterID == "sync") {
+		sync = newValue;
+		recalclabels();
+		return;
+	}
+	if(parameterID == "length") {
+		length = newValue;
+		recalclabels();
+		return;
+	}
 	for(int i = 0; i < knobcount; i++) if(knobs[i].id == parameterID) {
 		knobs[i].value = knobs[i].normalize(newValue);
 		return;
@@ -616,6 +624,13 @@ void SunBurntAudioProcessorEditor::parameterChanged(const String& parameterID, f
 		curveindex[i] = newValue;
 		if(i == curveselection) calcvis();
 		return;
+	}
+}
+void SunBurntAudioProcessorEditor::recalclabels() {
+	if(sync <= 0) {
+		knobs[3].value = length;
+	} else {
+		knobs[3].value = (sync-1)/15.f;
 	}
 }
 void SunBurntAudioProcessorEditor::mouseMove(const MouseEvent& event) {
@@ -840,7 +855,16 @@ void SunBurntAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 		}
 
 		float value = initialvalue[0]-(event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*(finemode?.0005f:.005f);
-		audioProcessor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(value-valueoffset[0]);
+		if(knobs[hover].id == "length") {
+			if(event.mods.isCtrlDown()) {
+				audioProcessor.apvts.getParameter("sync")->setValueNotifyingHost((fmax(value-valueoffset[0],0)*15+1)*.0625);
+			} else {
+				if(sync > 0) audioProcessor.apvts.getParameter("sync")->setValueNotifyingHost(0);
+				audioProcessor.apvts.getParameter("length")->setValueNotifyingHost(value-valueoffset[0]);
+			}
+		} else {
+			audioProcessor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(value-valueoffset[0]);
+		}
 
 		valueoffset[0] = fmax(fmin(valueoffset[0],value+.1f),value-1.1f);
 	} else if(initialdrag == -15) {

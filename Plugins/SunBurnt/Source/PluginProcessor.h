@@ -70,7 +70,7 @@ public:
 };
 struct pluginparams {
 	int curveselection = 0;
-	potentiometer pots[6];
+	potentiometer pots[16];
 	double uiscale = 1.5;
 	bool jpmode = false;
 };
@@ -78,21 +78,26 @@ struct pluginparams {
 struct pluginpreset {
 	String name = "";
 	curve curves[8];
-	int curveindex[5] = {0,1,3,5,7};
-	int sync = 0;
-	float values[6];
-	float filter[2] = {0.f,1.f};
-	float resonance[2] = {.3f,.3f};
-	int shimmerpitch = 12;
-	pluginpreset(String pname = "", float val1 = 0.f, float val2 = 0.f, float val3 = 0.f, float val4 = 0.f, float val5 = 0.f, float val6 = 0.f) {
+	float values[16];
+	pluginpreset(String pname = "", float val1 = 0.f, float val2 = 0.f, float val3 = 0.f, float val4 = 0.f, float val5 = 0.f, float val6 = 0.f, float val7 = 0.f, float val8 = 0.f, float val9 = 0.f, float val10 = 0.f, float val11 = 0.f, float val12 = 0.f, float val13 = 0.f, float val14 = 0.f, float val15 = 0.f, float val16 = 0.f) {
 		name = pname;
 
-		values[0] = val1;
-		values[1] = val2;
-		values[2] = val3;
-		values[3] = val4;
-		values[4] = val5;
-		values[5] = val6;
+		values[ 0] = val1;
+		values[ 1] = val2;
+		values[ 2] = val3;
+		values[ 3] = val4;
+		values[ 4] = val5;
+		values[ 5] = val6;
+		values[ 6] = val7;
+		values[ 7] = val8;
+		values[ 8] = val9;
+		values[ 9] = val10;
+		values[10] = val11;
+		values[11] = val12;
+		values[12] = val13;
+		values[13] = val14;
+		values[14] = val15;
+		values[15] = val16;
 
 		curves[0].points.push_back(point(0,0,.2f));
 		curves[0].points.push_back(point(.07f,1,.7f));
@@ -169,11 +174,11 @@ public:
 	UndoManager undoManager;
 
 	int version = 0;
-	const int paramcount = 6;
+	const int paramcount = 16;
 
 	pluginpreset state;
 	pluginparams params;
-	const String curvename[8] { "None","High Pass","HP Resonance","Low Pass","LP Resonance","Pan","Density","Shimmer" };
+	const String curvename[8] { "None","High-pass","HP resonance","Low-pass","LP resonance","Pan","Density","Shimmer" };
 
 	CoolLogger logger;
 private:
@@ -200,6 +205,7 @@ private:
 
 	Atomic<bool> updatedcurve = true;
 	Atomic<float> updatedcurvecooldown = -1;
+	float updatedcurvebpmcooldown = -1;
 	AudioBuffer<float> vibratobuffer;
 	std::vector<AudioBuffer<float>> impulsebuffer;
 	std::vector<AudioBuffer<float>> impulseeffectbuffer;
@@ -211,6 +217,7 @@ private:
 	int vibratoindex = 0;
 	double vibratophase = 0;
 	functions::dampendvalue dampvibratodepth;
+	Atomic<int> lastbpm = 120;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SunBurntAudioProcessor)
 };
