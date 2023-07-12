@@ -59,6 +59,8 @@ SunBurntAudioProcessorEditor::SunBurntAudioProcessorEditor(SunBurntAudioProcesso
 	setResizable(false, false);
 
 	calcvis();
+	randcubes();
+
 	setOpaque(true);
 	context.setOpenGLVersionRequired(OpenGLContext::OpenGLVersion::openGL3_2);
 	context.setRenderer(this);
@@ -102,6 +104,7 @@ uniform vec2 texscale;
 uniform float selection;
 uniform float shineprog;
 uniform float dpi;
+uniform vec2 hidecube;
 uniform vec4 randomid;
 uniform vec4 randomx;
 uniform vec4 randomy;
@@ -114,9 +117,13 @@ void main(){
 
 	vec3 disp = vec3(texture(disptex,uv).rg,texture(disptex,round(uv*vec2(736,668))/vec2(736,668)).b);
 	vec2 dispuv = uv;
-	if(disp.b < .9) {
+	if(disp.b < .95) {
 		vec3 r = vec3(-5);
 		disp.b = round(disp.b*64);
+		if(disp.b == hidecube.x || disp.b == hidecube.y) {
+			fragColor = vec4(0,0,0,1);
+			return;
+		}
 			 if(disp.b == randomid.x) r = vec3(randomx.x,randomy.x,randomblend.x);
 		else if(disp.b == randomid.y) r = vec3(randomx.y,randomy.y,randomblend.y);
 		else if(disp.b == randomid.z) r = vec3(randomx.z,randomy.z,randomblend.z);
@@ -354,6 +361,7 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 	baseshader->setUniform("texscale",736.f/baseentex.getWidth(),668.f/baseentex.getHeight());
 	baseshader->setUniform("selection",(float)curveselection);
 	baseshader->setUniform("shineprog",websiteht);
+	baseshader->setUniform("hidecube",(float)hidecube[0],(float)hidecube[1]);
 	baseshader->setUniform("randomid",(float)randomid[0],(float)randomid[1],(float)randomid[2],(float)randomid[3]);
 	baseshader->setUniform("randomx",randomdir[0],randomdir[1],randomdir[2],randomdir[3]);
 	baseshader->setUniform("randomy",randomdir[4],randomdir[5],randomdir[6],randomdir[7]);
@@ -422,7 +430,7 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 	for(int i = 0; i < knobcount; ++i) {
 		float x = i*121.2f+23.38f;
 		float y = 36.42f;
-		for(int ii = 0; ii < 4; ++ii) if(randomid[ii] == (i+46)) {
+		for(int ii = 0; ii < 4; ++ii) if(randomid[ii] == (i+48)) {
 			x += randomdir[ii]*2;
 			y += randomdir[ii+4]*2;
 			break;
@@ -440,7 +448,7 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 	for(int i = 0; i < knobcount; i++) {
 		float x = i*121.2f+52.51f+sin((knobs[i].value-.5f)*.8f*6.28318531f)*17.5f;
 		float y = 65.55f+cos((knobs[i].value-.5f)*.8f*6.28318531f)*17.5f;
-		for(int ii = 0; ii < 4; ++ii) if(randomid[ii] == (i+46)) {
+		for(int ii = 0; ii < 4; ++ii) if(randomid[ii] == (i+48)) {
 			x += randomdir[ii]*2;
 			y += randomdir[ii+4]*2;
 			break;
@@ -458,7 +466,7 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 		float y = 351.5f;
 		if((i%2) > .5) y -= 200;
 		if(i > 1.5) x += 40;
-		for(int ii = 0; ii < 4; ++ii) if(randomid[ii] == (i+52)) {
+		for(int ii = 0; ii < 4; ++ii) if(randomid[ii] == (i+54)) {
 			x += randomdir[ii]*2;
 			y += randomdir[ii+4]*2;
 			break;
@@ -633,10 +641,19 @@ void SunBurntAudioProcessorEditor::recalclabels() {
 		knobs[3].value = (sync-1)/15.f;
 	}
 }
+void SunBurntAudioProcessorEditor::randcubes() {
+	int prevcube = hidecube[0];
+	while(prevcube == hidecube[0] || prevcube == hidecube[1]) {
+		hidecube[0] = floor(random.nextFloat()*9)+11;
+		hidecube[1] = floor(random.nextFloat()*9)+11;
+		while(hidecube[0] == hidecube[1])
+			hidecube[1] = floor(random.nextFloat()*9)+11;
+	}
+}
 void SunBurntAudioProcessorEditor::mouseMove(const MouseEvent& event) {
 	int prevhover = hover;
 	hover = recalchover(event.x,event.y);
-	if(hover == -15 && prevhover != -15 && websiteht <= -.65761f) websiteht = 0;
+	if(hover == -16 && prevhover != -16 && websiteht <= -.65761f) websiteht = 0;
 }
 void SunBurntAudioProcessorEditor::mouseExit(const MouseEvent& event) {
 	hover = -1;
@@ -718,7 +735,7 @@ void SunBurntAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 			audioProcessor.undoManager.setCurrentTransactionName((String)"Changed curve "+(String)id+" to "+audioProcessor.curvename[val]);
 			audioProcessor.undoManager.beginNewTransaction();
 		}
-	}
+	} else if(hover == -15) randcubes();
 }
 void SunBurntAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 	if(initialdrag >= knobcount) {
@@ -867,10 +884,10 @@ void SunBurntAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 		}
 
 		valueoffset[0] = fmax(fmin(valueoffset[0],value+.1f),value-1.1f);
-	} else if(initialdrag == -15) {
+	} else if(initialdrag == -16) {
 		int prevhover = hover;
-		hover = recalchover(event.x,event.y)==-15?-15:-1;
-		if(hover == -15 && prevhover != -15 && websiteht <= -.65761f) websiteht = 0;
+		hover = recalchover(event.x,event.y)==-16?-16:-1;
+		if(hover == -16 && prevhover != -16 && websiteht <= -.65761f) websiteht = 0;
 	}
 }
 void SunBurntAudioProcessorEditor::mouseUp(const MouseEvent& event) {
@@ -917,8 +934,8 @@ void SunBurntAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 	} else {
 		int prevhover = hover;
 		hover = recalchover(event.x,event.y);
-		if(hover == -15) {
-			if(prevhover == -15) URL("https://vst.unplug.red/").launchInDefaultBrowser();
+		if(hover == -16) {
+			if(prevhover == -16) URL("https://vst.unplug.red/").launchInDefaultBrowser();
 			else if(websiteht <= -.65761f) websiteht = 0;
 		}
 	}
@@ -967,9 +984,12 @@ void SunBurntAudioProcessorEditor::mouseWheelMove(const MouseEvent& event, const
 int SunBurntAudioProcessorEditor::recalchover(float x, float y) {
 	x /= uiscales[uiscaleindex];
 	y /= uiscales[uiscaleindex];
-	//logo
-	if(y < 53) {
-		if(y >= 7 && x >= 217 && x < 365) return -15;
+	if(y < 7) return -1;
+	if(y < 55) {
+		//random seed
+		if(x >= 169 && x < 217) return -15;
+		//logo
+		else if(y < 53 && x >= 217 && x < 365) return -16;
 		return -1;
 	}
 	if(y <= 267) {
