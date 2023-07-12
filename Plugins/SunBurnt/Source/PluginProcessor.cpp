@@ -39,6 +39,7 @@ double curve::calctension(double interp, double tension) {
 	}
 }
 int SunBurntAudioProcessor::findcurve(int index) {
+	if(index == 0) return 0;
 	for(int i = 1; i < 5; i++)
 		if(((int)state.values[6+i]) == index)
 			return i;
@@ -586,26 +587,34 @@ void SunBurntAudioProcessor::parameterChanged(const String& parameterID, float n
 	}
 }
 void SunBurntAudioProcessor::movepoint(int index, float x, float y) {
-	int i = (int)state.values[6+params.curveselection];
+	int i = 0;
+	if(params.curveselection > 0)
+		i = (int)state.values[6+params.curveselection];
 	presets[currentpreset].curves[i].points[index].x = x;
 	presets[currentpreset].curves[i].points[index].y = y;
 	if(findcurve(i) != -1)
 		updatedcurve = true;
 }
 void SunBurntAudioProcessor::movetension(int index, float tension) {
-	int i = (int)state.values[6+params.curveselection];
+	int i = 0;
+	if(params.curveselection > 0)
+		i = (int)state.values[6+params.curveselection];
 	presets[currentpreset].curves[i].points[index].tension = tension;
 	if(findcurve(i) != -1)
 		updatedcurve = true;
 }
 void SunBurntAudioProcessor::addpoint(int index, float x, float y) {
-	int i = (int)state.values[6+params.curveselection];
+	int i = 0;
+	if(params.curveselection > 0)
+		i = (int)state.values[6+params.curveselection];
 	presets[currentpreset].curves[i].points.insert(presets[currentpreset].curves[i].points.begin()+index,point(x,y,presets[currentpreset].curves[i].points[index-1].tension));
 	if(findcurve(i) != -1)
 		updatedcurve = true;
 }
 void SunBurntAudioProcessor::deletepoint(int index) {
-	int i = (int)state.values[6+params.curveselection];
+	int i = 0;
+	if(params.curveselection > 0)
+		i = (int)state.values[6+params.curveselection];
 	presets[currentpreset].curves[i].points.erase(presets[currentpreset].curves[i].points.begin()+index);
 	if(findcurve(i) != -1)
 		updatedcurve = true;
