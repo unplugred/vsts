@@ -59,7 +59,7 @@ SunBurntAudioProcessorEditor::SunBurntAudioProcessorEditor(SunBurntAudioProcesso
 	setResizable(false, false);
 
 	calcvis();
-	randcubes();
+	randcubes(state.seed);
 
 	setOpaque(true);
 	context.setOpenGLVersionRequired(OpenGLContext::OpenGLVersion::openGL3_2);
@@ -606,6 +606,14 @@ void SunBurntAudioProcessorEditor::timerCallback() {
 		overlayposy = random.nextFloat();
 	}
 
+	if(audioProcessor.updatevis.get()) {
+		for(int i = 0; i < 8; i++)
+			curves[i] = audioProcessor.state.curves[i];
+		calcvis();
+		randcubes(audioProcessor.state.seed);
+		audioProcessor.updatevis = false;
+	}
+
 #ifdef BANNER
 	bannerx = fmod(bannerx+.0005f,1.f);
 #endif
@@ -641,14 +649,12 @@ void SunBurntAudioProcessorEditor::recalclabels() {
 		knobs[3].value = (sync-1)/15.f;
 	}
 }
-void SunBurntAudioProcessorEditor::randcubes() {
-	int prevcube = hidecube[0];
-	while(prevcube == hidecube[0] || prevcube == hidecube[1]) {
-		hidecube[0] = floor(random.nextFloat()*9)+11;
-		hidecube[1] = floor(random.nextFloat()*9)+11;
-		while(hidecube[0] == hidecube[1])
-			hidecube[1] = floor(random.nextFloat()*9)+11;
-	}
+void SunBurntAudioProcessorEditor::randcubes(int64 seed) {
+	Random seed_random(seed);
+	hidecube[0] = floor(seed_random.nextFloat()*9)+11;
+	hidecube[1] = floor(seed_random.nextFloat()*9)+11;
+	while(hidecube[0] == hidecube[1])
+		hidecube[1] = floor(seed_random.nextFloat()*9)+11;
 }
 void SunBurntAudioProcessorEditor::mouseMove(const MouseEvent& event) {
 	int prevhover = hover;
@@ -735,7 +741,7 @@ void SunBurntAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 			audioProcessor.undoManager.setCurrentTransactionName((String)"Changed curve "+(String)id+" to "+audioProcessor.curvename[val]);
 			audioProcessor.undoManager.beginNewTransaction();
 		}
-	} else if(hover == -15) randcubes();
+	} else if(hover == -15) randcubes(audioProcessor.reseed());
 }
 void SunBurntAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 	if(initialdrag >= knobcount) {

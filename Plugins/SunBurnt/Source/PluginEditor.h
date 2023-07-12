@@ -49,7 +49,7 @@ public:
 
 	virtual void parameterChanged(const String& parameterID, float newValue);
 	void recalclabels();
-	void randcubes();
+	void randcubes(int64 seed);
 	void mouseMove(const MouseEvent& event) override;
 	void mouseExit(const MouseEvent& event) override;
 	void mouseDown(const MouseEvent& event) override;

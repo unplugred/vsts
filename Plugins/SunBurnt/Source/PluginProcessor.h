@@ -79,6 +79,7 @@ struct pluginpreset {
 	String name = "";
 	curve curves[8];
 	float values[16];
+	int64 seed = 0;
 	pluginpreset(String pname = "", float val1 = 0.f, float val2 = 0.f, float val3 = 0.f, float val4 = 0.f, float val5 = 0.f, float val6 = 0.f, float val7 = 0.f, float val8 = 0.f, float val9 = 0.f, float val10 = 0.f, float val11 = 0.f, float val12 = 0.f, float val13 = 0.f, float val14 = 0.f, float val15 = 0.f, float val16 = 0.f) {
 		name = pname;
 
@@ -165,6 +166,7 @@ public:
 	void getStateInformation(MemoryBlock& destData) override;
 	void setStateInformation(const void* data, int sizeInBytes) override;
 	virtual void parameterChanged(const String& parameterID, float newValue);
+	int64 reseed();
 	void movepoint(int index, float x, float y);
 	void movetension(int index, float tension);
 	void addpoint(int index, float x, float y);
@@ -180,6 +182,8 @@ public:
 	pluginparams params;
 	const String curvename[8] { "None","High-pass","HP resonance","Low-pass","LP resonance","Pan","Density","Shimmer" };
 
+	Atomic<bool> updatevis = false;
+
 	CoolLogger logger;
 private:
 	AudioProcessorValueTreeState::ParameterLayout createParameters();
@@ -191,7 +195,6 @@ private:
 	int samplesperblock = 0;
 	int samplerate = 44100;
 
-	Random random;
 	curveiterator iterator[5];
 
 	std::vector<dsp::StateVariableFilter::Filter<float>> highpassfilters;
@@ -217,7 +220,7 @@ private:
 	int vibratoindex = 0;
 	double vibratophase = 0;
 	functions::dampendvalue dampvibratodepth;
-	Atomic<int> lastbpm = 120;
+	int lastbpm = 120;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SunBurntAudioProcessor)
 };

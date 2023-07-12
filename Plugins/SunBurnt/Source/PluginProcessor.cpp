@@ -73,6 +73,7 @@ SunBurntAudioProcessor::SunBurntAudioProcessor() :
 		presets[i] = presets[0];
 		presets[i].name = "Program " + (String)(i-7);
 	}
+	presets[currentpreset].seed = Time::currentTimeMillis();
 
 	params.pots[ 0] = potentiometer("Dry"				,"dry"			,.002f	,presets[0].values[ 0]	);
 	params.pots[ 1] = potentiometer("Wet"				,"wet"			,.002f	,presets[0].values[ 1]	);
@@ -118,9 +119,17 @@ void SunBurntAudioProcessor::setCurrentProgram (int index) {
 	if(currentpreset == index) return;
 	undoManager.beginNewTransaction((String)"Changed preset to " += presets[index].name);
 	currentpreset = index;
+
+	if(presets[currentpreset].seed == 0)
+		presets[currentpreset].seed = Time::currentTimeMillis();
+	state.seed = presets[currentpreset].seed;
+	for(int i = 0; i < 8; ++i)
+		state.curves[i] = presets[currentpreset].curves[i];
 	for(int i = 0; i < paramcount; ++i)
 		apvts.getParameter(params.pots[i].id)->setValueNotifyingHost(params.pots[i].normalize(presets[currentpreset].values[i]));
+
 	updatedcurve = true;
+	updatevis = true;
 	undoManager.beginNewTransaction();
 }
 const String SunBurntAudioProcessor::getProgramName (int index) {
@@ -254,12 +263,12 @@ void SunBurntAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffe
 		if(getPlayHead() != nullptr) {
 			AudioPlayHead::CurrentPositionInfo cpi;
 			getPlayHead()->getCurrentPosition(cpi);
-			if(cpi.bpm != lastbpm.get()) {
+			if(cpi.bpm != lastbpm) {
 				lastbpm = cpi.bpm;
 				updatedcurvebpmcooldown = .5f;
 			}
 			bpm = cpi.bpm;
-		} else bpm = lastbpm.get();
+		} else bpm = lastbpm;
 	}
 
 	//update impulse
@@ -382,7 +391,7 @@ void SunBurntAudioProcessor::genbuffer() {
 	if(state.values[4] == 0)
 		revlength = (int)round((pow(state.values[3],2)*(6-.1)+.1)*samplerate);
 	else
-		revlength = (int)round(((60.*state.values[4])/lastbpm.get())*samplerate);
+		revlength = (int)round(((60.*state.values[4])/lastbpm)*samplerate);
 
 	if(channelnum > 2) {
 		for(int c = 0; c < channelnum; ++c) {
@@ -410,6 +419,7 @@ void SunBurntAudioProcessor::genbuffer() {
 	double out = 0;
 	double agc = 0;
 
+	Random random(presets[currentpreset].seed);
 	double values[8];
 	for (int s = 0; s < revlength; ++s) {
 		values[0] = iterator[0].next();
@@ -499,7 +509,7 @@ void SunBurntAudioProcessor::getStateInformation (MemoryBlock& destData) {
 		<< currentpreset << linebreak << params.curveselection << linebreak;
 
 	for(int i = 0; i < getNumPrograms(); ++i) {
-		data << presets[i].name << linebreak;
+		data << presets[i].name << linebreak << presets[i].seed << linebreak;
 		for(int v = 0; v < paramcount; ++v)
 			data << presets[i].values[v] << linebreak;
 		for(int c = 0; c < 8; ++c) {
@@ -530,6 +540,8 @@ void SunBurntAudioProcessor::setStateInformation (const void* data, int sizeInBy
 		for(int i = 0; i < getNumPrograms(); ++i) {
 			std::getline(ss, token, '\n');
 			presets[i].name = token;
+			std::getline(ss, token, '\n');
+			presets[i].seed = std::stoll(token);
 			for(int v = 0; v < paramcount; ++v) {
 				std::getline(ss, token, '\n');
 				presets[i].values[v] = std::stof(token);
@@ -585,6 +597,12 @@ void SunBurntAudioProcessor::parameterChanged(const String& parameterID, float n
 			updatedcurvecooldown = .5f;
 		return;
 	}
+}
+int64 SunBurntAudioProcessor::reseed() {
+	presets[currentpreset].seed = Time::currentTimeMillis();
+	state.seed = presets[currentpreset].seed;
+	updatedcurve = true;
+	return state.seed;
 }
 void SunBurntAudioProcessor::movepoint(int index, float x, float y) {
 	int i = 0;
