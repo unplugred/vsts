@@ -49,6 +49,7 @@ public:
 
 	virtual void parameterChanged(const String& parameterID, float newValue);
 	void recalclabels();
+	void randcubes();
 	void mouseMove(const MouseEvent& event) override;
 	void mouseExit(const MouseEvent& event) override;
 	void mouseDown(const MouseEvent& event) override;
@@ -108,6 +109,7 @@ private:
 	float time = 1000;
 	Random random;
 	char randomid[4] {0,0,0,0};
+	char hidecube[2] {13,19};
 	float randomdir[8] {0,0,0,0,0,0,0,0};
 	float randomblend[4] {0,0,0,0};
 	int overlayorientation = 0;
