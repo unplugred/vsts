@@ -56,9 +56,11 @@ SunBurntAudioProcessor::SunBurntAudioProcessor() :
 	options.folderName = File::getSpecialLocation(File::SpecialLocationType::userApplicationDataDirectory).getChildFile(getName()).getFullPathName();
 	options.storageFormat = PropertiesFile::storeAsXML;
 	props.setStorageParameters(options);
-	params.jpmode = (props.getUserSettings()->getIntValue("Language")%2) == 0;
-	params.uiscale = props.getUserSettings()->getDoubleValue("UIScale");
-	if(params.uiscale == 0) params.uiscale = 1.5f;
+	PropertiesFile* usersettings = props.getUserSettings();
+	if(usersettings->containsKey("Language"))
+		params.jpmode = (usersettings->getIntValue("Language")%2) == 0;
+	if(usersettings->containsKey("UIScale"))
+		params.uiscale = usersettings->getDoubleValue("UIScale");
 
 	//												dry		wet		density	length	sync	depth	speed	curve1	curve2	curve3	curve4	hp		hp res	lp		lp res	shimmer
 	presets[0] = pluginpreset("Default"				,1.0f	,0.75f	,0.5f	,0.65f	,0		,0.55f	,0.65f	,1		,3		,5		,7		,0.0f	,0.3f	,1.0f	,0.3f	,12.0f	);
