@@ -28,39 +28,12 @@ SunBurntAudioProcessorEditor::SunBurntAudioProcessorEditor(SunBurntAudioProcesso
 	for(int i = 0; i < 8; i++)
 		curves[i] = state.curves[i];
 
-	dpi = context.getRenderingScale(); //TODO: AAAAAAAAA
-	int i = 0;
-	double s = 1.f;
-	double dif = 100;
-	Rectangle<int> r = Desktop::getInstance().getDisplays().getPrimaryDisplay()->userArea;
-	int w = r.getWidth();
-	int h = r.getHeight();
-	double pw = 368;
-	double ph = 334;
-#ifdef BANNER
-	ph += 21/1.5f;
-#endif
-	while((s/dpi)*pw < w && (s/dpi)*ph < h) {
-		uiscales.push_back(s/dpi);
-		if(abs(params.uiscale-s/dpi) <= dif) {
-			dif = abs(params.uiscale-s/dpi);
-			uiscaleindex = i;
-		}
-		if(i < 4) s += .25f;
-		else if(i < 8) s += .5f;
-		else if(i < 16) s++;
-		i++;
-	}
-	setSize(pw*uiscales[uiscaleindex],ph*uiscales[uiscaleindex]);
-	looknfeel.scale = uiscales[uiscaleindex];
-#ifdef BANNER
-	banneroffset = 21.f/1.5f*uiscales[uiscaleindex]/getHeight();
-#endif
-	setResizable(false, false);
 
 	calcvis();
 	randcubes(state.seed);
 
+	setSize(368,334);
+	setResizable(false, false);
 	setOpaque(true);
 	context.setOpenGLVersionRequired(OpenGLContext::OpenGLVersion::openGL3_2);
 	context.setRenderer(this);
@@ -82,7 +55,7 @@ SunBurntAudioProcessorEditor::~SunBurntAudioProcessorEditor() {
 }
 
 void SunBurntAudioProcessorEditor::newOpenGLContextCreated() {
-	audioProcessor.logger.init(&context,getWidth(),getHeight());
+	audioProcessor.logger.init(&context,368,334);
 
 	compileshader(baseshader,
 //BASE VERT
@@ -331,15 +304,42 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 	glEnable(GL_BLEND);
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_LINE_SMOOTH);
-	float scaleddpi = uiscales[uiscaleindex]*dpi;
 
-	if(prevuiscaleindex != uiscaleindex) {
-		framebuffer.release();
+	if(dpi != context.getRenderingScale()) {
+		dpi = context.getRenderingScale();
+		int i = 0;
+		double s = 1.f;
+		double dif = 100;
+		Rectangle<int> r = Desktop::getInstance().getDisplays().getPrimaryDisplay()->userArea;
+		int w = r.getWidth();
+		int h = r.getHeight();
+		double pw = 368;
+		double ph = 334;
+#ifdef BANNER
+		ph += 21/1.5f;
+#endif
+		uiscales.clear();
+		while((s/dpi)*pw < w && (s/dpi)*ph < h) {
+			uiscales.push_back(s/dpi);
+			if(abs(audioProcessor.params.uiscale-s/dpi) <= dif) {
+				dif = abs(audioProcessor.params.uiscale-s/dpi);
+				uiscaleindex = i;
+			}
+			if(i < 4) s += .25f;
+			else if(i < 8) s += .5f;
+			else if(i < 16) s++;
+			i++;
+		}
+		resetsize = true;
+	}
+
+	if(scaleddpi != uiscales[uiscaleindex]*dpi) {
+		if(scaleddpi > 0) framebuffer.release();
+		scaleddpi = uiscales[uiscaleindex]*dpi;
 		framebuffer.initialise(context, 368*scaleddpi, 334*scaleddpi);
 		glBindTexture(GL_TEXTURE_2D, framebuffer.getTextureID());
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		prevuiscaleindex = uiscaleindex;
 	}
 
 	context.extensions.glBindBuffer(GL_ARRAY_BUFFER, arraybuffer);
@@ -582,6 +582,19 @@ void SunBurntAudioProcessorEditor::paint (Graphics& g) { }
 void SunBurntAudioProcessorEditor::timerCallback() {
 	if(websiteht >= -.65761f) websiteht -= .03f;
 
+	if(resetsize) {
+		resetsize = false;
+#ifdef BANNER
+		setSize(368*uiscales[uiscaleindex],(334+21/1.5f)*uiscales[uiscaleindex]);
+		banneroffset = 21.f/1.5f*uiscales[uiscaleindex]/getHeight();
+#else
+		setSize(368*uiscales[uiscaleindex],334*uiscales[uiscaleindex]);
+#endif
+		audioProcessor.logger.width = getWidth();
+		audioProcessor.logger.height = getHeight();
+		looknfeel.scale = uiscales[uiscaleindex];
+	}
+
 	time += .1f;
 	if(time >= 1) {
 		time = fmod(time,1);
@@ -683,16 +696,8 @@ void SunBurntAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 			if(result <= 0) return;
 			else if(result <= uiscales.size()) {
 				uiscaleindex = result-1;
-#ifdef BANNER
-				setSize(368*uiscales[uiscaleindex],(334+21/1.5f)*uiscales[uiscaleindex]);
-				banneroffset = 21.f/1.5f*uiscales[uiscaleindex]/getHeight();
-#else
-				setSize(368*uiscales[uiscaleindex],334*uiscales[uiscaleindex]);
-#endif
-				audioProcessor.logger.width = getWidth();
-				audioProcessor.logger.height = getHeight();
-				looknfeel.scale = uiscales[uiscaleindex];
 				audioProcessor.setUIScale(uiscales[uiscaleindex]);
+				resetsize = true;
 			} else {
 				result -= uiscales.size()+1;
 				if(result <= 1) {

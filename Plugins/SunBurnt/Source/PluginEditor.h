@@ -125,10 +125,11 @@ private:
 #endif
 	float banneroffset = 0;
 
-	float dpi = 1;
+	float dpi = -10;
 	long unsigned int uiscaleindex = 0;
-	int prevuiscaleindex = -10;
+	float scaleddpi = -10;
 	std::vector<float> uiscales;
+	bool resetsize = false;
 
 	LookNFeel looknfeel;
 
