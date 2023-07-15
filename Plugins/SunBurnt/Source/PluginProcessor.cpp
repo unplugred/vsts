@@ -349,8 +349,8 @@ void SunBurntAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffe
 	}
 
 	//convolve
-	dsp::AudioBlock<float> wetblock(wetbuffer);
-	dsp::AudioBlock<float> effectblock(effectbuffer);
+	dsp::AudioBlock<float> wetblock(wetchanneldata,channelnum,numsamples);
+	dsp::AudioBlock<float> effectblock(effectchanneldata,channelnum,numsamples);
 	if(channelnum > 2) {
 		for(int c = 0; c < channelnum; ++c) {
 			dsp::AudioBlock<float> wetblocksinglechannel = wetblock.getSingleChannelBlock(c);
