@@ -6,7 +6,7 @@ SunBurntAudioProcessorEditor::SunBurntAudioProcessorEditor(SunBurntAudioProcesso
 	jpmode = params.jpmode;
 	curveselection = params.curveselection;
 
-	for(int i = 0; i < paramcount; i++)
+	for(int i = 0; i < paramcount; ++i)
 		audioProcessor.apvts.addParameterListener(params.pots[i].id,this);
 	for(int i = 0; i < 7; i++) {
 		if(i == 4) {
@@ -69,12 +69,12 @@ SunBurntAudioProcessorEditor::SunBurntAudioProcessorEditor(SunBurntAudioProcesso
 	startTimerHz(30);
 }
 SunBurntAudioProcessorEditor::~SunBurntAudioProcessorEditor() {
-	for(int i = 0; i < knobcount; i++) audioProcessor.apvts.removeParameterListener(knobs[i].id,this);
-	for(int i = 1; i < 5; i++) audioProcessor.apvts.removeParameterListener("curve"+(String)i,this);
+	for(int i = 0; i < knobcount; ++i) audioProcessor.apvts.removeParameterListener(knobs[i].id,this);
+	for(int i = 1; i < 5; ++i) audioProcessor.apvts.removeParameterListener("curve"+(String)i,this);
 	audioProcessor.apvts.removeParameterListener("sync",this);
 	audioProcessor.apvts.removeParameterListener("highpass",this);
-	audioProcessor.apvts.removeParameterListener("lowpass",this);
 	audioProcessor.apvts.removeParameterListener("highpassres",this);
+	audioProcessor.apvts.removeParameterListener("lowpass",this);
 	audioProcessor.apvts.removeParameterListener("lowpassres",this);
 	audioProcessor.apvts.removeParameterListener("shimmerpitch",this);
 	stopTimer();
