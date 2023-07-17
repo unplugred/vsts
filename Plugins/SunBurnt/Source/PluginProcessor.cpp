@@ -639,6 +639,50 @@ void SunBurntAudioProcessor::deletepoint(int index) {
 	if(findcurve(i) != -1)
 		updatedcurve = true;
 }
+String SunBurntAudioProcessor::curvetostring(const char linebreak) {
+	int i = 0;
+	if(params.curveselection > 0)
+		i = (int)state.values[6+params.curveselection];
+	std::ostringstream data;
+	data << presets[currentpreset].curves[i].points.size() << linebreak;
+	for(int p = 0; p < presets[currentpreset].curves[i].points.size(); ++p)
+		data << presets[currentpreset].curves[i].points[p].x << linebreak << presets[currentpreset].curves[i].points[p].y << linebreak << presets[currentpreset].curves[i].points[p].tension << linebreak;
+	return (String)data.str();
+}
+void SunBurntAudioProcessor::curvefromstring(String str, const char linebreak) {
+	int i = 0;
+	if(params.curveselection > 0)
+		i = (int)state.values[6+params.curveselection];
+	std::stringstream ss(str.trim().toRawUTF8());
+	std::string token;
+	presets[currentpreset].curves[i].points.clear();
+	std::getline(ss, token, linebreak);
+	int size = std::stof(token);
+	for(int p = 0; p < size; ++p) {
+		std::getline(ss, token, linebreak);
+		float x = std::stof(token);
+		std::getline(ss, token, linebreak);
+		float y = std::stof(token);
+		std::getline(ss, token, linebreak);
+		float tension = std::stof(token);
+		presets[currentpreset].curves[i].points.push_back(point(x,y,tension));
+	}
+	updatevis = true;
+	if(findcurve(i) != -1)
+		updatedcurve = true;
+}
+bool SunBurntAudioProcessor::isvalidcurvestring(String str, const char linebreak) {
+	String trimstring = str.trim();
+	if(trimstring.isEmpty())
+		return false;
+	if(!trimstring.containsOnly(",.0123456789"))
+		return false;
+	if(!trimstring.endsWithChar(linebreak))
+		return false;
+	if(trimstring.startsWithChar(linebreak))
+		return false;
+	return true;
+}
 
 AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new SunBurntAudioProcessor(); }
 
