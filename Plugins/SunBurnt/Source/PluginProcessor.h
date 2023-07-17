@@ -171,6 +171,9 @@ public:
 	void movetension(int index, float tension);
 	void addpoint(int index, float x, float y);
 	void deletepoint(int index);
+	String curvetostring(const char linebreak = ',');
+	void curvefromstring(String str, const char linebreak = ',');
+	bool isvalidcurvestring(String str, const char linebreak = ',');
  
 	AudioProcessorValueTreeState apvts;
 	UndoManager undoManager;
@@ -179,6 +182,8 @@ public:
 	const int paramcount = 16;
 
 	pluginpreset state;
+	pluginpreset presets[20];
+	int currentpreset = 0;
 	pluginparams params;
 	const String curvename[8] { "None","High-pass","HP resonance","Low-pass","LP resonance","Pan","Density","Shimmer" };
 
@@ -187,8 +192,6 @@ public:
 	CoolLogger logger;
 private:
 	AudioProcessorValueTreeState::ParameterLayout createParameters();
-	pluginpreset presets[20];
-	int currentpreset = 0;
 	ApplicationProperties props;
 
 	int channelnum = 0;

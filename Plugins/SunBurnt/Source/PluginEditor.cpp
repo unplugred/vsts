@@ -621,7 +621,7 @@ void SunBurntAudioProcessorEditor::timerCallback() {
 
 	if(audioProcessor.updatevis.get()) {
 		for(int i = 0; i < 8; i++)
-			curves[i] = audioProcessor.state.curves[i];
+			curves[i] = audioProcessor.presets[audioProcessor.currentpreset].curves[i];
 		calcvis();
 		randcubes(audioProcessor.state.seed);
 		audioProcessor.updatevis = false;
@@ -679,31 +679,40 @@ void SunBurntAudioProcessorEditor::mouseExit(const MouseEvent& event) {
 }
 void SunBurntAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 	if(event.mods.isRightButtonDown() && !event.mods.isLeftButtonDown()) {
-		int i = 0;
+		hover = recalchover(event.x,event.y);
 		std::unique_ptr<PopupMenu> rightclickmenu(new PopupMenu());
 		std::unique_ptr<PopupMenu> scalemenu(new PopupMenu());
 		std::unique_ptr<PopupMenu> langmenu(new PopupMenu());
-		while(i++ < uiscales.size())
-			scalemenu->addItem(i,(String)round(uiscales[i-1]*100)+"%",true,(i-1)==uiscaleindex);
-		langmenu->addItem(i++,"English",true,!jpmode);
-		langmenu->addItem(i++,String::fromUTF8("日本語"),true,jpmode);
+		int i = 20;
+		while(++i < (uiscales.size()+21))
+			scalemenu->addItem(i,(String)round(uiscales[i-21]*100)+"%",true,(i-21)==uiscaleindex);
+		langmenu->addItem(11,"English",true,!jpmode);
+		langmenu->addItem(12,String::fromUTF8("日本語"),true,jpmode);
 		rightclickmenu->setLookAndFeel(&looknfeel);
+		if(hover == -14 || hover >= knobcount) {
+			rightclickmenu->addItem(1,"'Copy curve",true);
+			rightclickmenu->addItem(2,"'Paste curve",audioProcessor.isvalidcurvestring(SystemClipboard::getTextFromClipboard()));
+			rightclickmenu->addItem(3,"'Reset curve",true);
+			rightclickmenu->addSeparator();
+		}
 		rightclickmenu->addSubMenu(jpmode?(String::fromUTF8("'スケール")):("'Scale"),*scalemenu);
 		rightclickmenu->addSubMenu(jpmode?(String::fromUTF8("'言語")):("'Language"),*langmenu);
 		rightclickmenu->addSeparator();
-		rightclickmenu->addItem(++i,"'Trust the process!",false);
+		rightclickmenu->addItem(-1,"'Trust the process!",false);
 		rightclickmenu->showMenuAsync(PopupMenu::Options(),[this](int result){
 			if(result <= 0) return;
-			else if(result <= uiscales.size()) {
-				uiscaleindex = result-1;
+			else if(result >= 20) { //size
+				uiscaleindex = result-21;
 				audioProcessor.setUIScale(uiscales[uiscaleindex]);
 				resetsize = true;
-			} else {
-				result -= uiscales.size()+1;
-				if(result <= 1) {
-					jpmode = result==1;
-					audioProcessor.setLang(result==1);
-				}
+			} else if(result >= 10) { //lang
+				jpmode = result==12;
+				audioProcessor.setLang(result==12);
+			} else if(result == 1) { //copy
+				SystemClipboard::copyTextToClipboard(audioProcessor.curvetostring());
+			} else if(result == 2) { //paste
+				audioProcessor.curvefromstring(SystemClipboard::getTextFromClipboard());
+			} else if(result == 3) { //reset
 			}
 		});
 		return;
