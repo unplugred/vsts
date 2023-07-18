@@ -20,8 +20,11 @@ struct point {
 };
 struct curve {
 	curve() { }
+	curve(String str, const char linebreak = ',');
+	String tostring(const char linebreak = ',');
 	std::vector<point> points;
 	static double calctension(double interp, double tension);
+	static bool isvalidcurvestring(String str, const char linebreak = ',');
 };
 class curveiterator {
 public:
@@ -80,7 +83,7 @@ struct pluginpreset {
 	curve curves[8];
 	float values[16];
 	int64 seed = 0;
-	pluginpreset(String pname = "", float val1 = 0.f, float val2 = 0.f, float val3 = 0.f, float val4 = 0.f, float val5 = 0.f, float val6 = 0.f, float val7 = 0.f, float val8 = 0.f, float val9 = 0.f, float val10 = 0.f, float val11 = 0.f, float val12 = 0.f, float val13 = 0.f, float val14 = 0.f, float val15 = 0.f, float val16 = 0.f) {
+	pluginpreset(String pname = "", float val1 = 0.f, float val2 = 0.f, float val3 = 0.f, float val4 = 0.f, float val5 = 0.f, float val6 = 0.f, float val7 = 0.f, float val8 = 0.f, float val9 = 0.f, float val10 = 0.f, float val11 = 0.f, float val12 = 0.f, float val13 = 0.f, float val14 = 0.f, float val15 = 0.f, float val16 = 0.f, String volume = "3,0,0,0.2,0.07,1,0.7,1,0,0.5,", String highpass = "2,0,0,0.5,1,0,0.5,", String hpresonance = "2,0,0.3,0.5,1,0.3,0.5,", String lowpass = "2,0,1,0.5,1,1,0.5,", String lpresonance = "2,0,0.3,0.5,1,0.3,0.5,", String pan = "2,0,0.5,0.5,1,0.5,0.5,", String density = "2,0,0.5,0.5,1,0.5,0.5,", String shimmer = "2,0,0,0.35,1,0.5,0.5,") {
 		name = pname;
 
 		values[ 0] = val1;
@@ -100,30 +103,14 @@ struct pluginpreset {
 		values[14] = val15;
 		values[15] = val16;
 
-		curves[0].points.push_back(point(0,0,.2f));
-		curves[0].points.push_back(point(.07f,1,.7f));
-		curves[0].points.push_back(point(1,0,.5f));
-
-		curves[1].points.push_back(point(0,0,.5f));
-		curves[1].points.push_back(point(1,0,.5f));
-
-		curves[2].points.push_back(point(0,.3f,.5f));
-		curves[2].points.push_back(point(1,.3f,.5f));
-
-		curves[3].points.push_back(point(0,1,.5f));
-		curves[3].points.push_back(point(1,1,.5f));
-
-		curves[4].points.push_back(point(0,.3f,.5f));
-		curves[4].points.push_back(point(1,.3f,.5f));
-
-		curves[5].points.push_back(point(0,.5f,.5f));
-		curves[5].points.push_back(point(1,.5f,.5f));
-
-		curves[6].points.push_back(point(0,.5f,.5f));
-		curves[6].points.push_back(point(1,.5f,.5f));
-
-		curves[7].points.push_back(point(0,0,.35f));
-		curves[7].points.push_back(point(1,.5f,.5f));
+		curves[0] = curve(volume);
+		curves[1] = curve(highpass);
+		curves[2] = curve(hpresonance);
+		curves[3] = curve(lowpass);
+		curves[4] = curve(lpresonance);
+		curves[5] = curve(pan);
+		curves[6] = curve(density);
+		curves[7] = curve(shimmer);
 	}
 };
 
@@ -173,7 +160,7 @@ public:
 	void deletepoint(int index);
 	String curvetostring(const char linebreak = ',');
 	void curvefromstring(String str, const char linebreak = ',');
-	bool isvalidcurvestring(String str, const char linebreak = ',');
+	void resetcurve();
  
 	AudioProcessorValueTreeState apvts;
 	UndoManager undoManager;
