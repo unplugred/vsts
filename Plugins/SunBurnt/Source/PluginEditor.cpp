@@ -691,7 +691,7 @@ void SunBurntAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		rightclickmenu->setLookAndFeel(&looknfeel);
 		if(hover == -14 || hover >= knobcount) {
 			rightclickmenu->addItem(1,"'Copy curve",true);
-			rightclickmenu->addItem(2,"'Paste curve",audioProcessor.isvalidcurvestring(SystemClipboard::getTextFromClipboard()));
+			rightclickmenu->addItem(2,"'Paste curve",curve::isvalidcurvestring(SystemClipboard::getTextFromClipboard()));
 			rightclickmenu->addItem(3,"'Reset curve",true);
 			rightclickmenu->addSeparator();
 		}
@@ -713,6 +713,7 @@ void SunBurntAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 			} else if(result == 2) { //paste
 				audioProcessor.curvefromstring(SystemClipboard::getTextFromClipboard());
 			} else if(result == 3) { //reset
+				audioProcessor.resetcurve();
 			}
 		});
 		return;

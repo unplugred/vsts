@@ -27,6 +27,28 @@ double curveiterator::next() {
 	double interp = curve::calctension((xx-points[currentpoint].x)/(points[nextpoint].x-points[currentpoint].x),points[currentpoint].tension);
 	return points[currentpoint].y*(1-interp)+points[nextpoint].y*interp;
 }
+curve::curve(String str, const char linebreak) {
+	std::stringstream ss(str.trim().toRawUTF8());
+	std::string token;
+	std::getline(ss, token, linebreak);
+	int size = std::stof(token);
+	for(int p = 0; p < size; ++p) {
+		std::getline(ss, token, linebreak);
+		float x = std::stof(token);
+		std::getline(ss, token, linebreak);
+		float y = std::stof(token);
+		std::getline(ss, token, linebreak);
+		float tension = std::stof(token);
+		points.push_back(point(x,y,tension));
+	}
+}
+String curve::tostring(const char linebreak) {
+	std::ostringstream data;
+	data << points.size() << linebreak;
+	for(int p = 0; p < points.size(); ++p)
+		data << points[p].x << linebreak << points[p].y << linebreak << points[p].tension << linebreak;
+	return (String)data.str();
+}
 double curve::calctension(double interp, double tension) {
 	if(tension == .5)
 		return interp;
@@ -37,6 +59,18 @@ double curve::calctension(double interp, double tension) {
 		else
 			return pow(interp,2-2*tension)*(1-tension)+(1-pow(1-interp,.5/(1-tension)))*tension;
 	}
+}
+bool curve::isvalidcurvestring(String str, const char linebreak) {
+	String trimstring = str.trim();
+	if(trimstring.isEmpty())
+		return false;
+	if(!trimstring.containsOnly(String(&linebreak,1)+".0123456789"))
+		return false;
+	if(!trimstring.endsWithChar(linebreak))
+		return false;
+	if(trimstring.startsWithChar(linebreak))
+		return false;
+	return true;
 }
 int SunBurntAudioProcessor::findcurve(int index) {
 	if(index == 0) return 0;
@@ -62,16 +96,9 @@ SunBurntAudioProcessor::SunBurntAudioProcessor() :
 	if(usersettings->containsKey("UIScale"))
 		params.uiscale = usersettings->getDoubleValue("UIScale");
 
-	//												dry		wet		density	length	sync	depth	speed	curve1	curve2	curve3	curve4	hp		hp res	lp		lp res	shimmer
-	presets[0] = pluginpreset("Default"				,1.0f	,0.75f	,0.5f	,0.65f	,0		,0.55f	,0.65f	,1		,3		,5		,7		,0.0f	,0.3f	,1.0f	,0.3f	,12.0f	);
-	presets[1] = pluginpreset("Digital Driver"		,0.27f	,-11.36f,0.53f	,0.0f	,0		,0.0f	,0.4f	,1		,3		,5		,7		,0.0f	,0.3f	,1.0f	,0.3f	,12.0f	);
-	presets[2] = pluginpreset("Noisy Bass Pumper"	,0.55f	,20.0f	,0.59f	,0.77f	,0		,0.0f	,0.4f	,1		,3		,5		,7		,0.0f	,0.3f	,1.0f	,0.3f	,12.0f	);
-	presets[3] = pluginpreset("Broken Earphone"		,0.19f	,-1.92f	,1.0f	,0.0f	,0		,0.88f	,0.4f	,1		,3		,5		,7		,0.0f	,0.3f	,1.0f	,0.3f	,12.0f	);
-	presets[4] = pluginpreset("Fatass"				,0.62f	,-5.28f	,1.0f	,0.0f	,0		,0.0f	,0.4f	,1		,3		,5		,7		,0.0f	,0.3f	,1.0f	,0.3f	,12.0f	);
-	presets[5] = pluginpreset("Screaming Alien"		,0.63f	,5.6f	,0.2f	,0.0f	,0		,0.0f	,0.4f	,1		,3		,5		,7		,0.0f	,0.3f	,1.0f	,0.3f	,12.0f	);
-	presets[6] = pluginpreset("Bad Connection"		,0.25f	,-2.56f	,0.48f	,0.0f	,0		,0.0f	,0.4f	,1		,3		,5		,7		,0.0f	,0.3f	,1.0f	,0.3f	,12.0f	);
-	presets[7] = pluginpreset("Ouch"				,0.9f	,-20.0f	,0.0f	,0.0f	,0		,0.69f	,0.4f	,1		,3		,5		,7		,0.0f	,0.3f	,1.0f	,0.3f	,12.0f	);
-	for(int i = 8; i < getNumPrograms(); ++i) {
+	//									dry		wet		density	length	sync	depth	speed	curve1	curve2	curve3	curve4	hp		hp res	lp		lp res	shimmer
+	presets[0] = pluginpreset("Default"	,1.0f	,0.75f	,0.5f	,0.65f	,0		,0.55f	,0.65f	,1		,3		,5		,7		,0.0f	,0.3f	,1.0f	,0.3f	,12.0f	,"3,0,0,0.2,0.07,1,0.7,1,0,0.5,", "2,0,0,0.5,1,0,0.5,", "2,0,0.3,0.5,1,0.3,0.5,", "2,0,1,0.5,1,1,0.5,", "2,0,0.3,0.5,1,0.3,0.5,", "2,0,0.5,0.5,1,0.5,0.5,", "2,0,0.5,0.5,1,0.5,0.5,", "2,0,0,0.35,1,0.5,0.5,");
+	for(int i = 1; i < getNumPrograms(); ++i) {
 		presets[i] = presets[0];
 		presets[i].name = "Program " + (String)(i-7);
 	}
@@ -643,45 +670,50 @@ String SunBurntAudioProcessor::curvetostring(const char linebreak) {
 	int i = 0;
 	if(params.curveselection > 0)
 		i = (int)state.values[6+params.curveselection];
-	std::ostringstream data;
-	data << presets[currentpreset].curves[i].points.size() << linebreak;
-	for(int p = 0; p < presets[currentpreset].curves[i].points.size(); ++p)
-		data << presets[currentpreset].curves[i].points[p].x << linebreak << presets[currentpreset].curves[i].points[p].y << linebreak << presets[currentpreset].curves[i].points[p].tension << linebreak;
-	return (String)data.str();
+	return presets[currentpreset].curves[i].tostring();
 }
 void SunBurntAudioProcessor::curvefromstring(String str, const char linebreak) {
 	int i = 0;
 	if(params.curveselection > 0)
 		i = (int)state.values[6+params.curveselection];
-	std::stringstream ss(str.trim().toRawUTF8());
-	std::string token;
-	presets[currentpreset].curves[i].points.clear();
-	std::getline(ss, token, linebreak);
-	int size = std::stof(token);
-	for(int p = 0; p < size; ++p) {
-		std::getline(ss, token, linebreak);
-		float x = std::stof(token);
-		std::getline(ss, token, linebreak);
-		float y = std::stof(token);
-		std::getline(ss, token, linebreak);
-		float tension = std::stof(token);
-		presets[currentpreset].curves[i].points.push_back(point(x,y,tension));
-	}
+	presets[currentpreset].curves[i] = curve(str);
 	updatevis = true;
 	if(findcurve(i) != -1)
 		updatedcurve = true;
 }
-bool SunBurntAudioProcessor::isvalidcurvestring(String str, const char linebreak) {
-	String trimstring = str.trim();
-	if(trimstring.isEmpty())
-		return false;
-	if(!trimstring.containsOnly(",.0123456789"))
-		return false;
-	if(!trimstring.endsWithChar(linebreak))
-		return false;
-	if(trimstring.startsWithChar(linebreak))
-		return false;
-	return true;
+void SunBurntAudioProcessor::resetcurve() {
+	int i = 0;
+	if(params.curveselection > 0)
+		i = (int)state.values[6+params.curveselection];
+	switch(i) {
+		case 0:
+			presets[currentpreset].curves[i] = curve("3,0,0,0.2,0.07,1,0.7,1,0,0.5,");
+			break;
+		case 1:
+			presets[currentpreset].curves[i] = curve("2,0,0,0.5,1,0,0.5,");
+			break;
+		case 2:
+			presets[currentpreset].curves[i] = curve("2,0,0.3,0.5,1,0.3,0.5,");
+			break;
+		case 3:
+			presets[currentpreset].curves[i] = curve("2,0,1,0.5,1,1,0.5,");
+			break;
+		case 4:
+			presets[currentpreset].curves[i] = curve("2,0,0.3,0.5,1,0.3,0.5,");
+			break;
+		case 5:
+			presets[currentpreset].curves[i] = curve("2,0,0.5,0.5,1,0.5,0.5,");
+			break;
+		case 6:
+			presets[currentpreset].curves[i] = curve("2,0,0.5,0.5,1,0.5,0.5,");
+			break;
+		case 7:
+			presets[currentpreset].curves[i] = curve("2,0,0,0.35,1,0.5,0.5,");
+			break;
+	}
+	updatevis = true;
+	if(findcurve(i) != -1)
+		updatedcurve = true;
 }
 
 AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new SunBurntAudioProcessor(); }
