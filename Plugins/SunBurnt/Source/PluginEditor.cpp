@@ -55,7 +55,8 @@ SunBurntAudioProcessorEditor::~SunBurntAudioProcessorEditor() {
 }
 
 void SunBurntAudioProcessorEditor::newOpenGLContextCreated() {
-	audioProcessor.logger.init(&context,368,334);
+	audioProcessor.logger.init(&context,banneroffset,368,334);
+	font.init(&context,banneroffset,368,334,dpi);
 
 	compileshader(baseshader,
 //BASE VERT
@@ -543,7 +544,8 @@ void SunBurntAudioProcessorEditor::openGLContextClosing() {
 	bannertex.release();
 #endif
 
-	audioProcessor.logger.release();
+	audioProcessor.logger.font.release();
+	font.font.release();
 
 	context.extensions.glDeleteBuffers(1,&arraybuffer);
 }
@@ -590,8 +592,13 @@ void SunBurntAudioProcessorEditor::timerCallback() {
 #else
 		setSize(368*uiscales[uiscaleindex],334*uiscales[uiscaleindex]);
 #endif
-		audioProcessor.logger.width = getWidth();
-		audioProcessor.logger.height = getHeight();
+		audioProcessor.logger.font.width = getWidth();
+		audioProcessor.logger.font.height = getHeight();
+		audioProcessor.logger.font.banneroffset = banneroffset;
+		font.font.width = ((float)getWidth())/uiscales[uiscaleindex];
+		font.font.height = ((float)getHeight())/uiscales[uiscaleindex];
+		font.font.dpi = dpi*uiscales[uiscaleindex];
+		font.font.banneroffset = banneroffset;
 		looknfeel.scale = uiscales[uiscaleindex];
 	}
 
@@ -678,6 +685,8 @@ void SunBurntAudioProcessorEditor::mouseExit(const MouseEvent& event) {
 	hover = -1;
 }
 void SunBurntAudioProcessorEditor::mouseDown(const MouseEvent& event) {
+	if(dpi < 0) return;
+
 	if(event.mods.isRightButtonDown() && !event.mods.isLeftButtonDown()) {
 		hover = recalchover(event.x,event.y);
 		std::unique_ptr<PopupMenu> rightclickmenu(new PopupMenu());
@@ -912,6 +921,8 @@ void SunBurntAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 	}
 }
 void SunBurntAudioProcessorEditor::mouseUp(const MouseEvent& event) {
+	if(dpi < 0) return;
+
 	if(hover > -1) {
 		if(hover >= knobcount) {
 			int i = hover-knobcount;
@@ -962,6 +973,8 @@ void SunBurntAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 	}
 }
 void SunBurntAudioProcessorEditor::mouseDoubleClick(const MouseEvent& event) {
+	if(dpi < 0) return;
+
 	if(hover == -14) {
 		float x = fmin(fmax((((float)event.x)/uiscales[uiscaleindex]-12)/284.f,0),1);
 		float y = fmin(fmax(1-(((float)event.y)/uiscales[uiscaleindex]-60)/200.f,0),1);
@@ -1003,8 +1016,10 @@ void SunBurntAudioProcessorEditor::mouseWheelMove(const MouseEvent& event, const
 		knobs[hover].value+wheel.deltaY*((event.mods.isShiftDown() || event.mods.isAltDown())?.03f:.2f));
 }
 int SunBurntAudioProcessorEditor::recalchover(float x, float y) {
+	if(dpi < 0) return -1;
 	x /= uiscales[uiscaleindex];
 	y /= uiscales[uiscaleindex];
+
 	if(y < 7) return -1;
 	if(y < 55) {
 		//random seed

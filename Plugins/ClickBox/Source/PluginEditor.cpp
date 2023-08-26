@@ -79,7 +79,7 @@ ClickBoxAudioProcessorEditor::~ClickBoxAudioProcessorEditor() {
 }
 
 void ClickBoxAudioProcessorEditor::newOpenGLContextCreated() {
-	audioProcessor.logger.init(&context,getWidth(),getHeight());
+	audioProcessor.logger.init(&context,0,getWidth(),getHeight());
 
 	compileshader(clearshader,
 //CLEAR VERT
@@ -433,7 +433,7 @@ void ClickBoxAudioProcessorEditor::openGLContextClosing() {
 	creditstex.release();
 	framebuffer.release();
 
-	audioProcessor.logger.release();
+	audioProcessor.logger.font.release();
 
 	context.extensions.glDeleteBuffers(1,&arraybuffer);
 }

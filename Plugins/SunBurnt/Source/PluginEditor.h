@@ -1,6 +1,7 @@
 #pragma once
 #include "includes.h"
 #include "PluginProcessor.h"
+#include "tahoma8.h"
 using namespace gl;
 
 class LookNFeel : public LookAndFeel_V4 {
@@ -132,6 +133,7 @@ private:
 	bool resetsize = false;
 
 	LookNFeel looknfeel;
+	tahoma8 font = tahoma8();
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SunBurntAudioProcessorEditor)
 };

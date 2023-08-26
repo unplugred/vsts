@@ -17,7 +17,6 @@ FetchContent_Declare(
 	GIT_TAG master
 	GIT_PROGRESS TRUE
 )
-FetchContent_MakeAvailable(JUCE)
 FetchContent_Declare(
 	clap-juce-extensions
 	GIT_REPOSITORY https://github.com/free-audio/clap-juce-extensions.git

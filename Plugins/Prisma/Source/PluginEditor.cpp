@@ -324,7 +324,7 @@ PrismaAudioProcessorEditor::~PrismaAudioProcessorEditor() {
 }
 
 void PrismaAudioProcessorEditor::newOpenGLContextCreated() {
-	audioProcessor.logger.init(&context,getWidth(),getHeight());
+	audioProcessor.logger.init(&context,banneroffset,getWidth(),getHeight());
 
 	compileshader(baseshader,
 //BASE VERT
@@ -1126,7 +1126,7 @@ void PrismaAudioProcessorEditor::openGLContextClosing() {
 	bannertex.release();
 #endif
 
-	audioProcessor.logger.release();
+	audioProcessor.logger.font.release();
 
 	context.extensions.glDeleteBuffers(1,&arraybuffer);
 }

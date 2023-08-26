@@ -70,7 +70,7 @@ void VuAudioProcessorEditor::resized() {
 }
 
 void VuAudioProcessorEditor::newOpenGLContextCreated() {
-	audioProcessor.logger.init(&context,getWidth(),getHeight());
+	audioProcessor.logger.init(&context,banneroffset,getWidth(),getHeight());
 
 	vushader.reset(new OpenGLShaderProgram(context));
 	if(!vushader->addVertexShader(
@@ -351,7 +351,7 @@ void VuAudioProcessorEditor::openGLContextClosing() {
 	bannertex.release();
 #endif
 
-	audioProcessor.logger.release();
+	audioProcessor.logger.font.release();
 
 	context.extensions.glDeleteBuffers(1, &arraybuffer);
 }
@@ -415,8 +415,9 @@ void VuAudioProcessorEditor::timerCallback() {
 #else
 	setSize(w,h);
 #endif
-	audioProcessor.logger.width = w;
-	audioProcessor.logger.height = h;
+	audioProcessor.logger.font.width = w;
+	audioProcessor.logger.font.height = h;
+	audioProcessor.logger.font.banneroffset = banneroffset;
 	/*
 	if (displaycomp.stereodamp > .001 && displaycomp.stereodamp < .999) {
 		if(getConstrainer()->getFixedAspectRatio() != 0) getConstrainer()->setFixedAspectRatio(0);

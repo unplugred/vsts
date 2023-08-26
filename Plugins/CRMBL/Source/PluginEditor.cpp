@@ -145,7 +145,7 @@ CRMBLAudioProcessorEditor::~CRMBLAudioProcessorEditor() {
 }
 
 void CRMBLAudioProcessorEditor::newOpenGLContextCreated() {
-	audioProcessor.logger.init(&context,getWidth(),getHeight());
+	audioProcessor.logger.init(&context,banneroffset,getWidth(),getHeight());
 
 	compileshader(baseshader,
 //BASE VERT
@@ -712,7 +712,7 @@ void CRMBLAudioProcessorEditor::openGLContextClosing() {
 	bannertex.release();
 #endif
 
-	audioProcessor.logger.release();
+	audioProcessor.logger.font.release();
 
 	context.extensions.glDeleteBuffers(1,&arraybuffer);
 }
