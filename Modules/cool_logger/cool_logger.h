@@ -22,30 +22,46 @@ END_JUCE_MODULE_DECLARATION
 using namespace juce;
 using namespace gl;
 
-#define ENABLE_CONSOLE
-#define ENABLE_TEXT
 #define CONSOLE_LENGTH 20
+
+class CoolFont {
+public:
+	void init(OpenGLContext* context, float bannero, int w, int h, float _dpi, Image image, int texw, int texh, int lineh = 16, bool is_mono = false, int monow = 8, int monoh = 16, String vert = "", String frag = "");
+	OpenGLTexture tex;
+	std::unique_ptr<OpenGLShaderProgram> shader;
+	OpenGLContext* context;
+	void drawstring(float fgr, float fgg, float fgb, float fga, float bgr, float bgg, float bgb, float bga, String txty, int channel = 0, float x = .5f, float y = .5f, float xa = .5f, float ya = .5f);
+	void release();
+	int width = 100;
+	int height = 100;
+	int monowidth = 8;
+	int monoheight = 16;
+	int lineheight = 16;
+	int texwidth = 128;
+	int texheight = 256;
+	bool mono = true;
+	float banneroffset = 0;
+	float dpi = 0;
+	std::vector<std::vector<std::vector<int>>> uvmap;
+
+private:
+	void drawstringmono(float fgr, float fgg, float fgb, float fga, float bgr, float bgg, float bgb, float bga, String txty, int channel = 0, float x = .5f, float y = .5f, float xa = .5f, float ya = .5f);
+	int finduvindex(int letter, int channel = 0);
+};
 
 class CoolLogger {
 public:
-	void init(OpenGLContext* context, int w, int h);
+	void init(OpenGLContext* context, float bannero, int w, int h);
 	void debug(String str, bool timestamp = true);
 	void debug(int str, bool timestamp = true);
 	void debug(float str, bool timestamp = true);
 	void debug(double str, bool timestamp = true);
 	void debug(bool str, bool timestamp = true);
-	void drawstring(String txty, float x = .5, float y = .5, float xa = .5f, float ya = .5f, std::unique_ptr<OpenGLShaderProgram>* shader = nullptr);
 	void drawlog();
-	void release();
+	CoolFont font;
 
-#ifdef ENABLE_TEXT
-	String textvert;
-	String textfrag;
-	int width = 100;
-	int height = 100;
-#endif
 private:
-#ifdef ENABLE_TEXT
+
 	const int dbg_txt_pngSize = 1827;
 	const unsigned char dbg_txt_png[1829] =
 	{ 137,80,78,71,13,10,26,10,0,0,0,13,73,72,68,82,0,0,0,128,0,0,1,0,1,0,0,0,0,83,130,67,10,0,0,6,234,73,68,65,84,120,218,189,215,1,132,20,81,24,7,240,127,219,168,41,87,125,37,181,145,238,201,200,148,212,150,240,100,213,244,124,178,229,144,92,36,33,57,21,
@@ -74,15 +90,8 @@ private:
 	218,237,17,135,81,151,37,164,224,20,178,46,24,1,235,216,141,221,212,41,147,64,2,221,166,46,99,87,12,17,37,169,67,211,200,178,251,95,110,47,155,251,168,85,125,87,71,190,194,1,25,36,25,65,147,3,61,248,121,8,95,38,18,168,2,179,39,14,76,194,92,129,68,188,
 	113,49,148,143,207,34,50,93,48,22,40,169,86,37,162,141,85,133,76,0,212,119,128,40,30,128,194,132,66,89,201,123,127,254,233,148,80,81,246,0,161,7,54,162,26,96,122,149,1,212,167,166,168,105,147,122,245,117,0,132,159,226,24,168,86,19,133,16,186,1,205,226,
 	30,100,208,244,125,115,216,239,194,39,229,2,41,228,143,205,163,118,0,0,0,0,73,69,78,68,174,66,96,130,0,0 };
-
-	OpenGLTexture texttex;
-	std::unique_ptr<OpenGLShaderProgram> textshader;
-	OpenGLContext* context;
-#endif
-#ifdef ENABLE_CONSOLE
 	String debuglist[CONSOLE_LENGTH];
 	int debugreadpos = 0;
 	std::mutex debugmutex;
 	String debugtxt = "";
-#endif
 };

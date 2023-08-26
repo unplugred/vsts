@@ -63,8 +63,6 @@ private:
 	OpenGLTexture basetex;
 	std::unique_ptr<OpenGLShaderProgram> baseshader;
 
-	std::unique_ptr<OpenGLShaderProgram> textshader;
-
 	int hover = -1;
 	int initialdrag = 0;
 	int held = 0;

@@ -48,7 +48,7 @@ ProtoAudioProcessorEditor::~ProtoAudioProcessorEditor() {
 }
 
 void ProtoAudioProcessorEditor::newOpenGLContextCreated() {
-	audioProcessor.logger.init(&context,getWidth(),getHeight());
+	audioProcessor.logger.init(&context,banneroffset,getWidth(),getHeight());
 
 	compileshader(baseshader,
 //BASE VERT
@@ -69,18 +69,6 @@ uniform float offset;
 out vec4 fragColor;
 void main(){
 	fragColor = texture(basetex,vec2(mod(uv.x*texscale.x+offset,1),1-(1-uv.y)*texscale.y));
-})");
-
-	compileshader(textshader,
-audioProcessor.logger.textvert,
-//TEXT FRAG
-R"(#version 150 core
-in vec2 texcoord;
-uniform sampler2D tex;
-uniform int hoverstate;
-out vec4 fragColor;
-void main(){
-	fragColor = vec4(vec2(texture(tex,texcoord).r),hoverstate,1);
 })");
 
 	compileshader(knobshader,
@@ -295,12 +283,9 @@ void ProtoAudioProcessorEditor::renderOpenGL() {
 	}
 	context.extensions.glDisableVertexAttribArray(coord);
 
-	textshader->use();
 	for(int i = 0; i < knobcount; i++) {
-		textshader->setUniform("hoverstate",hover==i?1:0);
-		audioProcessor.logger.drawstring(knobs[i].name,((float)knobs[i].x)/getWidth(),1-((float)knobs[i].y+45)/getHeight(),.5f,1,&textshader);
+		audioProcessor.logger.font.drawstring(1,1,hover==i?1:0,1,0,0,hover==i?1:0,1,knobs[i].name,0,((float)knobs[i].x)/getWidth(),((float)knobs[i].y+45)/(getHeight()-banneroffset*getHeight()),.5f,1);
 	}
-	textshader->setUniform("hoverstate",0);
 
 	blackshader->use();
 	coord = context.extensions.glGetAttribLocation(blackshader->getProgramID(),"aPos");
@@ -358,9 +343,9 @@ void ProtoAudioProcessorEditor::renderOpenGL() {
 	}
 
 	else if(creditsalpha <= 0)
-		audioProcessor.logger.drawstring((String)"Temporary user interface!\nThe look of this VST is \nsubject to change.",0,banneroffset,0,1,&textshader);
+		audioProcessor.logger.font.drawstring(1,1,0,1,0,0,0,1,(String)"Temporary user interface!\nThe look of this VST is \nsubject to change.",0,0,1,0,1);
 
-	audioProcessor.logger.drawstring(audioProcessor.getName()+(String)" (Prototype)",1,1,1,0,&textshader);
+	audioProcessor.logger.font.drawstring(1,1,0,1,0,0,0,1,audioProcessor.getName()+(String)" (Prototype)",0,1,0,1,0);
 
 #ifdef BANNER
 	bannershader->use();
@@ -391,7 +376,6 @@ void ProtoAudioProcessorEditor::renderOpenGL() {
 void ProtoAudioProcessorEditor::openGLContextClosing() {
 	baseshader->release();
 	knobshader->release();
-	textshader->release();
 	blackshader->release();
 	visshader->release();
 	oversamplingshader->release();
@@ -406,7 +390,7 @@ void ProtoAudioProcessorEditor::openGLContextClosing() {
 	bannertex.release();
 #endif
 
-	audioProcessor.logger.release();
+	audioProcessor.logger.font.release();
 
 	context.extensions.glDeleteBuffers(1,&arraybuffer);
 }

@@ -84,7 +84,7 @@ void main(){
 
 	context.extensions.glGenBuffers(1, &arraybuffer);
 
-	audioProcessor.logger.init(&context,getWidth(),getHeight());
+	audioProcessor.logger.init(&context,0,getWidth(),getHeight());
 }
 void MPaintAudioProcessorEditor::renderOpenGL() {
 	if(needtoupdate < 0) return;
@@ -145,7 +145,7 @@ void MPaintAudioProcessorEditor::openGLContextClosing() {
 	rulertex.release();
 	icontex.release();
 
-	audioProcessor.logger.release();
+	audioProcessor.logger.font.release();
 
 	context.extensions.glDeleteBuffers(1,&arraybuffer);
 }
@@ -157,7 +157,7 @@ void MPaintAudioProcessorEditor::timerCallback() {
 		if(error) {
 			loaded = true;
 			setSize(468, 180);
-			audioProcessor.logger.height = 180;
+			audioProcessor.logger.font.height = 180;
 			needtoupdate = 2;
 		} else {
 			loaded = audioProcessor.loaded.get();
@@ -190,7 +190,7 @@ void MPaintAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 			error = false;
 			audioProcessor.error = false;
 			setSize(468, 40);
-			audioProcessor.logger.height = 40;
+			audioProcessor.logger.font.height = 40;
 			needtoupdate = 2;
 		}
 		return;

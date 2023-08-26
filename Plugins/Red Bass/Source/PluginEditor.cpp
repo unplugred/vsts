@@ -244,7 +244,7 @@ void main(){
 
 	context.extensions.glGenBuffers(1, &arraybuffer);
 
-	audioProcessor.logger.init(&context,getWidth(),getHeight());
+	audioProcessor.logger.init(&context,banneroffset,getWidth(),getHeight());
 }
 void RedBassAudioProcessorEditor::compileshader(std::unique_ptr<OpenGLShaderProgram> &shader, String vertexshader, String fragmentshader) {
 	shader.reset(new OpenGLShaderProgram(context));
@@ -409,7 +409,7 @@ void RedBassAudioProcessorEditor::openGLContextClosing() {
 	bannertex.release();
 #endif
 
-	audioProcessor.logger.release();
+	audioProcessor.logger.font.release();
 
 	context.extensions.glDeleteBuffers(1,&arraybuffer);
 }

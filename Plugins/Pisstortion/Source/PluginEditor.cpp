@@ -311,7 +311,7 @@ void main(){
 
 	context.extensions.glGenBuffers(1, &arraybuffer);
 
-	audioProcessor.logger.init(&context,getWidth(),getHeight());
+	audioProcessor.logger.init(&context,banneroffset,getWidth(),getHeight());
 }
 void PisstortionAudioProcessorEditor::compileshader(std::unique_ptr<OpenGLShaderProgram> &shader, String vertexshader, String fragmentshader) {
 	shader.reset(new OpenGLShaderProgram(context));
@@ -501,7 +501,7 @@ void PisstortionAudioProcessorEditor::openGLContextClosing() {
 	bannertex.release();
 #endif
 
-	audioProcessor.logger.release();
+	audioProcessor.logger.font.release();
 
 	context.extensions.glDeleteBuffers(1,&arraybuffer);
 }
