@@ -141,10 +141,10 @@ void CRMBLAudioProcessor::reseteverything() {
 	//soundtouch
 	if(samplerate <= 96000) {
 		pitchshift.setSampleRate(samplerate*(params.oversampling?2:1));
-		pitchprocessbuffer.resize(samplerate*blocksizething*(params.oversampling?2:1));
+		pitchprocessbuffer.resize(channelnum*blocksizething*(params.oversampling?2:1));
 	} else {
 		pitchshift.setSampleRate(fmin(samplerate,192000));
-		pitchprocessbuffer.resize(fmin(samplerate,192000)*blocksizething);
+		pitchprocessbuffer.resize(channelnum*blocksizething);
 	}
 	pitchshift.setChannels(channelnum);
 	pitchshift.setPitchSemiTones(state.values[9]);
@@ -446,7 +446,7 @@ void CRMBLAudioProcessor::setoversampling(bool toggle) {
 	dcfilter.init(samplerate*(toggle?2:1),channelnum);
 	if(samplerate <= 96000) {
 		pitchshift.setSampleRate(samplerate*(toggle?2:1));
-		pitchprocessbuffer.resize(samplerate*blocksizething*(toggle?2:1));
+		pitchprocessbuffer.resize(channelnum*blocksizething*(toggle?2:1));
 	}
 }
 
