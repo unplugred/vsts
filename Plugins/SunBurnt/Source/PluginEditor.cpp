@@ -42,7 +42,6 @@ SunBurntAudioProcessorEditor::SunBurntAudioProcessorEditor(SunBurntAudioProcesso
 	for(int i = 0; i < 8; i++)
 		curves[i] = state.curves[i];
 
-	recalcsliders();
 	calcvis();
 	randcubes(state.seed);
 
@@ -67,6 +66,7 @@ SunBurntAudioProcessorEditor::~SunBurntAudioProcessorEditor() {
 void SunBurntAudioProcessorEditor::newOpenGLContextCreated() {
 	audioProcessor.logger.init(&context,banneroffset,368,334);
 	font.init(&context,banneroffset,368,334,dpi);
+	recalcsliders();
 
 	compileshader(baseshader,
 //BASE VERT
@@ -464,12 +464,10 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 		circleshader->setUniform("knobpos",
 			x*uiscales[uiscaleindex]/getWidth()-1,
 			y*uiscales[uiscaleindex]/getHeight()-1);
-		if(x >= 398 && y <= (66+panelheight)*2) {
+		if(x >= 398 && y <= (66+panelheighttarget)*2 && panelvisible) {
 			circleshader->setUniform("colin",1.f,1.f,0.f);
-			//circleshader->setUniform("colout",1.f,1.f,0.f);
 			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 			circleshader->setUniform("colin",1.f,0.f,0.f);
-			//circleshader->setUniform("colout",1.f,0.f,0.f);
 		} else {
 			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 		}
