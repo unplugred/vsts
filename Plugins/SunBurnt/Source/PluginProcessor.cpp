@@ -96,12 +96,24 @@ SunBurntAudioProcessor::SunBurntAudioProcessor() :
 	if(usersettings->containsKey("UIScale"))
 		params.uiscale = usersettings->getDoubleValue("UIScale");
 
+	params.curves[0] = curveparams("None"			,"3,0,0,0.2,0.07,1,0.7,1,0,0.5,");
+	params.curves[1] = curveparams("High-pass"		,"2,0,0,0.5,1,0,0.5,"			);
+	params.curves[2] = curveparams("HP resonance"	,"2,0,0.3,0.5,1,0.3,0.5,"		);
+	params.curves[3] = curveparams("Low-pass"		,"2,0,1,0.5,1,1,0.5,"			);
+	params.curves[4] = curveparams("LP resonance"	,"2,0,0.3,0.5,1,0.3,0.5,"		);
+	params.curves[5] = curveparams("Pan"			,"2,0,0.5,0.5,1,0.5,0.5,"		);
+	params.curves[6] = curveparams("Density"		,"2,0,0.5,0.5,1,0.5,0.5,"		);
+	params.curves[7] = curveparams("Shimmer"		,"2,0,0,0.35,1,0.5,0.5,"		);
+
 	//									dry		wet		density	length	sync	depth	speed	curve1	curve2	curve3	curve4	hp		hp res	lp		lp res	shimmer
-	presets[0] = pluginpreset("Default"	,1.0f	,0.75f	,0.5f	,0.65f	,0		,0.55f	,0.65f	,1		,3		,5		,7		,0.0f	,0.3f	,1.0f	,0.3f	,12.0f	,"3,0,0,0.2,0.07,1,0.7,1,0,0.5,", "2,0,0,0.5,1,0,0.5,", "2,0,0.3,0.5,1,0.3,0.5,", "2,0,1,0.5,1,1,0.5,", "2,0,0.3,0.5,1,0.3,0.5,", "2,0,0.5,0.5,1,0.5,0.5,", "2,0,0.5,0.5,1,0.5,0.5,", "2,0,0,0.35,1,0.5,0.5,");
+	presets[0] = pluginpreset("Default"	,1.0f	,0.75f	,0.5f	,0.65f	,0		,0.55f	,0.65f	,1		,3		,5		,7		,0.0f	,0.3f	,1.0f	,0.3f	,12.0f	);
 	for(int i = 1; i < getNumPrograms(); ++i) {
 		presets[i] = presets[0];
 		presets[i].name = "Program " + (String)(i-7);
 	}
+	for(int i = 0; i < getNumPrograms(); ++i)
+		for(int c = 0; c < 8; ++c)
+			presets[i].curves[c] = params.curves[c].defaultvalue;
 	presets[currentpreset].seed = Time::currentTimeMillis();
 
 	params.pots[ 0] = potentiometer("Dry"				,"dry"			,.002f	,presets[0].values[ 0]	);
@@ -120,6 +132,20 @@ SunBurntAudioProcessor::SunBurntAudioProcessor() :
 	params.pots[13] = potentiometer("Low-pass"			,"lowpass"		,0		,presets[0].values[13]	);
 	params.pots[14] = potentiometer("LP resonance"		,"lowpassres"	,0		,presets[0].values[14]	);
 	params.pots[15] = potentiometer("Shimmer pitch"		,"shimmerpitch"	,0		,presets[0].values[15]	,-24,24	,potentiometer::inttype);
+
+	params.pots[11].showon.push_back(0);
+	params.pots[11].dontshowif.push_back(1);
+	params.pots[12].showon.push_back(0);
+	params.pots[12].showon.push_back(1);
+	params.pots[12].dontshowif.push_back(1);
+	params.pots[12].dontshowif.push_back(2);
+	params.pots[13].showon.push_back(0);
+	params.pots[13].dontshowif.push_back(3);
+	params.pots[14].showon.push_back(0);
+	params.pots[14].showon.push_back(3);
+	params.pots[14].dontshowif.push_back(3);
+	params.pots[14].dontshowif.push_back(4);
+	params.pots[15].showon.push_back(7);
 
 	for(int i = 0; i < paramcount; ++i) {
 		state.values[i] = params.pots[i].inflate(apvts.getParameter(params.pots[i].id)->getValue());
@@ -685,32 +711,7 @@ void SunBurntAudioProcessor::resetcurve() {
 	int i = 0;
 	if(params.curveselection > 0)
 		i = (int)state.values[6+params.curveselection];
-	switch(i) {
-		case 0:
-			presets[currentpreset].curves[i] = curve("3,0,0,0.2,0.07,1,0.7,1,0,0.5,");
-			break;
-		case 1:
-			presets[currentpreset].curves[i] = curve("2,0,0,0.5,1,0,0.5,");
-			break;
-		case 2:
-			presets[currentpreset].curves[i] = curve("2,0,0.3,0.5,1,0.3,0.5,");
-			break;
-		case 3:
-			presets[currentpreset].curves[i] = curve("2,0,1,0.5,1,1,0.5,");
-			break;
-		case 4:
-			presets[currentpreset].curves[i] = curve("2,0,0.3,0.5,1,0.3,0.5,");
-			break;
-		case 5:
-			presets[currentpreset].curves[i] = curve("2,0,0.5,0.5,1,0.5,0.5,");
-			break;
-		case 6:
-			presets[currentpreset].curves[i] = curve("2,0,0.5,0.5,1,0.5,0.5,");
-			break;
-		case 7:
-			presets[currentpreset].curves[i] = curve("2,0,0,0.35,1,0.5,0.5,");
-			break;
-	}
+	presets[currentpreset].curves[i] = curve(params.curves[i].defaultvalue);
 	updatevis = true;
 	if(findcurve(i) != -1)
 		updatedcurve = true;
@@ -720,21 +721,21 @@ AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new SunBurntAudioPro
 
 AudioProcessorValueTreeState::ParameterLayout SunBurntAudioProcessor::createParameters() {
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("dry"			,"Dry"					,juce::NormalisableRange<float>( 0.0f	,1.0f	),1.0f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("wet"			,"wet"					,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.75f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("density"		,"Density"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("length"		,"Length"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.65f	));
-	parameters.push_back(std::make_unique<AudioParameterInt		>("sync"		,"Length (quarter note)"									,0.0f	,16.0f	 ,0.0f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("depth"		,"Vibrato depth"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.55f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("speed"		,"Vibrato speed"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.65f	));
-	parameters.push_back(std::make_unique<AudioParameterChoice	>("curve1"		,"Curve 1",StringArray{"None","High-pass","HP resonance","Low-pass","LP resonance","Pan","Density","Shimmer"},1	));
-	parameters.push_back(std::make_unique<AudioParameterChoice	>("curve2"		,"Curve 2",StringArray{"None","High-pass","HP resonance","Low-pass","LP resonance","Pan","Density","Shimmer"},3	));
-	parameters.push_back(std::make_unique<AudioParameterChoice	>("curve3"		,"Curve 3",StringArray{"None","High-pass","HP resonance","Low-pass","LP resonance","Pan","Density","Shimmer"},5	));
-	parameters.push_back(std::make_unique<AudioParameterChoice	>("curve4"		,"Curve 4",StringArray{"None","High-pass","HP resonance","Low-pass","LP resonance","Pan","Density","Shimmer"},7	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("highpass"	,"High-pass"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("highpassres"	,"HP resonance"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.3f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("lowpass"		,"Low-Pass"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),1.0f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("lowpassres"	,"LP resonance"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.3f	));
-	parameters.push_back(std::make_unique<AudioParameterInt		>("shimmerpitch","Shimmer pitch"										,-24.0f	,24.0f	 ,12.0f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"dry"			,1}	,"Dry"					,juce::NormalisableRange<float>( 0.0f	,1.0f	),1.0f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"wet"			,1}	,"wet"					,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.75f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"density"		,1}	,"Density"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"length"		,1},"Length"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.65f	));
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"sync"		,1},"Length (quarter note)"									,0.0f	,16.0f	 ,0.0f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"depth"		,1},"Vibrato depth"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.55f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"speed"		,1},"Vibrato speed"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.65f	));
+	parameters.push_back(std::make_unique<AudioParameterChoice	>(ParameterID{"curve1"		,1},"Curve 1",StringArray{"None","High-pass","HP resonance","Low-pass","LP resonance","Pan","Density","Shimmer"},1	));
+	parameters.push_back(std::make_unique<AudioParameterChoice	>(ParameterID{"curve2"		,1},"Curve 2",StringArray{"None","High-pass","HP resonance","Low-pass","LP resonance","Pan","Density","Shimmer"},3	));
+	parameters.push_back(std::make_unique<AudioParameterChoice	>(ParameterID{"curve3"		,1},"Curve 3",StringArray{"None","High-pass","HP resonance","Low-pass","LP resonance","Pan","Density","Shimmer"},5	));
+	parameters.push_back(std::make_unique<AudioParameterChoice	>(ParameterID{"curve4"		,1},"Curve 4",StringArray{"None","High-pass","HP resonance","Low-pass","LP resonance","Pan","Density","Shimmer"},7	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"highpass"	,1},"High-pass"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"highpassres"	,1}	,"HP resonance"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.3f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"lowpass"		,1}	,"Low-Pass"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),1.0f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"lowpassres"	,1},"LP resonance"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.3f	));
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"shimmerpitch",1},"Shimmer pitch"											,-24.0f	,24.0f	 ,12.0f	));
 	return { parameters.begin(), parameters.end() };
 }
