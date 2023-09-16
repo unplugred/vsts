@@ -70,10 +70,21 @@ public:
 	float inflate(float val) {
 		return val*(maximumvalue-minimumvalue)+minimumvalue;
 	}
+	std::vector<int> showon { };
+	std::vector<int> dontshowif { };
+};
+struct curveparams {
+	String name = "";
+	String defaultvalue = "";
+	curveparams(String potname = "", String potdefault = "") {
+		name = potname;
+		defaultvalue = potdefault;
+	}
 };
 struct pluginparams {
 	int curveselection = 0;
 	potentiometer pots[16];
+	curveparams curves[8];
 	double uiscale = 1.5;
 	bool jpmode = false;
 };
@@ -83,7 +94,7 @@ struct pluginpreset {
 	curve curves[8];
 	float values[16];
 	int64 seed = 0;
-	pluginpreset(String pname = "", float val1 = 0.f, float val2 = 0.f, float val3 = 0.f, float val4 = 0.f, float val5 = 0.f, float val6 = 0.f, float val7 = 0.f, float val8 = 0.f, float val9 = 0.f, float val10 = 0.f, float val11 = 0.f, float val12 = 0.f, float val13 = 0.f, float val14 = 0.f, float val15 = 0.f, float val16 = 0.f, String volume = "3,0,0,0.2,0.07,1,0.7,1,0,0.5,", String highpass = "2,0,0,0.5,1,0,0.5,", String hpresonance = "2,0,0.3,0.5,1,0.3,0.5,", String lowpass = "2,0,1,0.5,1,1,0.5,", String lpresonance = "2,0,0.3,0.5,1,0.3,0.5,", String pan = "2,0,0.5,0.5,1,0.5,0.5,", String density = "2,0,0.5,0.5,1,0.5,0.5,", String shimmer = "2,0,0,0.35,1,0.5,0.5,") {
+	pluginpreset(String pname = "", float val1 = 0.f, float val2 = 0.f, float val3 = 0.f, float val4 = 0.f, float val5 = 0.f, float val6 = 0.f, float val7 = 0.f, float val8 = 0.f, float val9 = 0.f, float val10 = 0.f, float val11 = 0.f, float val12 = 0.f, float val13 = 0.f, float val14 = 0.f, float val15 = 0.f, float val16 = 0.f) {
 		name = pname;
 
 		values[ 0] = val1;
@@ -102,15 +113,6 @@ struct pluginpreset {
 		values[13] = val14;
 		values[14] = val15;
 		values[15] = val16;
-
-		curves[0] = curve(volume);
-		curves[1] = curve(highpass);
-		curves[2] = curve(hpresonance);
-		curves[3] = curve(lowpass);
-		curves[4] = curve(lpresonance);
-		curves[5] = curve(pan);
-		curves[6] = curve(density);
-		curves[7] = curve(shimmer);
 	}
 };
 
@@ -161,7 +163,7 @@ public:
 	String curvetostring(const char linebreak = ',');
 	void curvefromstring(String str, const char linebreak = ',');
 	void resetcurve();
- 
+
 	AudioProcessorValueTreeState apvts;
 	UndoManager undoManager;
 
@@ -172,7 +174,6 @@ public:
 	pluginpreset presets[20];
 	int currentpreset = 0;
 	pluginparams params;
-	const String curvename[8] { "None","High-pass","HP resonance","Low-pass","LP resonance","Pan","Density","Shimmer" };
 
 	Atomic<bool> updatevis = false;
 

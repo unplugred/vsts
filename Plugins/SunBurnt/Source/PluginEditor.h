@@ -33,6 +33,23 @@ struct knob {
 		return val*(maximumvalue-minimumvalue)+minimumvalue;
 	}
 };
+struct slider {
+	float value = .5f;
+	String id;
+	String name;
+	String displayname;
+	float minimumvalue = 0.f;
+	float maximumvalue = 1.f;
+	float defaultvalue = 0.f;
+	float normalize(float val) {
+		return (val-minimumvalue)/(maximumvalue-minimumvalue);
+	}
+	float inflate(float val) {
+		return val*(maximumvalue-minimumvalue)+minimumvalue;
+	}
+	std::vector<int> showon;
+	std::vector<int> dontshowif;
+};
 class SunBurntAudioProcessorEditor : public AudioProcessorEditor, public OpenGLRenderer, public AudioProcessorValueTreeState::Listener, private Timer
 {
 public:
@@ -50,6 +67,7 @@ public:
 
 	virtual void parameterChanged(const String& parameterID, float newValue);
 	void recalclabels();
+	void recalcsliders();
 	void randcubes(int64 seed);
 	void mouseMove(const MouseEvent& event) override;
 	void mouseExit(const MouseEvent& event) override;
@@ -61,10 +79,16 @@ public:
 	int recalchover(float x, float y);
 
 	knob knobs[6];
+	int knobcount = 0;
+	slider sliders[5];
+	int slidercount = 0;
 	curve curves[8];
 	int curveindex[5] = {0,1,3,5,7};
-	int knobcount = 0;
 	float visline[3408];
+
+	std::vector<int> slidersvisible;
+	std::vector<String> sliderslabel;
+	std::vector<String> slidersvalue;
 private:
 	SunBurntAudioProcessor& audioProcessor;
 
@@ -100,12 +124,17 @@ private:
 	Point<int> dragpos = Point<int>(0,0);
 	std::unique_ptr<OpenGLShaderProgram> circleshader;
 
-	float length = .65f;
-	int sync = 0;
+	float panelheight = 0;
+	float panelheighttarget = 0;
+	bool panelvisible = false;
+	std::unique_ptr<OpenGLShaderProgram> panelshader;
 
 	OpenGLTexture overlaytex;
 	OpenGLFrameBuffer framebuffer;
 	std::unique_ptr<OpenGLShaderProgram> ppshader;
+
+	float length = .65f;
+	int sync = 0;
 
 	float time = 1000;
 	Random random;
