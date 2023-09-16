@@ -624,20 +624,20 @@ AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new CRMBLAudioProces
 
 AudioProcessorValueTreeState::ParameterLayout CRMBLAudioProcessor::createParameters() {
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("time"			,"Time (MS)"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.32f	));
-	parameters.push_back(std::make_unique<AudioParameterInt		>("sync"			,"Time (Eighth note)"									,0.0f	,16.0f	 ,0.0f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("modamp"			,"Mod Amount"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.15f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("modfreq"			,"Mod Frequency"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("pingpong"		,"Ping Pong"			,juce::NormalisableRange<float>( -1.0f	,1.0f	),0.0f	));
-	parameters.push_back(std::make_unique<AudioParameterBool	>("pingpostfeedback","Ping Post Feedback"													 ,true	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("feedback"		,"Feedback"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("reverse"			,"Reverse"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("chew"			,"Chew"					,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("pitch"			,"Pitch"				,juce::NormalisableRange<float>( -24.0f	,24.0f	),0.0f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("lowpass"			,"Lowpass"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.3f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("wet"				,"Dry/Wet"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.4f	));
-	parameters.push_back(std::make_unique<AudioParameterBool	>("hold"			,"Hold"																	 ,false	));
-	parameters.push_back(std::make_unique<AudioParameterBool	>("randomize"		,"Randomize"															 ,false	));
-	parameters.push_back(std::make_unique<AudioParameterBool	>("oversampling"	,"Over-Sampling"														 ,true	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"time"			,1},"Time (MS)"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.32f	));
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"sync"			,1},"Time (Eighth note)"								,0.0f	,16.0f	 ,0.0f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"modamp"			,1},"Mod Amount"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.15f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"modfreq"			,1},"Mod Frequency"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"pingpong"		,1},"Ping Pong"			,juce::NormalisableRange<float>( -1.0f	,1.0f	),0.0f	));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"pingpostfeedback",1},"Ping Post Feedback"												 ,true	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"feedback"		,1},"Feedback"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"reverse"			,1},"Reverse"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"chew"			,1},"Chew"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"pitch"			,1},"Pitch"				,juce::NormalisableRange<float>( -24.0f	,24.0f	),0.0f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"lowpass"			,1},"Lowpass"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.3f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"wet"				,1},"Dry/Wet"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.4f	));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"hold"			,1},"Hold"																 ,false	));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"randomize"		,1},"Randomize"															 ,false	));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"oversampling"	,1},"Over-Sampling"														 ,true	));
 	return { parameters.begin(), parameters.end() };
 }
