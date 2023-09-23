@@ -66,6 +66,7 @@ SunBurntAudioProcessorEditor::~SunBurntAudioProcessorEditor() {
 void SunBurntAudioProcessorEditor::newOpenGLContextCreated() {
 	audioProcessor.logger.init(&context,banneroffset,368,334);
 	font.init(&context,banneroffset,368,334,dpi);
+	timefont.init(&context,banneroffset,368,334,dpi);
 	recalcsliders();
 
 	compileshader(baseshader,
@@ -279,6 +280,7 @@ void main(){
 		texture(overlaytex,overlayuv-vec2(chromatic,0)).r,
 		texture(overlaytex,overlayuv).g,
 		texture(overlaytex,overlayuv+vec2(chromatic,0)).b)*.18),1);
+	//fragColor = vec4(texture(buffertex,uv).rgb,1);
 })");
 
 	baseentex.loadImage(ImageCache::getFromMemory(BinaryData::base_en_png, BinaryData::base_en_pngSize));
@@ -569,6 +571,19 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	}
 	context.extensions.glDisableVertexAttribArray(coord);
+
+	//time text
+	float x = .557f;
+	float y = .826f;
+	for(int ii = 0; ii < 4; ++ii) if(randomid[ii] == 51) {
+		x += randomdir[ii]*2/getWidth();
+		y -= randomdir[ii+4]*2/getHeight();
+		break;
+	}
+	timefont.font.shader->use();
+	timefont.font.shader->setUniform("time",timeopentime,timeclosetime);
+	timefont.font.drawstring(1,0,0,1,1,0,0,0,timestring,0,x,y,.5,.5);
+	timefont.font.drawstring(1,1,0,1,1,1,0,0,timestring,1,x,y,.5,.5);
 	framebuffer.releaseAsRenderingTarget();
 
 	//post processing
@@ -637,6 +652,7 @@ void SunBurntAudioProcessorEditor::openGLContextClosing() {
 
 	audioProcessor.logger.font.release();
 	font.font.release();
+	timefont.font.release();
 
 	context.extensions.glDeleteBuffers(1,&arraybuffer);
 }
@@ -675,6 +691,17 @@ void SunBurntAudioProcessorEditor::paint (Graphics& g) { }
 void SunBurntAudioProcessorEditor::timerCallback() {
 	if(websiteht >= -.65761f) websiteht -= .03f;
 
+	if(hover > -1 && hover < knobcount && knobs[hover].id == "length") {
+		if(timeclosetime >= timestring.length()) {
+			timeopentime = -1;
+			timeclosetime = -1;
+		}
+		timeopentime = fmin(timeopentime+1,999);
+		timeclosetime = fmax(timeclosetime-1,-1);
+	} else {
+		timeclosetime = fmin(timeclosetime+1,timestring.length());
+	}
+
 	panelvisible = hover == -14 || hover >= knobcount || hover < -20;
 	if(panelvisible)
 		panelheight = panelheight*.6+panelheighttarget*.4;
@@ -696,6 +723,11 @@ void SunBurntAudioProcessorEditor::timerCallback() {
 		font.font.height = ((float)getHeight())/uiscales[uiscaleindex];
 		font.font.dpi = dpi*uiscales[uiscaleindex];
 		font.font.banneroffset = banneroffset;
+		timefont.font.width = ((float)getWidth())/uiscales[uiscaleindex];
+		timefont.font.height = ((float)getHeight())/uiscales[uiscaleindex];
+		timefont.font.dpi = dpi*uiscales[uiscaleindex];
+		timefont.font.banneroffset = banneroffset;
+		looknfeel.scale = uiscales[uiscaleindex];
 		looknfeel.scale = uiscales[uiscaleindex];
 	}
 
@@ -768,8 +800,21 @@ void SunBurntAudioProcessorEditor::parameterChanged(const String& parameterID, f
 void SunBurntAudioProcessorEditor::recalclabels() {
 	if(sync <= 0) {
 		knobs[3].value = length;
+		float seconds = pow(length,2)*(6-.1)+.1;
+		if(seconds >= 1) {
+			timestring = (String)(round(seconds*100)*.01f);
+			if(timestring.length() == 1)
+				timestring += ".00s";
+			else if(timestring.length() == 3)
+				timestring += "0s";
+			else if(timestring.length() == 4)
+				timestring += "s";
+		} else {
+			timestring = (String)round(seconds*1000)+"ms";
+		}
 	} else {
 		knobs[3].value = (sync-1)/15.f;
+		timestring = ((String)sync)+"q";
 	}
 
 	sliderslabel.clear();
@@ -907,7 +952,12 @@ void SunBurntAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 			}
 		} else if(hover > -1) {
 			initialvalue[0] = knobs[hover].value;
-			audioProcessor.apvts.getParameter(knobs[hover].id)->beginChangeGesture();
+			if(knobs[hover].id == "length" && event.mods.isCtrlDown()) {
+				audioProcessor.apvts.getParameter("sync")->beginChangeGesture();
+				changegesturesync = true;
+			} else {
+				audioProcessor.apvts.getParameter(knobs[hover].id)->beginChangeGesture();
+			}
 		} else {
 			initialvalue[0] = sliders[slidersvisible[hover+30]].value;
 			audioProcessor.apvts.getParameter(sliders[slidersvisible[hover+30]].id)->beginChangeGesture();
@@ -1072,9 +1122,19 @@ void SunBurntAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 		if(initialdrag > -1) {
 			if(knobs[hover].id == "length") {
 				if(event.mods.isCtrlDown()) {
+					if(!changegesturesync) {
+						audioProcessor.apvts.getParameter("sync")->beginChangeGesture();
+						audioProcessor.apvts.getParameter("length")->endChangeGesture();
+						changegesturesync = true;
+					}
 					audioProcessor.apvts.getParameter("sync")->setValueNotifyingHost((fmax(value-valueoffset[0],0)*15+1)*.0625);
 				} else {
 					if(sync > 0) audioProcessor.apvts.getParameter("sync")->setValueNotifyingHost(0);
+					if(changegesturesync) {
+						audioProcessor.apvts.getParameter("sync")->endChangeGesture();
+						audioProcessor.apvts.getParameter("length")->beginChangeGesture();
+						changegesturesync = false;
+					}
 					audioProcessor.apvts.getParameter("length")->setValueNotifyingHost(value-valueoffset[0]);
 				}
 			} else {
@@ -1126,7 +1186,12 @@ void SunBurntAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 		} else if(hover > -1) {
 			audioProcessor.undoManager.setCurrentTransactionName(
 				(String)((knobs[hover].value - initialvalue[0]) >= 0 ? "Increased " : "Decreased ") += knobs[hover].name);
-			audioProcessor.apvts.getParameter(knobs[hover].id)->endChangeGesture();
+			if(changegesturesync) {
+				audioProcessor.apvts.getParameter("sync")->endChangeGesture();
+				changegesturesync = false;
+			} else {
+				audioProcessor.apvts.getParameter(knobs[hover].id)->endChangeGesture();
+			}
 		} else {
 			audioProcessor.undoManager.setCurrentTransactionName(
 				(String)((sliders[slidersvisible[hover+30]].value - initialvalue[0]) >= 0 ? "Increased " : "Decreased ") += sliders[slidersvisible[hover+30]].name);

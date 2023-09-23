@@ -50,6 +50,60 @@ struct slider {
 	std::vector<int> showon;
 	std::vector<int> dontshowif;
 };
+class handmedown {
+public:
+	handmedown() {
+		font.uvmap = {{{54,1,1,26,35,6,-2,14},{53,28,1,29,35,6,-2,17},{57,58,1,25,34,6,-2,13},{50,84,1,29,34,6,-2,17},{56,1,37,30,34,6,-2,18},{51,32,37,28,34,6,-1,17},{52,61,37,26,34,6,-2,14},{55,88,37,27,33,6,-1,15},{49,1,72,17,33,6,-1,5},{48,19,72,29,33,6,-1,17},{109,49,72,34,25,6,8,22},{115,84,72,22,24,6,8,10},{46,107,72,17,17,6,14,5},{32,0,0,0,0,0,0,13},{113,103,92,25,36,6,-2,13}},{{54,1,1,26,35,6,-2,14},{53,28,1,29,35,6,-2,17},{57,58,1,25,34,6,-2,13},{50,84,1,29,34,6,-2,17},{56,1,37,30,34,6,-2,18},{51,32,37,28,34,6,-1,17},{52,61,37,26,34,6,-2,14},{55,88,37,27,33,6,-1,15},{49,1,72,17,33,6,-1,5},{48,19,72,29,33,6,-1,17},{109,49,72,34,25,6,8,22},{115,84,72,22,24,6,8,10},{46,107,72,17,17,6,14,5},{32,0,0,0,0,0,0,13},{113,103,92,25,36,6,-2,13}}};
+		font.kerning = {{{54,55,-2},{54,57,-3},{53,55,-2},{50,55,-2},{51,55,-2},{109,55,-2},{109,57,-3},{115,55,-2},{115,57,-2}},{{54,55,-2},{54,57,-3},{53,55,-2},{50,55,-2},{51,55,-2},{109,55,-2},{109,57,-3},{115,55,-2},{115,57,-2}}}; //NOT YET IMPLEMENTED; looks good already so idk if ill add this
+		font.smooth = true;
+		font.slant = -.3f;
+		font.scale = .5f;
+	}
+	void init(OpenGLContext* context, float bannero, int w, int h, float _dpi) {
+		font.init(context, bannero, w, h, _dpi, ImageCache::getFromMemory(BinaryData::handmedown_png, BinaryData::handmedown_pngSize),128,128,33,false,0,0,
+R"(#version 150 core
+in vec2 aPos;
+uniform vec4 pos;
+uniform vec4 texpos;
+uniform float letter;
+uniform vec2 time;
+out vec2 uv;
+void main(){
+	gl_Position = vec4((aPos*pos.zw+pos.xy)*2-1,0,1);
+	gl_Position.y = pow(max(0,letter-time.x+1.5),4)*-0.0002-gl_Position.y;
+	uv = (aPos*texpos.zw+texpos.xy);
+	uv.y = 1-uv.y;
+})",
+R"(#version 150 core
+in vec2 uv;
+uniform sampler2D tex;
+uniform int channel;
+uniform vec2 res;
+uniform float dpi;
+uniform vec4 bg;
+uniform vec4 fg;
+uniform float letter;
+uniform vec2 time;
+out vec4 fragColor;
+void main(){
+	if(letter > time.x || letter < time.y) {
+		fragColor = vec4(0);
+		return;
+	}
+	float text = 0;
+	if(channel == 1)
+		text = texture(tex,uv).g;
+	else if(channel == 2)
+		text = texture(tex,uv).b;
+	else
+		text = texture(tex,uv).r;
+	if(dpi > 1)
+		text = (text-.5)*dpi+.5;
+	fragColor = vec4(fg.rgb,text);
+})");
+	}
+	CoolFont font;
+};
 class SunBurntAudioProcessorEditor : public AudioProcessorEditor, public OpenGLRenderer, public AudioProcessorValueTreeState::Listener, private Timer
 {
 public:
@@ -86,9 +140,6 @@ public:
 	int curveindex[5] = {0,1,3,5,7};
 	float visline[3408];
 
-	std::vector<int> slidersvisible;
-	std::vector<String> sliderslabel;
-	std::vector<String> slidersvalue;
 private:
 	SunBurntAudioProcessor& audioProcessor;
 
@@ -129,12 +180,18 @@ private:
 	bool panelvisible = false;
 	std::unique_ptr<OpenGLShaderProgram> panelshader;
 
+	std::vector<int> slidersvisible;
+	std::vector<String> sliderslabel;
+	std::vector<String> slidersvalue;
+	tahoma8 font = tahoma8();
+
 	OpenGLTexture overlaytex;
 	OpenGLFrameBuffer framebuffer;
 	std::unique_ptr<OpenGLShaderProgram> ppshader;
 
 	float length = .65f;
 	int sync = 0;
+	bool changegesturesync = false;
 
 	float time = 1000;
 	Random random;
@@ -162,7 +219,11 @@ private:
 	bool resetsize = false;
 
 	LookNFeel looknfeel;
-	tahoma8 font = tahoma8();
+
+	float timeopentime = -1;
+	float timeclosetime = -1;
+	String timestring = "";
+	handmedown timefont = handmedown();
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SunBurntAudioProcessorEditor)
 };
