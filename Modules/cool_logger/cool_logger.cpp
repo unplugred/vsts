@@ -156,8 +156,8 @@ void CoolFont::drawstringmono(float fgr, float fgg, float fgb, float fga, float 
 	while(txt[letter] != '\0') {
 		if(txt[letter] != '\n') {
 			shader->setUniform("pos",
-					x+(letterx-currentlinelength*xa)*letterw,
-					y*(1-banneroffset)+line*lineheight*scale/height,letterw,letterh);
+				x+(letterx-currentlinelength*xa)*letterw,
+				y*(1-banneroffset)+line*lineheight*scale/height,letterw,letterh);
 			shader->setUniform("texpos",
 				.00001f+fmod(txt[letter],16)*.0625f,
 				.00001f+floor(txt[letter]*.0625f)*.0625f,
@@ -245,7 +245,7 @@ void CoolFont::drawstring(float fgr, float fgg, float fgb, float fga, float bgr,
 			float currentx = letterx+uvmap[channel][uvindex][5]*scale/width-currentlinelength*xa;
 			shader->setUniform("pos",
 				x+currentx,
-				y*(1-banneroffset)+(line*lineheight+uvmap[channel][uvindex][6])*scale/height+(currentx+((float)uvmap[channel][uvindex][3])*.5f*scale/width)*slant,
+				y*(1-banneroffset)+(line*lineheight+uvmap[channel][uvindex][6])*scale/height+(currentx+((float)uvmap[channel][uvindex][7])*.5f*scale/width)*slant,
 				((float)uvmap[channel][uvindex][3])*scale/width,
 				((float)uvmap[channel][uvindex][4])*scale/height);
 			shader->setUniform("texpos",
