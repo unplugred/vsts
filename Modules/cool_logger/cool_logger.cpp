@@ -73,13 +73,14 @@ in vec2 uv;
 uniform sampler2D tex;
 uniform int channel;
 uniform vec2 res;
+uniform float smoot;
 uniform float dpi;
 uniform vec4 bg;
 uniform vec4 fg;
 out vec4 fragColor;
 void main(){
 	vec2 nuv = uv;
-	if(dpi > 1) {
+	if(dpi > 1 && smoot < .5) {
 		nuv *= res;
 		if(mod(nuv.x,1)>.5) nuv.x = floor(nuv.x)+(1-min((1-mod(nuv.x,1))*dpi*2,.5));
 		else nuv.x = floor(nuv.x)+min(mod(nuv.x,1)*dpi*2,.5);
@@ -94,28 +95,10 @@ void main(){
 		text = texture(tex,nuv).b;
 	else
 		text = texture(tex,nuv).r;
+	if(dpi > 1 && smoot > .5)
+		text = (text-.5)*dpi+.5;
 	fragColor = text*fg+(1-text)*bg;
 })");
-		/*
-		shader->addFragmentShader(
-R"(#version 150 core
-in vec2 uv;
-uniform sampler2D tex;
-uniform int channel;
-uniform vec4 bg;
-uniform vec4 fg;
-out vec4 fragColor;
-void main(){
-	float text = 0;
-	if(channel == 1)
-		text = texture(tex,uv).g;
-	else if(channel == 2)
-		text = texture(tex,uv).b;
-	else
-		text = texture(tex,uv).r;
-	fragColor = text*fg+(1-text)*bg;
-})");
-		*/
 	else
 		shader->addFragmentShader(frag);
 	shader->link();
@@ -130,10 +113,10 @@ void CoolFont::drawstringmono(float fgr, float fgg, float fgb, float fga, float 
 	shader->use();
 	context->extensions.glActiveTexture(GL_TEXTURE0);
 	tex.bind();
-	if(fmod(dpi,1) > .00001f && fmod(dpi,1) < .99999f) {
+	if((fmod(dpi,1) > .00001f && fmod(dpi,1) < .99999f) || smooth) {
 		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-		shader->setUniform("dpi",dpi);
+		shader->setUniform("dpi",dpi*scale);
 	} else {
 		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
@@ -144,7 +127,7 @@ void CoolFont::drawstringmono(float fgr, float fgg, float fgb, float fga, float 
 	shader->setUniform("fg",fgr,fgg,fgb,fga);
 	shader->setUniform("bg",bgr,bgg,bgb,bga);
 	shader->setUniform("res",texwidth,texheight);
-	shader->setUniform("dpi",dpi);
+	shader->setUniform("smoot",smooth?1.f:0.f);
 	float coord = context->extensions.glGetAttribLocation(shader->getProgramID(),"aPos");
 	context->extensions.glEnableVertexAttribArray(coord);
 	context->extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
@@ -154,8 +137,8 @@ void CoolFont::drawstringmono(float fgr, float fgg, float fgb, float fga, float 
 	float line = -ya;
 	std::queue<float> linelength;
 	const char* txt = txty.toUTF8();
-	float letterw = ((float)monowidth)/width;
-	float letterh = ((float)monoheight)/height;
+	float letterw = ((float)monowidth)*scale/width;
+	float letterh = ((float)monoheight)*scale/height;
 	while(txt[letter] != '\0') {
 		if(txt[letter] == '\n' || (((++letterx)+1)*letterw > 1 && txt[letter] != '\n')) {
 			linelength.push(letterx);
@@ -174,7 +157,7 @@ void CoolFont::drawstringmono(float fgr, float fgg, float fgb, float fga, float 
 		if(txt[letter] != '\n') {
 			shader->setUniform("pos",
 					x+(letterx-currentlinelength*xa)*letterw,
-					y*(1-banneroffset)+line*lineheight/height,letterw,letterh);
+					y*(1-banneroffset)+line*lineheight*scale/height,letterw,letterh);
 			shader->setUniform("texpos",
 				.00001f+fmod(txt[letter],16)*.0625f,
 				.00001f+floor(txt[letter]*.0625f)*.0625f,
@@ -202,10 +185,10 @@ void CoolFont::drawstring(float fgr, float fgg, float fgb, float fga, float bgr,
 	shader->use();
 	context->extensions.glActiveTexture(GL_TEXTURE0);
 	tex.bind();
-	if(fmod(dpi,1) > .00001f && fmod(dpi,1) < .99999f) {
+	if((fmod(dpi,1) > .00001f && fmod(dpi,1) < .99999f) || smooth) {
 		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-		shader->setUniform("dpi",dpi);
+		shader->setUniform("dpi",dpi*scale);
 	} else {
 		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
@@ -216,13 +199,14 @@ void CoolFont::drawstring(float fgr, float fgg, float fgb, float fga, float bgr,
 	shader->setUniform("fg",fgr,fgg,fgb,fga);
 	shader->setUniform("bg",bgr,bgg,bgb,bga);
 	shader->setUniform("res",texwidth,texheight);
+	shader->setUniform("smoot",smooth?1.f:0.f);
 	float coord = context->extensions.glGetAttribLocation(shader->getProgramID(),"aPos");
 	context->extensions.glEnableVertexAttribArray(coord);
 	context->extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 
 	int letter = 0;
 	float letterx = 0;
-	float line = -ya;
+	float line = -ya+1;
 	std::queue<float> linelength;
 	const char* txt = txty.toUTF8();
 	while(txt[letter] != '\0') {
@@ -230,7 +214,7 @@ void CoolFont::drawstring(float fgr, float fgg, float fgb, float fga, float bgr,
 		if(txt[letter] != '\n') {
 			int uvindex = finduvindex(txt[letter],channel);
 			if(uvindex >= 0) {
-				letterw = ((float)uvmap[channel][uvindex][7])/width;
+				letterw = ((float)uvmap[channel][uvindex][7])*scale/width;
 				letterx += letterw;
 			}
 		}
@@ -241,7 +225,7 @@ void CoolFont::drawstring(float fgr, float fgg, float fgb, float fga, float bgr,
 			line -= ya;
 			letterx = letterw;
 		}
-		letter++;
+		++letter;
 	}
 	linelength.push(letterx);
 
@@ -251,28 +235,27 @@ void CoolFont::drawstring(float fgr, float fgg, float fgb, float fga, float bgr,
 	linelength.pop();
 	while(txt[letter] != '\0') {
 		int uvindex = finduvindex(txt[letter],channel);
-		if(txt[letter] == '\n' || (uvindex != -1 && (letterx+((float)uvmap[channel][uvindex][7])/width) > 1)) {
+		if(txt[letter] == '\n' || (uvindex != -1 && (letterx+((float)uvmap[channel][uvindex][7])*scale/width) > 1)) {
 			++line;
 			letterx = 0;
 			currentlinelength = linelength.front();
 			linelength.pop();
 		}
 		if(txt[letter] != '\n' && uvindex != -1) {
-			float a = ((float)uvmap[channel][uvindex][3]);
-			float b = ((float)uvmap[channel][uvindex][4]);
-			float c = ((float)uvmap[channel][uvindex][7]);
+			float currentx = letterx+uvmap[channel][uvindex][5]*scale/width-currentlinelength*xa;
 			shader->setUniform("pos",
-				x+letterx+uvmap[channel][uvindex][5]/width-currentlinelength*xa,
-				y*(1-banneroffset)+(line*lineheight+uvmap[channel][uvindex][6])/height,
-				((float)uvmap[channel][uvindex][3])/width,
-				((float)uvmap[channel][uvindex][4])/height);
+				x+currentx,
+				y*(1-banneroffset)+(line*lineheight+uvmap[channel][uvindex][6])*scale/height+(currentx+((float)uvmap[channel][uvindex][3])*.5f*scale/width)*slant,
+				((float)uvmap[channel][uvindex][3])*scale/width,
+				((float)uvmap[channel][uvindex][4])*scale/height);
 			shader->setUniform("texpos",
 				.00001f+((float)uvmap[channel][uvindex][1])/texwidth,
 				.00001f+((float)uvmap[channel][uvindex][2])/texheight,
 				((float)uvmap[channel][uvindex][3])/texwidth,
 				((float)uvmap[channel][uvindex][4])/texheight);
+			shader->setUniform("letter",(float)letter);
 			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
-			letterx += ((float)uvmap[channel][uvindex][7]/width);
+			letterx += ((float)uvmap[channel][uvindex][7])*scale/width;
 		}
 		++letter;
 	}
