@@ -12,7 +12,7 @@ SunBurntAudioProcessorEditor::SunBurntAudioProcessorEditor(SunBurntAudioProcesso
 		if(i == 4) {
 			sync = state.values[i];
 			continue;
-		} else if(i == 3) time = state.values[i];
+		} else if(i == 3) length = state.values[i];
 		int newi = i>4?i-1:i;
 		knobs[newi].id = params.pots[i].id;
 		knobs[newi].name = params.pots[i].name;
