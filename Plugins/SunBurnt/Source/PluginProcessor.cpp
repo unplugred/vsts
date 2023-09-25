@@ -483,7 +483,7 @@ void SunBurntAudioProcessor::genbuffer() {
 		values[3] = state.values[13];
 		values[4] = state.values[14];
 		values[5] = .5;
-		values[6] = pow(state.values[2],4);
+		values[6] = state.values[2];
 		values[7] = 0;
 
 		for(int i = 1; i < 5; ++i)
@@ -494,6 +494,7 @@ void SunBurntAudioProcessor::genbuffer() {
 		values[2] = mapToLog10(values[2],0.1,40.0);
 		values[3] = mapToLog10(values[3],20.0,20000.0);
 		values[4] = mapToLog10(values[4],0.1,40.0);
+		values[6] = pow(values[6],4);
 
 		for (int c = 0; c < channelnum; ++c) {
 
@@ -515,13 +516,13 @@ void SunBurntAudioProcessor::genbuffer() {
 			}
 
 			//low pass
-			if(valuesactive[3] || values[3] < 1) {
+			if(valuesactive[3] || values[3] < 20000) {
 				(*lowpassfilters[c].parameters.get()).setCutOffFrequency(samplerate,values[3],values[4]);
 				out = lowpassfilters[c].processSample(out);
 			}
 
 			//high pass
-			if(valuesactive[1] || values[1] > 0) {
+			if(valuesactive[1] || values[1] > 20) {
 				(*highpassfilters[c].parameters.get()).setCutOffFrequency(samplerate,values[1],values[2]);
 				out = highpassfilters[c].processSample(out);
 			}
@@ -641,6 +642,7 @@ void SunBurntAudioProcessor::parameterChanged(const String& parameterID, float n
 		if(params.pots[i].smoothtime > 0) params.pots[i].smooth.setTargetValue(newValue);
 		else state.values[i] = newValue;
 		presets[currentpreset].values[i] = newValue;
+
 		if(parameterID.startsWith("curve"))
 			updatedcurve = true;
 		else if(parameterID == "length" || parameterID == "sync"

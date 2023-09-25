@@ -84,11 +84,12 @@ void main(){
 R"(#version 150 core
 in vec2 uv;
 uniform sampler2D basetex;
+uniform sampler2D basetexjp;
 uniform sampler2D disptex;
 uniform vec2 texscale;
-uniform float selection;
 uniform float shineprog;
 uniform float dpi;
+uniform float isjp;
 uniform vec2 hidecube;
 uniform vec4 randomid;
 uniform vec4 randomx;
@@ -117,30 +118,82 @@ void main(){
 	}
 
 	vec3 col = vec3(0);
-	if(section == 1 && uv.x <= .80978) {
-		col.rg = texture(basetex,uv).rg;
-		col.b = texture(basetex,dispuv).b;
+	if(section == 1) {
+		col = vec3(texture(basetex,uv).r,0,texture(basetex,dispuv).b);
+	} else if(section == 2) {
+		if(isjp > .5)
+			col = vec3(texture(basetexjp,dispuv*vec2(1,4)).rg,texture(basetexjp,uv*vec2(1,4)).b);
+		else
+			col = vec3(texture(basetex,dispuv).rg,texture(basetex,uv).b);
 	} else {
-		col.rg = texture(basetex,dispuv).rg;
-		if(shineprog > -.65761 && section == 0 && uv.x >= .58967) {
+		col.r = texture(basetex,dispuv).r;
+		if(shineprog > -.65761 && uv.x >= .58967) {
 			float shine = texture(basetex,uv+vec2(shineprog,0)).g;
 			col.b = shine*col.r;
 			col.r *= (1-shine);
-		} else if(section == 2) col.b = texture(basetex,uv).b;
+		}
 	}
 
-	if(section == 1 && uv.x >= .80978 && uv.x <= .9837) {
-		vec2 selectuv = uv;
-		if(selection == 0) selectuv.x -= .5;
-		else {
-			if(mod(selection,2.) == 0) selectuv.y += .2994;
-			if(selection > 2.5) selectuv.x -= .054348;
-		}
-		col.g = 1-abs(col.r-texture(basetex,selectuv).g);
-		col.r = 1;
-	} else if(section < 2) col.g = 0;
-
 	fragColor = vec4(max(min((col-.5)*dpi+.5,1),0),1);
+})");
+
+	compileshader(selectshader,
+//SELECT VERT
+R"(#version 150 core
+in vec2 aPos;
+uniform float banner;
+uniform vec4 pos;
+out vec2 texuv;
+uniform float ratio;
+uniform vec3 uvoffset;
+out vec2 uv;
+void main(){
+	gl_Position = vec4(vec2(aPos.x*pos.z+pos.x,(aPos.y*pos.w+pos.y)*(1-banner))*2-1,0,1);
+	texuv = vec2(aPos.x-.5,(aPos.y-.5)*ratio);
+	texuv = vec2(
+		texuv.x*cos(uvoffset.z)-texuv.y*sin(uvoffset.z),
+		texuv.x*sin(uvoffset.z)+texuv.y*cos(uvoffset.z));
+	texuv = vec2(texuv.x,texuv.y/ratio)+.5+uvoffset.xy;
+	uv = aPos;
+})",
+//SELECT FRAG
+R"(#version 150 core
+in vec2 texuv;
+in vec2 uv;
+uniform sampler2D tex;
+uniform float isjp;
+uniform float dpi;
+uniform float select;
+uniform float ratio;
+uniform float index;
+out vec4 fragColor;
+void main(){
+	vec2 coords = vec2((max(min(texuv.x,1),0)+index)/8,texuv.y);
+	if(index < .5)
+		coords.y = coords.y*2-.5;
+
+	float label = 0;
+	if(isjp > .5)
+		label = texture(tex,coords).g;
+	else
+		label = texture(tex,coords).r;
+	if(dpi > 2)
+		label = (label-.5)*dpi*.6+.5;
+
+	if(select < .5) {
+		fragColor = vec4(0,0,0,label);
+	} else if(select < 1.5) {
+		fragColor = vec4(0,0,1,label);
+
+	} else {
+		coords = uv;
+		if(uv.y > .5)
+			coords.y = 1-coords.y;
+		coords = coords*vec2(2,ratio*2)-1;
+		coords.y = min(coords.y,0);
+		float x = (1-sqrt(coords.x*coords.x+coords.y*coords.y))*10*dpi+.5;
+		fragColor = vec4(1,1-label,0,x);
+	}
 })");
 
 	compileshader(visshader,
@@ -280,7 +333,9 @@ void main(){
 		texture(overlaytex,overlayuv-vec2(chromatic,0)).r,
 		texture(overlaytex,overlayuv).g,
 		texture(overlaytex,overlayuv+vec2(chromatic,0)).b)*.18),1);
-	//fragColor = vec4(texture(buffertex,uv).rgb,1);
+
+	//fragColor = vec4(texture(buffertex,uv).rgb*.5+.25,1);
+	//fragColor = vec4(coldark.g,colgray.g,colwite.g,1);
 })");
 
 	baseentex.loadImage(ImageCache::getFromMemory(BinaryData::base_en_png, BinaryData::base_en_pngSize));
@@ -299,6 +354,13 @@ void main(){
 
 	disptex.loadImage(ImageCache::getFromMemory(BinaryData::disp_png, BinaryData::disp_pngSize));
 	disptex.bind();
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	selecttex.loadImage(ImageCache::getFromMemory(BinaryData::curvelabels_png, BinaryData::curvelabels_pngSize));
+	selecttex.bind();
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -408,43 +470,85 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 	//base
 	baseshader->use();
 	context.extensions.glActiveTexture(GL_TEXTURE0);
-	if(jpmode) basejptex.bind();
-	else baseentex.bind();
+	baseentex.bind();
 	baseshader->setUniform("basetex",0);
-	context.extensions.glActiveTexture(GL_TEXTURE1);
+	if(jpmode) {
+		context.extensions.glActiveTexture(GL_TEXTURE1);
+		basejptex.bind();
+		baseshader->setUniform("basetexjp",1);
+	}
+	context.extensions.glActiveTexture(GL_TEXTURE2);
 	disptex.bind();
-	baseshader->setUniform("disptex",1);
+	baseshader->setUniform("disptex",2);
+	baseshader->setUniform("isjp",jpmode?1.f:0.f);
 	baseshader->setUniform("banner",banneroffset);
 	baseshader->setUniform("texscale",736.f/baseentex.getWidth(),668.f/baseentex.getHeight());
-	baseshader->setUniform("selection",(float)curveselection);
 	baseshader->setUniform("shineprog",websiteht);
 	baseshader->setUniform("hidecube",(float)hidecube[0],(float)hidecube[1]);
 	baseshader->setUniform("randomid",(float)randomid[0],(float)randomid[1],(float)randomid[2],(float)randomid[3]);
 	baseshader->setUniform("randomx",randomdir[0],randomdir[1],randomdir[2],randomdir[3]);
 	baseshader->setUniform("randomy",randomdir[4],randomdir[5],randomdir[6],randomdir[7]);
 	baseshader->setUniform("randomblend",randomblend[0],randomblend[1],randomblend[2],randomblend[3]);
-	baseshader->setUniform("dpi",(float)fmax(scaleddpi*.5f,1.f));
+	if(scaleddpi > 2)
+		baseshader->setUniform("dpi",scaleddpi*.6f);
+	else
+		baseshader->setUniform("dpi",1.f);
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	context.extensions.glDisableVertexAttribArray(coord);
 
+	//curve selection
+	selectshader->use();
+	coord = context.extensions.glGetAttribLocation(selectshader->getProgramID(),"aPos");
+	context.extensions.glEnableVertexAttribArray(coord);
+	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+	context.extensions.glActiveTexture(GL_TEXTURE0);
+	selecttex.bind();
+	selectshader->setUniform("tex",0);
+	selectshader->setUniform("dpi",scaleddpi);
+	selectshader->setUniform("banner",banneroffset);
+	selectshader->setUniform("isjp",jpmode?1.f:0.f);
+	for(int i = 0; i < 5; ++i) {
+		if(i != 0 && curveindex[i] == 0)
+			//selectshader->setUniform("index",-1.f); TODO: enable
+			selectshader->setUniform("index",(float)fmax(i*2-1,0));
+		else
+			selectshader->setUniform("index",(float)curveindex[i]);
+		selectshader->setUniform("pos",(300+20*((i+1)/2))/368.f,(74+100*(i%2))/334.f,20/368.f,(i==0?200:100)/334.f);
+		selectshader->setUniform("select",curveselection==i?2.f:(hover==29013?1.f:0.f));
+		selectshader->setUniform("ratio",i==0?10.f:5.f);
+
+		bool found = false;
+		for(int ii = 0; ii < 4; ++ii) if(randomid[ii] == (i+36)) {
+			selectshader->setUniform("uvoffset",
+				(1-fabs(randomblend[ii]))*randomdir[ii]*.05f,
+				(1-fabs(randomblend[ii]))*randomdir[ii+4]*(i==0?.005f:.01f),
+				randomblend[ii]*.03);
+			found = true;
+			break;
+		}
+		if(!found) selectshader->setUniform("uvoffset",0.f,0.f,0.f);
+
+		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+	}
+
 	//vis line
 	visshader->use();
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 	coord = context.extensions.glGetAttribLocation(visshader->getProgramID(),"aPos");
-	visshader->setUniform("banner",banneroffset);
-	visshader->setUniform("dpi",scaleddpi);
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,3,GL_FLOAT,GL_FALSE,0,0);
 	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*3408, visline, GL_DYNAMIC_DRAW);
+	visshader->setUniform("banner",banneroffset);
+	visshader->setUniform("dpi",scaleddpi);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,1136);
 	context.extensions.glDisableVertexAttribArray(coord);
 	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
 
 	//tension points
 	int curveid = curveindex[curveselection];
-	if(curveid == 0) curveid = fmax(curveselection*2-1,0);
+	if(curveid == 0) curveid = fmax(curveselection*2-1,0); //TODO
 	circleshader->use();
 	coord = context.extensions.glGetAttribLocation(circleshader->getProgramID(),"aPos");
 	context.extensions.glEnableVertexAttribArray(coord);
@@ -566,8 +670,8 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 			break;
 		}
 		circleshader->setUniform("knobpos",(x*uiscales[uiscaleindex])/getWidth()-1,(y*uiscales[uiscaleindex])/getHeight()-1);
-		circleshader->setUniform("colin",1.f,curveindex[i+1]==0?0.f:1.f,0.f);
-		circleshader->setUniform("colout",1.f,curveindex[i+1]==0?1.f:0.f,0.f);
+		circleshader->setUniform("colin",1.f,curveindex[i+1]==0?0.f:1.f,0.f); // TODO
+		circleshader->setUniform("colout",1.f,curveindex[i+1]==0?1.f:0.f,0.f); // TODO
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	}
 	context.extensions.glDisableVertexAttribArray(coord);
@@ -634,13 +738,16 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 }
 void SunBurntAudioProcessorEditor::openGLContextClosing() {
 	baseshader->release();
+	selectshader->release();
 	visshader->release();
 	circleshader->release();
+	panelshader->release();
 	ppshader->release();
 
 	baseentex.release();
 	basejptex.release();
 	disptex.release();
+	selecttex.release();
 	overlaytex.release();
 
 	framebuffer.release();
@@ -658,7 +765,7 @@ void SunBurntAudioProcessorEditor::openGLContextClosing() {
 }
 void SunBurntAudioProcessorEditor::calcvis() {
 	curveiterator iterator;
-	if(curveindex[curveselection] == 0)
+	if(curveindex[curveselection] == 0) //TODO
 		iterator.reset(curves[(int)fmax(curveselection*2-1,0)],568);
 	else
 		iterator.reset(curves[curveindex[curveselection]],568);
@@ -822,6 +929,12 @@ void SunBurntAudioProcessorEditor::recalclabels() {
 	for(int i = 0; i < slidersvisible.size(); ++i) {
 		sliderslabel.push_back(sliders[slidersvisible[i]].displayname+":");
 		if(slidersvisible[i] == 0 || slidersvisible[i] == 2) {
+			/*
+			if((slidersvisible[i] == 0 && sliders[slidersvisible[i]].value <= 0) || (slidersvisible[i] == 2 && sliders[slidersvisible[i]].value >= 1)) {
+				slidersvalue.push_back("Off");
+				continue;
+			}
+			*/
 			int pt = mapToLog10(sliders[slidersvisible[i]].inflate(sliders[slidersvisible[i]].value),20.0f,20000.0f);
 			if(pt < 1000) {
 				slidersvalue.push_back(((String)pt)+"hz");
@@ -848,7 +961,7 @@ void SunBurntAudioProcessorEditor::recalclabels() {
 }
 void SunBurntAudioProcessorEditor::recalcsliders() {
 	int curveid = curveindex[curveselection];
-	if(curveid == 0) curveid = fmax(curveselection*2-1,0);
+	if(curveid == 0) curveid = fmax(curveselection*2-1,0); // TODO
 	slidersvisible.clear();
 	for(int i = 0; i < slidercount; ++i) {
 		for(int s = 0; s < sliders[i].showon.size(); ++s) {
@@ -971,7 +1084,7 @@ void SunBurntAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		} else {
 			int id = (int)(hover*.5)+5;
 			int val = 0;
-			if(curveindex[id] == 0) val = fmax(id*2-1,0);
+			if(curveindex[id] == 0) val = fmax(id*2-1,0); //TODO
 			audioProcessor.apvts.getParameter("curve"+(String)id)->setValueNotifyingHost(val/7.f);
 			audioProcessor.undoManager.setCurrentTransactionName((String)"Changed curve "+(String)id+" to "+audioProcessor.params.curves[val].name);
 			audioProcessor.undoManager.beginNewTransaction();
