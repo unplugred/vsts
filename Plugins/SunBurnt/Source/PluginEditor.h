@@ -70,7 +70,7 @@ uniform vec2 time;
 out vec2 uv;
 void main(){
 	gl_Position = vec4((aPos*pos.zw+pos.xy)*2-1,0,1);
-	gl_Position.y = pow(max(0,letter-time.x+1.5),4)*-0.0002-gl_Position.y;
+	gl_Position.y = pow(max(0,letter-time.x+1.5),4)*-0.0003-gl_Position.y;
 	uv = (aPos*texpos.zw+texpos.xy);
 	uv.y = 1-uv.y;
 })",
@@ -158,7 +158,10 @@ private:
 	bool jpmode = true;
 	std::unique_ptr<OpenGLShaderProgram> baseshader;
 
+	OpenGLTexture selecttex;
 	int curveselection = 0;
+	std::unique_ptr<OpenGLShaderProgram> selectshader;
+
 	std::unique_ptr<OpenGLShaderProgram> visshader;
 
 	int hover = -1;
