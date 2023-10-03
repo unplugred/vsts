@@ -722,22 +722,23 @@ void SunBurntAudioProcessor::resetcurve() {
 AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new SunBurntAudioProcessor(); }
 
 AudioProcessorValueTreeState::ParameterLayout SunBurntAudioProcessor::createParameters() {
+
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"dry"			,1}	,"Dry"					,juce::NormalisableRange<float>( 0.0f	,1.0f	),1.0f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"wet"			,1}	,"wet"					,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.75f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"density"		,1}	,"Density"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"length"		,1},"Length"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.65f	));
-	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"sync"		,1},"Length (quarter note)"									,0.0f	,16.0f	 ,0.0f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"depth"		,1},"Vibrato depth"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.55f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"speed"		,1},"Vibrato speed"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.65f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"dry"			,1}	,"Dry"					,juce::NormalisableRange<float>( 0.0f	,1.0f	),1.0f	,"",AudioProcessorParameter::genericParameter	,topercent		,frompercent	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"wet"			,1}	,"wet"					,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.75f	,"",AudioProcessorParameter::genericParameter	,topercent		,frompercent	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"density"		,1}	,"Density"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"length"		,1},"Length"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.65f	,"",AudioProcessorParameter::genericParameter	,tolength		,fromlength		));
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"sync"		,1},"Length (quarter note)"									,0		,16		 ,0		,""												,toqn			,fromqn			));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"depth"		,1},"Vibrato depth"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.55f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"speed"		,1},"Vibrato speed"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.65f	,"",AudioProcessorParameter::genericParameter	,tospeed		,fromspeed		));
 	parameters.push_back(std::make_unique<AudioParameterChoice	>(ParameterID{"curve1"		,1},"Curve 1",StringArray{"None","High-pass","HP resonance","Low-pass","LP resonance","Pan","Density","Shimmer"},1	));
 	parameters.push_back(std::make_unique<AudioParameterChoice	>(ParameterID{"curve2"		,1},"Curve 2",StringArray{"None","High-pass","HP resonance","Low-pass","LP resonance","Pan","Density","Shimmer"},3	));
 	parameters.push_back(std::make_unique<AudioParameterChoice	>(ParameterID{"curve3"		,1},"Curve 3",StringArray{"None","High-pass","HP resonance","Low-pass","LP resonance","Pan","Density","Shimmer"},5	));
 	parameters.push_back(std::make_unique<AudioParameterChoice	>(ParameterID{"curve4"		,1},"Curve 4",StringArray{"None","High-pass","HP resonance","Low-pass","LP resonance","Pan","Density","Shimmer"},7	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"highpass"	,1},"High-pass"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"highpassres"	,1}	,"HP resonance"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.3f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"lowpass"		,1}	,"Low-Pass"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),1.0f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"lowpassres"	,1},"LP resonance"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.3f	));
-	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"shimmerpitch",1},"Shimmer pitch"											,-24.0f	,24.0f	 ,12.0f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"highpass"	,1},"High-pass"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	,"",AudioProcessorParameter::genericParameter	,tocutoff		,fromcutoff		));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"highpassres"	,1}	,"HP resonance"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.3f	,"",AudioProcessorParameter::genericParameter	,toresonance	,fromresonance	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"lowpass"		,1}	,"Low-Pass"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),1.0f	,"",AudioProcessorParameter::genericParameter	,tocutoff		,fromcutoff		));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"lowpassres"	,1},"LP resonance"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.3f	,"",AudioProcessorParameter::genericParameter	,toresonance	,fromresonance	));
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"shimmerpitch",1},"Shimmer pitch"											,-24	,24		 ,12	,""												,topitch		,frompitch		));
 	return { parameters.begin(), parameters.end() };
 }

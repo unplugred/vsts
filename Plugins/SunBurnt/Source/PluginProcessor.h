@@ -165,6 +165,7 @@ public:
 	void resetcurve();
 
 	AudioProcessorValueTreeState apvts;
+
 	UndoManager undoManager;
 
 	int version = 0;
@@ -214,4 +215,61 @@ private:
 	int lastbpm = 120;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SunBurntAudioProcessor)
+};
+
+static std::function<String(float v, int max)> topercent = [](float v, int max) {
+	return String(v*100.f,1)+"%";
+};
+static std::function<float(const String& s)> frompercent = [](const String& s) {
+	return jlimit(0.f,1.f,s.getFloatValue()*.01f);
+};
+static std::function<String(float v, int max)> tonormalized = [](float v, int max) {
+	return String(v,3);
+};
+static std::function<float(const String& s)> fromnormalized = [](const String& s) {
+	return jlimit(0.f,1.f,s.getFloatValue());
+};
+static std::function<String(float v, int max)> tolength = [](float v, int max) {
+	return String(round(pow(v,2)*5900+100))+"ms";
+};
+static std::function<float(const String& s)> fromlength = [](const String& s) {
+	float val = s.getFloatValue();
+	if((s.contains("s") && !s.contains("ms")) || (!s.contains("s") && val <= 6))
+		val *= 1000;
+	return jlimit(0.f,1.f,(float)sqrt((val-100)/5900.f));
+};
+static std::function<String(int v, int max)> toqn = [](int v, int max) {
+	return String(v)+"qn";
+};
+static std::function<int(const String& s)> fromqn = [](const String& s) {
+	return jlimit(0,16,s.getIntValue());
+};
+static std::function<String(float v, int max)> tospeed = [](float v, int max) {
+	return String(pow(v*2+.2f,2),1)+"hz";
+};
+static std::function<float(const String& s)> fromspeed = [](const String& s) {
+	return jlimit(0.f,1.f,((float)sqrt(s.getFloatValue())-.2f)*.5f);
+};
+static std::function<String(float v, int max)> tocutoff = [](float v, int max) {
+	return String(round(mapToLog10(v,20.f,20000.f)))+"hz";
+};
+static std::function<float(const String& s)> fromcutoff = [](const String& s) {
+	float val = s.getFloatValue();
+	if((s.contains("k")) || (!s.contains("hz") && val < 20))
+		val *= 1000;
+	return jlimit(0.f,1.f,mapFromLog10(val,20.f,20000.f));
+};
+static std::function<String(float v, int max)> toresonance = [](float v, int max) {
+	return String(mapToLog10(v,.1f,40.f),1);
+};
+static std::function<float(const String& s)> fromresonance = [](const String& s) {
+	return jlimit(0.f,1.f,mapFromLog10(s.getFloatValue(),.1f,40.f));
+};
+static std::function<String(int v, int max)> topitch = [](int v, int max) {
+	if(max < 12)
+		return String(v)+"st";
+	return String(v)+" semitones";
+};
+static std::function<int(const String& s)> frompitch = [](const String& s) {
+	return jlimit(-24,24,s.getIntValue());
 };
