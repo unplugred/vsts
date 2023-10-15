@@ -7,6 +7,7 @@ struct knob {
 	int x = 0;
 	int y = 0;
 	float value = 0.5f;
+	String interpolatedvalue;
 	String id;
 	String name;
 	float minimumvalue = 0.f;
@@ -34,6 +35,7 @@ public:
 	void timerCallback() override;
 
 	virtual void parameterChanged(const String& parameterID, float newValue);
+	void recalclabels();
 	void mouseMove(const MouseEvent& event) override;
 	void mouseExit(const MouseEvent& event) override;
 	void mouseDown(const MouseEvent& event) override;
@@ -58,6 +60,7 @@ private:
 
 	float vis = 0;
 	OpenGLFrameBuffer framebuffer;
+	bool clearframebuffer = true;
 	std::unique_ptr<OpenGLShaderProgram> feedbackshader;
 
 	float credits = 0;
@@ -75,10 +78,8 @@ private:
 	std::unique_ptr<OpenGLShaderProgram> toggleshader;
 
 	OpenGLTexture texttex;
+	char textindex[21] = { '0','1','2','3','4','5','6','7','8','9','k','H','z','O','f','f','m','s','d','B','-' };
 	std::unique_ptr<OpenGLShaderProgram> textshader;
-
-	int freqfreq = 20;
-	int lowpfreq = 150;
 
 #ifdef BANNER
 	float bannerx = 0;
@@ -88,6 +89,6 @@ private:
 	float banneroffset = 0;
 
 	float dpi = 1;
-	
+
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (RedBassAudioProcessorEditor)
 };

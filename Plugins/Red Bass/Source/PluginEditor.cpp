@@ -27,8 +27,7 @@ RedBassAudioProcessorEditor::RedBassAudioProcessorEditor (RedBassAudioProcessor&
 	knobs[5].value = params.monitorsmooth.getTargetValue() >.5;
 	audioProcessor.apvts.addParameterListener("monitor",this);
 
-	freqfreq = audioProcessor.calculatefrequency(knobs[0].value);
-	lowpfreq = audioProcessor.calculatelowpass(knobs[4].value);
+	recalclabels();
 
 #ifdef BANNER
 	setSize(322,408+21);
@@ -105,7 +104,7 @@ void main(){
 				fragColor = vec4(vec3((mod(uv.x*322,2)+mod(uv.y*383,2))>2.9?0.2:0.0),1);
 			}
 		} else {
-			fragColor = vec4(vis,vis,vis,1);
+			fragColor = vec4(vec3(min(.75,vis)),1);
 		}
 	} else if(c.g > .5) {
 		fragColor = vec4(1,1,1,1);
@@ -174,11 +173,10 @@ in vec2 aPos;
 uniform vec2 size;
 uniform vec2 pos;
 uniform int letter;
-uniform int length;
 out vec2 uv;
 void main(){
-	gl_Position = vec4((aPos*size*vec2(length,1)+pos)*2-1,0,1);
-	uv = vec2((aPos.x*length+letter)*.0625,aPos.y);
+	gl_Position = vec4((aPos*size+pos)*2-1,0,1);
+	uv = vec2((aPos.x+letter)/21,aPos.y);
 })",
 //TEXT FRAG
 R"(#version 150 core
@@ -269,6 +267,7 @@ void RedBassAudioProcessorEditor::renderOpenGL() {
 		glBindTexture(GL_TEXTURE_2D, framebuffer.getTextureID());
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		clearframebuffer = true;
 	}
 
 	context.extensions.glBindBuffer(GL_ARRAY_BUFFER, arraybuffer);
@@ -276,6 +275,11 @@ void RedBassAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
 
 	framebuffer.makeCurrentRenderingTarget();
+	if(clearframebuffer) {
+		framebuffer.clear(Colours::black);
+		clearframebuffer = false;
+	}
+
 	feedbackshader->use();
 	context.extensions.glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, framebuffer.getTextureID());
@@ -312,7 +316,7 @@ void RedBassAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	for (int i = 0; i < knobcount; i++) {
 		if(i != 5) {
-			knobshader->setUniform("ext",(i==0||i==4)?.5f:1.f);
+			knobshader->setUniform("ext",(i==6||i==7)?1.f:.5f);
 			knobshader->setUniform("knobpos",((float)knobs[i].x*2)/getWidth(),2-((float)knobs[i].y*2)/getHeight());
 			knobshader->setUniform("knobrot",(float)fmod((knobs[i].value-.5f)*.748f,1)*-6.2831853072f);
 			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
@@ -335,37 +339,27 @@ void RedBassAudioProcessorEditor::renderOpenGL() {
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	context.extensions.glDisableVertexAttribArray(coord);
 
-	for(int i = 0; i < 6; i += 4) {
-		int val = i==0?freqfreq:lowpfreq;
-		int tl = 3;
-		int ext = 2;
-		if (val >= 10000) {
-			val = roundFloatToInt(val*.001f);
-			ext = 3;
-			if(knobs[i].value >= 1) tl = 1;
-		} else if(val >= 1000) tl = 5;
-		  else if(val >= 100 ) tl = 4;
-
-		textshader->use();
-		context.extensions.glActiveTexture(GL_TEXTURE0);
-		texttex.bind();
-		textshader->setUniform("tex",0);
-		coord = context.extensions.glGetAttribLocation(textshader->getProgramID(),"aPos");
-		context.extensions.glEnableVertexAttribArray(coord);
-		context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
-		for(int t = 0; t < tl; t++) {
+	textshader->use();
+	context.extensions.glActiveTexture(GL_TEXTURE0);
+	texttex.bind();
+	textshader->setUniform("tex",0);
+	textshader->setUniform("size",8.f/getWidth(),16.f/getHeight());
+	coord = context.extensions.glGetAttribLocation(textshader->getProgramID(),"aPos");
+	context.extensions.glEnableVertexAttribArray(coord);
+	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+	for(int i = 0; i < 5; ++i) {
+		int len = knobs[i].interpolatedvalue.length();
+		for(int t = 0; t < len; ++t) {
 			int n = 0;
-			if(tl == 1) n = 13;
-			else if(t == 0) n = ext==3?10:11;
-			else n = fmod(floorf(val*powf(.1f,t-1)),10);
-			textshader->setUniform("pos",((float)knobs[i].x-8*t+4*(tl-ext-1))/getWidth(),1-((float)knobs[i].y+8)/getHeight());
-			textshader->setUniform("size",8.f/getWidth(),16.f/getHeight());
+			for(n = 0; n < 21; ++n)
+				if(textindex[n] == knobs[i].interpolatedvalue[t])
+					break;
+			textshader->setUniform("pos",((float)knobs[i].x+8*t-4*len)/getWidth(),1-((float)knobs[i].y+8)/getHeight());
 			textshader->setUniform("letter",n);
-			textshader->setUniform("length",t==0?ext:1);
 			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 		}
-		context.extensions.glDisableVertexAttribArray(coord);
 	}
+	context.extensions.glDisableVertexAttribArray(coord);
 
 #ifdef BANNER
 	bannershader->use();
@@ -435,8 +429,31 @@ void RedBassAudioProcessorEditor::timerCallback() {
 void RedBassAudioProcessorEditor::parameterChanged(const String& parameterID, float newValue) {
 	for(int i = 0; i < knobcount; i++) if(knobs[i].id == parameterID) {
 		knobs[i].value = newValue;
-		     if(i == 0) freqfreq = audioProcessor.calculatefrequency(newValue);
-		else if(i == 4) lowpfreq = audioProcessor.calculatelowpass  (newValue);
+		if(i <= 4) recalclabels();
+		return;
+	}
+}
+void RedBassAudioProcessorEditor::recalclabels() {
+	knobs[0].interpolatedvalue = (String)round(audioProcessor.calculatefrequency(knobs[0].value))+"Hz";
+
+	int val = round(Decibels::gainToDecibels(fmax(.000001f,audioProcessor.calculatethreshold(knobs[1].value))));
+	if(val <= -96)
+		knobs[1].interpolatedvalue = "Off";
+	else
+		knobs[1].interpolatedvalue = (String)val+"dB";
+
+	knobs[2].interpolatedvalue = (String)round(audioProcessor.calculateattack(knobs[2].value))+"ms";
+
+	knobs[3].interpolatedvalue = (String)round(audioProcessor.calculaterelease(knobs[3].value))+"ms";
+
+	if(knobs[4].value >= 1) {
+		knobs[4].interpolatedvalue = "Off";
+	} else {
+		val = audioProcessor.calculatelowpass(knobs[4].value);
+		if(val >= 10000)
+			knobs[4].interpolatedvalue = (String)round(val*.001f)+"kHz";
+		else
+			knobs[4].interpolatedvalue = (String)round(val)+"Hz";
 	}
 }
 void RedBassAudioProcessorEditor::mouseMove(const MouseEvent& event) {

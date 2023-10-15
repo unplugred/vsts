@@ -101,7 +101,7 @@ public:
 	Atomic<float> rmsadd = 0;
 	Atomic<int> rmscount = 0;
 
-	int version = 2;
+	int version = 3;
 	const int paramcount = 7;
 
 	pluginpreset state;
