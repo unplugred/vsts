@@ -189,7 +189,7 @@ double RedBassAudioProcessor::calculatefrequency(double value) {
 	return mapToLog10(value,20.0,100.0);
 }
 double RedBassAudioProcessor::calculatethreshold(double value) {
-	return pow(value,2)*.7f;
+	return pow(value,2)*.7079f;
 }
 
 bool RedBassAudioProcessor::hasEditor() const { return true; }
@@ -234,6 +234,8 @@ void RedBassAudioProcessor::setStateInformation (const void* data, int sizeInByt
 				presets[i].name = token;
 				for(int v = 0; v < paramcount; v++) {
 					std::getline(ss, token, '\n');
+					float val = std::stof(token);
+					if(saveversion <= 2 && params.pots[v].id == "threshold") val = pow(pow(val,2)*7/7.079,.5);
 					presets[i].values[v] = std::stof(token);
 				}
 			}
@@ -244,7 +246,10 @@ void RedBassAudioProcessor::setStateInformation (const void* data, int sizeInByt
 				if(i == 5) params.monitor = std::stof(token) > .5 ? 1 : 0;
 				else {
 					float val = std::stof(token);
-					if(saveversion <= 0 && params.pots[ii].id == "threshold") val = pow(val/.7,.5);
+					if(params.pots[ii].id == "threshold") {
+						if(saveversion <= 0) val = pow(val/.7,.5);
+						else val = pow(pow(val,2)*7/7.079,.5);
+					}
 					presets[currentpreset].values[ii] = val;
 				}
 			}
