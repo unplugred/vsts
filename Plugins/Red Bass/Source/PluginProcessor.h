@@ -127,3 +127,76 @@ private:
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (RedBassAudioProcessor)
 };
+
+static std::function<String(float v, int max)> tofreq = [](float v, int max) {
+	return String(round(mapToLog10(v,20.f,100.f)))+"hz";
+};
+static std::function<float(const String& s)> fromfreq = [](const String& s) {
+	float val = s.getFloatValue();
+	if(val <= 1)
+		return jlimit(0.f,1.f,val);
+	return jlimit(0.f,1.f,mapFromLog10(val,20.f,100.f));
+};
+static std::function<String(float v, int max)> tothreshold = [](float v, int max) {
+	float val = Decibels::gainToDecibels(fmax(.000001f,pow(v,2)*.7079f));
+	if(val <= -96)
+		return (String)"off";
+	return String(val,2)+"db";
+};
+static std::function<float(const String& s)> fromthreshold = [](const String& s) {
+	if(s.containsIgnoreCase("f"))
+		return 0.f;
+	float val = s.getFloatValue();
+	if(val >= 0)
+		return jlimit(0.f,1.f,val);
+	return jlimit(0.f,1.f,(float)sqrt(Decibels::decibelsToGain(val)/.7079f));
+};
+static std::function<String(float v, int max)> toattack = [](float v, int max) {
+	return String(round(pow(v*15.2896119631f+7.0710678119f,2)))+"ms";
+};
+static std::function<float(const String& s)> fromattack = [](const String& s) {
+	float val = s.getFloatValue();
+	if(val <= 1)
+		return jlimit(0.f,1.f,val);
+	return jlimit(0.f,1.f,((float)sqrt(val)-7.0710678119f)/15.2896119631f);
+};
+static std::function<String(float v, int max)> torelease = [](float v, int max) {
+	return String(round(pow(v*26.4823847482f+12.2474487139f,2)))+"ms";
+};
+static std::function<float(const String& s)> fromrelease = [](const String& s) {
+	float val = s.getFloatValue();
+	if(val <= 1)
+		return jlimit(0.f,1.f,val);
+	return jlimit(0.f,1.f,((float)sqrt(val)-12.2474487139f)/26.4823847482f);
+};
+static std::function<String(float v, int max)> tocutoff = [](float v, int max) {
+	if(v >= 1)
+		return (String)"off";
+	return String(round(mapToLog10(v,100.f,20000.f)))+"hz";
+};
+static std::function<float(const String& s)> fromcutoff = [](const String& s) {
+	if(s.containsIgnoreCase("f"))
+		return 1.f;
+	float val = s.getFloatValue();
+	if(!s.containsIgnoreCase("k") && !s.containsIgnoreCase("hz") && val <= 1)
+		return jlimit(0.f,1.f,val);
+	if((s.containsIgnoreCase("k")) || (!s.containsIgnoreCase("hz") && val < 20))
+		val *= 1000;
+	return jlimit(0.f,1.f,mapFromLog10(val,100.f,20000.f));
+};
+static std::function<String(bool v, int max)> tobool = [](bool v, int max) {
+	return (String)(v?"on":"off");
+};
+static std::function<bool(const String& s)> frombool = [](const String& s) {
+	if(s.containsIgnoreCase("n")) return true;
+	if(s.containsIgnoreCase("f")) return false;
+	if(s.containsIgnoreCase("1")) return true;
+	if(s.containsIgnoreCase("0")) return false;
+	return true;
+};
+static std::function<String(float v, int max)> tonormalized = [](float v, int max) {
+	return String(v,3);
+};
+static std::function<float(const String& s)> fromnormalized = [](const String& s) {
+	return jlimit(0.f,1.f,s.getFloatValue());
+};

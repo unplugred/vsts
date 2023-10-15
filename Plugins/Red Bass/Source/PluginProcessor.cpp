@@ -302,13 +302,13 @@ AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new RedBassAudioProc
 
 AudioProcessorValueTreeState::ParameterLayout RedBassAudioProcessor::createParameters() {
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("freq"		,"Frequency"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.58f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("threshold"	,"Threshold"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.02f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("attack"		,"Attack"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.17f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("release"		,"Release"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.18f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("lowpass"		,"Sidechain lowpass",juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	));
-	parameters.push_back(std::make_unique<AudioParameterBool	>("monitor"		,"Monitor sidechain"												 ,false	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("dry"			,"Dry"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),1.0f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("wet"			,"Wet"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.18f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"freq"		,1},"Frequency"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.58f	,"",AudioProcessorParameter::genericParameter	,tofreq			,fromfreq		));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"threshold"	,1},"Threshold"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.02f	,"",AudioProcessorParameter::genericParameter	,tothreshold	,fromthreshold	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"attack"		,1},"Attack"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.17f	,"",AudioProcessorParameter::genericParameter	,toattack		,fromattack		));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"release"		,1},"Release"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.18f	,"",AudioProcessorParameter::genericParameter	,torelease		,fromrelease	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"lowpass"		,1},"Sidechain lowpass"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	,"",AudioProcessorParameter::genericParameter	,tocutoff		,fromcutoff		));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"monitor"		,1},"Monitor sidechain"													 ,false	,""												,tobool			,frombool		));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"dry"			,1},"Dry"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),1.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"wet"			,1},"Wet"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.18f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
 	return { parameters.begin(), parameters.end() };
 }

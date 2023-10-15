@@ -1,4 +1,3 @@
-//bump
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
@@ -305,7 +304,7 @@ void CRMBLAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 				double thresh = fmin(Decibels::decibelsToGain(-1)/fmax(fabs(delayProcessData[channel][sample]),.000001),1);
 				if(thresh < damplimiter.v_current[channel])
 					damplimiter.v_smoothtime = .01;
-				else 
+				else
 					damplimiter.v_smoothtime = .1;
 				delayProcessData[channel][sample] = fmax(fmin(delayProcessData[channel][sample]*damplimiter.nextvalue(thresh,channel),1.f),-1.f);
 
@@ -625,20 +624,20 @@ AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new CRMBLAudioProces
 
 AudioProcessorValueTreeState::ParameterLayout CRMBLAudioProcessor::createParameters() {
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"time"			,1},"Time (MS)"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.32f	));
-	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"sync"			,1},"Time (Eighth note)"								,0.0f	,16.0f	 ,0.0f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"modamp"			,1},"Mod Amount"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.15f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"modfreq"			,1},"Mod Frequency"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"pingpong"		,1},"Ping Pong"			,juce::NormalisableRange<float>( -1.0f	,1.0f	),0.0f	));
-	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"pingpostfeedback",1},"Ping Post Feedback"												 ,true	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"feedback"		,1},"Feedback"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"reverse"			,1},"Reverse"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"chew"			,1},"Chew"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"pitch"			,1},"Pitch"				,juce::NormalisableRange<float>( -24.0f	,24.0f	),0.0f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"lowpass"			,1},"Lowpass"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.3f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"wet"				,1},"Dry/Wet"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.4f	));
-	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"hold"			,1},"Hold"																 ,false	));
-	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"randomize"		,1},"Randomize"															 ,false	));
-	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"oversampling"	,1},"Over-Sampling"														 ,true	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"time"			,1},"Time (MS)"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.32f	,"",AudioProcessorParameter::genericParameter	,tolength		,fromlength		));
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"sync"			,1},"Time (Eighth note)"								,0		,16		 ,0		,""												,toen			,fromen			));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"modamp"			,1},"Mod Amount"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.15f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"modfreq"			,1},"Mod Frequency"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	,"",AudioProcessorParameter::genericParameter	,tospeed		,fromspeed		));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"pingpong"		,1},"Ping Pong"			,juce::NormalisableRange<float>( -1.0f	,1.0f	),0.0f	,"",AudioProcessorParameter::genericParameter	,tocenter		,fromcenter		));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"pingpostfeedback",1},"Ping Post Feedback"												 ,true	,""												,topost			,frompost		));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"feedback"		,1},"Feedback"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"reverse"			,1},"Reverse"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"chew"			,1},"Chew"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"pitch"			,1},"Pitch"				,juce::NormalisableRange<float>( -24	,24		),0		,"",AudioProcessorParameter::genericParameter	,topitch		,frompitch		));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"lowpass"			,1},"Lowpass"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.3f	,"",AudioProcessorParameter::genericParameter	,tocutoff		,fromcutoff		));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"wet"				,1},"Dry/Wet"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.4f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"hold"			,1},"Hold"																 ,false	,""												,tobool			,frombool		));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"randomize"		,1},"Randomize"															 ,false	,""												,tobool			,frombool		));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"oversampling"	,1},"Over-Sampling"														 ,true	,""												,tobool			,frombool		));
 	return { parameters.begin(), parameters.end() };
 }

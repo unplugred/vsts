@@ -216,7 +216,7 @@ AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new PNCHAudioProcess
 
 AudioProcessorValueTreeState::ParameterLayout PNCHAudioProcessor::createParameters() {
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("amount"		,"Amount"		,juce::NormalisableRange<float>(0.0f,1.0f)	,0.0f	));
-	parameters.push_back(std::make_unique<AudioParameterBool	>("oversampling","Over-Sampling"											,true	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"amount"		,1},"Amount"		,juce::NormalisableRange<float>(0.0f,1.0f)	,0.0f	));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"oversampling",1},"Over-Sampling"												,true	));
 	return { parameters.begin(), parameters.end() };
 }
