@@ -301,14 +301,14 @@ AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new ClickBoxAudioPro
 
 AudioProcessorValueTreeState::ParameterLayout ClickBoxAudioProcessor::createParameters() {
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("x"			,"X"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("y"			,"Y"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("intensity"	,"Intensity"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("amount"		,"Amount"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("stereo"		,"Stereo"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.28f	));
-	parameters.push_back(std::make_unique<AudioParameterBool	>("sidechain"	,"Side-chain to dry"										 ,false	));
-	parameters.push_back(std::make_unique<AudioParameterBool	>("dry"			,"Dry out"													 ,true	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("auto"		,"Auto"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	));
-	parameters.push_back(std::make_unique<AudioParameterBool	>("override"	,"Override"													 ,false	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"x"			,1},"X"					,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"y"			,1},"Y"					,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"intensity"	,1},"Intensity"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"amount"		,1},"Amount"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"stereo"		,1},"Stereo"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.28f	));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"sidechain"	,1},"Side-chain to dry"													 ,false	));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"dry"			,1},"Dry out"															 ,true	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"auto"		,1},"Auto"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"override"	,1},"Override"															 ,false	));
 	return { parameters.begin(), parameters.end() };
 }

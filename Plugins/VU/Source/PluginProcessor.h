@@ -98,3 +98,22 @@ private:
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (VuAudioProcessor)
 };
+
+static std::function<String(int v, int max)> todb = [](int v, int max) {
+	return String(v)+"db";
+};
+static std::function<int(const String& s)> fromdb = [](const String& s) {
+	return jlimit(-24,-6,s.getIntValue());
+};
+static std::function<String(bool v, int max)> tostereo = [](bool v, int max) {
+	return v?"stereo":"mono";
+};
+static std::function<bool(const String& s)> fromstereo = [](const String& s) {
+	if(s.containsIgnoreCase("s")) return true;
+	if(s.containsIgnoreCase("m")) return false;
+	if(s.containsIgnoreCase("n")) return true;
+	if(s.containsIgnoreCase("f")) return false;
+	if(s.containsIgnoreCase("1")) return true;
+	if(s.containsIgnoreCase("0")) return false;
+	return true;
+};

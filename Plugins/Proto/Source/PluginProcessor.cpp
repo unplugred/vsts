@@ -305,12 +305,12 @@ AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new ProtoAudioProces
 
 AudioProcessorValueTreeState::ParameterLayout ProtoAudioProcessor::createParameters() {
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("freq"		,"Frequency"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.32f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("fat"			,"Fatness"		,juce::NormalisableRange<float>( -20.0f	,20.0f	),0.0f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("drive"		,"Drive"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("dry"			,"Dry"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("stereo"		,"Stereo"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.37f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>("gain"		,"Out Gain"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.4f	));
-	parameters.push_back(std::make_unique<AudioParameterBool	>("oversampling","Over-Sampling"												 ,true	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"freq"		,1},"Frequency"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.32f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"fat"			,1},"Fatness"		,juce::NormalisableRange<float>( -20.0f	,20.0f	),0.0f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"drive"		,1},"Drive"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"dry"			,1},"Dry"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"stereo"		,1},"Stereo"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.37f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"gain"		,1},"Out Gain"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.4f	));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"oversampling",1},"Over-Sampling"													 ,true	));
 	return { parameters.begin(), parameters.end() };
 }

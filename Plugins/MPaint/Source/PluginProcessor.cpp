@@ -224,7 +224,7 @@ AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new MPaintAudioProce
 
 AudioProcessorValueTreeState::ParameterLayout MPaintAudioProcessor::createParameters() {
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
-	parameters.push_back(std::make_unique<AudioParameterInt	>("sound","Sound"		, 0, 14, 0));
-	parameters.push_back(std::make_unique<AudioParameterBool>("limit","Limit Voices", true));
+	parameters.push_back(std::make_unique<AudioParameterInt	>(ParameterID{"sound",1},"Sound"		,0	,14	,0		,""	,tosound	,fromsound	));
+	parameters.push_back(std::make_unique<AudioParameterBool>(ParameterID{"limit",1},"Limit Voices"			,true	,""	,tobool		,frombool	));
 	return { parameters.begin(), parameters.end() };
 }

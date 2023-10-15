@@ -162,3 +162,99 @@ private:
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (CRMBLAudioProcessor)
 };
+
+static std::function<String(float v, int max)> tolength = [](float v, int max) {
+	return String(round((pow(v,2)*(MAX_DLY-MIN_DLY)+MIN_DLY)*1000))+"ms";
+};
+static std::function<float(const String& s)> fromlength = [](const String& s) {
+	float val = s.getFloatValue();
+	if(!s.containsIgnoreCase("s") && val <= 1)
+		return jlimit(0.f,1.f,val);
+	if((s.containsIgnoreCase("s") && !s.containsIgnoreCase("ms")) || (!s.containsIgnoreCase("s") && val <= MAX_DLY))
+		val *= 1000;
+	return jlimit(0.f,1.f,(float)sqrt((val*.001f-MIN_DLY)/(MAX_DLY-MIN_DLY)));
+};
+static std::function<String(int v, int max)> toen = [](int v, int max) {
+	if(v == 0)
+		return (String)"off";
+	return String(v)+"en";
+};
+static std::function<int(const String& s)> fromen = [](const String& s) {
+	if(s.containsIgnoreCase("f"))
+		return 0;
+	return jlimit(0,16,s.getIntValue());
+};
+static std::function<String(float v, int max)> tonormalized = [](float v, int max) {
+	return String(v,3);
+};
+static std::function<float(const String& s)> fromnormalized = [](const String& s) {
+	return jlimit(0.f,1.f,s.getFloatValue());
+};
+static std::function<String(float v, int max)> tospeed = [](float v, int max) {
+	return String(pow(v*1.4+.15f,2),1)+"hz";
+};
+static std::function<float(const String& s)> fromspeed = [](const String& s) {
+	float val = s.getFloatValue();
+	if(!s.containsIgnoreCase("hz") && val <= 1)
+		return jlimit(0.f,1.f,val);
+	return jlimit(0.f,1.f,((float)sqrt(val)-.15f)*1.4f);
+};
+static std::function<String(float v, int max)> tocenter = [](float v, int max) {
+	if(v == 0)
+		return (String)"off";
+	return String(v,3);
+};
+static std::function<float(const String& s)> fromcenter = [](const String& s) {
+	if(s.containsIgnoreCase("f"))
+		return 0.f;
+	return jlimit(-1.f,1.f,s.getFloatValue());
+};
+static std::function<String(bool v, int max)> topost = [](bool v, int max) {
+	return v?"post":"pre";
+};
+static std::function<bool(const String& s)> frompost = [](const String& s) {
+	if(s.containsIgnoreCase("po") || s.containsIgnoreCase("s")) return true;
+	if(s.containsIgnoreCase("r")) return false;
+	if(s.containsIgnoreCase("n")) return true;
+	if(s.containsIgnoreCase("f")) return false;
+	if(s.containsIgnoreCase("1")) return true;
+	if(s.containsIgnoreCase("0")) return false;
+	return true;
+};
+static std::function<String(float v, int max)> topitch = [](float v, int max) {
+	if(v == 0)
+		return (String)"off";
+	if(max < 12)
+		return String(v)+"st";
+	return String(v)+" semitones";
+};
+static std::function<float(const String& s)> frompitch = [](const String& s) {
+	if(s.containsIgnoreCase("f"))
+		return 0.f;
+	return jlimit(-24.f,24.f,s.getFloatValue());
+};
+static std::function<String(float v, int max)> tocutoff = [](float v, int max) {
+	if(v <= 0)
+		return (String)"off";
+	return String(round(mapToLog10(1-(double)v,250.0,20000.0)))+"hz";
+};
+static std::function<float(const String& s)> fromcutoff = [](const String& s) {
+	if(s.containsIgnoreCase("f"))
+		return 0.f;
+	float val = s.getFloatValue();
+	if(!s.containsIgnoreCase("k") && !s.containsIgnoreCase("hz") && val <= 1)
+		return jlimit(0.f,1.f,val);
+	if((s.containsIgnoreCase("k")) || (!s.containsIgnoreCase("hz") && val < 20))
+		val *= 1000;
+	return jlimit(0.f,1.f,1-mapFromLog10(val,250.f,20000.f));
+};
+static std::function<String(bool v, int max)> tobool = [](bool v, int max) {
+	return v?"on":"off";
+};
+static std::function<bool(const String& s)> frombool = [](const String& s) {
+	if(s.containsIgnoreCase("n")) return true;
+	if(s.containsIgnoreCase("f")) return false;
+	if(s.containsIgnoreCase("1")) return true;
+	if(s.containsIgnoreCase("0")) return false;
+	return true;
+};

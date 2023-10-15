@@ -234,14 +234,18 @@ static std::function<String(float v, int max)> tolength = [](float v, int max) {
 };
 static std::function<float(const String& s)> fromlength = [](const String& s) {
 	float val = s.getFloatValue();
-	if((s.contains("s") && !s.contains("ms")) || (!s.contains("s") && val <= 6))
+	if((s.containsIgnoreCase("s") && !s.containsIgnoreCase("ms")) || (!s.containsIgnoreCase("s") && val <= 6))
 		val *= 1000;
 	return jlimit(0.f,1.f,(float)sqrt((val-100)/5900.f));
 };
 static std::function<String(int v, int max)> toqn = [](int v, int max) {
+	if(v <= 0)
+		return (String)"off";
 	return String(v)+"qn";
 };
 static std::function<int(const String& s)> fromqn = [](const String& s) {
+	if(s.containsIgnoreCase("f"))
+		return 0;
 	return jlimit(0,16,s.getIntValue());
 };
 static std::function<String(float v, int max)> tospeed = [](float v, int max) {
@@ -255,7 +259,7 @@ static std::function<String(float v, int max)> tocutoff = [](float v, int max) {
 };
 static std::function<float(const String& s)> fromcutoff = [](const String& s) {
 	float val = s.getFloatValue();
-	if((s.contains("k")) || (!s.contains("hz") && val < 20))
+	if((s.containsIgnoreCase("k")) || (!s.containsIgnoreCase("hz") && val < 20))
 		val *= 1000;
 	return jlimit(0.f,1.f,mapFromLog10(val,20.f,20000.f));
 };
@@ -266,10 +270,14 @@ static std::function<float(const String& s)> fromresonance = [](const String& s)
 	return jlimit(0.f,1.f,mapFromLog10(s.getFloatValue(),.1f,40.f));
 };
 static std::function<String(int v, int max)> topitch = [](int v, int max) {
+	if(v == 0)
+		return (String)"off";
 	if(max < 12)
 		return String(v)+"st";
 	return String(v)+" semitones";
 };
 static std::function<int(const String& s)> frompitch = [](const String& s) {
+	if(s.containsIgnoreCase("f"))
+		return 0;
 	return jlimit(-24,24,s.getIntValue());
 };

@@ -185,8 +185,8 @@ AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new VuAudioProcessor
 
 AudioProcessorValueTreeState::ParameterLayout VuAudioProcessor::createParameters() {
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
-	parameters.push_back(std::make_unique<AudioParameterInt>("nominal","Nominal",-24,-6,-18));
-	parameters.push_back(std::make_unique<AudioParameterInt>("damping","Damping",1,9,5));
-	parameters.push_back(std::make_unique<AudioParameterBool>("stereo","Stereo",false));
-	return{parameters.begin(),parameters.end()};
+	parameters.push_back(std::make_unique<AudioParameterInt	>(ParameterID{"nominal"	,1},"Nominal"	,-24,-6	,-18	,"",todb		,fromdb		));
+	parameters.push_back(std::make_unique<AudioParameterInt	>(ParameterID{"damping"	,1},"Damping"	,1	,9	,5								));
+	parameters.push_back(std::make_unique<AudioParameterBool>(ParameterID{"stereo"	,1},"Stereo"			,false	,"",tostereo	,fromstereo	));
+	return { parameters.begin(), parameters.end() };
 }
