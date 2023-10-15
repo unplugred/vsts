@@ -128,6 +128,60 @@ case $REPLY in
 		vn=SunBurnt
 		vs=SunBurnt
 		;;
+	ev)
+		cmake --build ${vf} --config ${vm} --target PlasticFuneral_All
+		cmake --build ${vf} --config ${vm} --target PlasticFuneral_CLAP
+		cmake --build ${vf} --config ${vm} --target VU_All
+		cmake --build ${vf} --config ${vm} --target VU_CLAP
+		cmake --build ${vf} --config ${vm} --target ClickBox_All
+		cmake --build ${vf} --config ${vm} --target ClickBox_CLAP
+		cmake --build ${vf} --config ${vm} --target Pisstortion_All
+		cmake --build ${vf} --config ${vm} --target Pisstortion_CLAP
+		cmake --build ${vf} --config ${vm} --target PNCH_All
+		cmake --build ${vf} --config ${vm} --target PNCH_CLAP
+		cmake --build ${vf} --config ${vm} --target Proto_All
+		cmake --build ${vf} --config ${vm} --target Proto_CLAP
+		cmake --build ${vf} --config ${vm} --target RedBass_All
+		cmake --build ${vf} --config ${vm} --target RedBass_CLAP
+		cmake --build ${vf} --config ${vm} --target MPaint_All
+		cmake --build ${vf} --config ${vm} --target MPaint_CLAP
+		cmake --build ${vf} --config ${vm} --target CRMBL_All
+		cmake --build ${vf} --config ${vm} --target CRMBL_CLAP
+		cmake --build ${vf} --config ${vm} --target Prisma_All
+		cmake --build ${vf} --config ${vm} --target Prisma_CLAP
+		cmake --build ${vf} --config ${vm} --target SunBurnt_All
+		cmake --build ${vf} --config ${vm} --target SunBurnt_CLAP
+		if [[ "$OSTYPE" =~ ^msys ]] || [[ "$OSTYPE" =~ ^cygwin ]]
+		then
+			cp "./${vf}/Plugins/Plastic Funeral/PlasticFuneral_artefacts/${vm}/CLAP/Plastic Funeral.clap" "./Setup/${vf}/paid/Plastic Funeral.clap"
+			cp "./${vf}/Plugins/VU/VU_artefacts/${vm}/CLAP/VU.clap" "./Setup/${vf}/paid/VU.clap"
+			cp "./${vf}/Plugins/VU/VU_artefacts/${vm}/Standalone/VU.exe" "./Setup/${vf}/paid/VU.exe"
+			cp "./${vf}/Plugins/ClickBox/ClickBox_artefacts/${vm}/CLAP/ClickBox.clap" "./Setup/${vf}/free/ClickBox.clap"
+			cp "./${vf}/Plugins/Pisstortion/Pisstortion_artefacts/${vm}/CLAP/Pisstortion.clap" "./Setup/${vf}/paid/Pisstortion.clap"
+			cp "./${vf}/Plugins/PNCH/PNCH_artefacts/${vm}/CLAP/PNCH.clap" "./Setup/${vf}/paid/PNCH.clap"
+			cp "./${vf}/Plugins/Red Bass/RedBass_artefacts/${vm}/CLAP/Red Bass.clap" "./Setup/${vf}/paid/Red Bass.clap"
+			cp "./${vf}/Plugins/MPaint/MPaint_artefacts/${vm}/CLAP/MPaint.clap" "./Setup/${vf}/free/MPaint.clap"
+			cp "./${vf}/Plugins/MPaint/MPaint_artefacts/${vm}/Standalone/MPaint.exe" "./Setup/${vf}/free/MPaint.exe"
+			cp "./${vf}/Plugins/CRMBL/CRMBL_artefacts/${vm}/CLAP/CRMBL.clap" "./Setup/${vf}/paid/CRMBL.clap"
+			cp "./${vf}/Plugins/Prisma/Prisma_artefacts/${vm}/CLAP/Prisma.clap" "./Setup/${vf}/paid/Prisma.clap"
+			cp "./${vf}/Plugins/SunBurnt/SunBurnt_artefacts/${vm}/CLAP/SunBurnt.clap" "./Setup/${vf}/paid/SunBurnt.clap"
+		else
+			cp "./${vf}/Plugins/Plastic Funeral/PlasticFuneral_artefacts/CLAP/Plastic Funeral.clap" "./Setup/${vf}/paid/Plastic Funeral.clap"
+			cp "./${vf}/Plugins/VU/VU_artefacts/CLAP/VU.clap" "./Setup/${vf}/paid/VU.clap"
+			cp "./${vf}/Plugins/VU/VU_artefacts/Standalone/VU" "./Setup/${vf}/paid/VU"
+			cp "./${vf}/Plugins/ClickBox/ClickBox_artefacts/CLAP/ClickBox.clap" "./Setup/${vf}/free/ClickBox.clap"
+			cp "./${vf}/Plugins/Pisstortion/Pisstortion_artefacts/CLAP/Pisstortion.clap" "./Setup/${vf}/paid/Pisstortion.clap"
+			cp "./${vf}/Plugins/PNCH/PNCH_artefacts/CLAP/PNCH.clap" "./Setup/${vf}/paid/PNCH.clap"
+			cp "./${vf}/Plugins/Red Bass/RedBass_artefacts/CLAP/Red Bass.clap" "./Setup/${vf}/paid/Red Bass.clap"
+			cp "./${vf}/Plugins/MPaint/MPaint_artefacts/CLAP/MPaint.clap" "./Setup/${vf}/free/MPaint.clap"
+			cp "./${vf}/Plugins/MPaint/MPaint_artefacts/Standalone/MPaint" "./Setup/${vf}/free/MPaint"
+			cp "./${vf}/Plugins/CRMBL/CRMBL_artefacts/CLAP/CRMBL.clap" "./Setup/${vf}/paid/CRMBL.clap"
+			cp "./${vf}/Plugins/Prisma/Prisma_artefacts/CLAP/Prisma.clap" "./Setup/${vf}/paid/Prisma.clap"
+			cp "./${vf}/Plugins/SunBurnt/SunBurnt_artefacts/CLAP/SunBurnt.clap" "./Setup/${vf}/paid/SunBurnt.clap"
+		fi
+		read -p "done."
+		exit 1
+		;;
 	*)
 		read -p "done."
 		exit 1
