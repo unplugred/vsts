@@ -214,13 +214,9 @@ void SunBurntAudioProcessor::reseteverything() {
 
 	dampvibratodepth.reset(0,.2,-1,samplerate,channelnum);
 
-	dsp::ProcessSpec spec;
 	dsp::ProcessSpec monospec;
-	spec.sampleRate = samplerate;
 	monospec.sampleRate = samplerate;
-	spec.maximumBlockSize = samplesperblock;
 	monospec.maximumBlockSize = samplesperblock;
-	spec.numChannels = channelnum;
 	monospec.numChannels = 1;
 
 	vibratobuffer.setSize(channelnum,(int)floor(MAX_VIBRATO*samplerate));
@@ -246,10 +242,6 @@ void SunBurntAudioProcessor::reseteverything() {
 		convolvereffect.resize(1);
 		convolver[0].reset(new dsp::Convolution);
 		convolvereffect[0].reset(new dsp::Convolution);
-		convolver[0]->prepare(spec);
-		convolvereffect[0]->prepare(spec);
-		convolver[0]->reset();
-		convolvereffect[0]->reset();
 	}
 
 	for(int c = 0; c < channelnum; ++c) {
@@ -263,10 +255,6 @@ void SunBurntAudioProcessor::reseteverything() {
 		if(channelnum > 2) {
 			convolver[c].reset(new dsp::Convolution);
 			convolvereffect[c].reset(new dsp::Convolution);
-			convolver[c]->prepare(monospec);
-			convolvereffect[c]->prepare(monospec);
-			convolver[c]->reset();
-			convolvereffect[c]->reset();
 		}
 	}
 
@@ -285,6 +273,26 @@ void SunBurntAudioProcessor::reseteverything() {
 	} else {
 		convolver[0]->loadImpulseResponse(std::move(impulsebuffer[0]),samplerate,channelnum==2?dsp::Convolution::Stereo::yes:dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
 		convolvereffect[0]->loadImpulseResponse(std::move(impulseeffectbuffer[0]),samplerate,channelnum==2?dsp::Convolution::Stereo::yes:dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
+	}
+}
+void SunBurntAudioProcessor::resetconvolution() {
+	dsp::ProcessSpec spec;
+	spec.sampleRate = samplerate;
+	spec.maximumBlockSize = samplesperblock;
+	if(channelnum > 2) {
+		spec.numChannels = 1;
+		for(int c = 0; c < channelnum; ++c) {
+			convolver[c]->reset();
+			convolvereffect[c]->reset();
+			convolver[c]->prepare(spec);
+			convolvereffect[c]->prepare(spec);
+		}
+	} else {
+		spec.numChannels = channelnum;
+		convolver[0]->reset();
+		convolver[0]->prepare(spec);
+		convolvereffect[0]->reset();
+		convolvereffect[0]->prepare(spec);
 	}
 }
 void SunBurntAudioProcessor::releaseResources() { }
@@ -339,7 +347,7 @@ void SunBurntAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffe
 	}
 	if(updatedcurve.get()) {
 		genbuffer();
-
+		resetconvolution();
 		if(channelnum > 2) {
 			for(int c = 0; c < channelnum; ++c) {
 				convolver[c]->loadImpulseResponse(std::move(impulsebuffer[c]),samplerate,dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
