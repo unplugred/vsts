@@ -154,7 +154,7 @@ SunBurntAudioProcessor::SunBurntAudioProcessor() :
 		apvts.addParameterListener(params.pots[i].id,this);
 	}
 
-	logger.debug((String)"DEBUG VERSION 1");
+	logger.debug((String)"DEBUG VERSION 2");
 }
 
 SunBurntAudioProcessor::~SunBurntAudioProcessor(){
@@ -322,45 +322,6 @@ void SunBurntAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffe
 	float* const* wetchanneldata = wetbuffer.getArrayOfWritePointers();
 	float* const* effectchanneldata = effectbuffer.getArrayOfWritePointers();
 
-	//get bpm
-	double bpm = 120;
-	if(state.values[4] > 0) {
-		if(getPlayHead() != nullptr) {
-			AudioPlayHead::CurrentPositionInfo cpi;
-			getPlayHead()->getCurrentPosition(cpi);
-			if(cpi.bpm != lastbpm) {
-				lastbpm = cpi.bpm;
-				updatedcurvebpmcooldown = .5f;
-			}
-			bpm = cpi.bpm;
-		} else bpm = lastbpm;
-	}
-
-	//update impulse
-	if(updatedcurvecooldown.get() > 0) {
-		updatedcurvecooldown = updatedcurvecooldown.get()-((float)numsamples)/samplerate;
-		if(updatedcurvecooldown.get() <= 0)
-			updatedcurve = true;
-	}
-	if(updatedcurvebpmcooldown > 0) {
-		updatedcurvebpmcooldown = updatedcurvebpmcooldown-((float)numsamples)/samplerate;
-		if(updatedcurvebpmcooldown <= 0)
-			updatedcurve = true;
-	}
-	if(updatedcurve.get()) {
-		genbuffer();
-		resetconvolution();
-		if(channelnum > 2) {
-			for(int c = 0; c < channelnum; ++c) {
-				convolver[c]->loadImpulseResponse(std::move(impulsebuffer[c]),samplerate,dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
-				convolvereffect[c]->loadImpulseResponse(std::move(impulseeffectbuffer[c]),samplerate,dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
-			}
-		} else {
-			convolver[0]->loadImpulseResponse(std::move(impulsebuffer[0]),samplerate,channelnum==2?dsp::Convolution::Stereo::yes:dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
-			convolvereffect[0]->loadImpulseResponse(std::move(impulseeffectbuffer[0]),samplerate,channelnum==2?dsp::Convolution::Stereo::yes:dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
-		}
-	}
-
 	//vibrato
 	int buffersize = (int)floor(MAX_VIBRATO*samplerate);
 	float* const* vibratobufferdata = vibratobuffer.getArrayOfWritePointers();
@@ -444,6 +405,45 @@ void SunBurntAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffe
 				drychanneldata[c][s] = drychanneldata[c][s]*state.values[0]+(wetchanneldata[c][s]+effectchanneldata[c][s])*pow(state.values[1]*2,2);
 			else
 				drychanneldata[c][s] = drychanneldata[c][s]*state.values[0]+wetchanneldata[c][s]*pow(state.values[1]*2,2);
+		}
+	}
+
+	//get bpm
+	double bpm = 120;
+	if(state.values[4] > 0) {
+		if(getPlayHead() != nullptr) {
+			AudioPlayHead::CurrentPositionInfo cpi;
+			getPlayHead()->getCurrentPosition(cpi);
+			if(cpi.bpm != lastbpm) {
+				lastbpm = cpi.bpm;
+				updatedcurvebpmcooldown = .5f;
+			}
+			bpm = cpi.bpm;
+		} else bpm = lastbpm;
+	}
+
+	//update impulse
+	if(updatedcurvecooldown.get() > 0) {
+		updatedcurvecooldown = updatedcurvecooldown.get()-((float)numsamples)/samplerate;
+		if(updatedcurvecooldown.get() <= 0)
+			updatedcurve = true;
+	}
+	if(updatedcurvebpmcooldown > 0) {
+		updatedcurvebpmcooldown = updatedcurvebpmcooldown-((float)numsamples)/samplerate;
+		if(updatedcurvebpmcooldown <= 0)
+			updatedcurve = true;
+	}
+	if(updatedcurve.get()) {
+		genbuffer();
+		resetconvolution();
+		if(channelnum > 2) {
+			for(int c = 0; c < channelnum; ++c) {
+				convolver[c]->loadImpulseResponse(std::move(impulsebuffer[c]),samplerate,dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
+				convolvereffect[c]->loadImpulseResponse(std::move(impulseeffectbuffer[c]),samplerate,dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
+			}
+		} else {
+			convolver[0]->loadImpulseResponse(std::move(impulsebuffer[0]),samplerate,channelnum==2?dsp::Convolution::Stereo::yes:dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
+			convolvereffect[0]->loadImpulseResponse(std::move(impulseeffectbuffer[0]),samplerate,channelnum==2?dsp::Convolution::Stereo::yes:dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
 		}
 	}
 }
