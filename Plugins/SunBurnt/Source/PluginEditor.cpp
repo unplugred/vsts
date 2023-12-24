@@ -4,6 +4,7 @@
 SunBurntAudioProcessorEditor::SunBurntAudioProcessorEditor(SunBurntAudioProcessor& p, int paramcount, pluginpreset state, pluginparams params) : AudioProcessorEditor(&p), audioProcessor(p)
 {
 	jpmode = params.jpmode;
+	prevjpmode = jpmode;
 	curveselection = params.curveselection;
 
 	for(int i = 0; i < paramcount; ++i)
@@ -53,6 +54,17 @@ SunBurntAudioProcessorEditor::SunBurntAudioProcessorEditor(SunBurntAudioProcesso
 	context.attachTo(*this);
 
 	startTimerHz(30);
+
+	for(int h = 0; h < 2; ++h) {
+		handposrotated[h*3+1] = 191-random.nextFloat()*40;
+		handposdamp       [h*4  ].reset(handposrotated[h*3  ],.07,-1,15,2);
+		handposdamp       [h*4+1].reset(handposrotated[h*3+1],.07,-1,15,2);
+		handposdamp       [h*4+2].reset(handposrotated[h*3+2],.07,-1,15,2);
+		handposdamp       [h*4+3].reset(handpos       [h*4+3],.07,-1,15,2);
+		handposinertiadamp[h*3  ].reset(handposrotated[h*3  ],.2 ,-1,15,2);
+		handposinertiadamp[h*3+1].reset(handposrotated[h*3+1],.2 ,-1,15,2);
+		handposinertiadamp[h*3+2].reset(handposrotated[h*3+2],.1 ,-1,15,2);
+	}
 }
 SunBurntAudioProcessorEditor::~SunBurntAudioProcessorEditor() {
 	for(int i = 0; i < knobcount; ++i) audioProcessor.apvts.removeParameterListener(knobs[i].id,this);
@@ -143,9 +155,9 @@ R"(#version 150 core
 in vec2 aPos;
 uniform float banner;
 uniform vec4 pos;
-out vec2 texuv;
 uniform float ratio;
 uniform vec3 uvoffset;
+out vec2 texuv;
 out vec2 uv;
 void main(){
 	gl_Position = vec4(vec2(aPos.x*pos.z+pos.x,(aPos.y*pos.w+pos.y)*(1-banner))*2-1,0,1);
@@ -178,7 +190,7 @@ void main(){
 	else
 		label = texture(tex,coords).r;
 	if(dpi > 2)
-		label = (label-.5)*dpi*.6+.5;
+		label = (label-.5)*max(1,dpi*.6)+.5;
 
 	if(select < .5) {
 		fragColor = vec4(0,0,0,label);
@@ -284,6 +296,56 @@ void main(){
 	fragColor = vec4(1,0,0,max(min(x-.5,1),0));
 })");
 
+	compileshader(papershader,
+//PAPER VERT
+R"(#version 150 core
+in vec2 aPos;
+uniform float banner;
+uniform vec4 pos;
+uniform vec4 texpos;
+uniform vec4 texcoords;
+uniform float rot;
+out vec2 uv;
+void main(){
+	vec2 temppos = aPos*texpos.zw+texpos.xy-.5;
+	gl_Position = vec4(vec2(
+		(temppos.x*cos(rot)-temppos.y*sin(rot)+.5)*pos.z+pos.x,
+		((temppos.x*sin(rot)+temppos.y*cos(rot)+.5)*pos.w+pos.y)*(1-banner))*2-1,0,1);
+	uv = aPos*texcoords.zw+texcoords.xy;
+})",
+//PAPER FRAG
+R"(#version 150 core
+in vec2 uv;
+uniform sampler2D tex;
+uniform float hover;
+uniform float dpi;
+uniform float isshadow;
+out vec4 fragColor;
+void main(){
+	vec3 col = texture(tex,uv).rgb;
+	if(hover > .5) {
+		if(round(col.b*8) == round(hover))
+			fragColor = vec4(1,0,(col.gr-.5)*max(1,dpi*.6)+.5);
+		else
+			fragColor = vec4(0);
+		return;
+	}
+	col = (col-.5)*max(1,dpi*.6)+.5;
+	if(isshadow < .5) {
+		float alpha = col.r+col.b;
+		if(col.b < .5)
+			col = vec3(1,0,0);
+		col.b -= col.g;
+		col.g = 0;
+		fragColor = vec4(col,alpha);
+	} else {
+		if(col.b < .001)
+			fragColor = vec4(0,0,1,col.g);
+		else
+			fragColor = vec4(0);
+	}
+})");
+
 	compileshader(ppshader,
 //PP VERT
 R"(#version 150 core
@@ -345,15 +407,34 @@ void main(){
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-	basejptex.loadImage(ImageCache::getFromMemory(BinaryData::base_jp_png, BinaryData::base_jp_pngSize));
-	basejptex.bind();
+	if(jpmode) {
+		basejptex.loadImage(ImageCache::getFromMemory(BinaryData::base_jp_png, BinaryData::base_jp_pngSize));
+		basejptex.bind();
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	}
+
+	disptex.loadImage(ImageCache::getFromMemory(BinaryData::disp_png, BinaryData::disp_pngSize));
+	disptex.bind();
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-	disptex.loadImage(ImageCache::getFromMemory(BinaryData::disp_png, BinaryData::disp_pngSize));
-	disptex.bind();
+	if(jpmode)
+		papertex.loadImage(ImageCache::getFromMemory(BinaryData::paper_jp_png, BinaryData::paper_jp_pngSize));
+	else
+		papertex.loadImage(ImageCache::getFromMemory(BinaryData::paper_en_png, BinaryData::paper_en_pngSize));
+	papertex.bind();
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	handtex.loadImage(ImageCache::getFromMemory(BinaryData::hands_png, BinaryData::hands_pngSize));
+	handtex.bind();
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -461,6 +542,30 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	}
 
+	if(jpmode != prevjpmode) {
+		prevjpmode = jpmode;
+		papertex.release();
+		if(jpmode) {
+			basejptex.loadImage(ImageCache::getFromMemory(BinaryData::base_jp_png, BinaryData::base_jp_pngSize));
+			basejptex.bind();
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+			papertex.loadImage(ImageCache::getFromMemory(BinaryData::paper_jp_png, BinaryData::paper_jp_pngSize));
+		} else {
+			basejptex.release();
+
+			papertex.loadImage(ImageCache::getFromMemory(BinaryData::paper_en_png, BinaryData::paper_en_pngSize));
+		}
+		papertex.bind();
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	}
+
 	context.extensions.glBindBuffer(GL_ARRAY_BUFFER, arraybuffer);
 	auto coord = context.extensions.glGetAttribLocation(baseshader->getProgramID(),"aPos");
 	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
@@ -490,7 +595,7 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 	baseshader->setUniform("randomy",randomdir[4],randomdir[5],randomdir[6],randomdir[7]);
 	baseshader->setUniform("randomblend",randomblend[0],randomblend[1],randomblend[2],randomblend[3]);
 	if(scaleddpi > 2)
-		baseshader->setUniform("dpi",scaleddpi*.6f);
+		baseshader->setUniform("dpi",(float)fmax(1,scaleddpi*.6f));
 	else
 		baseshader->setUniform("dpi",1.f);
 	context.extensions.glEnableVertexAttribArray(coord);
@@ -511,8 +616,7 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 	selectshader->setUniform("isjp",jpmode?1.f:0.f);
 	for(int i = 0; i < 5; ++i) {
 		if(i != 0 && curveindex[i] == 0)
-			//selectshader->setUniform("index",-1.f); TODO: enable
-			selectshader->setUniform("index",(float)fmax(i*2-1,0));
+			selectshader->setUniform("index",-1.f);
 		else
 			selectshader->setUniform("index",(float)curveindex[i]);
 		selectshader->setUniform("pos",(300+20*((i+1)/2))/368.f,(74+100*(i%2))/334.f,20/368.f,(i==0?200:100)/334.f);
@@ -534,65 +638,69 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 	}
 
 	//vis line
-	visshader->use();
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-	coord = context.extensions.glGetAttribLocation(visshader->getProgramID(),"aPos");
-	context.extensions.glEnableVertexAttribArray(coord);
-	context.extensions.glVertexAttribPointer(coord,3,GL_FLOAT,GL_FALSE,0,0);
-	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*3408, visline, GL_DYNAMIC_DRAW);
-	visshader->setUniform("banner",banneroffset);
-	visshader->setUniform("dpi",scaleddpi);
-	glDrawArrays(GL_TRIANGLE_STRIP,0,1136);
-	context.extensions.glDisableVertexAttribArray(coord);
-	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
+	int curveid = curveindex[curveselection];
+	if(curveid > 0 || curveselection == 0) {
+		visshader->use();
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+		coord = context.extensions.glGetAttribLocation(visshader->getProgramID(),"aPos");
+		context.extensions.glEnableVertexAttribArray(coord);
+		context.extensions.glVertexAttribPointer(coord,3,GL_FLOAT,GL_FALSE,0,0);
+		context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*3408, visline, GL_DYNAMIC_DRAW);
+		visshader->setUniform("banner",banneroffset);
+		visshader->setUniform("dpi",scaleddpi);
+		glDrawArrays(GL_TRIANGLE_STRIP,0,1136);
+		context.extensions.glDisableVertexAttribArray(coord);
+		context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
+	}
 
 	//tension points
-	int curveid = curveindex[curveselection];
-	if(curveid == 0) curveid = fmax(curveselection*2-1,0); //TODO
 	circleshader->use();
 	coord = context.extensions.glGetAttribLocation(circleshader->getProgramID(),"aPos");
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
-	circleshader->setUniform("colin",1.f,0.f,0.f);
 	circleshader->setUniform("colout",1.f,0.f,0.f);
-	circleshader->setUniform("knobscale",17.364f*uiscales[uiscaleindex]/getWidth(),17.364f*uiscales[uiscaleindex]/getHeight());
-	circleshader->setUniform("size",8.682f*scaleddpi);
-	circleshader->setUniform("fill",.3f);
-	int nextpoint = 0;
-	for(int i = 0; i < (curves[curveid].points.size()-1); ++i) {
-		if(!curves[curveid].points[i].enabled) continue;
-		++nextpoint;
-		while(!curves[curveid].points[nextpoint].enabled) ++nextpoint;
-		if(((curves[curveid].points[nextpoint].x-curves[curveid].points[i].x)*1.42f) <= .02 || fabs(curves[curveid].points[nextpoint].y-curves[curveid].points[i].y) <= .02) continue;
-		double interp = curve::calctension(.5,curves[curveid].points[i].tension);
-		float x = (curves[curveid].points[i].x+curves[curveid].points[nextpoint].x)*284.f+24.f-8.682f;
-		float y = (curves[curveid].points[i].y*(1-interp)+curves[curveid].points[nextpoint].y*interp)*400.f+148.f-8.682f;
-		circleshader->setUniform("knobpos",
-			x*uiscales[uiscaleindex]/getWidth()-1,
-			y*uiscales[uiscaleindex]/getHeight()-1);
-		if(x >= 398 && y <= (66+panelheighttarget)*2 && panelvisible) {
-			circleshader->setUniform("colin",1.f,1.f,0.f);
-			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
-			circleshader->setUniform("colin",1.f,0.f,0.f);
-		} else {
+	if(curveid > 0 || curveselection == 0) {
+		circleshader->setUniform("colin",1.f,0.f,0.f);
+		circleshader->setUniform("knobscale",17.364f*uiscales[uiscaleindex]/getWidth(),17.364f*uiscales[uiscaleindex]/getHeight());
+		circleshader->setUniform("size",8.682f*scaleddpi);
+		circleshader->setUniform("fill",.3f);
+		int nextpoint = 0;
+		for(int i = 0; i < (curves[curveid].points.size()-1); ++i) {
+			if(!curves[curveid].points[i].enabled) continue;
+			++nextpoint;
+			while(!curves[curveid].points[nextpoint].enabled) ++nextpoint;
+			if(((curves[curveid].points[nextpoint].x-curves[curveid].points[i].x)*1.42f) <= .02 || fabs(curves[curveid].points[nextpoint].y-curves[curveid].points[i].y) <= .02) continue;
+			double interp = curve::calctension(.5,curves[curveid].points[i].tension);
+			float x = (curves[curveid].points[i].x+curves[curveid].points[nextpoint].x)*284.f+24.f-8.682f;
+			float y = (curves[curveid].points[i].y*(1-interp)+curves[curveid].points[nextpoint].y*interp)*400.f+148.f-8.682f;
+			circleshader->setUniform("knobpos",
+				x*uiscales[uiscaleindex]/getWidth()-1,
+				y*uiscales[uiscaleindex]/getHeight()-1);
+			if(x >= 398 && y <= (66+panelheighttarget)*2 && panelvisible) {
+				circleshader->setUniform("colin",1.f,1.f,0.f);
+				glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+				circleshader->setUniform("colin",1.f,0.f,0.f);
+			} else {
+				glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+			}
+		}
+
+		//control points
+		circleshader->setUniform("colin",1.f,1.f,0.f);
+		circleshader->setUniform("knobscale",25.364f*uiscales[uiscaleindex]/getWidth(),25.364f*uiscales[uiscaleindex]/getHeight());
+		circleshader->setUniform("size",12.682f*scaleddpi);
+		circleshader->setUniform("fill",1-9.f/12.682f);
+		for(int i = 0; i < curves[curveid].points.size(); ++i) {
+			if(!curves[curveid].points[i].enabled) continue;
+			circleshader->setUniform("knobpos",
+				((curves[curveid].points[i].x*568.f+24.f-12.682f)*uiscales[uiscaleindex])/getWidth()-1,
+				((curves[curveid].points[i].y*400.f+148.f-12.682f)*uiscales[uiscaleindex])/getHeight()-1);
 			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 		}
 	}
 
-	//control points
-	circleshader->setUniform("colin",1.f,1.f,0.f);
-	circleshader->setUniform("knobscale",25.364f*uiscales[uiscaleindex]/getWidth(),25.364f*uiscales[uiscaleindex]/getHeight());
-	circleshader->setUniform("size",12.682f*scaleddpi);
-	circleshader->setUniform("fill",1-9.f/12.682f);
-	for(int i = 0; i < curves[curveid].points.size(); ++i) {
-		if(!curves[curveid].points[i].enabled) continue;
-		circleshader->setUniform("knobpos",
-			((curves[curveid].points[i].x*568.f+24.f-12.682f)*uiscales[uiscaleindex])/getWidth()-1,
-			((curves[curveid].points[i].y*400.f+148.f-12.682f)*uiscales[uiscaleindex])/getHeight()-1);
-		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
-	}
-
 	//knob bg
+	circleshader->setUniform("colin",1.f,1.f,0.f);
 	circleshader->setUniform("knobscale",83.26f*uiscales[uiscaleindex]/getWidth(),83.26f*uiscales[uiscaleindex]/getHeight());
 	circleshader->setUniform("size",41.63f*scaleddpi);
 	circleshader->setUniform("fill",1-9.f/41.63f);
@@ -655,7 +763,7 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	}
 
-	//curve enable
+	//menu open circle
 	circleshader->setUniform("knobscale",33.f*uiscales[uiscaleindex]/getWidth(),33.f*uiscales[uiscaleindex]/getHeight());
 	circleshader->setUniform("size",16.5f*scaleddpi);
 	circleshader->setUniform("fill",1-5.f/16.5f);
@@ -670,8 +778,8 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 			break;
 		}
 		circleshader->setUniform("knobpos",(x*uiscales[uiscaleindex])/getWidth()-1,(y*uiscales[uiscaleindex])/getHeight()-1);
-		circleshader->setUniform("colin",1.f,curveindex[i+1]==0?0.f:1.f,0.f); // TODO
-		circleshader->setUniform("colout",1.f,curveindex[i+1]==0?1.f:0.f,0.f); // TODO
+		circleshader->setUniform("colin",1.f,menuindex==(i+1)?0.f:1.f,0.f);
+		circleshader->setUniform("colout",1.f,menuindex==(i+1)?1.f:0.f,0.f);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	}
 	context.extensions.glDisableVertexAttribArray(coord);
@@ -688,6 +796,84 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 	timefont.font.shader->setUniform("time",timeopentime,timeclosetime);
 	timefont.font.drawstring(1,0,0,1,1,0,0,0,timestring,0,x,y,.5,.5);
 	timefont.font.drawstring(1,1,0,1,1,1,0,0,timestring,1,x,y,.5,.5);
+
+	//paper
+	papershader->use();
+	coord = context.extensions.glGetAttribLocation(papershader->getProgramID(),"aPos");
+	context.extensions.glEnableVertexAttribArray(coord);
+	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+	papershader->setUniform("dpi",scaleddpi);
+	papershader->setUniform("banner",banneroffset);
+	papershader->setUniform("hover",-1.f);
+	if(paperindex < 17) {
+		context.extensions.glActiveTexture(GL_TEXTURE0);
+		papertex.bind();
+		papershader->setUniform("tex",0);
+		papershader->setUniform("rot",paperrot);
+		papershader->setUniform("pos",-2/368.f,13/334.f,320/368.f,320/334.f);
+		papershader->setUniform("texpos",
+			papercoords[jpmode?1:0][paperindex*6+4]/640.f,
+			1-(papercoords[jpmode?1:0][paperindex*6+5]+papercoords[jpmode?1:0][paperindex*6+3])/640.f,
+			papercoords[jpmode?1:0][paperindex*6+2]/640.f,
+			papercoords[jpmode?1:0][paperindex*6+3]/640.f);
+		papershader->setUniform("texcoords",
+			papercoords[jpmode?1:0][paperindex*6  ]/(jpmode?1714.f:1897.f),
+			1-(papercoords[jpmode?1:0][paperindex*6+1]+papercoords[jpmode?1:0][paperindex*6+3])/(jpmode?1504.f:1355.f),
+			papercoords[jpmode?1:0][paperindex*6+2]/(jpmode?1714.f:1897.f),
+			papercoords[jpmode?1:0][paperindex*6+3]/(jpmode?1504.f:1355.f));
+		for(int s = 1; s >= 0; --s) {
+			papershader->setUniform("isshadow",(float)s);
+			if(s == 0)
+				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			else
+				glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+		}
+		if(itemenabled && paperindex == 0) {
+			papershader->setUniform("hover",(float)hover);
+			papershader->setUniform("texpos",
+				papercoords[jpmode?1:0][17*6+4]/640.f,
+				1-(papercoords[jpmode?1:0][17*6+5]+papercoords[jpmode?1:0][17*6+3])/640.f,
+				papercoords[jpmode?1:0][17*6+2]/640.f,
+				papercoords[jpmode?1:0][17*6+3]/640.f);
+			papershader->setUniform("texcoords",
+				papercoords[jpmode?1:0][17*6  ]/(jpmode?1714.f:1897.f),
+				1-(papercoords[jpmode?1:0][17*6+1]+papercoords[jpmode?1:0][17*6+3])/(jpmode?1504.f:1355.f),
+				papercoords[jpmode?1:0][17*6+2]/(jpmode?1714.f:1897.f),
+				papercoords[jpmode?1:0][17*6+3]/(jpmode?1504.f:1355.f));
+			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+			papershader->setUniform("hover",-1.f);
+		}
+	}
+
+	//hands
+	context.extensions.glActiveTexture(GL_TEXTURE0);
+	handtex.bind();
+	papershader->setUniform("tex",0);
+	for(int s = 1; s >= 0; --s) {
+		papershader->setUniform("isshadow",(float)s);
+		if(s == 0)
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		else
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+		for(int h = 0; h < 2; ++h) {
+			int index = (h*32+fmin(1,round(handposlerp[h*4+3]))*16+((int)round(handposlerp[h*4+2]))%16)*6;
+			papershader->setUniform("pos",handposlerp[h*4]/368.f,1-(handposlerp[h*4+1]/334.f),128/368.f,128/334.f);
+			papershader->setUniform("rot",(.5f-(float)fmod(.5f+handposlerp[h*4+2],1))*.5f);
+			papershader->setUniform("texpos",
+				handcoords[index+4]/256.f,
+				1-(handcoords[index+5]+handcoords[index+3])/256.f,
+				handcoords[index+2]/256.f,
+				handcoords[index+3]/256.f);
+			papershader->setUniform("texcoords",
+				handcoords[index  ]/2048.f,
+				1-(handcoords[index+1]+handcoords[index+3])/509.f,
+				handcoords[index+2]/2048.f,
+				handcoords[index+3]/509.f);
+			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+		}
+	}
+
 	framebuffer.releaseAsRenderingTarget();
 
 	//post processing
@@ -743,12 +929,15 @@ void SunBurntAudioProcessorEditor::openGLContextClosing() {
 	circleshader->release();
 	panelshader->release();
 	ppshader->release();
+	papershader->release();
 
 	baseentex.release();
 	basejptex.release();
 	disptex.release();
 	selecttex.release();
 	overlaytex.release();
+	papertex.release();
+	handtex.release();
 
 	framebuffer.release();
 
@@ -764,11 +953,10 @@ void SunBurntAudioProcessorEditor::openGLContextClosing() {
 	context.extensions.glDeleteBuffers(1,&arraybuffer);
 }
 void SunBurntAudioProcessorEditor::calcvis() {
+	if(curveindex[curveselection] == 0 && curveselection != 0)
+		return;
 	curveiterator iterator;
-	if(curveindex[curveselection] == 0) //TODO
-		iterator.reset(curves[(int)fmax(curveselection*2-1,0)],568);
-	else
-		iterator.reset(curves[curveindex[curveselection]],568);
+	iterator.reset(curves[curveindex[curveselection]],568);
 	double prevy = 74+iterator.next()*200;
 	double currenty = prevy;
 	double nexty = prevy;
@@ -798,7 +986,44 @@ void SunBurntAudioProcessorEditor::paint (Graphics& g) { }
 void SunBurntAudioProcessorEditor::timerCallback() {
 	if(websiteht >= -.65761f) websiteht -= .03f;
 
-	if(hover > -1 && hover < knobcount && knobs[hover].id == "length") {
+	if(menuindex > 0) {
+		if(paperindex == 17) {
+			paperrottarget = (random.nextFloat()-.5f)*.15f;
+			paperrotoffset = (random.nextFloat()-.5f)*.25f;
+		}
+		if(updatetick || paperindex == 1)
+			paperindex = fmax(0,paperindex-1);
+	} else {
+		if(paperindex == 0) {
+			paperrotoffset = (random.nextFloat()-.5f)*.25f;
+			for(int h = 0; h < 2; ++h) {
+				handposrotated[h*3  ]  = -128*(1-h)+368*h;
+				handposrotated[h*3+1]  = 191-random.nextFloat()*40;
+				handposrotated[h*3+2] += (h*2-1)*12;
+				handpos       [h*4+3]  = 3.5f;
+			}
+		}
+		if((updatetick && paperindex > 0) || (!updatetick && paperindex == 0))
+			paperindex = fmin(17,paperindex+1);
+	}
+	if(updatetick && paperindex != 0 && paperindex != 17)
+		paperrot = paperrottarget+paperrotoffset*pow(paperindex/16.f,3)+(random.nextFloat()-.5)*.02f;
+	if(updatetick) {
+		for(int h = 0; h < 2; ++h) {
+			handposlerp[h*4+3] = handposdamp[h*4+3].nextvalue(handpos[h*4+3],h);
+
+			for(int i = 0; i < 3; ++i)
+				handposdamp[h*4+i].v_smoothtime = .07+(1-pow(1-handposlerp[h*4+3],3))*.05;
+
+			float rotationeuler = handposrotated[h*3+2]*6.28318530718f*.0625f;
+			handposlerp[h*4  ] = handposinertiadamp[h*3  ].nextvalue(handposdamp[h*4  ].nextvalue(handposrotated[h*3  ],h),h);
+			handposlerp[h*4+1] = handposinertiadamp[h*3+1].nextvalue(handposdamp[h*4+1].nextvalue(handposrotated[h*3+1],h),h);
+			handposlerp[h*4+2] = handposinertiadamp[h*3+2].nextvalue(handposdamp[h*4+2].nextvalue(handposrotated[h*3+2]+(handposdamp[h*4].v_velocity[h]*cos(rotationeuler)+handposdamp[h*4+1].v_velocity[h]*sin(rotationeuler))*.003f,h),h);
+		}
+	}
+	updatetick = !updatetick;
+
+	if(hover > -1 && hover < knobcount && knobs[hover].id == "length" && menuindex == 0) {
 		if(timeclosetime >= timestring.length()) {
 			timeopentime = -1;
 			timeclosetime = -1;
@@ -809,7 +1034,7 @@ void SunBurntAudioProcessorEditor::timerCallback() {
 		timeclosetime = fmin(timeclosetime+1,timestring.length());
 	}
 
-	panelvisible = hover == -14 || hover >= knobcount || hover < -20;
+	panelvisible = (hover == -14 || hover >= knobcount || hover < -20) && menuindex == 0;
 	if(panelvisible)
 		panelheight = panelheight*.6+panelheighttarget*.4;
 	else
@@ -961,8 +1186,13 @@ void SunBurntAudioProcessorEditor::recalclabels() {
 }
 void SunBurntAudioProcessorEditor::recalcsliders() {
 	int curveid = curveindex[curveselection];
-	if(curveid == 0) curveid = fmax(curveselection*2-1,0); // TODO
 	slidersvisible.clear();
+	if(curveid == 0 && curveselection != 0) {
+		panelheighttarget = 0;
+		sliderslabel.clear();
+		slidersvalue.clear();
+		return;
+	}
 	for(int i = 0; i < slidercount; ++i) {
 		for(int s = 0; s < sliders[i].showon.size(); ++s) {
 			if(sliders[i].showon[s] == curveid) {
@@ -995,6 +1225,63 @@ void SunBurntAudioProcessorEditor::mouseMove(const MouseEvent& event) {
 	int prevhover = hover;
 	hover = recalchover(event.x,event.y);
 	if(hover == -16 && prevhover != -16 && websiteht <= -.65761f) websiteht = 0;
+	if(menuindex <= 0 || prevhover == hover)
+		return;
+	switch(hover) {
+		case -1:
+			hoverid = -1;
+			break;
+		case 0:
+			hoverid = 0;
+			break;
+		case 1:
+			hoverid = 5;
+			break;
+		case 2:
+			hoverid = 7;
+			break;
+		case 3:
+			hoverid = 6;
+			break;
+		case 4:
+			hoverid = 1;
+			break;
+		case 5:
+			hoverid = 3;
+			break;
+		case 6:
+			hoverid = 2;
+			break;
+		case 7:
+			hoverid = 4;
+			break;
+	}
+	itemenabled = false;
+	for(int i = 1; i < 5; ++i) {
+		if(curveindex[i] == hoverid && i != menuindex) {
+			itemenabled = true;
+			return;
+		}
+	}
+	for(int h = 0; h < 2; ++h) {
+		if(hover == -1 || hover%2 != h) {
+			if(handhover%2 != h || handhover == hover)
+				continue;
+			handpos[h*4  ] += (random.nextFloat()*2-1)*5+(h*2-1)*10;
+			handpos[h*4+1] += (random.nextFloat()*2-1)*20;
+			handpos[h*4+2]  = random.nextFloat()*(h*2-1)*2;
+			handpos[h*4+3]  = 1;
+		} else {
+			handpos[h*4  ]  = (random.nextFloat()*2-1)*5+(jpmode?158:163)+(h*2-1)*130;
+			handpos[h*4+1]  = (random.nextFloat()*2-1)*5+floor(hover*.5)*(jpmode?31:32)+(jpmode?133:122);
+			handpos[h*4+2]  = (random.nextFloat()*2-1)*.3f+(h==0?4:-4);
+			handpos[h*4+3]  = 0;
+		}
+		handposrotated[h*3  ] = (handpos[h*4]-160)*cos(-paperrot)-(handpos[h*4+1]-160)*sin(-paperrot)+158-64;
+		handposrotated[h*3+1] = (handpos[h*4]-160)*sin(-paperrot)+(handpos[h*4+1]-160)*cos(-paperrot)+161+64;
+		handposrotated[h*3+2] = 1024+handpos[h*4+2]-(paperrot/6.28318530718f)*16;
+	}
+	handhover = hover;
 }
 void SunBurntAudioProcessorEditor::mouseExit(const MouseEvent& event) {
 	hover = -1;
@@ -1044,6 +1331,16 @@ void SunBurntAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 	}
 
 	initialdrag = hover;
+
+	if(menuindex > 0) {
+		if(hover == -1) {
+			menuindex = 0;
+			hover = recalchover(event.x,event.y);
+			skipmouseup = true;
+		}
+		return;
+	}
+
 	if(hover > -1 || hover < -20) {
 		valueoffset[0] = 0;
 		audioProcessor.undoManager.beginNewTransaction();
@@ -1084,16 +1381,20 @@ void SunBurntAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		} else {
 			int id = (int)(hover*.5)+5;
 			int val = 0;
-			if(curveindex[id] == 0) val = fmax(id*2-1,0); //TODO
-			audioProcessor.apvts.getParameter("curve"+(String)id)->setValueNotifyingHost(val/7.f);
-			audioProcessor.undoManager.setCurrentTransactionName((String)"Changed curve "+(String)id+" to "+audioProcessor.params.curves[val].name);
-			audioProcessor.undoManager.beginNewTransaction();
+			menuindex = id;
+			initialdrag = -1;
+			hover = recalchover(event.x,event.y);
 		}
 	} else if(hover == -15) {
 		randcubes(audioProcessor.reseed());
 	}
 }
 void SunBurntAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
+	if(menuindex > 0) {
+		hover = recalchover(event.x,event.y)==initialdrag?initialdrag:-1;
+		return;
+	}
+
 	if(initialdrag >= knobcount) {
 		int i = initialdrag-knobcount;
 		if((i%2) == 0) { // dragging a dot
@@ -1262,6 +1563,20 @@ void SunBurntAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 }
 void SunBurntAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 	if(dpi < 0) return;
+	if(skipmouseup) {
+		skipmouseup = false;
+		return;
+	}
+	if(menuindex > 0) {
+		if(hover > -1 && initialdrag == hover && !itemenabled) {
+			audioProcessor.apvts.getParameter("curve"+(String)menuindex)->setValueNotifyingHost(hoverid/7.f);
+			audioProcessor.undoManager.setCurrentTransactionName((String)"Changed curve "+(String)menuindex+" to "+audioProcessor.params.curves[hoverid].name);
+			audioProcessor.undoManager.beginNewTransaction();
+			menuindex = 0;
+			hover = recalchover(event.x,event.y);
+		}
+		return;
+	}
 
 	if(hover > -1 || hover < -20) {
 		if(hover >= knobcount) {
@@ -1323,6 +1638,7 @@ void SunBurntAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 }
 void SunBurntAudioProcessorEditor::mouseDoubleClick(const MouseEvent& event) {
 	if(dpi < 0) return;
+	if(menuindex > 0) return;
 
 	if(hover == -14) {
 		float x = fmin(fmax((((float)event.x)/uiscales[uiscaleindex]-12)/284.f,0),1);
@@ -1363,6 +1679,7 @@ void SunBurntAudioProcessorEditor::mouseDoubleClick(const MouseEvent& event) {
 	}
 }
 void SunBurntAudioProcessorEditor::mouseWheelMove(const MouseEvent& event, const MouseWheelDetails& wheel) {
+	if(menuindex > 0) return;
 	if(hover >= knobcount) return;
 	if(hover > -1)
 		audioProcessor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(
@@ -1375,6 +1692,22 @@ int SunBurntAudioProcessorEditor::recalchover(float x, float y) {
 	if(dpi < 0) return -1;
 	x /= uiscales[uiscaleindex];
 	y /= uiscales[uiscaleindex];
+
+	if(menuindex > 0) {
+		float rotx = (x-158)*cos(paperrot)-(y-161)*sin(paperrot)+160;
+		float roty = (x-158)*sin(paperrot)+(y-161)*cos(paperrot)+160;
+		if(jpmode) {
+			if(rotx < 61 || roty < 117 || rotx >= 255 || roty >= 241)
+				return -1;
+			else
+				return (rotx>=158?1:0)+floor((roty-117)/31)*2;
+		} else {
+			if(rotx < 60 || roty < 106 || rotx >= 266 || roty >= 234)
+				return -1;
+			else
+				return (rotx>=163?1:0)+floor((roty-106)/32)*2;
+		}
+	}
 
 	if(y < 7) return -1;
 	if(y < 55) {
