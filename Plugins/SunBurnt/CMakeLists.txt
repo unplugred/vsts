@@ -60,6 +60,7 @@ juce_add_binary_data("${BaseTargetName}BinaryData" HEADER_NAME BinaryData.h NAME
 	Resources/paper_en.png
 	Resources/paper_jp.png
 	Resources/hands.png
+	Resources/none.png
 	../../Resources/banner.png)
 set_target_properties("${BaseTargetName}BinaryData" PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 

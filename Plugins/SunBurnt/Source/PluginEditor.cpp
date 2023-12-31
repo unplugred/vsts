@@ -86,11 +86,10 @@ void SunBurntAudioProcessorEditor::newOpenGLContextCreated() {
 R"(#version 150 core
 in vec2 aPos;
 uniform float banner;
-uniform vec2 texscale;
 out vec2 uv;
 void main(){
 	gl_Position = vec4(vec2(aPos.x,aPos.y*(1-banner))*2-1,0,1);
-	uv = vec2(aPos.x*texscale.x,1-(1-aPos.y)*texscale.y);
+	uv = aPos;
 })",
 //BASE FRAG
 R"(#version 150 core
@@ -147,6 +146,32 @@ void main(){
 	}
 
 	fragColor = vec4(max(min((col-.5)*dpi+.5,1),0),1);
+})");
+
+	compileshader(noneshader,
+//NONE VERT
+R"(#version 150 core
+in vec2 aPos;
+uniform vec4 pos;
+uniform float banner;
+out vec2 uv;
+void main(){
+	gl_Position = vec4(vec2(aPos.x*pos.z+pos.x,(aPos.y*pos.w+pos.y)*(1-banner))*2-1,0,1);
+	uv = aPos;
+})",
+//NONE FRAG
+R"(#version 150 core
+in vec2 uv;
+uniform sampler2D tex;
+uniform float isjp;
+uniform float dpi;
+out vec4 fragColor;
+void main(){
+	vec3 col = (texture(tex,uv).rgb-.5)*max(1,dpi*.6)+.5;
+	if(isjp > .5)
+		fragColor = vec4(col.b,0,col.g,1);
+	else
+		fragColor = vec4(col.b,0,col.r,1);
 })");
 
 	compileshader(selectshader,
@@ -423,6 +448,20 @@ void main(){
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
+	nonetex.loadImage(ImageCache::getFromMemory(BinaryData::none_png, BinaryData::none_pngSize));
+	nonetex.bind();
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	selecttex.loadImage(ImageCache::getFromMemory(BinaryData::curvelabels_png, BinaryData::curvelabels_pngSize));
+	selecttex.bind();
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
 	if(jpmode)
 		papertex.loadImage(ImageCache::getFromMemory(BinaryData::paper_jp_png, BinaryData::paper_jp_pngSize));
 	else
@@ -435,13 +474,6 @@ void main(){
 
 	handtex.loadImage(ImageCache::getFromMemory(BinaryData::hands_png, BinaryData::hands_pngSize));
 	handtex.bind();
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-	selecttex.loadImage(ImageCache::getFromMemory(BinaryData::curvelabels_png, BinaryData::curvelabels_pngSize));
-	selecttex.bind();
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -587,7 +619,6 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 	baseshader->setUniform("disptex",2);
 	baseshader->setUniform("isjp",jpmode?1.f:0.f);
 	baseshader->setUniform("banner",banneroffset);
-	baseshader->setUniform("texscale",736.f/baseentex.getWidth(),668.f/baseentex.getHeight());
 	baseshader->setUniform("shineprog",websiteht);
 	baseshader->setUniform("hidecube",(float)hidecube[0],(float)hidecube[1]);
 	baseshader->setUniform("randomid",(float)randomid[0],(float)randomid[1],(float)randomid[2],(float)randomid[3]);
@@ -602,6 +633,24 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	context.extensions.glDisableVertexAttribArray(coord);
+
+	//none selected
+	int curveid = curveindex[curveselection];
+	if(curveid == 0 && curveselection > 0) {
+		noneshader->use();
+		coord = context.extensions.glGetAttribLocation(noneshader->getProgramID(),"aPos");
+		context.extensions.glEnableVertexAttribArray(coord);
+		context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+		context.extensions.glActiveTexture(GL_TEXTURE0);
+		nonetex.bind();
+		noneshader->setUniform("tex",0);
+		noneshader->setUniform("dpi",scaleddpi);
+		noneshader->setUniform("banner",banneroffset);
+		noneshader->setUniform("isjp",jpmode?1.f:0.f);
+		noneshader->setUniform("pos",11/368.f,73/334.f,286/368.f,202/334.f);
+		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+		context.extensions.glDisableVertexAttribArray(coord);
+	}
 
 	//curve selection
 	selectshader->use();
@@ -638,7 +687,6 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 	}
 
 	//vis line
-	int curveid = curveindex[curveselection];
 	if(curveid > 0 || curveselection == 0) {
 		visshader->use();
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
@@ -924,6 +972,7 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 }
 void SunBurntAudioProcessorEditor::openGLContextClosing() {
 	baseshader->release();
+	noneshader->release();
 	selectshader->release();
 	visshader->release();
 	circleshader->release();
@@ -934,6 +983,7 @@ void SunBurntAudioProcessorEditor::openGLContextClosing() {
 	baseentex.release();
 	basejptex.release();
 	disptex.release();
+	nonetex.release();
 	selecttex.release();
 	overlaytex.release();
 	papertex.release();
@@ -1260,12 +1310,11 @@ void SunBurntAudioProcessorEditor::mouseMove(const MouseEvent& event) {
 	for(int i = 1; i < 5; ++i) {
 		if(curveindex[i] == hoverid && i != menuindex) {
 			itemenabled = true;
-			return;
 		}
 	}
 	for(int h = 0; h < 2; ++h) {
 		if(hover == -1 || hover%2 != h) {
-			if(handhover%2 != h || handhover == hover)
+			if(prevhover%2 != h || prevhover == hover)
 				continue;
 			handpos[h*4  ] += (random.nextFloat()*2-1)*5+(h*2-1)*10;
 			handpos[h*4+1] += (random.nextFloat()*2-1)*20;
@@ -1281,7 +1330,6 @@ void SunBurntAudioProcessorEditor::mouseMove(const MouseEvent& event) {
 		handposrotated[h*3+1] = (handpos[h*4]-160)*sin(-paperrot)+(handpos[h*4+1]-160)*cos(-paperrot)+161+64;
 		handposrotated[h*3+2] = 1024+handpos[h*4+2]-(paperrot/6.28318530718f)*16;
 	}
-	handhover = hover;
 }
 void SunBurntAudioProcessorEditor::mouseExit(const MouseEvent& event) {
 	hover = -1;
