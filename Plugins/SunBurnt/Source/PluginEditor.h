@@ -159,6 +159,9 @@ private:
 	bool prevjpmode = false;
 	std::unique_ptr<OpenGLShaderProgram> baseshader;
 
+	OpenGLTexture nonetex;
+	std::unique_ptr<OpenGLShaderProgram> noneshader;
+
 	OpenGLTexture selecttex;
 	int curveselection = 0;
 	std::unique_ptr<OpenGLShaderProgram> selectshader;
@@ -302,7 +305,6 @@ private:
 	float handposlerp   [8] = { -128,171,1012,3.5f,368,171,1034,3.5f };
 	functions::inertiadampened handposinertiadamp[6];
 	functions::dampendvalue handposdamp[8];
-	int handhover = -1;
 	bool skipmouseup = false;
 	int menuindex = 0;
 	int hoverid = -1;
