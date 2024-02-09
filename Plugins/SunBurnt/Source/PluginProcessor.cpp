@@ -27,26 +27,26 @@ double curveiterator::next() {
 	double interp = curve::calctension((xx-points[currentpoint].x)/(points[nextpoint].x-points[currentpoint].x),points[currentpoint].tension);
 	return points[currentpoint].y*(1-interp)+points[nextpoint].y*interp;
 }
-curve::curve(String str, const char linebreak) {
+curve::curve(String str, const char delimiter) {
 	std::stringstream ss(str.trim().toRawUTF8());
 	std::string token;
-	std::getline(ss, token, linebreak);
+	std::getline(ss, token, delimiter);
 	int size = std::stof(token);
 	for(int p = 0; p < size; ++p) {
-		std::getline(ss, token, linebreak);
+		std::getline(ss, token, delimiter);
 		float x = std::stof(token);
-		std::getline(ss, token, linebreak);
+		std::getline(ss, token, delimiter);
 		float y = std::stof(token);
-		std::getline(ss, token, linebreak);
+		std::getline(ss, token, delimiter);
 		float tension = std::stof(token);
 		points.push_back(point(x,y,tension));
 	}
 }
-String curve::tostring(const char linebreak) {
+String curve::tostring(const char delimiter) {
 	std::ostringstream data;
-	data << points.size() << linebreak;
+	data << points.size() << delimiter;
 	for(int p = 0; p < points.size(); ++p)
-		data << points[p].x << linebreak << points[p].y << linebreak << points[p].tension << linebreak;
+		data << points[p].x << delimiter << points[p].y << delimiter << points[p].tension << delimiter;
 	return (String)data.str();
 }
 double curve::calctension(double interp, double tension) {
@@ -60,15 +60,15 @@ double curve::calctension(double interp, double tension) {
 			return pow(interp,2-2*tension)*(1-tension)+(1-pow(1-interp,.5/(1-tension)))*tension;
 	}
 }
-bool curve::isvalidcurvestring(String str, const char linebreak) {
+bool curve::isvalidcurvestring(String str, const char delimiter) {
 	String trimstring = str.trim();
 	if(trimstring.isEmpty())
 		return false;
-	if(!trimstring.containsOnly(String(&linebreak,1)+".0123456789"))
+	if(!trimstring.containsOnly(String(&delimiter,1)+".0123456789"))
 		return false;
-	if(!trimstring.endsWithChar(linebreak))
+	if(!trimstring.endsWithChar(delimiter))
 		return false;
-	if(trimstring.startsWithChar(linebreak))
+	if(trimstring.startsWithChar(delimiter))
 		return false;
 	return true;
 }
@@ -115,6 +115,7 @@ SunBurntAudioProcessor::SunBurntAudioProcessor() :
 		for(int c = 0; c < 8; ++c)
 			presets[i].curves[c] = params.curves[c].defaultvalue;
 	presets[currentpreset].seed = Time::currentTimeMillis();
+	state.seed = presets[currentpreset].seed;
 
 	params.pots[ 0] = potentiometer("Dry"				,"dry"			,.002f	,presets[0].values[ 0]	);
 	params.pots[ 1] = potentiometer("Wet"				,"wet"			,.002f	,presets[0].values[ 1]	);
@@ -154,7 +155,7 @@ SunBurntAudioProcessor::SunBurntAudioProcessor() :
 		apvts.addParameterListener(params.pots[i].id,this);
 	}
 
-	logger.debug((String)"DEBUG VERSION 2");
+	//logger.debug((String)"DEBUG VERSION 3");
 }
 
 SunBurntAudioProcessor::~SunBurntAudioProcessor(){
@@ -315,12 +316,56 @@ void SunBurntAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffe
 
 	int numsamples = buffer.getNumSamples();
 
-	for (auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
-		buffer.clear (i, 0, numsamples);
+	for(int i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
+		buffer.clear(i, 0, numsamples);
 
 	float* const* drychanneldata = buffer.getArrayOfWritePointers();
 	float* const* wetchanneldata = wetbuffer.getArrayOfWritePointers();
 	float* const* effectchanneldata = effectbuffer.getArrayOfWritePointers();
+
+	//get bpm
+	double bpm = 120;
+	if(state.values[4] > 0) {
+		if(getPlayHead() != nullptr) {
+			AudioPlayHead::CurrentPositionInfo cpi;
+			getPlayHead()->getCurrentPosition(cpi);
+			if(cpi.bpm != lastbpm) {
+				lastbpm = cpi.bpm;
+				updatedcurvebpmcooldown = .5f;
+			}
+			bpm = cpi.bpm;
+		} else bpm = lastbpm;
+	}
+
+	//update impulse
+	if(updatedcurvecooldown.get() > 0) {
+		updatedcurvecooldown = updatedcurvecooldown.get()-((float)numsamples)/samplerate;
+		if(updatedcurvecooldown.get() <= 0)
+			updatedcurve = true;
+	}
+	if(updatedcurvebpmcooldown > 0) {
+		updatedcurvebpmcooldown = updatedcurvebpmcooldown-((float)numsamples)/samplerate;
+		if(updatedcurvebpmcooldown <= 0)
+			updatedcurve = true;
+	}
+	if(updatedcurve.get()) {
+		genbuffer();
+		resetconvolution();
+		if(channelnum > 2) {
+			for(int c = 0; c < channelnum; ++c) {
+				convolver[c]->loadImpulseResponse(std::move(impulsebuffer[c]),samplerate,dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
+				convolvereffect[c]->loadImpulseResponse(std::move(impulseeffectbuffer[c]),samplerate,dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
+			}
+		} else {
+			convolver[0]->loadImpulseResponse(std::move(impulsebuffer[0]),samplerate,channelnum==2?dsp::Convolution::Stereo::yes:dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
+			convolvereffect[0]->loadImpulseResponse(std::move(impulseeffectbuffer[0]),samplerate,channelnum==2?dsp::Convolution::Stereo::yes:dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
+		}
+
+		for(int i = 0; i < getTotalNumOutputChannels(); ++i)
+			buffer.clear(i, 0, numsamples);
+
+		return;
+	}
 
 	//vibrato
 	int buffersize = (int)floor(MAX_VIBRATO*samplerate);
@@ -405,45 +450,6 @@ void SunBurntAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffe
 				drychanneldata[c][s] = drychanneldata[c][s]*state.values[0]+(wetchanneldata[c][s]+effectchanneldata[c][s])*pow(state.values[1]*2,2);
 			else
 				drychanneldata[c][s] = drychanneldata[c][s]*state.values[0]+wetchanneldata[c][s]*pow(state.values[1]*2,2);
-		}
-	}
-
-	//get bpm
-	double bpm = 120;
-	if(state.values[4] > 0) {
-		if(getPlayHead() != nullptr) {
-			AudioPlayHead::CurrentPositionInfo cpi;
-			getPlayHead()->getCurrentPosition(cpi);
-			if(cpi.bpm != lastbpm) {
-				lastbpm = cpi.bpm;
-				updatedcurvebpmcooldown = .5f;
-			}
-			bpm = cpi.bpm;
-		} else bpm = lastbpm;
-	}
-
-	//update impulse
-	if(updatedcurvecooldown.get() > 0) {
-		updatedcurvecooldown = updatedcurvecooldown.get()-((float)numsamples)/samplerate;
-		if(updatedcurvecooldown.get() <= 0)
-			updatedcurve = true;
-	}
-	if(updatedcurvebpmcooldown > 0) {
-		updatedcurvebpmcooldown = updatedcurvebpmcooldown-((float)numsamples)/samplerate;
-		if(updatedcurvebpmcooldown <= 0)
-			updatedcurve = true;
-	}
-	if(updatedcurve.get()) {
-		genbuffer();
-		resetconvolution();
-		if(channelnum > 2) {
-			for(int c = 0; c < channelnum; ++c) {
-				convolver[c]->loadImpulseResponse(std::move(impulsebuffer[c]),samplerate,dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
-				convolvereffect[c]->loadImpulseResponse(std::move(impulseeffectbuffer[c]),samplerate,dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
-			}
-		} else {
-			convolver[0]->loadImpulseResponse(std::move(impulsebuffer[0]),samplerate,channelnum==2?dsp::Convolution::Stereo::yes:dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
-			convolvereffect[0]->loadImpulseResponse(std::move(impulseeffectbuffer[0]),samplerate,channelnum==2?dsp::Convolution::Stereo::yes:dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
 		}
 	}
 }
@@ -568,20 +574,20 @@ void SunBurntAudioProcessor::setUIScale(double uiscale) {
 }
 
 void SunBurntAudioProcessor::getStateInformation (MemoryBlock& destData) {
-	const char linebreak = '\n';
+	const char delimiter = '\n';
 	std::ostringstream data;
 
-	data << version << linebreak
-		<< currentpreset << linebreak << params.curveselection << linebreak;
+	data << version << delimiter
+		<< currentpreset << delimiter << params.curveselection << delimiter;
 
 	for(int i = 0; i < getNumPrograms(); ++i) {
-		data << presets[i].name << linebreak << presets[i].seed << linebreak;
+		data << presets[i].name << delimiter << presets[i].seed << delimiter;
 		for(int v = 0; v < paramcount; ++v)
-			data << presets[i].values[v] << linebreak;
+			data << presets[i].values[v] << delimiter;
 		for(int c = 0; c < 8; ++c) {
-			data << presets[i].curves[c].points.size() << linebreak;
+			data << presets[i].curves[c].points.size() << delimiter;
 			for(int p = 0; p < presets[i].curves[c].points.size(); ++p)
-				data << presets[i].curves[c].points[p].x << linebreak << presets[i].curves[c].points[p].y << linebreak << presets[i].curves[c].points[p].tension << linebreak;
+				data << presets[i].curves[c].points[p].x << delimiter << presets[i].curves[c].points[p].y << delimiter << presets[i].curves[c].points[p].tension << delimiter;
 		}
 	}
 
@@ -589,39 +595,40 @@ void SunBurntAudioProcessor::getStateInformation (MemoryBlock& destData) {
 	stream.writeString(data.str());
 }
 void SunBurntAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
+	const char delimiter = '\n';
 	try {
 		//*/
 		std::stringstream ss(String::createStringFromData(data, sizeInBytes).toRawUTF8());
 		std::string token;
 
-		std::getline(ss, token, '\n');
+		std::getline(ss, token, delimiter);
 		int saveversion = std::stoi(token);
 
-		std::getline(ss, token, '\n');
+		std::getline(ss, token, delimiter);
 		currentpreset = std::stoi(token);
 
-		std::getline(ss, token, '\n');
+		std::getline(ss, token, delimiter);
 		params.curveselection = std::stoi(token);
 
 		for(int i = 0; i < getNumPrograms(); ++i) {
-			std::getline(ss, token, '\n');
+			std::getline(ss, token, delimiter);
 			presets[i].name = token;
-			std::getline(ss, token, '\n');
+			std::getline(ss, token, delimiter);
 			presets[i].seed = std::stoll(token);
 			for(int v = 0; v < paramcount; ++v) {
-				std::getline(ss, token, '\n');
+				std::getline(ss, token, delimiter);
 				presets[i].values[v] = std::stof(token);
 			}
 			for(int c = 0; c < 8; ++c) {
 				presets[i].curves[c].points.clear();
-				std::getline(ss, token, '\n');
+				std::getline(ss, token, delimiter);
 				int size = std::stof(token);
 				for(int p = 0; p < size; ++p) {
-					std::getline(ss, token, '\n');
+					std::getline(ss, token, delimiter);
 					float x = std::stof(token);
-					std::getline(ss, token, '\n');
+					std::getline(ss, token, delimiter);
 					float y = std::stof(token);
-					std::getline(ss, token, '\n');
+					std::getline(ss, token, delimiter);
 					float tension = std::stof(token);
 					presets[i].curves[c].points.push_back(point(x,y,tension));
 				}
@@ -645,7 +652,82 @@ void SunBurntAudioProcessor::setStateInformation (const void* data, int sizeInBy
 			state.values[i] = presets[currentpreset].values[i];
 		}
 	}
+	state.seed = presets[currentpreset].seed;
 	updatedcurve = true;
+	updatevis = true;
+}
+const String SunBurntAudioProcessor::getpreset(const char delimiter) {
+	std::ostringstream data;
+
+	data << version << delimiter;
+
+	data << presets[currentpreset].seed << delimiter;
+	for(int v = 0; v < paramcount; ++v)
+		data << presets[currentpreset].values[v] << delimiter;
+	for(int c = 0; c < 8; ++c) {
+		data << presets[currentpreset].curves[c].points.size() << delimiter;
+		for(int p = 0; p < presets[currentpreset].curves[c].points.size(); ++p)
+			data << presets[currentpreset].curves[c].points[p].x << delimiter << presets[currentpreset].curves[c].points[p].y << delimiter << presets[currentpreset].curves[c].points[p].tension << delimiter;
+	}
+
+	return data.str();
+}
+void SunBurntAudioProcessor::setpreset(const String& preset, const char delimiter, bool printerrors) {
+	String error = "";
+	String revert = getpreset();
+	try {
+		std::stringstream ss(preset.toRawUTF8());
+		std::string token;
+
+		std::getline(ss, token, delimiter);
+		int saveversion = std::stoi(token);
+
+		std::getline(ss, token, delimiter);
+		presets[currentpreset].seed = std::stoll(token);
+		for(int v = 0; v < paramcount; ++v) {
+			std::getline(ss, token, delimiter);
+			presets[currentpreset].values[v] = std::stof(token);
+		}
+		for(int c = 0; c < 8; ++c) {
+			presets[currentpreset].curves[c].points.clear();
+			std::getline(ss, token, delimiter);
+			int size = std::stof(token);
+			for(int p = 0; p < size; ++p) {
+				std::getline(ss, token, delimiter);
+				float x = std::stof(token);
+				std::getline(ss, token, delimiter);
+				float y = std::stof(token);
+				std::getline(ss, token, delimiter);
+				float tension = std::stof(token);
+				presets[currentpreset].curves[c].points.push_back(point(x,y,tension));
+			}
+		}
+	} catch (const char* e) {
+		error = "Error loading saved data: "+(String)e;
+	} catch(String e) {
+		error = "Error loading saved data: "+e;
+	} catch(std::exception &e) {
+		error = "Error loading saved data: "+(String)e.what();
+	} catch(...) {
+		error = "Error loading saved data";
+	}
+	if(error != "") {
+		//if(printerrors)
+			logger.debug(error);
+		setpreset(revert);
+		return;
+	}
+
+	for(int i = 0; i < paramcount; ++i) {
+		apvts.getParameter(params.pots[i].id)->setValueNotifyingHost(params.pots[i].normalize(presets[currentpreset].values[i]));
+		if(params.pots[i].smoothtime > 0) {
+			params.pots[i].smooth.setCurrentAndTargetValue(presets[currentpreset].values[i]);
+			state.values[i] = presets[currentpreset].values[i];
+		}
+	}
+	state.seed = presets[currentpreset].seed;
+	updatedcurve = true;
+	updatevis = true;
 }
 void SunBurntAudioProcessor::parameterChanged(const String& parameterID, float newValue) {
 	for(int i = 0; i < paramcount; ++i) if(parameterID == params.pots[i].id) {
@@ -704,17 +786,17 @@ void SunBurntAudioProcessor::deletepoint(int index) {
 	if(findcurve(i) != -1)
 		updatedcurve = true;
 }
-String SunBurntAudioProcessor::curvetostring(const char linebreak) {
+const String SunBurntAudioProcessor::curvetostring(const char delimiter) {
 	int i = 0;
 	if(params.curveselection > 0)
 		i = (int)state.values[6+params.curveselection];
-	return presets[currentpreset].curves[i].tostring();
+	return presets[currentpreset].curves[i].tostring(delimiter);
 }
-void SunBurntAudioProcessor::curvefromstring(String str, const char linebreak) {
+void SunBurntAudioProcessor::curvefromstring(String str, const char delimiter) {
 	int i = 0;
 	if(params.curveselection > 0)
 		i = (int)state.values[6+params.curveselection];
-	presets[currentpreset].curves[i] = curve(str);
+	presets[currentpreset].curves[i] = curve(str,delimiter);
 	updatevis = true;
 	if(findcurve(i) != -1)
 		updatedcurve = true;

@@ -155,13 +155,15 @@ public:
 
 	void getStateInformation(MemoryBlock& destData) override;
 	void setStateInformation(const void* data, int sizeInBytes) override;
+	const String getpreset(const char delimiter = ',');
+	void setpreset(const String& preset, const char delimiter = ',', bool printerrors = false);
 	virtual void parameterChanged(const String& parameterID, float newValue);
 	int64 reseed();
 	void movepoint(int index, float x, float y);
 	void movetension(int index, float tension);
 	void addpoint(int index, float x, float y);
 	void deletepoint(int index);
-	String curvetostring(const char linebreak = ',');
+	const String curvetostring(const char linebreak = ',');
 	void curvefromstring(String str, const char linebreak = ',');
 	void resetcurve();
 

@@ -1353,6 +1353,9 @@ void SunBurntAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 			rightclickmenu->addItem(2,"'Paste curve",curve::isvalidcurvestring(SystemClipboard::getTextFromClipboard()));
 			rightclickmenu->addItem(3,"'Reset curve",true);
 			rightclickmenu->addSeparator();
+			rightclickmenu->addItem(4,"'Copy preset",true);
+			rightclickmenu->addItem(5,"'Paste preset",true);
+			rightclickmenu->addSeparator();
 		}
 		rightclickmenu->addSubMenu(jpmode?(String::fromUTF8("'スケール")):("'Scale"),*scalemenu);
 		rightclickmenu->addSubMenu(jpmode?(String::fromUTF8("'言語")):("'Language"),*langmenu);
@@ -1367,12 +1370,16 @@ void SunBurntAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 			} else if(result >= 10) { //lang
 				jpmode = result==12;
 				audioProcessor.setLang(result==12);
-			} else if(result == 1) { //copy
+			} else if(result == 1) { //copy curve
 				SystemClipboard::copyTextToClipboard(audioProcessor.curvetostring());
-			} else if(result == 2) { //paste
+			} else if(result == 2) { //paste curve
 				audioProcessor.curvefromstring(SystemClipboard::getTextFromClipboard());
-			} else if(result == 3) { //reset
+			} else if(result == 3) { //reset curve
 				audioProcessor.resetcurve();
+			} else if(result == 4) { //copy preset TODO
+				SystemClipboard::copyTextToClipboard(audioProcessor.getpreset());
+			} else if(result == 5) { //paste preset TODO
+				audioProcessor.setpreset(SystemClipboard::getTextFromClipboard());
 			}
 		});
 		return;
