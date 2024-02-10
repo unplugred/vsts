@@ -180,6 +180,7 @@ private:
 	bool finemode = false;
 	int axislock = -1;
 	Point<int> dragpos = Point<int>(0,0);
+	bool delaymode = false;
 	std::unique_ptr<OpenGLShaderProgram> circleshader;
 
 	float panelheight = 0;

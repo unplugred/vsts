@@ -688,17 +688,19 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 
 	//vis line
 	if(curveid > 0 || curveselection == 0) {
-		visshader->use();
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-		coord = context.extensions.glGetAttribLocation(visshader->getProgramID(),"aPos");
-		context.extensions.glEnableVertexAttribArray(coord);
-		context.extensions.glVertexAttribPointer(coord,3,GL_FLOAT,GL_FALSE,0,0);
-		context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*3408, visline, GL_DYNAMIC_DRAW);
-		visshader->setUniform("banner",banneroffset);
-		visshader->setUniform("dpi",scaleddpi);
-		glDrawArrays(GL_TRIANGLE_STRIP,0,1136);
-		context.extensions.glDisableVertexAttribArray(coord);
-		context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
+		if(!delaymode) {
+			visshader->use();
+			coord = context.extensions.glGetAttribLocation(visshader->getProgramID(),"aPos");
+			context.extensions.glEnableVertexAttribArray(coord);
+			context.extensions.glVertexAttribPointer(coord,3,GL_FLOAT,GL_FALSE,0,0);
+			context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*3408, visline, GL_DYNAMIC_DRAW);
+			visshader->setUniform("banner",banneroffset);
+			visshader->setUniform("dpi",scaleddpi);
+			glDrawArrays(GL_TRIANGLE_STRIP,0,1136);
+			context.extensions.glDisableVertexAttribArray(coord);
+			context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
+		}
 	}
 
 	//tension points
@@ -708,28 +710,30 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	circleshader->setUniform("colout",1.f,0.f,0.f);
 	if(curveid > 0 || curveselection == 0) {
-		circleshader->setUniform("colin",1.f,0.f,0.f);
-		circleshader->setUniform("knobscale",17.364f*uiscales[uiscaleindex]/getWidth(),17.364f*uiscales[uiscaleindex]/getHeight());
-		circleshader->setUniform("size",8.682f*scaleddpi);
-		circleshader->setUniform("fill",.3f);
-		int nextpoint = 0;
-		for(int i = 0; i < (curves[curveid].points.size()-1); ++i) {
-			if(!curves[curveid].points[i].enabled) continue;
-			++nextpoint;
-			while(!curves[curveid].points[nextpoint].enabled) ++nextpoint;
-			if(((curves[curveid].points[nextpoint].x-curves[curveid].points[i].x)*1.42f) <= .02 || fabs(curves[curveid].points[nextpoint].y-curves[curveid].points[i].y) <= .02) continue;
-			double interp = curve::calctension(.5,curves[curveid].points[i].tension);
-			float x = (curves[curveid].points[i].x+curves[curveid].points[nextpoint].x)*284.f+24.f-8.682f;
-			float y = (curves[curveid].points[i].y*(1-interp)+curves[curveid].points[nextpoint].y*interp)*400.f+148.f-8.682f;
-			circleshader->setUniform("knobpos",
-				x*uiscales[uiscaleindex]/getWidth()-1,
-				y*uiscales[uiscaleindex]/getHeight()-1);
-			if(x >= 398 && y <= (66+panelheighttarget)*2 && panelvisible) {
-				circleshader->setUniform("colin",1.f,1.f,0.f);
-				glDrawArrays(GL_TRIANGLE_STRIP,0,4);
-				circleshader->setUniform("colin",1.f,0.f,0.f);
-			} else {
-				glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+		if(!delaymode) {
+			circleshader->setUniform("colin",1.f,0.f,0.f);
+			circleshader->setUniform("knobscale",17.364f*uiscales[uiscaleindex]/getWidth(),17.364f*uiscales[uiscaleindex]/getHeight());
+			circleshader->setUniform("size",8.682f*scaleddpi);
+			circleshader->setUniform("fill",.3f);
+			int nextpoint = 0;
+			for(int i = 0; i < (curves[curveid].points.size()-1); ++i) {
+				if(!curves[curveid].points[i].enabled) continue;
+				++nextpoint;
+				while(!curves[curveid].points[nextpoint].enabled) ++nextpoint;
+				if(((curves[curveid].points[nextpoint].x-curves[curveid].points[i].x)*1.42f) <= .02 || fabs(curves[curveid].points[nextpoint].y-curves[curveid].points[i].y) <= .02) continue;
+				double interp = curve::calctension(.5,curves[curveid].points[i].tension);
+				float x = (curves[curveid].points[i].x+curves[curveid].points[nextpoint].x)*284.f+24.f-8.682f;
+				float y = (curves[curveid].points[i].y*(1-interp)+curves[curveid].points[nextpoint].y*interp)*400.f+148.f-8.682f;
+				circleshader->setUniform("knobpos",
+					x*uiscales[uiscaleindex]/getWidth()-1,
+					y*uiscales[uiscaleindex]/getHeight()-1);
+				if(x >= 398 && y <= (66+panelheighttarget)*2 && panelvisible) {
+					circleshader->setUniform("colin",1.f,1.f,0.f);
+					glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+					circleshader->setUniform("colin",1.f,0.f,0.f);
+				} else {
+					glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+				}
 			}
 		}
 
@@ -1165,6 +1169,8 @@ void SunBurntAudioProcessorEditor::parameterChanged(const String& parameterID, f
 	}
 	for(int i = 0; i < knobcount; i++) if(knobs[i].id == parameterID) {
 		knobs[i].value = knobs[i].normalize(newValue);
+		if(parameterID == "density")
+			recalcsliders();
 		return;
 	}
 	for(int i = 0; i < slidercount; i++) if(sliders[i].id == parameterID) {
@@ -1235,6 +1241,11 @@ void SunBurntAudioProcessorEditor::recalclabels() {
 	}
 }
 void SunBurntAudioProcessorEditor::recalcsliders() {
+	delaymode = knobs[2].value == 0 && curveselection == 0;
+	for(int d = 1; d < 5; ++d)
+		if(curveindex[d] == 6)
+			delaymode = false;
+
 	int curveid = curveindex[curveselection];
 	slidersvisible.clear();
 	if(curveid == 0 && curveselection != 0) {
@@ -1493,7 +1504,7 @@ void SunBurntAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 					}
 				} else axislock = -1;
 
-				if(event.mods.isShiftDown()) { // free mode
+				if(event.mods.isShiftDown() || delaymode) { // free mode
 					if((i > 1 && pointx < curves[curveindex[curveselection]].points[i-1].x) || (i < (curves[curveindex[curveselection]].points.size()-2) && pointx > curves[curveindex[curveselection]].points[i+1].x)) {
 						point pnt = curves[curveindex[curveselection]].points[i];
 						int n = 1;
@@ -1520,7 +1531,7 @@ void SunBurntAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 				bool clamppedy = false;
 				float xleft = 0;
 				float xright = 1;
-				if(!event.mods.isShiftDown()) { // free mode
+				if(!event.mods.isShiftDown() && !delaymode) { // no free mode
 					if(i > 1) {
 						xleft = curves[curveindex[curveselection]].points[i-1].x;
 						if(pointx <= curves[curveindex[curveselection]].points[i-1].x) {
