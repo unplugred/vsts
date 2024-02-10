@@ -1307,11 +1307,10 @@ void SunBurntAudioProcessorEditor::mouseMove(const MouseEvent& event) {
 			break;
 	}
 	itemenabled = false;
-	for(int i = 1; i < 5; ++i) {
-		if(curveindex[i] == hoverid && i != menuindex) {
-			itemenabled = true;
-		}
-	}
+	if(hoverid > 0)
+		for(int i = 1; i < 5; ++i)
+			if(curveindex[i] == hoverid && i != menuindex)
+				itemenabled = true;
 	for(int h = 0; h < 2; ++h) {
 		if(hover == -1 || hover%2 != h) {
 			if(prevhover%2 != h || prevhover == hover)
@@ -1353,10 +1352,10 @@ void SunBurntAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 			rightclickmenu->addItem(2,"'Paste curve",curve::isvalidcurvestring(SystemClipboard::getTextFromClipboard()));
 			rightclickmenu->addItem(3,"'Reset curve",true);
 			rightclickmenu->addSeparator();
-			rightclickmenu->addItem(4,"'Copy preset",true);
-			rightclickmenu->addItem(5,"'Paste preset",true);
-			rightclickmenu->addSeparator();
 		}
+		rightclickmenu->addItem(4,"'Copy preset",true);
+		rightclickmenu->addItem(5,"'Paste preset",true);
+		rightclickmenu->addSeparator();
 		rightclickmenu->addSubMenu(jpmode?(String::fromUTF8("'スケール")):("'Scale"),*scalemenu);
 		rightclickmenu->addSubMenu(jpmode?(String::fromUTF8("'言語")):("'Language"),*langmenu);
 		rightclickmenu->addSeparator();

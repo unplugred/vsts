@@ -113,7 +113,7 @@ SunBurntAudioProcessor::SunBurntAudioProcessor() :
 	}
 	for(int i = 0; i < getNumPrograms(); ++i)
 		for(int c = 0; c < 8; ++c)
-			presets[i].curves[c] = params.curves[c].defaultvalue;
+			presets[i].curves[c] = curve(params.curves[c].defaultvalue);
 	presets[currentpreset].seed = Time::currentTimeMillis();
 	state.seed = presets[currentpreset].seed;
 
@@ -168,7 +168,7 @@ bool SunBurntAudioProcessor::producesMidi() const { return false; }
 bool SunBurntAudioProcessor::isMidiEffect() const { return false; }
 double SunBurntAudioProcessor::getTailLengthSeconds() const {
 	if(samplerate <= 0) return 0;
-	return ((double)revlength)/samplerate;
+	return ((double)taillength)/samplerate;
 }
 
 int SunBurntAudioProcessor::getNumPrograms() { return 20; }
@@ -233,6 +233,7 @@ void SunBurntAudioProcessor::reseteverything() {
 	effectbuffer.clear();
 
 	revlength = 0;
+	taillength = 0;
 	if(channelnum > 2) {
 		impulsebuffer.resize(channelnum);
 		impulseeffectbuffer.resize(channelnum);
@@ -267,16 +268,7 @@ void SunBurntAudioProcessor::reseteverything() {
 	pitchshift.setPitchSemiTones(state.values[15]);
 	pitchprocessbuffer.resize(channelnum*samplesperblock);
 
-	genbuffer();
-	if(channelnum > 2) {
-		for(int c = 0; c < channelnum; ++c) {
-			convolver[c]->loadImpulseResponse(std::move(impulsebuffer[c]),samplerate,dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
-			convolvereffect[c]->loadImpulseResponse(std::move(impulseeffectbuffer[c]),samplerate,dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
-		}
-	} else {
-		convolver[0]->loadImpulseResponse(std::move(impulsebuffer[0]),samplerate,channelnum==2?dsp::Convolution::Stereo::yes:dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
-		convolvereffect[0]->loadImpulseResponse(std::move(impulseeffectbuffer[0]),samplerate,channelnum==2?dsp::Convolution::Stereo::yes:dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
-	}
+	updatedcurve = true;
 }
 void SunBurntAudioProcessor::resetconvolution() {
 	dsp::ProcessSpec spec;
@@ -463,17 +455,18 @@ void SunBurntAudioProcessor::genbuffer() {
 		revlength = (int)round((pow(state.values[3],2)*(6-.1)+.1)*samplerate);
 	else
 		revlength = (int)round(((60.*state.values[4])/lastbpm)*samplerate);
+	taillength = revlength+(int)round(.1*samplerate);
 
 	if(channelnum > 2) {
 		for(int c = 0; c < channelnum; ++c) {
-			impulsebuffer[c] = AudioBuffer<float>(1,revlength);
-			impulseeffectbuffer[c] = AudioBuffer<float>(1,revlength);
+			impulsebuffer[c] = AudioBuffer<float>(1,taillength);
+			impulseeffectbuffer[c] = AudioBuffer<float>(1,taillength);
 			impulsechanneldata[c] = impulsebuffer[c].getWritePointer(0);
 			impulseeffectchanneldata[c] = impulseeffectbuffer[c].getWritePointer(0);
 		}
 	} else {
-		impulsebuffer[0] = AudioBuffer<float>(channelnum,revlength);
-		impulseeffectbuffer[0] = AudioBuffer<float>(channelnum,revlength);
+		impulsebuffer[0] = AudioBuffer<float>(channelnum,taillength);
+		impulseeffectbuffer[0] = AudioBuffer<float>(channelnum,taillength);
 		for(int c = 0; c < channelnum; ++c) {
 			impulsechanneldata[c] = impulsebuffer[0].getWritePointer(c);
 			impulseeffectchanneldata[c] = impulseeffectbuffer[0].getWritePointer(c);
@@ -492,7 +485,7 @@ void SunBurntAudioProcessor::genbuffer() {
 
 	Random random(presets[currentpreset].seed);
 	double values[8];
-	for (int s = 0; s < revlength; ++s) {
+	for (int s = 0; s < taillength; ++s) {
 		values[0] = iterator[0].next();
 		values[1] = state.values[11];
 		values[2] = state.values[12];
@@ -515,7 +508,9 @@ void SunBurntAudioProcessor::genbuffer() {
 		for (int c = 0; c < channelnum; ++c) {
 
 			//vol
-			if(iterator[0].pointhit) {
+			if(s >= revlength) {
+				out = 0;
+			} else if(iterator[0].pointhit) {
 				out = values[0];
 			} else if(random.nextFloat() < values[6]) {
 				float r = random.nextFloat();
@@ -550,7 +545,7 @@ void SunBurntAudioProcessor::genbuffer() {
 	}
 	agc = 1/fmax(sqrt(agc/channelnum),1);
 	for (int c = 0; c < channelnum; ++c) {
-		for (int s = 0; s < revlength; ++s) {
+		for (int s = 0; s < taillength; ++s) {
 			impulsechanneldata[c][s] *= agc;
 			impulseeffectchanneldata[c][s] *= agc;
 		}
