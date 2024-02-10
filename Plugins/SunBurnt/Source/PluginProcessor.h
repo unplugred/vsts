@@ -212,6 +212,7 @@ private:
 	AudioBuffer<float> wetbuffer;
 	AudioBuffer<float> effectbuffer;
 	int revlength = 0;
+	int taillength = 0;
 	int vibratoindex = 0;
 	double vibratophase = 0;
 	functions::dampendvalue dampvibratodepth;
