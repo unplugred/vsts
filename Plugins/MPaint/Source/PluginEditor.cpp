@@ -38,7 +38,7 @@ void main(){
 	gl_Position = vec4(aPos*2*pos.xy-1+pos.zw,0,1);
 	uv = vec2((aPos.x+sound)*texscale.x,1-(1-aPos.y)*texscale.y);
 })"))
-		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Vertex shader error",shader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at arihanan@proton.me. THANKS!","OK!");
+		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Vertex shader error",shader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at melody@unplug.red. THANKS!","OK!");
 	if(!shader->addFragmentShader(
 R"(#version 150 core
 in vec2 uv;
@@ -58,7 +58,7 @@ void main(){
 	if((errorhover < .5 || uv.x < .8 || uv.y > .15) && res.y > 80)
 		fragColor.r = fragColor.g;
 })"))
-		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Fragment shader error",shader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at arihanan@proton.me. THANKS!","OK!");
+		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Fragment shader error",shader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at melody@unplug.red. THANKS!","OK!");
 	shader->link();
 
 	errortex.loadImage(ImageCache::getFromMemory(BinaryData::error_png, BinaryData::error_pngSize));
