@@ -111,7 +111,7 @@ void main(){
 	if(right < .5) lgcoords = aPos*lgsize.xy+vec2(lgsize.z-lgsize.x,lgsize.w);
 	else lgcoords = aPos*lgsize.xy+vec2(lgsize.z,lgsize.w);
 })"))
-		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Vertex shader error",vushader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at arihanan@proton.me. THANKS!","OK!");
+		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Vertex shader error",vushader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at melody@unplug.red. THANKS!","OK!");
 	if(!vushader->addFragmentShader(
 R"(#version 150 core
 in vec2 v_TexCoord;
@@ -188,7 +188,7 @@ void main(){
 		}
 	}
 })"))
-		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Fragment shader error",vushader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at arihanan@proton.me. THANKS!","OK!");
+		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Fragment shader error",vushader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at melody@unplug.red. THANKS!","OK!");
 	vushader->link();
 
 	vutex.loadImage(ImageCache::getFromMemory(BinaryData::map_png, BinaryData::map_pngSize));
@@ -225,7 +225,7 @@ void main(){
 	gl_Position = vec4((aPos*vec2(1,size.y))*2-1,0,1);
 	uv = vec2(aPos.x*size.x,1-(1-aPos.y)*texscale.y);
 })"))
-		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Vertex shader error",bannershader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at arihanan@proton.me. THANKS!","OK!");
+		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Vertex shader error",bannershader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at melody@unplug.red. THANKS!","OK!");
 	if(!bannershader->addFragmentShader(
 //BANNER FRAG
 R"(#version 150 core
@@ -240,7 +240,7 @@ void main(){
 	vec2 col = max(min((texture(tex,vec2(mod(uv.x+pos,1)*texscale.x,uv.y)).rg-.5)*dpi+.5,1),0);
 	fragColor = vec4(vec3(col.r*free+col.g*(1-free)),1);
 })"))
-		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Fragment shader error",bannershader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at arihanan@proton.me. THANKS!","OK!");
+		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Fragment shader error",bannershader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at melody@unplug.red. THANKS!","OK!");
 	bannershader->link();
 
 	bannertex.loadImage(ImageCache::getFromMemory(BinaryData::banner_png, BinaryData::banner_pngSize));
