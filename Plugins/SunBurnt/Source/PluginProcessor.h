@@ -155,8 +155,8 @@ public:
 
 	void getStateInformation(MemoryBlock& destData) override;
 	void setStateInformation(const void* data, int sizeInBytes) override;
-	const String getpreset(const char delimiter = ',');
-	void setpreset(const String& preset, const char delimiter = ',', bool printerrors = false);
+	const String getpreset(int presetid, const char delimiter = ',');
+	void setpreset(const String& preset, int presetid, const char delimiter = ',', bool printerrors = false);
 	virtual void parameterChanged(const String& parameterID, float newValue);
 	int64 reseed();
 	void movepoint(int index, float x, float y);
