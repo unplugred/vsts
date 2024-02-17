@@ -1441,8 +1441,8 @@ void SunBurntAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		if((hover+9)%2 == 0 || hover == -10) {
 			curveselection = ceil(hover*.5+5);
 			audioProcessor.params.curveselection = curveselection;
-			recalcsliders();
 			calcvis();
+			recalcsliders();
 		} else {
 			int id = (int)(hover*.5)+5;
 			int val = 0;
@@ -1634,6 +1634,8 @@ void SunBurntAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 	}
 	if(menuindex > 0) {
 		if(hover > -1 && initialdrag == hover && !itemenabled) {
+			curveselection = menuindex;
+			audioProcessor.params.curveselection = curveselection;
 			audioProcessor.apvts.getParameter("curve"+(String)menuindex)->setValueNotifyingHost(hoverid/7.f);
 			audioProcessor.undoManager.setCurrentTransactionName((String)"Changed curve "+(String)menuindex+" to "+audioProcessor.params.curves[hoverid].name);
 			audioProcessor.undoManager.beginNewTransaction();
