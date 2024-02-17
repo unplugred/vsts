@@ -32,6 +32,8 @@ curve::curve(String str, const char delimiter) {
 	std::string token;
 	std::getline(ss, token, delimiter);
 	int size = std::stof(token);
+	if(size < 2) throw std::invalid_argument("Invalid point data");
+	float prevx = 0;
 	for(int p = 0; p < size; ++p) {
 		std::getline(ss, token, delimiter);
 		float x = std::stof(token);
@@ -39,6 +41,9 @@ curve::curve(String str, const char delimiter) {
 		float y = std::stof(token);
 		std::getline(ss, token, delimiter);
 		float tension = std::stof(token);
+		if(x > 1 || x < prevx || y > 1 || y < 0 || tension > 1 || tension < 0 || (p == 0 && x != 0) || (p == (size-1) && x != 1))
+			throw std::invalid_argument("Invalid point data");
+		prevx = x;
 		points.push_back(point(x,y,tension));
 	}
 }
@@ -64,7 +69,7 @@ bool curve::isvalidcurvestring(String str, const char delimiter) {
 	String trimstring = str.trim();
 	if(trimstring.isEmpty())
 		return false;
-	if(!trimstring.containsOnly(String(&delimiter,1)+".0123456789"))
+	if(!trimstring.containsOnly(String(&delimiter,1)+"-.0123456789"))
 		return false;
 	if(!trimstring.endsWithChar(delimiter))
 		return false;
@@ -99,23 +104,55 @@ SunBurntAudioProcessor::SunBurntAudioProcessor() :
 	params.curves[0] = curveparams("None"			,"3,0,0,0.2,0.07,1,0.7,1,0,0.5,");
 	params.curves[1] = curveparams("High-pass"		,"2,0,0,0.5,1,0,0.5,"			);
 	params.curves[2] = curveparams("HP resonance"	,"2,0,0.3,0.5,1,0.3,0.5,"		);
-	params.curves[3] = curveparams("Low-pass"		,"2,0,1,0.5,1,1,0.5,"			);
-	params.curves[4] = curveparams("LP resonance"	,"2,0,0.3,0.5,1,0.3,0.5,"		);
+	params.curves[3] = curveparams("Low-pass"		,"2,0,1,0.5,1,0.8438,0.5,"		);
+	params.curves[4] = curveparams("LP resonance"	,"2,0,0.14,0.5,1,0.14,0.5,"		);
 	params.curves[5] = curveparams("Pan"			,"2,0,0.5,0.5,1,0.5,0.5,"		);
 	params.curves[6] = curveparams("Density"		,"2,0,0.5,0.5,1,0.5,0.5,"		);
 	params.curves[7] = curveparams("Shimmer"		,"2,0,0,0.35,1,0.5,0.5,"		);
 
-	//									dry		wet		density	length	sync	depth	speed	curve1	curve2	curve3	curve4	hp		hp res	lp		lp res	shimmer
-	presets[0] = pluginpreset("Default"	,1.0f	,0.75f	,0.5f	,0.65f	,0		,0.55f	,0.65f	,1		,3		,5		,7		,0.0f	,0.3f	,1.0f	,0.3f	,12.0f	);
-	for(int i = 1; i < getNumPrograms(); ++i) {
+	currentpreset = -1;
+
+	presets[0].name = "hall";
+	setpreset("0,1707551331622,1,0.57,0.5,0.53,0,0.55,0.65,1,3,5,7,0,0.3,1,0.14,12,3,0,0,0.2,0.07,1,0.7,1,0,0.5,2,0,0,0.5,1,0,0.5,2,0,0.3,0.5,1,0.3,0.5,2,0,1,0.5,1,0.8438,0.5,2,0,0.14,0.5,1,0.14,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0,0.35,1,0.5,0.5,",0);
+	presets[0].seed = Time::currentTimeMillis();
+	state.seed = presets[0].seed;
+
+	presets[1].name = "room";
+	setpreset("0,1707550784267,1,0.525,0.5,0.21,0,0.55,0.65,1,3,0,0,0,0.3,1,0.14,12,3,0,0,0.2,0.09,1,0.435,1,0,0.5,2,0,0,0.5,1,0,0.5,2,0,0.3,0.5,1,0.3,0.5,2,0,1,0.5,1,0.8438,0.5,2,0,0.14,0.5,1,0.14,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0,0.35,1,0.5,0.5,",1);
+
+	presets[2].name = "gated";
+	setpreset("0,1707554593602,1,0.46,0.5,0.21,1,0.605,0.65,0,0,0,0,0,0.3,0.785,0.14,12,4,0,0,0.09,0.17,1,0.68,0.89,0.5598,0.065,1,0,0.5,2,0,0,0.5,1,0,0.5,2,0,0.3,0.5,1,0.3,0.5,2,0,1,0.5,1,0.8438,0.5,2,0,0.14,0.5,1,0.14,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0,0.35,1,0.5,0.5,",2);
+
+	presets[3].name = "stutter";
+	setpreset("0,1707555224332,1,0.68,0.145,0.815,0,0.64,0.65,5,0,6,0,0,0.3,0.905,0.14,12,3,0,0,0.2,0.03,1,0.665,1,0,0.5,2,0,0,0.5,1,0,0.5,2,0,0.3,0.5,1,0.3,0.5,2,0,1,0.5,1,0.8438,0.5,2,0,0.14,0.5,1,0.14,0.5,5,0,0.7272,0.5,0.2277,0.343333,0.5,0.5,0.643333,0.5,0.731573,0.4526,0.5,1,0.5,0.5,2,0,0.2657,0.77,1,0.0994,0.5,2,0,0,0.35,1,0.5,0.5,",3);
+
+	presets[4].name = "two sevenths";
+	setpreset("0,1707555312628,1,0.57,0,0.53,1,0.55,0.65,0,0,0,7,0,0.3,1,0.14,7,3,0,0,0.5,0.483732,1,0.5,1,0.3621,0.5,2,0,0,0.5,1,0,0.5,2,0,0.3,0.5,1,0.3,0.5,2,0,1,0.5,1,0.8438,0.5,2,0,0.14,0.5,1,0.14,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,1,0.35,1,1,0.5,",4);
+
+	presets[5].name = "reverse reverb";
+	setpreset("0,1707551331622,0,1,0.5,0.53,8,0.55,0.65,1,3,0,0,0,0,1,0,12,4,0,0,0.195,0.881174,0.3542,0.21,1,1,0.7,1,0,0.5,2,0,0.2911,0.695,1,0,0.5,2,0,0.3,0.5,1,0.3,0.5,2,0,0.4533,0.655,1,1,0.5,2,0,0.14,0.5,1,0.14,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0,0.35,1,0.5,0.5,",5);
+
+	presets[6].name = "ufo";
+	setpreset("0,1707551331622,1,0.355,0.5,0.78,8,0.555,0.435,1,3,5,7,0,0.84,1,0.835,12,3,0,0,0.2,0.07,1,0.2,1,0,0.5,8,0,0,0.5,0.140493,0.1551,0.5,0.238122,0.3666,0.5,0.401408,0.203333,0.5,0.582958,0.430867,0.5,0.720657,0.126667,0.5,0.861502,0.453333,0.5,1,0,0.5,2,0,0.3,0.5,1,0.3,0.5,6,0,0.6663,0.5,0.220164,0.446867,0.5,0.433427,0.7871,0.5,0.663991,0.525733,0.5,0.791901,0.7223,0.5,1,0.8438,0.5,2,0,0.14,0.5,1,0.14,0.5,8,0,0.5,0.5,0.239437,0.18,0.5,0.460094,0.753333,0.5,0.643193,0.47,0.5,0.680751,0.716667,0.5,0.765258,0.246667,0.5,0.903756,0.52,0.5,1,0.5,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0,0.35,1,0.7343,0.5,",6);
+
+	presets[7].name = "wave";
+	setpreset("0,1707575061535,0.84,0.68,0.265,0.525,0,0.56,0.54,0,3,0,7,0,0.3,1,0.455,7,3,0,0,0.87,0.27,1,0.38,1,0,0.5,2,0,0,0.5,1,0,0.5,2,0,0.3,0.5,1,0.3,0.5,2,0,1,0.77,1,0.3468,0.5,2,0,0.14,0.5,1,0.14,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0.2758,0.35,1,0.6024,0.5,",7);
+
+	presets[8].name = "sub wub wub";
+	setpreset("0,1708193043094,1,1,0.5,0.153125,3,0.24,0.65,0,3,0,7,0,0.3,1,0.14,-12,9,0,0,0.7,0,1,0.7,0.25,0,0.7,0.25,0.9361,0.7,0.5,0,0.7,0.5,0.8509,0.7,0.75,0,0.7,0.75,0.7586,0.7,1,0,0.5,2,0,0,0.5,1,0,0.5,2,0,0.3,0.5,1,0.3,0.5,2,0,0.7941,0.5,1,0.5456,0.5,2,0,0.14,0.5,1,0.14,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0.7302,0.35,1,0.7302,0.5,",8);
+
+	presets[9].name = "spectre";
+	setpreset("0,1708193043096,1,0.525,0,0.53,0,0.7,0.535,0,3,5,0,0.435,0.3,1,0.14,12,6,0,0,0.2,0.0610329,0.33,0.2,0.185446,0.783333,0.2,0.431009,0.3542,0.2,0.765,0.804633,0.2,1,0.6172,0.5,2,0,0,0.5,1,0,0.5,2,0,0.3,0.5,1,0.3,0.5,7,0,0.3539,0.5,0.194836,0.683333,0.5,0.284648,0.425667,0.5,0.42723,0.743333,0.5,0.698498,0.437133,0.5,0.798122,0.8,0.5,1,0.5669,0.5,2,0,0.14,0.5,1,0.14,0.5,11,0,0,0.5,0,0,0.5,0.136479,0.6177,0.5,0.136479,1,0.5,0.358873,0.4604,0.5,0.358873,0,0.5,0.607277,0.2911,0.5,0.607277,1,0.5,0.85446,0.6805,0.5,0.85446,0.1704,0.5,1,0.2627,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0,0.35,1,0.5,0.5,",9);
+
+	currentpreset = 0;
+
+	for(int i = 10; i < getNumPrograms(); ++i) {
 		presets[i] = presets[0];
-		presets[i].name = "Program " + (String)(i-7);
-	}
-	for(int i = 0; i < getNumPrograms(); ++i)
+		presets[i].seed += i;
+		presets[i].name = "program " + (String)(i-9);
 		for(int c = 0; c < 8; ++c)
 			presets[i].curves[c] = curve(params.curves[c].defaultvalue);
-	presets[currentpreset].seed = Time::currentTimeMillis();
-	state.seed = presets[currentpreset].seed;
+	}
 
 	params.pots[ 0] = potentiometer("Dry"				,"dry"			,.002f	,presets[0].values[ 0]	);
 	params.pots[ 1] = potentiometer("Wet"				,"wet"			,.002f	,presets[0].values[ 1]	);
@@ -171,7 +208,7 @@ double SunBurntAudioProcessor::getTailLengthSeconds() const {
 	return ((double)taillength)/samplerate;
 }
 
-int SunBurntAudioProcessor::getNumPrograms() { return 20; }
+int SunBurntAudioProcessor::getNumPrograms() { return 18; }
 int SunBurntAudioProcessor::getCurrentProgram() { return currentpreset; }
 void SunBurntAudioProcessor::setCurrentProgram (int index) {
 	if(currentpreset == index) return;
@@ -590,9 +627,9 @@ void SunBurntAudioProcessor::getStateInformation (MemoryBlock& destData) {
 	stream.writeString(data.str());
 }
 void SunBurntAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
+	//*/
 	const char delimiter = '\n';
 	try {
-		//*/
 		std::stringstream ss(String::createStringFromData(data, sizeInBytes).toRawUTF8());
 		std::string token;
 
@@ -629,7 +666,6 @@ void SunBurntAudioProcessor::setStateInformation (const void* data, int sizeInBy
 				}
 			}
 		}
-		//*/
 	} catch (const char* e) {
 		logger.debug((String)"Error loading saved data: "+(String)e);
 	} catch(String e) {
@@ -650,43 +686,46 @@ void SunBurntAudioProcessor::setStateInformation (const void* data, int sizeInBy
 	state.seed = presets[currentpreset].seed;
 	updatedcurve = true;
 	updatevis = true;
+	//*/
 }
-const String SunBurntAudioProcessor::getpreset(const char delimiter) {
+const String SunBurntAudioProcessor::getpreset(int presetid, const char delimiter) {
 	std::ostringstream data;
 
 	data << version << delimiter;
 
-	data << presets[currentpreset].seed << delimiter;
+	data << presets[presetid].seed << delimiter;
 	for(int v = 0; v < paramcount; ++v)
-		data << presets[currentpreset].values[v] << delimiter;
+		data << presets[presetid].values[v] << delimiter;
 	for(int c = 0; c < 8; ++c) {
-		data << presets[currentpreset].curves[c].points.size() << delimiter;
-		for(int p = 0; p < presets[currentpreset].curves[c].points.size(); ++p)
-			data << presets[currentpreset].curves[c].points[p].x << delimiter << presets[currentpreset].curves[c].points[p].y << delimiter << presets[currentpreset].curves[c].points[p].tension << delimiter;
+		data << presets[presetid].curves[c].points.size() << delimiter;
+		for(int p = 0; p < presets[presetid].curves[c].points.size(); ++p)
+			data << presets[presetid].curves[c].points[p].x << delimiter << presets[presetid].curves[c].points[p].y << delimiter << presets[presetid].curves[c].points[p].tension << delimiter;
 	}
 
 	return data.str();
 }
-void SunBurntAudioProcessor::setpreset(const String& preset, const char delimiter, bool printerrors) {
+void SunBurntAudioProcessor::setpreset(const String& preset, int presetid, const char delimiter, bool printerrors) {
 	String error = "";
-	String revert = getpreset();
+	String revert = getpreset(presetid);
 	try {
-		std::stringstream ss(preset.toRawUTF8());
+		std::stringstream ss(preset.trim().toRawUTF8());
 		std::string token;
 
 		std::getline(ss, token, delimiter);
 		int saveversion = std::stoi(token);
 
 		std::getline(ss, token, delimiter);
-		presets[currentpreset].seed = std::stoll(token);
+		presets[presetid].seed = std::stoll(token);
 		for(int v = 0; v < paramcount; ++v) {
 			std::getline(ss, token, delimiter);
-			presets[currentpreset].values[v] = std::stof(token);
+			presets[presetid].values[v] = std::stof(token);
 		}
 		for(int c = 0; c < 8; ++c) {
-			presets[currentpreset].curves[c].points.clear();
+			presets[presetid].curves[c].points.clear();
 			std::getline(ss, token, delimiter);
 			int size = std::stof(token);
+			if(size < 2) throw std::invalid_argument("Invalid point data");
+			float prevx = 0;
 			for(int p = 0; p < size; ++p) {
 				std::getline(ss, token, delimiter);
 				float x = std::stof(token);
@@ -694,7 +733,10 @@ void SunBurntAudioProcessor::setpreset(const String& preset, const char delimite
 				float y = std::stof(token);
 				std::getline(ss, token, delimiter);
 				float tension = std::stof(token);
-				presets[currentpreset].curves[c].points.push_back(point(x,y,tension));
+				if(x > 1 || x < prevx || y > 1 || y < 0 || tension > 1 || tension < 0 || (p == 0 && x != 0) || (p == (size-1) && x != 1))
+					throw std::invalid_argument("Invalid point data");
+				prevx = x;
+				presets[presetid].curves[c].points.push_back(point(x,y,tension));
 			}
 		}
 	} catch (const char* e) {
@@ -707,11 +749,13 @@ void SunBurntAudioProcessor::setpreset(const String& preset, const char delimite
 		error = "Error loading saved data";
 	}
 	if(error != "") {
-		//if(printerrors)
+		if(printerrors)
 			logger.debug(error);
-		setpreset(revert);
+		setpreset(revert, presetid);
 		return;
 	}
+
+	if(currentpreset != presetid) return;
 
 	for(int i = 0; i < paramcount; ++i) {
 		apvts.getParameter(params.pots[i].id)->setValueNotifyingHost(params.pots[i].normalize(presets[currentpreset].values[i]));
@@ -791,7 +835,12 @@ void SunBurntAudioProcessor::curvefromstring(String str, const char delimiter) {
 	int i = 0;
 	if(params.curveselection > 0)
 		i = (int)state.values[6+params.curveselection];
-	presets[currentpreset].curves[i] = curve(str,delimiter);
+	String revert = presets[currentpreset].curves[i].tostring();
+	try {
+		presets[currentpreset].curves[i] = curve(str,delimiter);
+	} catch (...) {
+		presets[currentpreset].curves[i] = curve(revert);
+	}
 	updatevis = true;
 	if(findcurve(i) != -1)
 		updatedcurve = true;
@@ -811,10 +860,10 @@ AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new SunBurntAudioPro
 AudioProcessorValueTreeState::ParameterLayout SunBurntAudioProcessor::createParameters() {
 
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"dry"			,1}	,"Dry"					,juce::NormalisableRange<float>( 0.0f	,1.0f	),1.0f	,"",AudioProcessorParameter::genericParameter	,topercent		,frompercent	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"wet"			,1}	,"wet"					,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.75f	,"",AudioProcessorParameter::genericParameter	,topercent		,frompercent	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"density"		,1}	,"Density"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"length"		,1},"Length"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.65f	,"",AudioProcessorParameter::genericParameter	,tolength		,fromlength		));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"dry"			,1},"Dry"					,juce::NormalisableRange<float>( 0.0f	,1.0f	),1.0f	,"",AudioProcessorParameter::genericParameter	,topercent		,frompercent	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"wet"			,1},"Wet"					,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.57f	,"",AudioProcessorParameter::genericParameter	,topercent		,frompercent	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"density"		,1},"Density"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"length"		,1},"Length"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.53f	,"",AudioProcessorParameter::genericParameter	,tolength		,fromlength		));
 	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"sync"		,1},"Length (quarter note)"									,0		,16		 ,0		,""												,toqn			,fromqn			));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"depth"		,1},"Vibrato depth"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.55f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"speed"		,1},"Vibrato speed"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.65f	,"",AudioProcessorParameter::genericParameter	,tospeed		,fromspeed		));
@@ -823,9 +872,9 @@ AudioProcessorValueTreeState::ParameterLayout SunBurntAudioProcessor::createPara
 	parameters.push_back(std::make_unique<AudioParameterChoice	>(ParameterID{"curve3"		,1},"Curve 3",StringArray{"None","High-pass","HP resonance","Low-pass","LP resonance","Pan","Density","Shimmer"},5	));
 	parameters.push_back(std::make_unique<AudioParameterChoice	>(ParameterID{"curve4"		,1},"Curve 4",StringArray{"None","High-pass","HP resonance","Low-pass","LP resonance","Pan","Density","Shimmer"},7	));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"highpass"	,1},"High-pass"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	,"",AudioProcessorParameter::genericParameter	,tocutoff		,fromcutoff		));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"highpassres"	,1}	,"HP resonance"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.3f	,"",AudioProcessorParameter::genericParameter	,toresonance	,fromresonance	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"lowpass"		,1}	,"Low-Pass"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),1.0f	,"",AudioProcessorParameter::genericParameter	,tocutoff		,fromcutoff		));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"lowpassres"	,1},"LP resonance"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.3f	,"",AudioProcessorParameter::genericParameter	,toresonance	,fromresonance	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"highpassres"	,1},"HP resonance"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.3f	,"",AudioProcessorParameter::genericParameter	,toresonance	,fromresonance	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"lowpass"		,1},"Low-pass"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),1.0f	,"",AudioProcessorParameter::genericParameter	,tocutoff		,fromcutoff		));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"lowpassres"	,1},"LP resonance"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.14f	,"",AudioProcessorParameter::genericParameter	,toresonance	,fromresonance	));
 	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"shimmerpitch",1},"Shimmer pitch"											,-24	,24		 ,12	,""												,topitch		,frompitch		));
 	return { parameters.begin(), parameters.end() };
 }
