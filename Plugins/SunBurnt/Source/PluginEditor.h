@@ -160,6 +160,8 @@ private:
 	std::unique_ptr<OpenGLShaderProgram> baseshader;
 
 	OpenGLTexture nonetex;
+	float nonetime = 0;
+	int nonerate = 0;
 	std::unique_ptr<OpenGLShaderProgram> noneshader;
 
 	OpenGLTexture selecttex;
