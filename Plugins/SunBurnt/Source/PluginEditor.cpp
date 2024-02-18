@@ -154,24 +154,40 @@ R"(#version 150 core
 in vec2 aPos;
 uniform vec4 pos;
 uniform float banner;
+uniform float isjp;
+uniform float time;
 out vec2 uv;
+out vec2 logouv;
 void main(){
 	gl_Position = vec4(vec2(aPos.x*pos.z+pos.x,(aPos.y*pos.w+pos.y)*(1-banner))*2-1,0,1);
 	uv = aPos;
+	float angle = -.0471238898;
+	if(isjp > .5)
+		angle = -.0844739358;
+	logouv = vec2((aPos.x-.5)*1.4158415842,aPos.y-.5);
+	logouv = vec2(
+		(logouv.x*cos(angle)-logouv.y*sin(angle))/1.4158415842,
+		logouv.x*sin(angle)+logouv.y*cos(angle))+.5;
+	logouv.x -= time;
+	if(isjp < .5)
+		logouv -= vec2(.18,.09);
 })",
 //NONE FRAG
 R"(#version 150 core
 in vec2 uv;
+in vec2 logouv;
 uniform sampler2D tex;
 uniform float isjp;
 uniform float dpi;
 out vec4 fragColor;
 void main(){
-	vec3 col = (texture(tex,uv).rgb-.5)*max(1,dpi*.6)+.5;
+	float border = (texture(tex,uv).b-.5)*max(1,dpi*.6)+.5;
+	float logo = 0;
 	if(isjp > .5)
-		fragColor = vec4(col.b,0,col.g,1);
+		logo = texture(tex,mod(logouv,vec2(.2185314685,.3094059406))).g;
 	else
-		fragColor = vec4(col.b,0,col.r,1);
+		logo = texture(tex,mod(logouv,vec2(.2622377622,.5099009901))).r;
+	fragColor = vec4(border,0,(logo-.5)*max(1,dpi*.6)+.5,1);
 })");
 
 	compileshader(selectshader,
@@ -648,6 +664,7 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 		noneshader->setUniform("banner",banneroffset);
 		noneshader->setUniform("isjp",jpmode?1.f:0.f);
 		noneshader->setUniform("pos",11/368.f,73/334.f,286/368.f,202/334.f);
+		noneshader->setUniform("time",nonetime);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 		context.extensions.glDisableVertexAttribArray(coord);
 	}
@@ -1147,6 +1164,11 @@ void SunBurntAudioProcessorEditor::timerCallback() {
 		calcvis();
 		randcubes(audioProcessor.state.seed);
 		audioProcessor.updatevis = false;
+	}
+
+	if(++nonerate >= 3) {
+		nonetime = fmod(nonetime+.0005f,10000.f);
+		nonerate = 0;
 	}
 
 #ifdef BANNER
