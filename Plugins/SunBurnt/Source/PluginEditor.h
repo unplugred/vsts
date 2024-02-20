@@ -58,6 +58,7 @@ public:
 		font.smooth = true;
 		font.slant = -.3f;
 		font.scale = .5f;
+		font.inframebuffer = true;
 	}
 	void init(OpenGLContext* context, float bannero, int w, int h, float _dpi) {
 		font.init(context, bannero, w, h, _dpi, ImageCache::getFromMemory(BinaryData::handmedown_png, BinaryData::handmedown_pngSize),128,128,33,false,0,0,

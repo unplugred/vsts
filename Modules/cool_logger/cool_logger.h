@@ -47,6 +47,7 @@ public:
 	float dpi = 0;
 	std::vector<std::vector<std::vector<int>>> uvmap;
 	std::vector<std::vector<std::vector<int>>> kerning;
+	bool inframebuffer = false;
 
 private:
 	void drawstringmono(float fgr, float fgg, float fgb, float fga, float bgr, float bgg, float bgb, float bga, String txty, int channel = 0, float x = .5f, float y = .5f, float xa = .5f, float ya = .5f);
