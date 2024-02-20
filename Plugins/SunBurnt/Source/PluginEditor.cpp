@@ -806,8 +806,8 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 		for(int i = 0; i < slidersvisible.size(); i++) {
 			--y;
 			bool hovered = hover == i-30;
-			font.font.drawstring(0,hovered?0:1,hovered?1:0,1,0,hovered?0:1,hovered?1:0,0,sliderslabel[i],0,204.f/368.f,(262.f-y*font.font.lineheight)/334.f,0,1);
-			font.font.drawstring(0,hovered?0:1,hovered?1:0,1,0,hovered?0:1,hovered?1:0,0,slidersvalue[i],1,297.f/368.f,(262.f-y*font.font.lineheight)/334.f,1,1);
+			font.font.drawstring(0,hovered?0:1,hovered?1:0,1,0,hovered?0:1,hovered?1:0,0,sliderslabel[i],0,204.f/368.f,(261.f-y*font.font.lineheight)/334.f,0,1);
+			font.font.drawstring(0,hovered?0:1,hovered?1:0,1,0,hovered?0:1,hovered?1:0,0,slidersvalue[i],1,297.f/368.f,(261.f-y*font.font.lineheight)/334.f,1,1);
 		}
 	}
 
@@ -854,8 +854,8 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glDisableVertexAttribArray(coord);
 
 	//time text
-	float x = .557f;
-	float y = .826f;
+	float x = 205/368.f;
+	float y = 279/334.f;
 	for(int ii = 0; ii < 4; ++ii) if(randomid[ii] == 51) {
 		x += randomdir[ii]*2/getWidth();
 		y -= randomdir[ii+4]*2/getHeight();
