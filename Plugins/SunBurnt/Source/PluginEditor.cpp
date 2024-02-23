@@ -317,7 +317,9 @@ void main(){
 	vec2 coord = uv;
 	coord.y = 1-(1-coord.y)*min(size.y/3,1);
 	if(coord.x > .6666) {
-		if(coord.y > .3333) {
+		if(coord.y > 1) {
+			x = 0;
+		} else if(coord.y > .3333) {
 			coord = (1-coord)*sizeclamp.xy-vec2(1,0);
 			coord.x = min(coord.x,0);
 			x = 1-(1-sqrt(coord.x*coord.x+coord.y*coord.y))*sizeclamp.z;
@@ -333,6 +335,8 @@ void main(){
 			coord.y = min(coord.y,0);
 			x = 1-(1-sqrt(coord.x*coord.x+coord.y*coord.y))*sizeclamp.z;
 		}
+	} else {
+		x = 0;
 	}
 	fragColor = vec4(1,0,0,max(min(x-.5,1),0));
 })");
