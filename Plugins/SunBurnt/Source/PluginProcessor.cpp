@@ -191,8 +191,6 @@ SunBurntAudioProcessor::SunBurntAudioProcessor() :
 		if(params.pots[i].smoothtime > 0) params.pots[i].smooth.setCurrentAndTargetValue(state.values[i]);
 		apvts.addParameterListener(params.pots[i].id,this);
 	}
-
-	//logger.debug((String)"DEBUG VERSION 3");
 }
 
 SunBurntAudioProcessor::~SunBurntAudioProcessor(){
