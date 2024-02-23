@@ -249,8 +249,8 @@ jobs:
       run: |
         cd Setup
         chmod +rx "./assets/scripts/postinstall"
-        pkgbuild --install-location "/Library/Audio/Plug-Ins/Components/UnplugRed" --identifier "com.unplugred.${{env.NOSPACE}}-au.pkg" --scripts "./assets/scripts" --version 1.1.1 --component "${{matrix.folder}}/paid/${{env.PLUG}}.component" "${{env.NOSPACE}}-au.pkg"
-        pkgbuild --install-location "/Library/Audio/Plug-Ins/Components/UnplugRed" --identifier "com.unplugred.${{env.NOSPACE}}-free-au.pkg" --scripts "./assets/scripts" --version 1.1.1 --component "${{matrix.folder}}/free/${{env.PLUG}}.component" "${{env.NOSPACE}}-free-au.pkg"
+        pkgbuild --install-location "/Library/Audio/Plug-Ins/Components" --identifier "com.unplugred.${{env.NOSPACE}}-au.pkg" --scripts "./assets/scripts" --version 1.1.1 --component "${{matrix.folder}}/paid/${{env.PLUG}}.component" "${{env.NOSPACE}}-au.pkg"
+        pkgbuild --install-location "/Library/Audio/Plug-Ins/Components" --identifier "com.unplugred.${{env.NOSPACE}}-free-au.pkg" --scripts "./assets/scripts" --version 1.1.1 --component "${{matrix.folder}}/free/${{env.PLUG}}.component" "${{env.NOSPACE}}-free-au.pkg"
         pkgbuild --install-location "/Library/Audio/Plug-Ins/VST3/UnplugRed" --identifier "com.unplugred.${{env.NOSPACE}}-vst3.pkg" --version 1.1.1 --component "${{matrix.folder}}/paid/${{env.PLUG}}.vst3" "${{env.NOSPACE}}-vst3.pkg"
         pkgbuild --install-location "/Library/Audio/Plug-Ins/VST3/UnplugRed" --identifier "com.unplugred.${{env.NOSPACE}}-free-vst3.pkg" --version 1.1.1 --component "${{matrix.folder}}/free/${{env.PLUG}}.vst3" "${{env.NOSPACE}}-free-vst3.pkg"
         pkgbuild --install-location "/Library/Audio/Plug-Ins/CLAP/UnplugRed" --identifier "com.unplugred.${{env.NOSPACE}}-clap.pkg" --version 1.1.1 --component "${{matrix.folder}}/paid/${{env.PLUG}}.clap" "${{env.NOSPACE}}-clap.pkg"
