@@ -2,9 +2,6 @@
 #include "includes.h"
 #include "functions.h"
 
-#define BANNER
-#define BETA
-
 #define MAX_VIBRATO 1.0
 
 struct point {
