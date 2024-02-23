@@ -902,7 +902,7 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 				glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 		}
-		if(itemenabled && paperindex == 0) {
+		if(itemenabled && paperindex == 0 && hover > 0) {
 			papershader->setUniform("hover",(float)hover);
 			papershader->setUniform("texpos",
 				papercoords[jpmode?1:0][17*6+4]/640.f,
@@ -1668,6 +1668,8 @@ void SunBurntAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 			audioProcessor.undoManager.beginNewTransaction();
 			menuindex = 0;
 			hover = recalchover(event.x,event.y);
+		} else if(hover == -1) {
+			itemenabled = false;
 		}
 		return;
 	}
