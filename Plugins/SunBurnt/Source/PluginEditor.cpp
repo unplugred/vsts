@@ -1827,7 +1827,7 @@ int SunBurntAudioProcessorEditor::recalchover(float x, float y) {
 					xx = x-(curves[curveindex[curveselection]].points[i].x+curves[curveindex[curveselection]].points[i+1].x)*.5f*284.f;
 					yy = y-(1-(curves[curveindex[curveselection]].points[i].y*(1-interp)+curves[curveindex[curveselection]].points[i+1].y*interp))*200.f;
 					//tension
-					if((xx*xx+yy*yy)<=16.7) return i*2+1+knobcount;
+					if((xx*xx+yy*yy)<=37.1) return i*2+1+knobcount;
 				}
 			}
 			//sliders
