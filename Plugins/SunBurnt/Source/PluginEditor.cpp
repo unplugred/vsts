@@ -1408,9 +1408,9 @@ void SunBurntAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 				audioProcessor.curvefromstring(SystemClipboard::getTextFromClipboard());
 			} else if(result == 3) { //reset curve
 				audioProcessor.resetcurve();
-			} else if(result == 4) { //copy preset TODO
+			} else if(result == 4) { //copy preset
 				SystemClipboard::copyTextToClipboard(audioProcessor.getpreset(audioProcessor.currentpreset));
-			} else if(result == 5) { //paste preset TODO
+			} else if(result == 5) { //paste preset
 				audioProcessor.setpreset(SystemClipboard::getTextFromClipboard(), audioProcessor.currentpreset);
 			}
 		});
@@ -1483,24 +1483,25 @@ void SunBurntAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 	}
 
 	if(initialdrag >= knobcount) {
+		float dragspeed = 1.f/(284*uiscales[uiscaleindex]);
 		int i = initialdrag-knobcount;
 		if((i%2) == 0) { // dragging a dot
 			i /= 2;
 			if(!finemode && event.mods.isAltDown()) { //start of fine mode
 				finemode = true;
-				initialvalue[0] += event.getDistanceFromDragStartX()*.0045f;
-				initialvalue[1] -= event.getDistanceFromDragStartY()*.0045f*1.42f;
+				initialvalue[0] += event.getDistanceFromDragStartX()*dragspeed*.9f;
+				initialvalue[1] -= event.getDistanceFromDragStartY()*dragspeed*.9f*1.42f;
 			} else if(finemode && !event.mods.isAltDown()) { //end of fine mode
 				finemode = false;
-				initialvalue[0] -= event.getDistanceFromDragStartX()*.0045f;
-				initialvalue[1] += event.getDistanceFromDragStartY()*.0045f*1.42f;
+				initialvalue[0] -= event.getDistanceFromDragStartX()*dragspeed*.9f;
+				initialvalue[1] += event.getDistanceFromDragStartY()*dragspeed*.9f*1.42f;
 			}
 
-			float valuey = initialvalue[1]-event.getDistanceFromDragStartY()*(finemode?.0005f:.005f)*1.42f;
+			float valuey = initialvalue[1]-event.getDistanceFromDragStartY()*dragspeed*(finemode?.1f:1)*1.42f;
 			float pointy = valuey-valueoffset[1];
 
 			if(i > 0 && i < (curves[curveindex[curveselection]].points.size()-1)) {
-				float valuex = initialvalue[0]+event.getDistanceFromDragStartX()*(finemode?.0005f:.005f);
+				float valuex = initialvalue[0]+event.getDistanceFromDragStartX()*dragspeed*(finemode?.1f:1);
 				float pointx = valuex-valueoffset[0];
 
 				if(event.mods.isCtrlDown()) { // one axis
@@ -1594,13 +1595,13 @@ void SunBurntAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 			int dir = curves[curveindex[curveselection]].points[i].y > curves[curveindex[curveselection]].points[i+1].y ? -1 : 1;
 			if(!finemode && (event.mods.isShiftDown() || event.mods.isAltDown())) {
 				finemode = true;
-				initialvalue[0] -= dir*event.getDistanceFromDragStartY()*.0045f;
+				initialvalue[0] -= dir*event.getDistanceFromDragStartY()*dragspeed*.9f*1.42f;
 			} else if(finemode && !(event.mods.isShiftDown() || event.mods.isAltDown())) {
 				finemode = false;
-				initialvalue[0] += dir*event.getDistanceFromDragStartY()*.0045f;
+				initialvalue[0] += dir*event.getDistanceFromDragStartY()*dragspeed*.9f*1.42f;
 			}
 
-			float value = initialvalue[0]-dir*event.getDistanceFromDragStartY()*(finemode?.0005f:.005f);
+			float value = initialvalue[0]-dir*event.getDistanceFromDragStartY()*dragspeed*(finemode?.1f:1)*1.42f;
 			curves[curveindex[curveselection]].points[i].tension = fmin(fmax(value-valueoffset[0],0),1);
 
 			valueoffset[0] = fmax(fmin(valueoffset[0],value+.1f),value-1.1f);
