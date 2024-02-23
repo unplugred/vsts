@@ -60,6 +60,12 @@ jobs:
         path: "${{matrix.folder}}"
         key: "${{matrix.folder}}"
 
+    - name: (mac) select xcode version
+      if: startsWith(matrix.os, 'macos')
+      id: xcode_version
+      run: |
+        sudo xcode-select -s '/Applications/Xcode_15.1.app/Contents/Developer'
+
     - name: (mac) import certificates
       if: startsWith(matrix.os, 'macos')
       id: import_certificates
@@ -190,7 +196,7 @@ jobs:
         mkdir -p "${{matrix.folder}}/free/Manual install"
         mv "${{matrix.folder}}/free/${{env.PLUG}}/" "${{matrix.folder}}/free/Manual install/"
         mv "${{matrix.folder}}/free/${{env.PLUG}}.component" "${{matrix.folder}}/free/Manual install/"
-        pkgbuild --install-location "/Library/Audio/Plug-Ins/Components/UnplugRed" --identifier "com.unplugred.${{env.NOSPACE}}-au.pkg" --scripts "./assets/scripts" --version 1.1.1 --root "${{matrix.folder}}/free/Manual install" "${{env.NOSPACE}}-au.pkg"
+        pkgbuild --install-location "/Library/Audio/Plug-Ins/Components" --identifier "com.unplugred.${{env.NOSPACE}}-au.pkg" --scripts "./assets/scripts" --version 1.1.1 --root "${{matrix.folder}}/free/Manual install" "${{env.NOSPACE}}-au.pkg"
         mv "${{matrix.folder}}/free/Manual install/${{env.PLUG}}.component" "${{matrix.folder}}/free/"
         mv "${{matrix.folder}}/free/${{env.PLUG}}.vst3" "${{matrix.folder}}/free/Manual install/"
         pkgbuild --install-location "/Library/Audio/Plug-Ins/VST3/UnplugRed" --identifier "com.unplugred.${{env.NOSPACE}}-vst3.pkg" --version 1.1.1 --root "${{matrix.folder}}/free/Manual install" "${{env.NOSPACE}}-vst3.pkg"
