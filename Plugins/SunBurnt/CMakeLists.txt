@@ -32,7 +32,9 @@ clap_juce_extensions_plugin(TARGET "${BaseTargetName}"
 target_sources("${BaseTargetName}" PRIVATE
 	Source/functions.cpp
 	Source/PluginEditor.cpp
-	Source/PluginProcessor.cpp)
+	Source/PluginProcessor.cpp
+	Source/impulsethread.cpp
+	Source/curves.cpp)
 
 target_compile_definitions("${BaseTargetName}" PUBLIC
 	JUCE_DISPLAY_SPLASH_SCREEN=0

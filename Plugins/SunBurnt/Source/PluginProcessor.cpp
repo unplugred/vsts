@@ -1,82 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-void curveiterator::reset(curve inputcurve, int wwidth) {
-	points = inputcurve.points;
-	width = wwidth;
-	x = -1;
-	nextpoint = 0;
-	points[0].x = 0;
-	points[points.size()-1].x = 1;
-	pointhit = true;
-	while(!points[nextpoint].enabled) ++nextpoint;
-}
-double curveiterator::next() {
-	double xx = ((double)++x)/(width-1);
-	if(xx >= 1) {
-		if((((double)x-1)/(width-1)) < 1) pointhit = true;
-		return points[points.size()-1].y;
-	}
-	if(xx >= points[nextpoint].x || (width-x) <= (points.size()-nextpoint)) {
-		pointhit = true;
-		currentpoint = nextpoint;
-		++nextpoint;
-		while(!points[nextpoint].enabled) ++nextpoint;
-		return points[currentpoint].y;
-	}
-	double interp = curve::calctension((xx-points[currentpoint].x)/(points[nextpoint].x-points[currentpoint].x),points[currentpoint].tension);
-	return points[currentpoint].y*(1-interp)+points[nextpoint].y*interp;
-}
-curve::curve(String str, const char delimiter) {
-	std::stringstream ss(str.trim().toRawUTF8());
-	std::string token;
-	std::getline(ss, token, delimiter);
-	int size = std::stof(token);
-	if(size < 2) throw std::invalid_argument("Invalid point data");
-	float prevx = 0;
-	for(int p = 0; p < size; ++p) {
-		std::getline(ss, token, delimiter);
-		float x = std::stof(token);
-		std::getline(ss, token, delimiter);
-		float y = std::stof(token);
-		std::getline(ss, token, delimiter);
-		float tension = std::stof(token);
-		if(x > 1 || x < prevx || y > 1 || y < 0 || tension > 1 || tension < 0 || (p == 0 && x != 0) || (p == (size-1) && x != 1))
-			throw std::invalid_argument("Invalid point data");
-		prevx = x;
-		points.push_back(point(x,y,tension));
-	}
-}
-String curve::tostring(const char delimiter) {
-	std::ostringstream data;
-	data << points.size() << delimiter;
-	for(int p = 0; p < points.size(); ++p)
-		data << points[p].x << delimiter << points[p].y << delimiter << points[p].tension << delimiter;
-	return (String)data.str();
-}
-double curve::calctension(double interp, double tension) {
-	if(tension == .5)
-		return interp;
-	else {
-		tension = tension*.99+.005;
-		if(tension < .5)
-			return pow(interp,.5/tension)*(1-tension)+(1-pow(1-interp,2*tension))*tension;
-		else
-			return pow(interp,2-2*tension)*(1-tension)+(1-pow(1-interp,.5/(1-tension)))*tension;
-	}
-}
-bool curve::isvalidcurvestring(String str, const char delimiter) {
-	String trimstring = str.trim();
-	if(trimstring.isEmpty())
-		return false;
-	if(!trimstring.containsOnly(String(&delimiter,1)+"-.0123456789"))
-		return false;
-	if(!trimstring.endsWithChar(delimiter))
-		return false;
-	if(trimstring.startsWithChar(delimiter))
-		return false;
-	return true;
-}
 int SunBurntAudioProcessor::findcurve(int index) {
 	if(index == 0) return 0;
 	for(int i = 1; i < 5; i++)
@@ -203,7 +127,7 @@ bool SunBurntAudioProcessor::producesMidi() const { return false; }
 bool SunBurntAudioProcessor::isMidiEffect() const { return false; }
 double SunBurntAudioProcessor::getTailLengthSeconds() const {
 	if(samplerate <= 0) return 0;
-	return ((double)taillength)/samplerate;
+	return ((double)impulsethread.taillength)/samplerate;
 }
 
 int SunBurntAudioProcessor::getNumPrograms() { return 18; }
@@ -259,24 +183,24 @@ void SunBurntAudioProcessor::reseteverything() {
 
 	vibratobuffer.setSize(channelnum,(int)floor(MAX_VIBRATO*samplerate));
 	vibratobuffer.clear();
-	highpassfilters.resize(channelnum);
-	lowpassfilters.resize(channelnum);
-	impulsechanneldata.resize(channelnum);
-	impulseeffectchanneldata.resize(channelnum);
+	impulsethread.highpassfilters.resize(channelnum);
+	impulsethread.lowpassfilters.resize(channelnum);
+	impulsethread.impulsechanneldata.resize(channelnum);
+	impulsethread.impulseeffectchanneldata.resize(channelnum);
 	wetbuffer.setSize(channelnum,samplesperblock);
 	effectbuffer.setSize(channelnum,samplesperblock);
 	effectbuffer.clear();
 
-	revlength = 0;
-	taillength = 0;
+	impulsethread.revlength = 0;
+	impulsethread.taillength = 0;
 	if(channelnum > 2) {
-		impulsebuffer.resize(channelnum);
-		impulseeffectbuffer.resize(channelnum);
+		impulsethread.impulsebuffer.resize(channelnum);
+		impulsethread.impulseeffectbuffer.resize(channelnum);
 		convolver.resize(channelnum);
 		convolvereffect.resize(channelnum);
 	} else {
-		impulsebuffer.resize(1);
-		impulseeffectbuffer.resize(1);
+		impulsethread.impulsebuffer.resize(1);
+		impulsethread.impulseeffectbuffer.resize(1);
 		convolver.resize(1);
 		convolvereffect.resize(1);
 		convolver[0].reset(new dsp::Convolution);
@@ -284,12 +208,12 @@ void SunBurntAudioProcessor::reseteverything() {
 	}
 
 	for(int c = 0; c < channelnum; ++c) {
-		highpassfilters[c].reset();
-		lowpassfilters[c].reset();
-		(*highpassfilters[c].parameters.get()).type = dsp::StateVariableFilter::Parameters<float>::Type::highPass;
-		(*lowpassfilters[c].parameters.get()).type = dsp::StateVariableFilter::Parameters<float>::Type::lowPass;
-		highpassfilters[c].prepare(monospec);
-		lowpassfilters[c].prepare(monospec);
+		impulsethread.highpassfilters[c].reset();
+		impulsethread.lowpassfilters[c].reset();
+		(*impulsethread.highpassfilters[c].parameters.get()).type = dsp::StateVariableFilter::Parameters<float>::Type::highPass;
+		(*impulsethread.lowpassfilters[c].parameters.get()).type = dsp::StateVariableFilter::Parameters<float>::Type::lowPass;
+		impulsethread.highpassfilters[c].prepare(monospec);
+		impulsethread.lowpassfilters[c].prepare(monospec);
 
 		if(channelnum > 2) {
 			convolver[c].reset(new dsp::Convolution);
@@ -375,23 +299,49 @@ void SunBurntAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffe
 		if(updatedcurvebpmcooldown <= 0)
 			updatedcurve = true;
 	}
-	if(updatedcurve.get()) {
-		genbuffer();
+	if(impulsethread.done.get()) {
+		impulsethread.done = false;
 		resetconvolution();
 		if(channelnum > 2) {
 			for(int c = 0; c < channelnum; ++c) {
-				convolver[c]->loadImpulseResponse(std::move(impulsebuffer[c]),samplerate,dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
-				convolvereffect[c]->loadImpulseResponse(std::move(impulseeffectbuffer[c]),samplerate,dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
+				convolver[c]->loadImpulseResponse(std::move(impulsethread.impulsebuffer[c]),samplerate,dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
+				convolvereffect[c]->loadImpulseResponse(std::move(impulsethread.impulseeffectbuffer[c]),samplerate,dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
 			}
 		} else {
-			convolver[0]->loadImpulseResponse(std::move(impulsebuffer[0]),samplerate,channelnum==2?dsp::Convolution::Stereo::yes:dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
-			convolvereffect[0]->loadImpulseResponse(std::move(impulseeffectbuffer[0]),samplerate,channelnum==2?dsp::Convolution::Stereo::yes:dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
+			convolver[0]->loadImpulseResponse(std::move(impulsethread.impulsebuffer[0]),samplerate,channelnum==2?dsp::Convolution::Stereo::yes:dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
+			convolvereffect[0]->loadImpulseResponse(std::move(impulsethread.impulseeffectbuffer[0]),samplerate,channelnum==2?dsp::Convolution::Stereo::yes:dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
 		}
+	} else if(!impulsethread.active.get() && updatedcurve.get()) {
+		impulsethread.samplerate = samplerate;
+		impulsethread.channelnum = channelnum;
+		if(state.values[4] == 0)
+			impulsethread.revlength = (int)round((pow(state.values[3],2)*(6-.1)+.1)*samplerate);
+		else
+			impulsethread.revlength = (int)round(((60.*state.values[4])/lastbpm)*samplerate);
+		impulsethread.taillength = impulsethread.revlength+(int)round(.1*samplerate);
+		for(int i = 0; i < 8; ++i)
+			impulsethread.valuesactive[i] = false;
+		impulsethread.iterator[0].reset(presets[currentpreset].curves[0],impulsethread.revlength);
+		for(int i = 1; i < 5; ++i) {
+			impulsethread.iterator[i].reset(presets[currentpreset].curves[(int)state.values[6+i]],impulsethread.revlength);
+			impulsethread.valuesactive[(int)state.values[6+i]] = true;
+		}
+		impulsethread.valuesraw[1] = state.values[11];
+		impulsethread.valuesraw[2] = state.values[12];
+		impulsethread.valuesraw[3] = state.values[13];
+		impulsethread.valuesraw[4] = state.values[14];
+		impulsethread.valuesraw[5] = .5;
+		impulsethread.valuesraw[6] = state.values[2];
+		impulsethread.valuesraw[7] = 0;
+		impulsethread.seed = presets[currentpreset].seed;
+		for(int i = 0; i < 4; ++i)
+			impulsethread.enabledcurves[i] = (int)state.values[i+7];
 
-		for(int i = 0; i < getTotalNumOutputChannels(); ++i)
-			buffer.clear(i, 0, numsamples);
+		impulsethread.startThread();
 
-		return;
+		updatedcurve = false;
+		updatedcurvecooldown = -1;
+		updatedcurvebpmcooldown = -1;
 	}
 
 	//vibrato
@@ -477,112 +427,6 @@ void SunBurntAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffe
 				drychanneldata[c][s] = drychanneldata[c][s]*state.values[0]+(wetchanneldata[c][s]+effectchanneldata[c][s])*pow(state.values[1]*2,2);
 			else
 				drychanneldata[c][s] = drychanneldata[c][s]*state.values[0]+wetchanneldata[c][s]*pow(state.values[1]*2,2);
-		}
-	}
-}
-void SunBurntAudioProcessor::genbuffer() {
-	if(channelnum <= 0) return;
-	updatedcurve = false;
-	updatedcurvecooldown = -1;
-	updatedcurvebpmcooldown = -1;
-
-	if(state.values[4] == 0)
-		revlength = (int)round((pow(state.values[3],2)*(6-.1)+.1)*samplerate);
-	else
-		revlength = (int)round(((60.*state.values[4])/lastbpm)*samplerate);
-	taillength = revlength+(int)round(.1*samplerate);
-
-	if(channelnum > 2) {
-		for(int c = 0; c < channelnum; ++c) {
-			impulsebuffer[c] = AudioBuffer<float>(1,taillength);
-			impulseeffectbuffer[c] = AudioBuffer<float>(1,taillength);
-			impulsechanneldata[c] = impulsebuffer[c].getWritePointer(0);
-			impulseeffectchanneldata[c] = impulseeffectbuffer[c].getWritePointer(0);
-		}
-	} else {
-		impulsebuffer[0] = AudioBuffer<float>(channelnum,taillength);
-		impulseeffectbuffer[0] = AudioBuffer<float>(channelnum,taillength);
-		for(int c = 0; c < channelnum; ++c) {
-			impulsechanneldata[c] = impulsebuffer[0].getWritePointer(c);
-			impulseeffectchanneldata[c] = impulseeffectbuffer[0].getWritePointer(c);
-		}
-	}
-
-	bool valuesactive[8] { false,false,false,false,false,false,false,false };
-	iterator[0].reset(presets[currentpreset].curves[0],revlength);
-	for(int i = 1; i < 5; ++i) {
-		iterator[i].reset(presets[currentpreset].curves[(int)state.values[6+i]],revlength);
-		valuesactive[(int)state.values[6+i]] = true;
-	}
-
-	double out = 0;
-	double agc = 0;
-
-	Random random(presets[currentpreset].seed);
-	double values[8];
-	for (int s = 0; s < taillength; ++s) {
-		values[0] = iterator[0].next();
-		values[1] = state.values[11];
-		values[2] = state.values[12];
-		values[3] = state.values[13];
-		values[4] = state.values[14];
-		values[5] = .5;
-		values[6] = state.values[2];
-		values[7] = 0;
-
-		for(int i = 1; i < 5; ++i)
-			values[(int)state.values[6+i]] = iterator[i].next();
-
-		values[0] *= (random.nextFloat()>.5?1:-1);
-		values[1] = mapToLog10(values[1],20.0,20000.0);
-		values[2] = mapToLog10(values[2],0.1,40.0);
-		values[3] = mapToLog10(values[3],20.0,20000.0);
-		values[4] = mapToLog10(values[4],0.1,40.0);
-		values[6] = pow(values[6],4);
-
-		for (int c = 0; c < channelnum; ++c) {
-
-			//vol
-			if(s >= revlength) {
-				out = 0;
-			} else if(iterator[0].pointhit) {
-				out = values[0];
-			} else if(random.nextFloat() < values[6]) {
-				float r = random.nextFloat();
-				agc += r*r;
-				out = values[0]*r;
-			} else {
-				out = 0;
-			}
-
-			//pan
-			if(valuesactive[5] && channelnum > 1) {
-				double linearpan = (((double)c)/(channelnum-1))*(1-values[5]*2)+values[5];
-				out *= sin(linearpan*1.5707963268)*.7071067812+linearpan;
-			}
-
-			//low pass
-			if(valuesactive[3] || values[3] < 20000) {
-				(*lowpassfilters[c].parameters.get()).setCutOffFrequency(samplerate,values[3],values[4]);
-				out = lowpassfilters[c].processSample(out);
-			}
-
-			//high pass
-			if(valuesactive[1] || values[1] > 20) {
-				(*highpassfilters[c].parameters.get()).setCutOffFrequency(samplerate,values[1],values[2]);
-				out = highpassfilters[c].processSample(out);
-			}
-
-			impulsechanneldata[c][s] = out*(1-values[7]);
-			impulseeffectchanneldata[c][s] = out*values[7];
-		}
-		iterator[0].pointhit = false;
-	}
-	agc = 1/fmax(sqrt(agc/channelnum),1);
-	for (int c = 0; c < channelnum; ++c) {
-		for (int s = 0; s < taillength; ++s) {
-			impulsechanneldata[c][s] *= agc;
-			impulseeffectchanneldata[c][s] *= agc;
 		}
 	}
 }
@@ -858,21 +702,21 @@ AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new SunBurntAudioPro
 AudioProcessorValueTreeState::ParameterLayout SunBurntAudioProcessor::createParameters() {
 
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"dry"			,1},"Dry"					,juce::NormalisableRange<float>( 0.0f	,1.0f	),1.0f	,"",AudioProcessorParameter::genericParameter	,topercent		,frompercent	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"wet"			,1},"Wet"					,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.57f	,"",AudioProcessorParameter::genericParameter	,topercent		,frompercent	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"density"		,1},"Density"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"length"		,1},"Length"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.53f	,"",AudioProcessorParameter::genericParameter	,tolength		,fromlength		));
-	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"sync"		,1},"Length (quarter note)"									,0		,16		 ,0		,""												,toqn			,fromqn			));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"depth"		,1},"Vibrato depth"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.55f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"speed"		,1},"Vibrato speed"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.65f	,"",AudioProcessorParameter::genericParameter	,tospeed		,fromspeed		));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"dry"			,1},"Dry"					,NormalisableRange<float>( 0.0f	,1.0f	),1.0f	,"",AudioProcessorParameter::genericParameter	,topercent		,frompercent	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"wet"			,1},"Wet"					,NormalisableRange<float>( 0.0f	,1.0f	),0.57f	,"",AudioProcessorParameter::genericParameter	,topercent		,frompercent	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"density"		,1},"Density"				,NormalisableRange<float>( 0.0f	,1.0f	),0.5f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"length"		,1},"Length"				,NormalisableRange<float>( 0.0f	,1.0f	),0.53f	,"",AudioProcessorParameter::genericParameter	,tolength		,fromlength		));
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"sync"		,1},"Length (quarter note)"							  ,0	,16		 ,0		,""												,toqn			,fromqn			));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"depth"		,1},"Vibrato depth"			,NormalisableRange<float>( 0.0f	,1.0f	),0.55f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"speed"		,1},"Vibrato speed"			,NormalisableRange<float>( 0.0f	,1.0f	),0.65f	,"",AudioProcessorParameter::genericParameter	,tospeed		,fromspeed		));
 	parameters.push_back(std::make_unique<AudioParameterChoice	>(ParameterID{"curve1"		,1},"Curve 1",StringArray{"None","High-pass","HP resonance","Low-pass","LP resonance","Pan","Density","Shimmer"},1	));
 	parameters.push_back(std::make_unique<AudioParameterChoice	>(ParameterID{"curve2"		,1},"Curve 2",StringArray{"None","High-pass","HP resonance","Low-pass","LP resonance","Pan","Density","Shimmer"},3	));
 	parameters.push_back(std::make_unique<AudioParameterChoice	>(ParameterID{"curve3"		,1},"Curve 3",StringArray{"None","High-pass","HP resonance","Low-pass","LP resonance","Pan","Density","Shimmer"},5	));
 	parameters.push_back(std::make_unique<AudioParameterChoice	>(ParameterID{"curve4"		,1},"Curve 4",StringArray{"None","High-pass","HP resonance","Low-pass","LP resonance","Pan","Density","Shimmer"},7	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"highpass"	,1},"High-pass"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	,"",AudioProcessorParameter::genericParameter	,tocutoff		,fromcutoff		));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"highpassres"	,1},"HP resonance"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.3f	,"",AudioProcessorParameter::genericParameter	,toresonance	,fromresonance	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"lowpass"		,1},"Low-pass"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),1.0f	,"",AudioProcessorParameter::genericParameter	,tocutoff		,fromcutoff		));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"lowpassres"	,1},"LP resonance"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.14f	,"",AudioProcessorParameter::genericParameter	,toresonance	,fromresonance	));
-	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"shimmerpitch",1},"Shimmer pitch"											,-24	,24		 ,12	,""												,topitch		,frompitch		));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"highpass"	,1},"High-pass"				,NormalisableRange<float>( 0.0f	,1.0f	),0.0f	,"",AudioProcessorParameter::genericParameter	,tocutoff		,fromcutoff		));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"highpassres"	,1},"HP resonance"			,NormalisableRange<float>( 0.0f	,1.0f	),0.3f	,"",AudioProcessorParameter::genericParameter	,toresonance	,fromresonance	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"lowpass"		,1},"Low-pass"				,NormalisableRange<float>( 0.0f	,1.0f	),1.0f	,"",AudioProcessorParameter::genericParameter	,tocutoff		,fromcutoff		));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"lowpassres"	,1},"LP resonance"			,NormalisableRange<float>( 0.0f	,1.0f	),0.14f	,"",AudioProcessorParameter::genericParameter	,toresonance	,fromresonance	));
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"shimmerpitch",1},"Shimmer pitch"									  ,-24	,24		 ,12	,""												,topitch		,frompitch		));
 	return { parameters.begin(), parameters.end() };
 }
