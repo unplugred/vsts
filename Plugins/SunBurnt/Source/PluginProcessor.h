@@ -1,41 +1,11 @@
 #pragma once
 #include "includes.h"
 #include "functions.h"
+#include "impulsethread.h"
+#include "curves.h"
 
 #define MAX_VIBRATO 1.0
 
-struct point {
-	point(float px, float py, float ptension = .5f) {
-		x = px;
-		y = py;
-		tension = ptension;
-	}
-	float x = 0;
-	float y = 0;
-	float tension = .5f;
-	bool enabled = true;
-};
-struct curve {
-	curve() { }
-	curve(String str, const char linebreak = ',');
-	String tostring(const char linebreak = ',');
-	std::vector<point> points;
-	static double calctension(double interp, double tension);
-	static bool isvalidcurvestring(String str, const char linebreak = ',');
-};
-class curveiterator {
-public:
-	curveiterator() { }
-	void reset(curve inputcurve, int wwidth);
-	double next();
-	bool pointhit = true;
-	int width = 284;
-	int x = 99999;
-private:
-	std::vector<point> points;
-	int nextpoint = 1;
-	int currentpoint = 0;
-};
 struct potentiometer {
 public:
 	enum ptype {
@@ -187,29 +157,19 @@ private:
 	int samplesperblock = 0;
 	int samplerate = 44100;
 
-	curveiterator iterator[5];
-
-	std::vector<dsp::StateVariableFilter::Filter<float>> highpassfilters;
-	std::vector<dsp::StateVariableFilter::Filter<float>> lowpassfilters;
 	std::vector<std::unique_ptr<dsp::Convolution>> convolver;
-
 	std::vector<std::unique_ptr<dsp::Convolution>> convolvereffect;
 	soundtouch::SoundTouch pitchshift;
 	std::vector<float> pitchprocessbuffer;
 	int prevpitch = 0;
 
+	createimpulse impulsethread;
 	Atomic<bool> updatedcurve = true;
 	Atomic<float> updatedcurvecooldown = -1;
 	float updatedcurvebpmcooldown = -1;
 	AudioBuffer<float> vibratobuffer;
-	std::vector<AudioBuffer<float>> impulsebuffer;
-	std::vector<AudioBuffer<float>> impulseeffectbuffer;
-	std::vector<float*> impulsechanneldata;
-	std::vector<float*> impulseeffectchanneldata;
 	AudioBuffer<float> wetbuffer;
 	AudioBuffer<float> effectbuffer;
-	int revlength = 0;
-	int taillength = 0;
 	int vibratoindex = 0;
 	double vibratophase = 0;
 	functions::dampendvalue dampvibratodepth;
