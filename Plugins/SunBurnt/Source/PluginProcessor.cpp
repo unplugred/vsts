@@ -299,19 +299,7 @@ void SunBurntAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffe
 		if(updatedcurvebpmcooldown <= 0)
 			updatedcurve = true;
 	}
-	if(impulsethread.done.get()) {
-		impulsethread.done = false;
-		resetconvolution();
-		if(channelnum > 2) {
-			for(int c = 0; c < channelnum; ++c) {
-				convolver[c]->loadImpulseResponse(std::move(impulsethread.impulsebuffer[c]),samplerate,dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
-				convolvereffect[c]->loadImpulseResponse(std::move(impulsethread.impulseeffectbuffer[c]),samplerate,dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
-			}
-		} else {
-			convolver[0]->loadImpulseResponse(std::move(impulsethread.impulsebuffer[0]),samplerate,channelnum==2?dsp::Convolution::Stereo::yes:dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
-			convolvereffect[0]->loadImpulseResponse(std::move(impulsethread.impulseeffectbuffer[0]),samplerate,channelnum==2?dsp::Convolution::Stereo::yes:dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
-		}
-	} else if(!impulsethread.active.get() && updatedcurve.get()) {
+	if(!impulsethread.active.get() && updatedcurve.get()) {
 		impulsethread.samplerate = samplerate;
 		impulsethread.channelnum = channelnum;
 		if(state.values[4] == 0)
@@ -337,11 +325,27 @@ void SunBurntAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffe
 		for(int i = 0; i < 4; ++i)
 			impulsethread.enabledcurves[i] = (int)state.values[i+7];
 
-		impulsethread.startThread();
+		if(isNonRealtime())
+			impulsethread.run();
+		else
+			impulsethread.startThread();
 
 		updatedcurve = false;
 		updatedcurvecooldown = -1;
 		updatedcurvebpmcooldown = -1;
+	}
+	if(impulsethread.done.get()) {
+		impulsethread.done = false;
+		resetconvolution();
+		if(channelnum > 2) {
+			for(int c = 0; c < channelnum; ++c) {
+				convolver[c]->loadImpulseResponse(std::move(impulsethread.impulsebuffer[c]),samplerate,dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
+				convolvereffect[c]->loadImpulseResponse(std::move(impulsethread.impulseeffectbuffer[c]),samplerate,dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
+			}
+		} else {
+			convolver[0]->loadImpulseResponse(std::move(impulsethread.impulsebuffer[0]),samplerate,channelnum==2?dsp::Convolution::Stereo::yes:dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
+			convolvereffect[0]->loadImpulseResponse(std::move(impulsethread.impulseeffectbuffer[0]),samplerate,channelnum==2?dsp::Convolution::Stereo::yes:dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
+		}
 	}
 
 	//vibrato
