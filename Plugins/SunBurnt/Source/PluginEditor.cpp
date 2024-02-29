@@ -46,7 +46,12 @@ SunBurntAudioProcessorEditor::SunBurntAudioProcessorEditor(SunBurntAudioProcesso
 	calcvis();
 	randcubes(state.seed);
 
-	setSize(368,334);
+	double scale = audioProcessor.params.uiscale;
+#ifdef BANNER
+	setSize(368*scale,(334+21/1.5f)*scale);
+#else
+	setSize(368*scale,334*scale);
+#endif
 	setResizable(false, false);
 	setOpaque(true);
 	context.setOpenGLVersionRequired(OpenGLContext::OpenGLVersion::openGL3_2);
