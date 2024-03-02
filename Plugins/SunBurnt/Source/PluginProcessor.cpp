@@ -118,8 +118,7 @@ SunBurntAudioProcessor::SunBurntAudioProcessor() :
 }
 
 SunBurntAudioProcessor::~SunBurntAudioProcessor(){
-	if(impulsethread.isThreadRunning())
-		impulsethread.stopThread(0);
+	impulsethread.active = false;
 	for(int i = 0; i < paramcount; ++i) apvts.removeParameterListener(params.pots[i].id,this);
 }
 
@@ -189,10 +188,9 @@ void SunBurntAudioProcessor::reseteverything() {
 	effectbuffer.setSize(channelnum,samplesperblock);
 	effectbuffer.clear();
 
-	if(impulsethread.isThreadRunning())
-		impulsethread.stopThread(0);
 	impulsethread.done = false;
 	impulsethread.active = false;
+	impulsethread.generated = false;
 	impulsethread.revlength = 0;
 	impulsethread.taillength = 0;
 	impulsethread.samplerate = samplerate;
@@ -354,6 +352,7 @@ void SunBurntAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffe
 			convolvereffect[0]->loadImpulseResponse(std::move(impulsethread.impulseeffectbuffer[0]),samplerate,channelnum==2?dsp::Convolution::Stereo::yes:dsp::Convolution::Stereo::no,dsp::Convolution::Trim::no,dsp::Convolution::Normalise::no);
 		}
 	}
+	if(!impulsethread.generated.get()) return;
 
 	//vibrato
 	int buffersize = (int)floor(MAX_VIBRATO*samplerate);

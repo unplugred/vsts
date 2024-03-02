@@ -11,6 +11,7 @@ public:
 	int channelnum = 0;
 	Atomic<bool> done = false;
 	Atomic<bool> active = false;
+	Atomic<bool> generated = false;
 	int revlength = 0;
 	int taillength = 0;
 	std::vector<dsp::StateVariableFilter::Filter<float>> highpassfilters;
