@@ -26,4 +26,6 @@ public:
 	int enabledcurves[4];
 
 	void run() override;
+
+	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(createimpulse)
 };
