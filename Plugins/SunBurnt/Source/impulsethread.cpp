@@ -73,6 +73,7 @@ void createimpulse::run() {
 				out = highpassfilters[c].processSample(out);
 			}
 
+			if(!active.get()) return;
 			impulsechanneldata[c][s] = out*(1-values[7]);
 			impulseeffectchanneldata[c][s] = out*values[7];
 		}
@@ -81,6 +82,7 @@ void createimpulse::run() {
 	agc = 1/fmax(sqrt(agc/channelnum),1);
 	for (int c = 0; c < channelnum; ++c) {
 		for (int s = 0; s < taillength; ++s) {
+			if(!active.get()) return;
 			impulsechanneldata[c][s] *= agc;
 			impulseeffectchanneldata[c][s] *= agc;
 		}
@@ -88,4 +90,5 @@ void createimpulse::run() {
 
 	done = true;
 	active = false;
+	generated = true;
 }
