@@ -135,6 +135,7 @@ int SunBurntAudioProcessor::getNumPrograms() { return 18; }
 int SunBurntAudioProcessor::getCurrentProgram() { return currentpreset; }
 void SunBurntAudioProcessor::setCurrentProgram (int index) {
 	if(currentpreset == index) return;
+	impulsethread.active = false;
 	undoManager.beginNewTransaction((String)"Changed preset to " += presets[index].name);
 	currentpreset = index;
 
@@ -481,6 +482,7 @@ void SunBurntAudioProcessor::getStateInformation (MemoryBlock& destData) {
 void SunBurntAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
 	//*/
 	const char delimiter = '\n';
+	impulsethread.active = false;
 	try {
 		std::stringstream ss(String::createStringFromData(data, sizeInBytes).toRawUTF8());
 		std::string token;
@@ -557,6 +559,7 @@ const String SunBurntAudioProcessor::getpreset(int presetid, const char delimite
 	return data.str();
 }
 void SunBurntAudioProcessor::setpreset(const String& preset, int presetid, const char delimiter, bool printerrors) {
+	impulsethread.active = false;
 	String error = "";
 	String revert = getpreset(presetid);
 	try {
@@ -648,6 +651,8 @@ void SunBurntAudioProcessor::movepoint(int index, float x, float y) {
 	int i = 0;
 	if(params.curveselection > 0)
 		i = (int)state.values[6+params.curveselection];
+	if(findcurve(i) != -1)
+		impulsethread.active = false;
 	presets[currentpreset].curves[i].points[index].x = x;
 	presets[currentpreset].curves[i].points[index].y = y;
 	if(findcurve(i) != -1)
@@ -657,6 +662,8 @@ void SunBurntAudioProcessor::movetension(int index, float tension) {
 	int i = 0;
 	if(params.curveselection > 0)
 		i = (int)state.values[6+params.curveselection];
+	if(findcurve(i) != -1)
+		impulsethread.active = false;
 	presets[currentpreset].curves[i].points[index].tension = tension;
 	if(findcurve(i) != -1)
 		updatedcurve = true;
@@ -665,6 +672,8 @@ void SunBurntAudioProcessor::addpoint(int index, float x, float y) {
 	int i = 0;
 	if(params.curveselection > 0)
 		i = (int)state.values[6+params.curveselection];
+	if(findcurve(i) != -1)
+		impulsethread.active = false;
 	presets[currentpreset].curves[i].points.insert(presets[currentpreset].curves[i].points.begin()+index,point(x,y,presets[currentpreset].curves[i].points[index-1].tension));
 	if(findcurve(i) != -1)
 		updatedcurve = true;
@@ -673,6 +682,8 @@ void SunBurntAudioProcessor::deletepoint(int index) {
 	int i = 0;
 	if(params.curveselection > 0)
 		i = (int)state.values[6+params.curveselection];
+	if(findcurve(i) != -1)
+		impulsethread.active = false;
 	presets[currentpreset].curves[i].points.erase(presets[currentpreset].curves[i].points.begin()+index);
 	if(findcurve(i) != -1)
 		updatedcurve = true;
@@ -687,6 +698,8 @@ void SunBurntAudioProcessor::curvefromstring(String str, const char delimiter) {
 	int i = 0;
 	if(params.curveselection > 0)
 		i = (int)state.values[6+params.curveselection];
+	if(findcurve(i) != -1)
+		impulsethread.active = false;
 	String revert = presets[currentpreset].curves[i].tostring();
 	try {
 		presets[currentpreset].curves[i] = curve(str,delimiter);
@@ -701,6 +714,8 @@ void SunBurntAudioProcessor::resetcurve() {
 	int i = 0;
 	if(params.curveselection > 0)
 		i = (int)state.values[6+params.curveselection];
+	if(findcurve(i) != -1)
+		impulsethread.active = false;
 	presets[currentpreset].curves[i] = curve(params.curves[i].defaultvalue);
 	updatevis = true;
 	if(findcurve(i) != -1)
