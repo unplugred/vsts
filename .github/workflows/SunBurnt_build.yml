@@ -148,6 +148,9 @@ jobs:
         xcrun stapler staple "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.component"
 
     - name: (mac) auval
+      if: startsWith(matrix.os, 'macos')
+      id: auval
+      run: |
         cp -f "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.component" "/Library/Audio/Plug-Ins/Components/"
         auval -a
         auval -strict -v aufx snbt ured
@@ -223,7 +226,10 @@ jobs:
         xcrun stapler staple "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.clap"
         xcrun stapler staple "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.component"
 
-    - name: (mac) auval
+    - name: (mac) auval free
+      if: startsWith(matrix.os, 'macos')
+      id: auval_free
+      run: |
         cp -f "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.component" "/Library/Audio/Plug-Ins/Components/"
         auval -a
         auval -strict -v aufx snbt ured
