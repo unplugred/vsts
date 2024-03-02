@@ -165,6 +165,15 @@ jobs:
         xcrun stapler staple "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.app"
         xcrun stapler staple "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.component"
 
+    - name: (mac) auval
+      if: startsWith(matrix.os, 'macos')
+      id: auval
+      run: |
+        sudo cp -R -f "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.component" "/Library/Audio/Plug-Ins/Components/${{ env.PLUG }}.component"
+        killall -9 AudioComponentRegistrar
+        auval -a
+        auval -strict -v aumu Mpnt Ured
+
     - name: (windows) build installer
       if: startsWith(matrix.os, 'windows')
       id: installer_windows
