@@ -118,6 +118,8 @@ SunBurntAudioProcessor::SunBurntAudioProcessor() :
 }
 
 SunBurntAudioProcessor::~SunBurntAudioProcessor(){
+	if(impulsethread.isThreadRunning())
+		impulsethread.stopThread(0);
 	for(int i = 0; i < paramcount; ++i) apvts.removeParameterListener(params.pots[i].id,this);
 }
 
@@ -183,16 +185,23 @@ void SunBurntAudioProcessor::reseteverything() {
 
 	vibratobuffer.setSize(channelnum,(int)floor(MAX_VIBRATO*samplerate));
 	vibratobuffer.clear();
-	impulsethread.highpassfilters.resize(channelnum);
-	impulsethread.lowpassfilters.resize(channelnum);
-	impulsethread.impulsechanneldata.resize(channelnum);
-	impulsethread.impulseeffectchanneldata.resize(channelnum);
 	wetbuffer.setSize(channelnum,samplesperblock);
 	effectbuffer.setSize(channelnum,samplesperblock);
 	effectbuffer.clear();
 
+	if(impulsethread.isThreadRunning())
+		impulsethread.stopThread(0);
+	impulsethread.done = false;
+	impulsethread.active = false;
 	impulsethread.revlength = 0;
 	impulsethread.taillength = 0;
+	impulsethread.samplerate = samplerate;
+	impulsethread.channelnum = channelnum;
+	impulsethread.highpassfilters.resize(channelnum);
+	impulsethread.lowpassfilters.resize(channelnum);
+	impulsethread.impulsechanneldata.resize(channelnum);
+	impulsethread.impulseeffectchanneldata.resize(channelnum);
+
 	if(channelnum > 2) {
 		impulsethread.impulsebuffer.resize(channelnum);
 		impulsethread.impulseeffectbuffer.resize(channelnum);
@@ -299,9 +308,7 @@ void SunBurntAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffe
 		if(updatedcurvebpmcooldown <= 0)
 			updatedcurve = true;
 	}
-	if(!impulsethread.active.get() && updatedcurve.get()) {
-		impulsethread.samplerate = samplerate;
-		impulsethread.channelnum = channelnum;
+	if(!impulsethread.active.get() && !impulsethread.done.get() && updatedcurve.get()) {
 		if(state.values[4] == 0)
 			impulsethread.revlength = (int)round((pow(state.values[3],2)*(6-.1)+.1)*samplerate);
 		else
@@ -334,7 +341,7 @@ void SunBurntAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffe
 		updatedcurvecooldown = -1;
 		updatedcurvebpmcooldown = -1;
 	}
-	if(impulsethread.done.get()) {
+	if(!impulsethread.active.get() && impulsethread.done.get()) {
 		impulsethread.done = false;
 		resetconvolution();
 		if(channelnum > 2) {
