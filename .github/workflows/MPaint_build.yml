@@ -169,7 +169,7 @@ jobs:
       if: startsWith(matrix.os, 'macos')
       id: auval
       run: |
-        sudo cp -R -f "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.component" "/Library/Audio/Plug-Ins/Components/${{ env.PLUG }}.component"
+        sudo cp -R -f "Setup/${{ matrix.folder }}/free/${{ env.PLUG }}.component" "/Library/Audio/Plug-Ins/Components/${{ env.PLUG }}.component"
         killall -9 AudioComponentRegistrar
         auval -a
         auval -strict -v aumu Mpnt Ured
