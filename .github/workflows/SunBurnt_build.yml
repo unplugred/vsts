@@ -234,7 +234,7 @@ jobs:
         sudo cp -R -f "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.component" "/Library/Audio/Plug-Ins/Components/${{ env.PLUG }}.component"
         killall -9 AudioComponentRegistrar
         auval -a
-        auval -strict -v aufx snbt ured
+        auval -strict -v aufx Snbt Ured
 
     - name: (windows) build installer
       if: startsWith(matrix.os, 'windows')
