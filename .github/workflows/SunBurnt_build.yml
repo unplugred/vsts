@@ -151,7 +151,7 @@ jobs:
       if: startsWith(matrix.os, 'macos')
       id: auval
       run: |
-        cp -R -f "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.component" "/Library/Audio/Plug-Ins/Components/${{ env.PLUG }}.component"
+        sudo cp -R -f "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.component" "/Library/Audio/Plug-Ins/Components/${{ env.PLUG }}.component"
         auval -a
         auval -strict -v aufx snbt ured
 
@@ -230,7 +230,7 @@ jobs:
       if: startsWith(matrix.os, 'macos')
       id: auval_free
       run: |
-        cp -R -f "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.component" "/Library/Audio/Plug-Ins/Components/${{ env.PLUG }}.component"
+        sudo cp -R -f "Setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.component" "/Library/Audio/Plug-Ins/Components/${{ env.PLUG }}.component"
         auval -a
         auval -strict -v aufx snbt ured
 
