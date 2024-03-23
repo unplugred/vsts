@@ -2,19 +2,19 @@
 #include "PluginEditor.h"
 
 PNCHAudioProcessor::PNCHAudioProcessor() :
-	AudioProcessor(BusesProperties().withInput("Input",AudioChannelSet::stereo(),true).withOutput("Output",AudioChannelSet::stereo(),true)),
-	apvts(*this, &undoManager, "Parameters", createParameters())
-{
+	apvts(*this, &undo_manager, "Parameters", createParameters()),
+	plugmachine_dsp(BusesProperties().withInput("Input",AudioChannelSet::stereo(),true).withOutput("Output",AudioChannelSet::stereo(),true), &apvts) {
+
+	init();
+
 	amount.setCurrentAndTargetValue(apvts.getParameter("amount")->getValue());
 	oversampling = apvts.getParameter("oversampling")->getValue();
-	apvts.addParameterListener("amount",this);
-	apvts.addParameterListener("oversampling",this);
+	add_listener("amount");
+	add_listener("oversampling");
 }
 
 PNCHAudioProcessor::~PNCHAudioProcessor(){
-	apvts.removeParameterListener("amount",this);
-	apvts.removeParameterListener("oversampling",this);
-
+	close();
 }
 
 const String PNCHAudioProcessor::getName() const { return "PNCH"; }
@@ -27,10 +27,10 @@ int PNCHAudioProcessor::getNumPrograms() { return 31; }
 int PNCHAudioProcessor::getCurrentProgram() {
 	return (int)floor(amount.getTargetValue()*31);
 }
-void PNCHAudioProcessor::setCurrentProgram (int index) {
+void PNCHAudioProcessor::setCurrentProgram(int index) {
 	apvts.getParameter("amount")->setValueNotifyingHost(index/30.f);
 }
-const String PNCHAudioProcessor::getProgramName (int index) {
+const String PNCHAudioProcessor::getProgramName(int index) {
 	std::ostringstream presetname;
 	presetname << "P";
 	for(int i = 0; i < index; i++) presetname << "U";
@@ -38,9 +38,9 @@ const String PNCHAudioProcessor::getProgramName (int index) {
 	if(index == 0) presetname << ".";
 	return { presetname.str() };
 }
-void PNCHAudioProcessor::changeProgramName (int index, const String& newName) { }
+void PNCHAudioProcessor::changeProgramName(int index, const String& newName) { }
 
-void PNCHAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {
+void PNCHAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
 	if(!saved && sampleRate > 60000) {
 		oversampling = false;
 		apvts.getParameter("oversampling")->setValueNotifyingHost(0);
@@ -70,14 +70,14 @@ void PNCHAudioProcessor::reseteverything() {
 }
 void PNCHAudioProcessor::releaseResources() { }
 
-bool PNCHAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const {
-	if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
+bool PNCHAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const {
+	if(layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
 		return false;
 
 	return (layouts.getMainInputChannels() > 0);
 }
 
-void PNCHAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midiMessages) {
+void PNCHAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMessages) {
 	ScopedNoDenormals noDenormals;
 	
 	if(buffer.getNumChannels() == 0 || buffer.getNumSamples() == 0) return;
@@ -85,8 +85,8 @@ void PNCHAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& m
 		changechannelnum(buffer.getNumChannels());
 	saved = true;
 
-	for (auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
-		buffer.clear (i, 0, buffer.getNumSamples());
+	for(auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
+		buffer.clear(i, 0, buffer.getNumSamples());
 
 	float prmsadd = rmsadd.get();
 	int prmscount = rmscount.get();
@@ -106,8 +106,8 @@ void PNCHAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& m
 	if(isoversampling) channelData = osbuffer.getArrayOfWritePointers();
 	else channelData = buffer.getArrayOfWritePointers();
 
-	for (int sample = 0; sample < numsamples; ++sample) {
-		for (int channel = 0; channel < channelnum; ++channel) {
+	for(int sample = 0; sample < numsamples; ++sample) {
+		for(int channel = 0; channel < channelnum; ++channel) {
 			channelData[channel][sample] = pnch(channelData[channel][sample],amount.getNextValue());
 			if(prmscount < samplerate*2) {
 				prmsadd += fmin(channelData[channel][sample]*channelData[channel][sample],10);
@@ -131,7 +131,7 @@ float PNCHAudioProcessor::pnch(float source, float amount) {
 
 	if(q >= 1) f = 0;
 	else if(q > 0) {
-		if (f > 0)
+		if(f > 0)
 			f = fmax(source-q,0);
 		else
 			f = fmin(source+q,0);
@@ -168,30 +168,31 @@ AudioProcessorEditor* PNCHAudioProcessor::createEditor() {
 	return new PNCHAudioProcessorEditor(*this,amount.getTargetValue());
 }
 
-void PNCHAudioProcessor::getStateInformation (MemoryBlock& destData) {
-	const char linebreak = '\n';
+void PNCHAudioProcessor::getStateInformation(MemoryBlock& destData) {
+	const char delimiter = '\n';
 	std::ostringstream data;
 	data << version
-		<< linebreak << amount.getTargetValue()
-		<< linebreak << (oversampling.get()?1:0) << linebreak;
+		<< delimiter << amount.getTargetValue()
+		<< delimiter << (oversampling.get()?1:0) << delimiter;
 	MemoryOutputStream stream(destData, false);
 	stream.writeString(data.str());
 }
-void PNCHAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
+void PNCHAudioProcessor::setStateInformation(const void* data, int sizeInBytes) {
+	const char delimiter = '\n';
 	saved = true;
 	try {
 		std::stringstream ss(String::createStringFromData(data, sizeInBytes).toRawUTF8());
 		std::string token;
 
-		std::getline(ss, token, '\n');
+		std::getline(ss, token, delimiter);
 		int saveversion = std::stoi(token);
 
-		std::getline(ss, token, '\n');
+		std::getline(ss, token, delimiter);
 		float a = std::stof(token);
 		if(saveversion <= 1) a = 1-(3/(3+(5*a)));
 		apvts.getParameter("amount")->setValueNotifyingHost(a);
 
-		std::getline(ss, token, '\n');
+		std::getline(ss, token, delimiter);
 		apvts.getParameter("oversampling")->setValueNotifyingHost(std::stof(token));
 
 	} catch(const char* e) {
@@ -204,6 +205,48 @@ void PNCHAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 		logger.debug((String)"Error loading saved data");
 	}
 }
+const String PNCHAudioProcessor::get_preset(int preset_id, const char delimiter) {
+	std::ostringstream data;
+
+	data << version
+		<< delimiter << amount.getTargetValue()
+		<< delimiter << (oversampling.get()?1:0) << delimiter;
+
+	return data.str();
+}
+void PNCHAudioProcessor::set_preset(const String& preset, int preset_id, const char delimiter, bool print_errors) {
+	String error = "";
+	String revert = get_preset(0);
+	try {
+		std::stringstream ss(preset.trim().toRawUTF8());
+		std::string token;
+
+		std::getline(ss, token, delimiter);
+		int save_version = std::stoi(token);
+
+		std::getline(ss, token, delimiter);
+		apvts.getParameter("amount")->setValueNotifyingHost(std::stof(token));
+
+		std::getline(ss, token, delimiter);
+		apvts.getParameter("oversampling")->setValueNotifyingHost(std::stof(token));
+
+	} catch (const char* e) {
+		error = "Error loading saved data: "+(String)e;
+	} catch(String e) {
+		error = "Error loading saved data: "+e;
+	} catch(std::exception &e) {
+		error = "Error loading saved data: "+(String)e.what();
+	} catch(...) {
+		error = "Error loading saved data";
+	}
+	if(error != "") {
+		if(print_errors)
+			logger.debug(error);
+		set_preset(revert, 0);
+		return;
+	}
+}
+
 void PNCHAudioProcessor::parameterChanged(const String& parameterID, float newValue) {
 	if(parameterID == "amount") amount.setTargetValue(newValue);
 	else if(parameterID == "oversampling") {
