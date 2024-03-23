@@ -2,10 +2,12 @@
 #include "PluginEditor.h"
 
 PrismaAudioProcessor::PrismaAudioProcessor() :
-	AudioProcessor(BusesProperties().withInput("Input",AudioChannelSet::stereo(),true).withOutput("Output",AudioChannelSet::stereo(),true)),
-	apvts(*this, &undoManager, "Parameters", createParameters()),
-	forwardFFT(fftOrder), window(fftSize, dsp::WindowingFunction<float>::hann)
-{
+	apvts(*this, &undo_manager, "Parameters", create_parameters()),
+	plugmachine_dsp(BusesProperties().withInput("Input",AudioChannelSet::stereo(),true).withOutput("Output",AudioChannelSet::stereo(),true), &apvts),
+	forwardFFT(fftOrder), window(fftSize, dsp::WindowingFunction<float>::hann) {
+
+	init();
+
 	for(int i = 0; i < getNumPrograms(); i++)
 		presets[i].name = "Program " + (String)(i+1);
 
@@ -13,41 +15,41 @@ PrismaAudioProcessor::PrismaAudioProcessor() :
 		for(int m = 0; m < 4; m++) {
 			state[0].values[b][m] = apvts.getParameter("b"+(String)b+"m"+(String)m+"val")->getValue();
 			pots.bands[b].modules[m].value.setCurrentAndTargetValue(state[0].values[b][m]);
-			apvts.addParameterListener("b"+(String)b+"m"+(String)m+"val", this);
+			add_listener("b"+(String)b+"m"+(String)m+"val");
 
 			state[0].id[b][m] = apvts.getParameter("b"+(String)b+"m"+(String)m+"id")->getValue();
-			apvts.addParameterListener("b"+(String)b+"m"+(String)m+"id", this);
+			add_listener("b"+(String)b+"m"+(String)m+"id");
 		}
 
 		if(b >= 1) {
 			state[0].crossover[b-1] = apvts.getParameter("b" + (String)b + "cross")->getValue();
-			apvts.addParameterListener("b"+(String)b+"cross", this);
+			add_listener("b"+(String)b+"cross");
 		}
 
 		state[0].gain[b] = apvts.getParameter("b" + (String)b + "gain")->getValue();
 		pots.bands[b].gain.setCurrentAndTargetValue(state[0].gain[b]);
-		apvts.addParameterListener("b"+(String)b+"gain", this);
+		add_listener("b"+(String)b+"gain");
 
 		pots.bands[b].mute = apvts.getParameter("b" + (String)b + "mute")->getValue();
-		apvts.addParameterListener("b"+(String)b+"mute", this);
+		add_listener("b"+(String)b+"mute");
 
 		pots.bands[b].solo = apvts.getParameter("b" + (String)b + "solo")->getValue();
-		apvts.addParameterListener("b"+(String)b+"solo", this);
+		add_listener("b"+(String)b+"solo");
 
 		pots.bands[b].bypass = apvts.getParameter("b" + (String)b + "bypass")->getValue();
 		pots.bands[b].bypasssmooth = pots.bands[b].bypass>.5?1.f:0.f;
 		pots.bands[b].bandbypass.setCurrentAndTargetValue(pots.bands[b].bypasssmooth);
-		apvts.addParameterListener("b"+(String)b+"bypass", this);
+		add_listener("b"+(String)b+"bypass");
 	}
 	state[0].wet = apvts.getParameter("wet")->getValue();
 	pots.wet.setCurrentAndTargetValue(state[0].wet);
-	apvts.addParameterListener("wet", this);
+	add_listener("wet");
 
 	pots.oversampling = apvts.getParameter("oversampling")->getValue();
-	apvts.addParameterListener("oversampling", this);
+	add_listener("oversampling");
 
 	pots.isb = apvts.getParameter("ab")->getValue();
-	apvts.addParameterListener("ab", this);
+	add_listener("ab");
 
 	recalcactivebands();
 	for(int b = 0; b < 4; b++) {
@@ -65,21 +67,8 @@ PrismaAudioProcessor::PrismaAudioProcessor() :
 	for(int i = 0; i < fftSize*2; i++) fftData[i] = 0;
 }
 
-PrismaAudioProcessor::~PrismaAudioProcessor(){
-	for(int b = 0; b < 4; b++) {
-		for(int m = 0; m < 4; m++) {
-			apvts.removeParameterListener("b"+(String)b+"m"+(String)m+"val", this);
-			apvts.removeParameterListener("b"+(String)b+"m"+(String)m+"id", this);
-		}
-		if(b >= 1) apvts.removeParameterListener("b"+(String)b+"cross", this);
-		apvts.removeParameterListener("b"+(String)b+"gain", this);
-		apvts.removeParameterListener("b"+(String)b+"mute", this);
-		apvts.removeParameterListener("b"+(String)b+"solo", this);
-		apvts.removeParameterListener("b"+(String)b+"bypass", this);
-	}
-	apvts.removeParameterListener("wet", this);
-	apvts.removeParameterListener("oversampling", this);
-	apvts.removeParameterListener("ab", this);
+PrismaAudioProcessor::~PrismaAudioProcessor() {
+	close();
 }
 
 const String PrismaAudioProcessor::getName() const { return "Prisma"; }
@@ -93,14 +82,14 @@ int PrismaAudioProcessor::getCurrentProgram() { return currentpreset; }
 void PrismaAudioProcessor::setCurrentProgram (int index) {
 	if(currentpreset == index) return;
 
-	undoManager.beginNewTransaction((String)"Changed preset to " += presets[index].name);
+	undo_manager.beginNewTransaction((String)"Changed preset to " += presets[index].name);
 	transition = true;
 	currentpreset = index;
 
 	for(int b = 0; b < 4; b++) {
 		for(int m = 0; m < 4; m++) {
 			apvts.getParameter("b"+(String)b+"m"+(String)m+"val")->setValueNotifyingHost(presets[currentpreset].values[b][m]);
-			apvts.getParameter("b"+(String)b+"m"+(String)m+"id")->setValueNotifyingHost(presets[currentpreset].id[b][m]/16.f);
+			apvts.getParameter("b"+(String)b+"m"+(String)m+"id")->setValueNotifyingHost(((float)presets[currentpreset].id[b][m])/MODULE_COUNT);
 		}
 		if(b >= 1) apvts.getParameter("b"+(String)b+"cross")->setValueNotifyingHost(presets[currentpreset].crossover[b-1]);
 		apvts.getParameter("b"+(String)b+"gain")->setValueNotifyingHost(presets[currentpreset].gain[b]);
@@ -649,121 +638,99 @@ AudioProcessorEditor* PrismaAudioProcessor::createEditor() {
 }
 
 void PrismaAudioProcessor::getStateInformation (MemoryBlock& destData) {
-	const char linebreak = '\n';
+	const char delimiter = '\n';
 	std::ostringstream data;
 
-	data << version << linebreak << (pots.isb?1:0) << linebreak << currentpreset << linebreak;
+	data << version << delimiter << (pots.isb?1:0) << delimiter << currentpreset << delimiter;
 
 	for(int i = 0; i < 2; i++) {
 		pluginpreset newstate = state[i];
 		for(int b = 0; b < 4; b++) {
 			for(int m = 0; m < 4; m++) {
 				if(pots.isb == (i>.5))
-					data << pots.bands[b].modules[m].value.getTargetValue() << linebreak;
+					data << pots.bands[b].modules[m].value.getTargetValue() << delimiter;
 				else
-					data << newstate.values[b][m] << linebreak;
-				data << newstate.id[b][m] << linebreak;
+					data << newstate.values[b][m] << delimiter;
+				data << newstate.id[b][m] << delimiter;
 			}
-			if(b >= 1) data << newstate.crossover[b-1] << linebreak;
+			if(b >= 1) data << newstate.crossover[b-1] << delimiter;
 			if(pots.isb == (i>.5))
-				data << pots.bands[b].gain.getTargetValue() << linebreak;
+				data << pots.bands[b].gain.getTargetValue() << delimiter;
 			else
-				data << newstate.gain[b] << linebreak;
+				data << newstate.gain[b] << delimiter;
 		}
 		if(pots.isb == (i>.5))
-			data << pots.wet.getTargetValue() << linebreak;
+			data << pots.wet.getTargetValue() << delimiter;
 		else
-			data << newstate.wet << linebreak;
+			data << newstate.wet << delimiter;
 	}
 	for(int b = 0; b < 4; b++) {
-		data << (pots.bands[b].mute?1:0) << linebreak;
-		data << (pots.bands[b].solo?1:0) << linebreak;
-		data << (pots.bands[b].bypass?1:0) << linebreak;
+		data << (pots.bands[b].mute?1:0) << delimiter;
+		data << (pots.bands[b].solo?1:0) << delimiter;
+		data << (pots.bands[b].bypass?1:0) << delimiter;
 	}
-	data << (pots.oversampling?1:0) << linebreak;
+	data << (pots.oversampling?1:0) << delimiter;
 
 	for(int i = 0; i < getNumPrograms(); i++) {
 		for(int b = 0; b < 4; b++) {
 			for(int m = 0; m < 4; m++) {
-				data << presets[i].values[b][m] << linebreak;
-				data << presets[i].id[b][m] << linebreak;
+				data << presets[i].values[b][m] << delimiter;
+				data << presets[i].id[b][m] << delimiter;
 			}
-			if(b >= 1) data << presets[i].crossover[b-1] << linebreak;
-			data << presets[i].gain[b] << linebreak;
+			if(b >= 1) data << presets[i].crossover[b-1] << delimiter;
+			data << presets[i].gain[b] << delimiter;
 		}
-		data << presets[i].wet << linebreak;
+		data << presets[i].wet << delimiter;
 	}
 
 	MemoryOutputStream stream(destData, false);
 	stream.writeString(data.str());
 }
 void PrismaAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
+	const char delimiter = '\n';
 	saved = true;
 	try {
 		std::stringstream ss(String::createStringFromData(data, sizeInBytes).toRawUTF8());
 		std::string token;
 
-		std::getline(ss, token, '\n');
+		std::getline(ss, token, delimiter);
 		int saveversion = std::stoi(token);
 
-		std::getline(ss, token, '\n');
+		std::getline(ss, token, delimiter);
 		apvts.getParameter("ab")->setValueNotifyingHost(std::stoi(token));
 
-		std::getline(ss, token, '\n');
+		std::getline(ss, token, delimiter);
 		currentpreset = std::stoi(token);
 
 		for(int i = 0; i < 2; i++) {
 			for(int b = 0; b < 4; b++) {
 				for(int m = 0; m < 4; m++) {
-					std::getline(ss, token, '\n');
-					float val = std::stof(token);
-					if(pots.isb == (i>.5)) {
-						apvts.getParameter("b"+(String)b+"m"+(String)m+"val")->setValueNotifyingHost(val);
-						pots.bands[b].modules[m].value.setCurrentAndTargetValue(val);
-					}
-					state[i].values[b][m] = val;
-
-					std::getline(ss, token, '\n');
-					if(pots.isb == (i>.5))
-						apvts.getParameter("b"+(String)b+"m"+(String)m+"id")->setValueNotifyingHost(std::stoi(token)/16.f);
-					else state[i].id[b][m] = std::stoi(token);
+					std::getline(ss, token, delimiter);
+					state[i].values[b][m] = std::stof(token);
+					std::getline(ss, token, delimiter);
+					state[i].id[b][m] = std::stoi(token); // TODO: weird else here
 				}
-
 				if(b >= 1) {
-					std::getline(ss, token, '\n');
-					if(pots.isb == (i>.5))
-						apvts.getParameter("b"+(String)b+"cross")->setValueNotifyingHost(std::stof(token));
-					else state[i].crossover[b-1] = std::stof(token);
+					std::getline(ss, token, delimiter);
+					state[i].crossover[b-1] = std::stof(token); // ELSE HERE TOO
 				}
-
-				std::getline(ss, token, '\n');
-				float val = std::stof(token);
-				if(pots.isb == (i>.5)) {
-					apvts.getParameter("b"+(String)b+"gain")->setValueNotifyingHost(val);
-					pots.bands[b].gain.setCurrentAndTargetValue(val);
-				}
-				state[i].gain[b] = val;
+				std::getline(ss, token, delimiter);
+				state[i].gain[b] = std::stof(token);
 			}
-
-			std::getline(ss, token, '\n');
-			float val = std::stof(token);
-			if(pots.isb == (i>.5)) {
-				apvts.getParameter("wet")->setValueNotifyingHost(val);
-				pots.wet.setCurrentAndTargetValue(val);
-			}
-			state[i].wet = val;
+			std::getline(ss, token, delimiter);
+			state[i].wet = std::stof(token);
 		}
 
 		for(int b = 0; b < 4; b++) {
-			std::getline(ss, token, '\n');
+			std::getline(ss, token, delimiter);
 			pots.bands[b].mute = std::stof(token) > .5;
 			apvts.getParameter("b"+(String)b+"mute")->setValueNotifyingHost(std::stof(token));
 
-			std::getline(ss, token, '\n');
+			std::getline(ss, token, delimiter);
 			pots.bands[b].solo = std::stof(token) > .5;
 			apvts.getParameter("b"+(String)b+"solo")->setValueNotifyingHost(std::stof(token));
 
-			std::getline(ss, token, '\n');
+			std::getline(ss, token, delimiter);
 			float val = std::stof(token);
 			pots.bands[b].bandbypass.setCurrentAndTargetValue(val);
 			pots.bands[b].bypasssmooth = val;
@@ -776,25 +743,25 @@ void PrismaAudioProcessor::setStateInformation (const void* data, int sizeInByte
 			pots.bands[b].bandactive.setCurrentAndTargetValue(pots.bands[b].activesmooth);
 		}
 
-		std::getline(ss, token, '\n');
+		std::getline(ss, token, delimiter);
 		apvts.getParameter("oversampling")->setValueNotifyingHost(std::stof(token));
 
 		for(int i = 0; i < (saveversion >= 1 ? getNumPrograms() : 8); i++) {
 			for(int b = 0; b < 4; b++) {
 				for(int m = 0; m < 4; m++) {
-					std::getline(ss, token, '\n');
+					std::getline(ss, token, delimiter);
 					if(i != currentpreset) presets[i].values[b][m] = std::stof(token);
-					std::getline(ss, token, '\n');
+					std::getline(ss, token, delimiter);
 					if(i != currentpreset) presets[i].id[b][m] = std::stof(token);
 				}
 				if(b >= 1) {
-					std::getline(ss, token, '\n');
+					std::getline(ss, token, delimiter);
 					if(i != currentpreset) presets[i].crossover[b-1] = std::stof(token);
 				}
-				std::getline(ss, token, '\n');
+				std::getline(ss, token, delimiter);
 				if(i != currentpreset) presets[i].gain[b] = std::stof(token);
 			}
-			std::getline(ss, token, '\n');
+			std::getline(ss, token, delimiter);
 			if(i != currentpreset) presets[i].wet = std::stof(token);
 		}
 	} catch (const char* e) {
@@ -806,6 +773,99 @@ void PrismaAudioProcessor::setStateInformation (const void* data, int sizeInByte
 	} catch(...) {
 		logger.debug((String)"Error loading saved data");
 	}
+
+	for(int b = 0; b < 3; b++)
+		crossovertruevalue[b] = state[pots.isb].crossover[b];
+	for(int b = 0; b < 4; b++) {
+		for(int m = 0; m < 4; m++) {
+			apvts.getParameter("b"+(String)b+"m"+(String)m+"val")->setValueNotifyingHost(state[pots.isb].values[b][m]);
+			pots.bands[b].modules[m].value.setCurrentAndTargetValue(state[pots.isb].values[b][m]);
+			apvts.getParameter("b"+(String)b+"m"+(String)m+"id")->setValueNotifyingHost(((float)state[pots.isb].id[b][m])/MODULE_COUNT);
+		}
+		if(b >= 1) {
+			apvts.getParameter("b"+(String)b+"cross")->setValueNotifyingHost(state[pots.isb].crossover[b-1]);
+		}
+		apvts.getParameter("b"+(String)b+"gain")->setValueNotifyingHost(state[pots.isb].gain[b]);
+		pots.bands[b].gain.setCurrentAndTargetValue(state[pots.isb].gain[b]);
+	}
+	apvts.getParameter("wet")->setValueNotifyingHost(state[pots.isb].wet);
+	pots.wet.setCurrentAndTargetValue(state[pots.isb].wet);
+}
+const String PrismaAudioProcessor::get_preset(int preset_id, const char delimiter) {
+	std::ostringstream data;
+
+	data << version << delimiter;
+
+	for(int b = 0; b < 4; b++) {
+		for(int m = 0; m < 4; m++) {
+			data << presets[preset_id].values[b][m] << delimiter;
+			data << presets[preset_id].id[b][m] << delimiter;
+		}
+		if(b >= 1) data << presets[preset_id].crossover[b-1] << delimiter;
+		data << presets[preset_id].gain[b] << delimiter;
+	}
+	data << presets[preset_id].wet << delimiter;
+
+	return data.str();
+}
+void PrismaAudioProcessor::set_preset(const String& preset, int preset_id, const char delimiter, bool print_errors) {
+	String error = "";
+	String revert = get_preset(preset_id);
+	try {
+		std::stringstream ss(preset.trim().toRawUTF8());
+		std::string token;
+
+		std::getline(ss, token, delimiter);
+		int save_version = std::stoi(token);
+
+		for(int b = 0; b < 4; b++) {
+			for(int m = 0; m < 4; m++) {
+				std::getline(ss, token, delimiter);
+				presets[preset_id].values[b][m] = std::stof(token);
+				std::getline(ss, token, delimiter);
+				presets[preset_id].id[b][m] = std::stof(token);
+			}
+			if(b >= 1) {
+				std::getline(ss, token, delimiter);
+				presets[preset_id].crossover[b-1] = std::stof(token);
+			}
+			std::getline(ss, token, delimiter);
+			presets[preset_id].gain[b] = std::stof(token);
+		}
+		std::getline(ss, token, delimiter);
+		presets[preset_id].wet = std::stof(token);
+
+	} catch (const char* e) {
+		error = "Error loading saved data: "+(String)e;
+	} catch(String e) {
+		error = "Error loading saved data: "+e;
+	} catch(std::exception &e) {
+		error = "Error loading saved data: "+(String)e.what();
+	} catch(...) {
+		error = "Error loading saved data";
+	}
+	if(error != "") {
+		if(print_errors)
+			logger.debug(error);
+		set_preset(revert, preset_id);
+		return;
+	}
+
+	if(currentpreset != preset_id) return;
+
+	for(int b = 0; b < 3; b++)
+		crossovertruevalue[b] = presets[preset_id].crossover[b];
+	for(int b = 0; b < 4; b++) {
+		for(int m = 0; m < 4; m++) {
+			apvts.getParameter("b"+(String)b+"m"+(String)m+"val")->setValueNotifyingHost(presets[preset_id].values[b][m]);
+			apvts.getParameter("b"+(String)b+"m"+(String)m+"id")->setValueNotifyingHost(((float)presets[preset_id].id[b][m])/MODULE_COUNT);
+		}
+		if(b >= 1) {
+			apvts.getParameter("b"+(String)b+"cross")->setValueNotifyingHost(presets[preset_id].crossover[b-1]);
+		}
+		apvts.getParameter("b"+(String)b+"gain")->setValueNotifyingHost(presets[preset_id].gain[b]);
+	}
+	apvts.getParameter("wet")->setValueNotifyingHost(presets[preset_id].wet);
 }
 void PrismaAudioProcessor::parameterChanged(const String& parameterID, float newValue) {
 	if(parameterID == "ab") {
@@ -925,7 +985,7 @@ void PrismaAudioProcessor::switchpreset(bool isbb) {
 	for(int b = 0; b < 4; b++) {
 		for(int m = 0; m < 4; m++) {
 			apvts.getParameter("b"+(String)b+"m"+(String)m+"val")->setValueNotifyingHost(newstate.values[b][m]);
-			apvts.getParameter("b"+(String)b+"m"+(String)m+"id")->setValueNotifyingHost(newstate.id[b][m]/16.f);
+			apvts.getParameter("b"+(String)b+"m"+(String)m+"id")->setValueNotifyingHost(((float)newstate.id[b][m])/MODULE_COUNT);
 		}
 		if(b >= 1) apvts.getParameter("b"+(String)b+"cross")->setValueNotifyingHost(newstate.crossover[b-1]);
 		apvts.getParameter("b"+(String)b+"gain")->setValueNotifyingHost(newstate.gain[b]);
@@ -955,61 +1015,61 @@ void PrismaAudioProcessor::recalcactivebands() {
 
 AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new PrismaAudioProcessor(); }
 
-AudioProcessorValueTreeState::ParameterLayout PrismaAudioProcessor::createParameters() {//72  41
+AudioProcessorValueTreeState::ParameterLayout PrismaAudioProcessor::create_parameters() {//72  41
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b0m0val"		,1},"Low Module 1 Value"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
-	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"b0m0id"		,1},"Low Module 1 Type"											,0		,16		 ,0		,""												,toid			,fromid			));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b0m1val"		,1},"Low Module 2 Value"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
-	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"b0m1id"		,1},"Low Module 2 Type"											,0		,16		 ,0		,""												,toid			,fromid			));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b0m2val"		,1},"Low Module 3 Value"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
-	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"b0m2id"		,1},"Low Module 3 Type"											,0		,16		 ,0		,""												,toid			,fromid			));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b0m3val"		,1},"Low Module 4 Value"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
-	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"b0m3id"		,1},"Low Module 4 Type"											,0		,16		 ,0		,""												,toid			,fromid			));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b0gain"		,1},"Low Gain"					,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
-	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"b0mute"		,1},"Low Mute"																	 ,false	,""												,tobool			,frombool		));
-	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"b0solo"		,1},"Low Solo"																	 ,false	,""												,tobool			,frombool		));
-	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"b0bypass"	,1},"Low Bypass"																 ,false	,""												,tobool			,frombool		));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b1m0val"		,1},"Low Mid Module 1 Value"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
-	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"b1m0id"		,1},"Low Mid Module 1 Type"										,0		,16		 ,0		,""												,toid			,fromid			));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b1m1val"		,1},"Low Mid Module 2 Value"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
-	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"b1m1id"		,1},"Low Mid Module 2 Type"										,0		,16		 ,0		,""												,toid			,fromid			));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b1m2val"		,1},"Low Mid Module 3 Value"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
-	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"b1m2id"		,1},"Low Mid Module 3 Type"										,0		,16		 ,0		,""												,toid			,fromid			));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b1m3val"		,1},"Low Mid Module 4 Value"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
-	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"b1m3id"		,1},"Low Mid Module 4 Type"										,0		,16		 ,0		,""												,toid			,fromid			));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b1cross"		,1},"Low Mid Crossover"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.25f	,"",AudioProcessorParameter::genericParameter	,tocross		,fromcross		));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b1gain"		,1},"Low Mid Gain"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
-	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"b1mute"		,1},"Low Mid Mute"																 ,false	,""												,tobool			,frombool		));
-	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"b1solo"		,1},"Low Mid Solo"																 ,false	,""												,tobool			,frombool		));
-	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"b1bypass"	,1},"Low Mid Bypass"															 ,false	,""												,tobool			,frombool		));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b2m0val"		,1},"High Mid Module 1 Value"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
-	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"b2m0id"		,1},"High Mid Module 1 Type"									,0		,16		 ,0		,""												,toid			,fromid			));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b2m1val"		,1},"High Mid Module 2 Value"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
-	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"b2m1id"		,1},"High Mid Module 2 Type"									,0		,16		 ,0		,""												,toid			,fromid			));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b2m2val"		,1},"High Mid Module 3 Value"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
-	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"b2m2id"		,1},"High Mid Module 3 Type"									,0		,16		 ,0		,""												,toid			,fromid			));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b2m3val"		,1},"High Mid Module 4 Value"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
-	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"b2m3id"		,1},"High Mid Module 4 Type"									,0		,16		 ,0		,""												,toid			,fromid			));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b2cross"		,1},"High Mid Crossover"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	,"",AudioProcessorParameter::genericParameter	,tocross		,fromcross		));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b2gain"		,1},"High Mid Gain"				,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
-	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"b2mute"		,1},"High Mid Mute"																 ,false	,""												,tobool			,frombool		));
-	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"b2solo"		,1},"High Mid Solo"																 ,false	,""												,tobool			,frombool		));
-	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"b2bypass"	,1},"High Mid Bypass"															 ,false	,""												,tobool			,frombool		));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b3m0val"		,1},"High Module 1 Value"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
-	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"b3m0id"		,1},"High Module 1 Type"										,0		,16		 ,0		,""												,toid			,fromid			));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b3m1val"		,1},"High Module 2 Value"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
-	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"b3m1id"		,1},"High Module 2 Type"										,0		,16		 ,0		,""												,toid			,fromid			));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b3m2val"		,1},"High Module 3 Value"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
-	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"b3m2id"		,1},"High Module 3 Type"										,0		,16		 ,0		,""												,toid			,fromid			));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b3m3val"		,1},"High Module 4 Value"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
-	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"b3m3id"		,1},"High Module 4 Type"										,0		,16		 ,0		,""												,toid			,fromid			));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b3cross"		,1},"High Crossover"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.75f	,"",AudioProcessorParameter::genericParameter	,tocross		,fromcross		));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b3gain"		,1},"High Gain"					,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
-	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"b3mute"		,1},"High Mute"																	 ,false	,""												,tobool			,frombool		));
-	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"b3solo"		,1},"High Solo"																	 ,false	,""												,tobool			,frombool		));
-	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"b3bypass"	,1},"High Bypass"																 ,false	,""												,tobool			,frombool		));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"wet"			,1},"Wet"						,juce::NormalisableRange<float>( 0.0f	,1.0f	),1.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
-	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"oversampling",1},"Quality"																	 ,true	,""												,toquality		,fromquality	));
-	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"ab"			,1},"A/B"																		 ,false	,""												,toab			,fromab			));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b0m0val"		,1},"Low Module 1 Value"		,juce::NormalisableRange<float>( 0.0f	,1.0f			),0.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"b0m0id"		,1},"Low Module 1 Type"											,0		,MODULE_COUNT	 ,0		,""												,toid			,fromid			));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b0m1val"		,1},"Low Module 2 Value"		,juce::NormalisableRange<float>( 0.0f	,1.0f			),0.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"b0m1id"		,1},"Low Module 2 Type"											,0		,MODULE_COUNT	 ,0		,""												,toid			,fromid			));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b0m2val"		,1},"Low Module 3 Value"		,juce::NormalisableRange<float>( 0.0f	,1.0f			),0.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"b0m2id"		,1},"Low Module 3 Type"											,0		,MODULE_COUNT	 ,0		,""												,toid			,fromid			));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b0m3val"		,1},"Low Module 4 Value"		,juce::NormalisableRange<float>( 0.0f	,1.0f			),0.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"b0m3id"		,1},"Low Module 4 Type"											,0		,MODULE_COUNT	 ,0		,""												,toid			,fromid			));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b0gain"		,1},"Low Gain"					,juce::NormalisableRange<float>( 0.0f	,1.0f			),0.5f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"b0mute"		,1},"Low Mute"																			 ,false	,""												,tobool			,frombool		));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"b0solo"		,1},"Low Solo"																			 ,false	,""												,tobool			,frombool		));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"b0bypass"	,1},"Low Bypass"																		 ,false	,""												,tobool			,frombool		));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b1m0val"		,1},"Low Mid Module 1 Value"	,juce::NormalisableRange<float>( 0.0f	,1.0f			),0.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"b1m0id"		,1},"Low Mid Module 1 Type"										,0		,MODULE_COUNT	 ,0		,""												,toid			,fromid			));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b1m1val"		,1},"Low Mid Module 2 Value"	,juce::NormalisableRange<float>( 0.0f	,1.0f			),0.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"b1m1id"		,1},"Low Mid Module 2 Type"										,0		,MODULE_COUNT	 ,0		,""												,toid			,fromid			));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b1m2val"		,1},"Low Mid Module 3 Value"	,juce::NormalisableRange<float>( 0.0f	,1.0f			),0.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"b1m2id"		,1},"Low Mid Module 3 Type"										,0		,MODULE_COUNT	 ,0		,""												,toid			,fromid			));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b1m3val"		,1},"Low Mid Module 4 Value"	,juce::NormalisableRange<float>( 0.0f	,1.0f			),0.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"b1m3id"		,1},"Low Mid Module 4 Type"										,0		,MODULE_COUNT	 ,0		,""												,toid			,fromid			));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b1cross"		,1},"Low Mid Crossover"			,juce::NormalisableRange<float>( 0.0f	,1.0f			),0.25f	,"",AudioProcessorParameter::genericParameter	,tocross		,fromcross		));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b1gain"		,1},"Low Mid Gain"				,juce::NormalisableRange<float>( 0.0f	,1.0f			),0.5f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"b1mute"		,1},"Low Mid Mute"																		 ,false	,""												,tobool			,frombool		));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"b1solo"		,1},"Low Mid Solo"																		 ,false	,""												,tobool			,frombool		));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"b1bypass"	,1},"Low Mid Bypass"																	 ,false	,""												,tobool			,frombool		));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b2m0val"		,1},"High Mid Module 1 Value"	,juce::NormalisableRange<float>( 0.0f	,1.0f			),0.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"b2m0id"		,1},"High Mid Module 1 Type"									,0		,MODULE_COUNT	 ,0		,""												,toid			,fromid			));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b2m1val"		,1},"High Mid Module 2 Value"	,juce::NormalisableRange<float>( 0.0f	,1.0f			),0.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"b2m1id"		,1},"High Mid Module 2 Type"									,0		,MODULE_COUNT	 ,0		,""												,toid			,fromid			));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b2m2val"		,1},"High Mid Module 3 Value"	,juce::NormalisableRange<float>( 0.0f	,1.0f			),0.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"b2m2id"		,1},"High Mid Module 3 Type"									,0		,MODULE_COUNT	 ,0		,""												,toid			,fromid			));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b2m3val"		,1},"High Mid Module 4 Value"	,juce::NormalisableRange<float>( 0.0f	,1.0f			),0.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"b2m3id"		,1},"High Mid Module 4 Type"									,0		,MODULE_COUNT	 ,0		,""												,toid			,fromid			));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b2cross"		,1},"High Mid Crossover"		,juce::NormalisableRange<float>( 0.0f	,1.0f			),0.5f	,"",AudioProcessorParameter::genericParameter	,tocross		,fromcross		));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b2gain"		,1},"High Mid Gain"				,juce::NormalisableRange<float>( 0.0f	,1.0f			),0.5f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"b2mute"		,1},"High Mid Mute"																		 ,false	,""												,tobool			,frombool		));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"b2solo"		,1},"High Mid Solo"																		 ,false	,""												,tobool			,frombool		));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"b2bypass"	,1},"High Mid Bypass"																	 ,false	,""												,tobool			,frombool		));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b3m0val"		,1},"High Module 1 Value"		,juce::NormalisableRange<float>( 0.0f	,1.0f			),0.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"b3m0id"		,1},"High Module 1 Type"										,0		,MODULE_COUNT	 ,0		,""												,toid			,fromid			));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b3m1val"		,1},"High Module 2 Value"		,juce::NormalisableRange<float>( 0.0f	,1.0f			),0.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"b3m1id"		,1},"High Module 2 Type"										,0		,MODULE_COUNT	 ,0		,""												,toid			,fromid			));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b3m2val"		,1},"High Module 3 Value"		,juce::NormalisableRange<float>( 0.0f	,1.0f			),0.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"b3m2id"		,1},"High Module 3 Type"										,0		,MODULE_COUNT	 ,0		,""												,toid			,fromid			));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b3m3val"		,1},"High Module 4 Value"		,juce::NormalisableRange<float>( 0.0f	,1.0f			),0.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"b3m3id"		,1},"High Module 4 Type"										,0		,MODULE_COUNT	 ,0		,""												,toid			,fromid			));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b3cross"		,1},"High Crossover"			,juce::NormalisableRange<float>( 0.0f	,1.0f			),0.75f	,"",AudioProcessorParameter::genericParameter	,tocross		,fromcross		));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b3gain"		,1},"High Gain"					,juce::NormalisableRange<float>( 0.0f	,1.0f			),0.5f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"b3mute"		,1},"High Mute"																			 ,false	,""												,tobool			,frombool		));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"b3solo"		,1},"High Solo"																			 ,false	,""												,tobool			,frombool		));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"b3bypass"	,1},"High Bypass"																		 ,false	,""												,tobool			,frombool		));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"wet"			,1},"Wet"						,juce::NormalisableRange<float>( 0.0f	,1.0f			),1.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"oversampling",1},"Quality"																			 ,true	,""												,toquality		,fromquality	));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"ab"			,1},"A/B"																				 ,false	,""												,toab			,fromab			));
 	return { parameters.begin(), parameters.end() };
 }

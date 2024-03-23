@@ -2,6 +2,8 @@
 #include "includes.h"
 #include "DCFilter.h"
 
+#define MODULE_COUNT 16
+
 struct pluginmodule {
 	SmoothedValue<float,ValueSmoothingTypes::Linear> value;
 };
@@ -42,7 +44,7 @@ struct pluginpreset {
 	float wet = 1;
 };
 
-class PrismaAudioProcessor : public AudioProcessor, public AudioProcessorValueTreeState::Listener {
+class PrismaAudioProcessor : public plugmachine_dsp {
 public:
 	PrismaAudioProcessor();
 	~PrismaAudioProcessor() override;
@@ -78,6 +80,9 @@ public:
 
 	void getStateInformation (MemoryBlock& destData) override;
 	void setStateInformation (const void* data, int sizeInBytes) override;
+	const String get_preset(int preset_id, const char delimiter = ',') override;
+	void set_preset(const String& preset, int preset_id, const char delimiter = ',', bool print_errors = false) override;
+
 	virtual void parameterChanged(const String& parameterID, float newValue);
 	void calccross(float* input, float* output);
 	double calcfilter(float val);
@@ -87,13 +92,12 @@ public:
 	bool transition = false;
 	
 	void recalcactivebands();
- 
+
+	AudioProcessorValueTreeState::ParameterLayout create_parameters();
 	AudioProcessorValueTreeState apvts;
-	UndoManager undoManager;
 
 	int version = 1;
 	pluginparams pots;
-	CoolLogger logger;
 
 	enum {
 		fftOrder = 10,
@@ -103,13 +107,13 @@ public:
 	Atomic<bool> nextFFTBlockReady = false;
 	Atomic<bool> dofft = false;
 	float scopeData[scopeSize];
+
+	int currentpreset = 0;
 private:
 	pluginpreset state[2];
 	float crossovertruevalue[3] {.25f,.5f,.75f};
 
-	AudioProcessorValueTreeState::ParameterLayout createParameters();
 	pluginpreset presets[20];
-	int currentpreset = 0;
 	bool preparedtoplay = false;
 	bool saved = false;
 
@@ -272,7 +276,7 @@ static std::function<int(const String& s)> fromid = [](const String& s) {
 		return 1;
 	if(lower.contains("o") || lower.contains("e"))
 		return 0;
-	return jlimit(0,16,s.getIntValue());
+	return jlimit(0,MODULE_COUNT,s.getIntValue());
 };
 static std::function<String(bool v, int max)> tobool = [](bool v, int max) {
 	return v?"On":"Off";
