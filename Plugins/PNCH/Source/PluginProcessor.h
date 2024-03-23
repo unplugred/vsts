@@ -1,7 +1,7 @@
 #pragma once
 #include "includes.h"
 
-class PNCHAudioProcessor : public AudioProcessor, public AudioProcessorValueTreeState::Listener {
+class PNCHAudioProcessor : public plugmachine_dsp {
 public:
 	PNCHAudioProcessor();
 	~PNCHAudioProcessor() override;
@@ -35,10 +35,13 @@ public:
 
 	void getStateInformation (MemoryBlock& destData) override;
 	void setStateInformation (const void* data, int sizeInBytes) override;
+	const String get_preset(int preset_id, const char delimiter = ',') override;
+	void set_preset(const String& preset, int preset_id, const char delimiter = ',', bool print_errors = false) override;
+
 	virtual void parameterChanged(const String& parameterID, float newValue);
- 
+
+	AudioProcessorValueTreeState::ParameterLayout createParameters();
 	AudioProcessorValueTreeState apvts;
-	UndoManager undoManager;
 
 	Atomic<float> rmsadd = 0;
 	Atomic<int> rmscount = 0;
@@ -47,9 +50,7 @@ public:
 	SmoothedValue<float,ValueSmoothingTypes::Linear> amount;
 	Atomic<bool> oversampling = 1;
 
-	CoolLogger logger;
 private:
-	AudioProcessorValueTreeState::ParameterLayout createParameters();
 	bool preparedtoplay = false;
 	bool saved = false;
 
