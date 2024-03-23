@@ -3,6 +3,22 @@
 #include "PluginProcessor.h"
 using namespace gl;
 
+class LookNFeel : public plugmachine_look_n_feel {
+public:
+	LookNFeel();
+	~LookNFeel();
+	Font getPopupMenuFont();
+	void drawPopupMenuBackground(Graphics &g, int width, int height) override;
+	void drawPopupMenuItem(Graphics &g, const Rectangle<int> &area, bool isSeparator, bool isActive, bool isHighlighted, bool isTicked, bool hasSubMenu, const String &text, const String &shortcutKeyText, const Drawable *icon, const Colour *textColour) override; //biggest function ive seen ever
+	void getIdealPopupMenuItemSize(const String& text, const bool isSeparator, int standardMenuItemHeight, int& idealWidth, int& idealHeight) override;
+	int getPopupMenuBorderSize() override;
+	Colour bg = Colour::fromFloatRGBA(.99608f,.99608f,.95294f,1.f);
+	Colour inactive = Colour::fromFloatRGBA(0.f,0.f,0.f,.5f);
+	Colour txt = Colour::fromFloatRGBA(0.f,0.f,0.f,1.f);
+	Colour highlight_bg = Colour::fromFloatRGBA(.83137f,.41176f,.34902f,1.f);
+	Colour highlight_bg2 = Colour::fromFloatRGBA(.35294f,.60784f,.83922f,1.f);
+	String font = "n";
+};
 struct subknob {
 	int id = 0;
 	float rotspeed = .8f;
@@ -26,6 +42,7 @@ struct module {
 	float hovercutoff = .4f;
 	float defaultval = 0;
 	int clip = -1;
+	String description = "";
 };
 struct modulevalues {
 	int id = 0;
@@ -38,17 +55,15 @@ struct editorpreset {
 	float gain[4] {.5f,.5f,.5f,.5f};
 	float wet = 1;
 };
-class PrismaAudioProcessorEditor : public AudioProcessorEditor, public OpenGLRenderer, public AudioProcessorValueTreeState::Listener, private Timer
-{
+class PrismaAudioProcessorEditor : public plugmachine_gui {
 public:
 	PrismaAudioProcessorEditor(PrismaAudioProcessor&, pluginpreset states, pluginparams pots);
 	~PrismaAudioProcessorEditor() override;
 
 	void newOpenGLContextCreated() override;
-	void compileshader(std::unique_ptr<OpenGLShaderProgram> &shader, String vertexshader, String fragmentshader);
 	void renderOpenGL() override;
 	void openGLContextClosing() override;
-	void paint (Graphics&) override;
+	void paint(Graphics&) override;
 
 	void timerCallback() override;
 
@@ -60,18 +75,11 @@ public:
 	void mouseUp(const MouseEvent& event) override;
 	void mouseDoubleClick(const MouseEvent& event) override;
 	void mouseWheelMove(const MouseEvent& event, const MouseWheelDetails& wheel) override;
-	void recalchover(float x, float y);
+	void recalc_hover(float x, float y);
 
 private:
-	PrismaAudioProcessor& audioProcessor;
+	PrismaAudioProcessor& audio_processor;
 
-	OpenGLContext context;
-	unsigned int arraybuffer;
-	float square[8]{
-		0.f,0.f,
-		1.f,0.f,
-		0.f,1.f,
-		1.f,1.f};
 	float opsquare[12]{
 		0.f,0.f,1.f,
 		1.f,0.f,1.f,
@@ -101,16 +109,16 @@ private:
 	bool isdown = false;
 
 	OpenGLTexture basetex;
-	std::unique_ptr<OpenGLShaderProgram> baseshader;
+	std::shared_ptr<OpenGLShaderProgram> baseshader;
 
 	bool isb = false;
 	bool oversampling = false;
 	OpenGLTexture selectortex;
-	std::unique_ptr<OpenGLShaderProgram> decalshader;
+	std::shared_ptr<OpenGLShaderProgram> decalshader;
 
-	module modules[17];
+	module modules[MODULE_COUNT+1];
 	OpenGLTexture modulestex;
-	std::unique_ptr<OpenGLShaderProgram> moduleshader;
+	std::shared_ptr<OpenGLShaderProgram> moduleshader;
 
 	int initialdrag = -1;
 	float initialvalue = 0;
@@ -118,16 +126,16 @@ private:
 	float valueoffset = 0;
 	Point<int> dragpos = Point<int>(0,0);
 	OpenGLTexture elementstex;
-	std::unique_ptr<OpenGLShaderProgram> elementshader;
+	std::shared_ptr<OpenGLShaderProgram> elementshader;
 
-	std::unique_ptr<OpenGLShaderProgram> lidshader;
+	std::shared_ptr<OpenGLShaderProgram> lidshader;
 
 	float websiteht = -1;
-	std::unique_ptr<OpenGLShaderProgram> logoshader;
+	std::shared_ptr<OpenGLShaderProgram> logoshader;
 
 	float vispoly[3972];
 	int fftdelta = 0;
-	std::unique_ptr<OpenGLShaderProgram> visshader;
+	std::shared_ptr<OpenGLShaderProgram> visshader;
 
 	bool buttons[4][3];
 	bool truemute[4] {false,false,false,false};
@@ -135,16 +143,7 @@ private:
 	float bypasslerp[4] {1.f,1.f,1.f,1.f};
 	float activeease[4] {1.f,1.f,1.f,1.f};
 	float bypassease[4] {1.f,1.f,1.f,1.f};
-	std::unique_ptr<OpenGLShaderProgram> visbttnshader;
-
-#ifdef BANNER
-	float bannerx = 0;
-	OpenGLTexture bannertex;
-	std::unique_ptr<OpenGLShaderProgram> bannershader;
-#endif
-	float banneroffset = 0;
-
-	float dpi = 1;
+	std::shared_ptr<OpenGLShaderProgram> visbttnshader;
 
 	float selectorlerp[4] = {0,0,0,0};
 	float selectorease[4] = {0,0,0,0};
@@ -158,6 +157,8 @@ private:
 	float crossovertruevalue[3] {.25f,.5f,.75f};
 
 	Random random;
+
+	LookNFeel look_n_feel;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PrismaAudioProcessorEditor)
 };
