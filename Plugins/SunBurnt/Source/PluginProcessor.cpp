@@ -9,21 +9,14 @@ int SunBurntAudioProcessor::findcurve(int index) {
 	return -1;
 }
 SunBurntAudioProcessor::SunBurntAudioProcessor() :
-	AudioProcessor(BusesProperties().withInput("Input",AudioChannelSet::stereo(),true).withOutput("Output",AudioChannelSet::stereo(),true)),
-	apvts(*this, &undoManager, "Parameters", createParameters())
-{
-	PropertiesFile::Options options;
-	options.applicationName = getName();
-	options.filenameSuffix = ".settings";
-	options.osxLibrarySubFolder = "Application Support";
-	options.folderName = File::getSpecialLocation(File::SpecialLocationType::userApplicationDataDirectory).getChildFile(getName()).getFullPathName();
-	options.storageFormat = PropertiesFile::storeAsXML;
-	props.setStorageParameters(options);
-	PropertiesFile* usersettings = props.getUserSettings();
-	if(usersettings->containsKey("Language"))
-		params.jpmode = (usersettings->getIntValue("Language")%2) == 0;
-	if(usersettings->containsKey("UIScale"))
-		params.uiscale = usersettings->getDoubleValue("UIScale");
+	apvts(*this, &undo_manager, "Parameters", createParameters()),
+	plugmachine_dsp(BusesProperties().withInput("Input",AudioChannelSet::stereo(),true).withOutput("Output",AudioChannelSet::stereo(),true), &apvts) {
+
+	init();
+
+	PropertiesFile* user_settings = props.getUserSettings();
+	if(user_settings->containsKey("Language"))
+		params.jpmode = (user_settings->getIntValue("Language")%2) == 0;
 
 	params.curves[0] = curveparams("None"			,"3,0,0,0.2,0.07,1,0.7,1,0,0.5,");
 	params.curves[1] = curveparams("High-pass"		,"2,0,0,0.5,1,0,0.5,"			);
@@ -37,36 +30,36 @@ SunBurntAudioProcessor::SunBurntAudioProcessor() :
 	currentpreset = -1;
 
 	presets[0].name = "hall";
-	setpreset("0,1707551331622,1,0.57,0.5,0.53,0,0.55,0.65,1,3,5,7,0,0.3,1,0.14,12,3,0,0,0.2,0.07,1,0.7,1,0,0.5,2,0,0,0.5,1,0,0.5,2,0,0.3,0.5,1,0.3,0.5,2,0,1,0.5,1,0.8438,0.5,2,0,0.14,0.5,1,0.14,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0,0.35,1,0.5,0.5,",0);
+	set_preset("0,1707551331622,1,0.57,0.5,0.53,0,0.55,0.65,1,3,5,7,0,0.3,1,0.14,12,3,0,0,0.2,0.07,1,0.7,1,0,0.5,2,0,0,0.5,1,0,0.5,2,0,0.3,0.5,1,0.3,0.5,2,0,1,0.5,1,0.8438,0.5,2,0,0.14,0.5,1,0.14,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0,0.35,1,0.5,0.5,",0);
 	presets[0].seed = Time::currentTimeMillis();
 	state.seed = presets[0].seed;
 
 	presets[1].name = "room";
-	setpreset("0,1707550784267,1,0.525,0.5,0.21,0,0.55,0.65,1,3,0,0,0,0.3,1,0.14,12,3,0,0,0.2,0.09,1,0.435,1,0,0.5,2,0,0,0.5,1,0,0.5,2,0,0.3,0.5,1,0.3,0.5,2,0,1,0.5,1,0.8438,0.5,2,0,0.14,0.5,1,0.14,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0,0.35,1,0.5,0.5,",1);
+	set_preset("0,1707550784267,1,0.525,0.5,0.21,0,0.55,0.65,1,3,0,0,0,0.3,1,0.14,12,3,0,0,0.2,0.09,1,0.435,1,0,0.5,2,0,0,0.5,1,0,0.5,2,0,0.3,0.5,1,0.3,0.5,2,0,1,0.5,1,0.8438,0.5,2,0,0.14,0.5,1,0.14,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0,0.35,1,0.5,0.5,",1);
 
 	presets[2].name = "gated";
-	setpreset("0,1707554593602,1,0.46,0.5,0.21,1,0.605,0.65,0,0,0,0,0,0.3,0.785,0.14,12,4,0,0,0.09,0.17,1,0.68,0.89,0.5598,0.065,1,0,0.5,2,0,0,0.5,1,0,0.5,2,0,0.3,0.5,1,0.3,0.5,2,0,1,0.5,1,0.8438,0.5,2,0,0.14,0.5,1,0.14,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0,0.35,1,0.5,0.5,",2);
+	set_preset("0,1707554593602,1,0.46,0.5,0.21,1,0.605,0.65,0,0,0,0,0,0.3,0.785,0.14,12,4,0,0,0.09,0.17,1,0.68,0.89,0.5598,0.065,1,0,0.5,2,0,0,0.5,1,0,0.5,2,0,0.3,0.5,1,0.3,0.5,2,0,1,0.5,1,0.8438,0.5,2,0,0.14,0.5,1,0.14,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0,0.35,1,0.5,0.5,",2);
 
 	presets[3].name = "stutter";
-	setpreset("0,1707555224332,1,0.68,0.145,0.815,0,0.64,0.65,5,0,6,0,0,0.3,0.905,0.14,12,3,0,0,0.2,0.03,1,0.665,1,0,0.5,2,0,0,0.5,1,0,0.5,2,0,0.3,0.5,1,0.3,0.5,2,0,1,0.5,1,0.8438,0.5,2,0,0.14,0.5,1,0.14,0.5,5,0,0.7272,0.5,0.2277,0.343333,0.5,0.5,0.643333,0.5,0.731573,0.4526,0.5,1,0.5,0.5,2,0,0.2657,0.77,1,0.0994,0.5,2,0,0,0.35,1,0.5,0.5,",3);
+	set_preset("0,1707555224332,1,0.68,0.145,0.815,0,0.64,0.65,5,0,6,0,0,0.3,0.905,0.14,12,3,0,0,0.2,0.03,1,0.665,1,0,0.5,2,0,0,0.5,1,0,0.5,2,0,0.3,0.5,1,0.3,0.5,2,0,1,0.5,1,0.8438,0.5,2,0,0.14,0.5,1,0.14,0.5,5,0,0.7272,0.5,0.2277,0.343333,0.5,0.5,0.643333,0.5,0.731573,0.4526,0.5,1,0.5,0.5,2,0,0.2657,0.77,1,0.0994,0.5,2,0,0,0.35,1,0.5,0.5,",3);
 
 	presets[4].name = "two sevenths";
-	setpreset("0,1707555312628,1,0.57,0,0.53,1,0.55,0.65,0,0,0,7,0,0.3,1,0.14,7,3,0,0,0.5,0.483732,1,0.5,1,0.3621,0.5,2,0,0,0.5,1,0,0.5,2,0,0.3,0.5,1,0.3,0.5,2,0,1,0.5,1,0.8438,0.5,2,0,0.14,0.5,1,0.14,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,1,0.35,1,1,0.5,",4);
+	set_preset("0,1707555312628,1,0.57,0,0.53,1,0.55,0.65,0,0,0,7,0,0.3,1,0.14,7,3,0,0,0.5,0.483732,1,0.5,1,0.3621,0.5,2,0,0,0.5,1,0,0.5,2,0,0.3,0.5,1,0.3,0.5,2,0,1,0.5,1,0.8438,0.5,2,0,0.14,0.5,1,0.14,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,1,0.35,1,1,0.5,",4);
 
 	presets[5].name = "reverse reverb";
-	setpreset("0,1707551331623,0,1,0.5,0.53,8,0.55,0.65,1,3,0,0,0,0,1,0,12,4,0,0,0.195,0.881174,0.3542,0.21,1,1,0.7,1,0,0.5,2,0,0.2911,0.695,1,0,0.5,2,0,0.3,0.5,1,0.3,0.5,2,0,0.4533,0.655,1,1,0.5,2,0,0.14,0.5,1,0.14,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0,0.35,1,0.5,0.5,",5);
+	set_preset("0,1707551331623,0,1,0.5,0.53,8,0.55,0.65,1,3,0,0,0,0,1,0,12,4,0,0,0.195,0.881174,0.3542,0.21,1,1,0.7,1,0,0.5,2,0,0.2911,0.695,1,0,0.5,2,0,0.3,0.5,1,0.3,0.5,2,0,0.4533,0.655,1,1,0.5,2,0,0.14,0.5,1,0.14,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0,0.35,1,0.5,0.5,",5);
 
 	presets[6].name = "ufo";
-	setpreset("0,1707551331624,1,0.355,0.5,0.78,8,0.555,0.435,1,3,5,7,0,0.84,1,0.835,12,3,0,0,0.2,0.07,1,0.2,1,0,0.5,8,0,0,0.5,0.140493,0.1551,0.5,0.238122,0.3666,0.5,0.401408,0.203333,0.5,0.582958,0.430867,0.5,0.720657,0.126667,0.5,0.861502,0.453333,0.5,1,0,0.5,2,0,0.3,0.5,1,0.3,0.5,6,0,0.6663,0.5,0.220164,0.446867,0.5,0.433427,0.7871,0.5,0.663991,0.525733,0.5,0.791901,0.7223,0.5,1,0.8438,0.5,2,0,0.14,0.5,1,0.14,0.5,8,0,0.5,0.5,0.239437,0.18,0.5,0.460094,0.753333,0.5,0.643193,0.47,0.5,0.680751,0.716667,0.5,0.765258,0.246667,0.5,0.903756,0.52,0.5,1,0.5,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0,0.35,1,0.7343,0.5,",6);
+	set_preset("0,1707551331624,1,0.355,0.5,0.78,8,0.555,0.435,1,3,5,7,0,0.84,1,0.835,12,3,0,0,0.2,0.07,1,0.2,1,0,0.5,8,0,0,0.5,0.140493,0.1551,0.5,0.238122,0.3666,0.5,0.401408,0.203333,0.5,0.582958,0.430867,0.5,0.720657,0.126667,0.5,0.861502,0.453333,0.5,1,0,0.5,2,0,0.3,0.5,1,0.3,0.5,6,0,0.6663,0.5,0.220164,0.446867,0.5,0.433427,0.7871,0.5,0.663991,0.525733,0.5,0.791901,0.7223,0.5,1,0.8438,0.5,2,0,0.14,0.5,1,0.14,0.5,8,0,0.5,0.5,0.239437,0.18,0.5,0.460094,0.753333,0.5,0.643193,0.47,0.5,0.680751,0.716667,0.5,0.765258,0.246667,0.5,0.903756,0.52,0.5,1,0.5,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0,0.35,1,0.7343,0.5,",6);
 
 	presets[7].name = "wave";
-	setpreset("0,1707575061535,0.84,0.68,0.265,0.525,0,0.56,0.54,0,3,0,7,0,0.3,1,0.455,7,3,0,0,0.87,0.27,1,0.38,1,0,0.5,2,0,0,0.5,1,0,0.5,2,0,0.3,0.5,1,0.3,0.5,2,0,1,0.77,1,0.3468,0.5,2,0,0.14,0.5,1,0.14,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0.2758,0.35,1,0.6024,0.5,",7);
+	set_preset("0,1707575061535,0.84,0.68,0.265,0.525,0,0.56,0.54,0,3,0,7,0,0.3,1,0.455,7,3,0,0,0.87,0.27,1,0.38,1,0,0.5,2,0,0,0.5,1,0,0.5,2,0,0.3,0.5,1,0.3,0.5,2,0,1,0.77,1,0.3468,0.5,2,0,0.14,0.5,1,0.14,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0.2758,0.35,1,0.6024,0.5,",7);
 
 	presets[8].name = "sub wub wub";
-	setpreset("0,1708193043094,1,0.787,0.5,0.153125,3,0.24,0.65,0,3,0,7,0,0.3,1,0.14,-12,9,0,0,0.7,0,1,0.7,0.25,0,0.7,0.25,0.9361,0.7,0.5,0,0.7,0.5,0.8509,0.7,0.75,0,0.7,0.75,0.7586,0.7,1,0,0.5,2,0,0,0.5,1,0,0.5,2,0,0.3,0.5,1,0.3,0.5,2,0,0.7941,0.5,1,0.5456,0.5,2,0,0.14,0.5,1,0.14,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0.7302,0.35,1,0.7302,0.5,",8);
+	set_preset("0,1708193043094,1,0.787,0.5,0.153125,3,0.24,0.65,0,3,0,7,0,0.3,1,0.14,-12,9,0,0,0.7,0,1,0.7,0.25,0,0.7,0.25,0.9361,0.7,0.5,0,0.7,0.5,0.8509,0.7,0.75,0,0.7,0.75,0.7586,0.7,1,0,0.5,2,0,0,0.5,1,0,0.5,2,0,0.3,0.5,1,0.3,0.5,2,0,0.7941,0.5,1,0.5456,0.5,2,0,0.14,0.5,1,0.14,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0.7302,0.35,1,0.7302,0.5,",8);
 
 	presets[9].name = "spectre";
-	setpreset("0,1708193043096,1,0.525,0,0.53,0,0.7,0.535,0,3,5,0,0.435,0.3,1,0.14,12,6,0,0,0.2,0.0610329,0.33,0.2,0.185446,0.783333,0.2,0.431009,0.3542,0.2,0.765,0.804633,0.2,1,0.6172,0.5,2,0,0,0.5,1,0,0.5,2,0,0.3,0.5,1,0.3,0.5,7,0,0.3539,0.5,0.194836,0.683333,0.5,0.284648,0.425667,0.5,0.42723,0.743333,0.5,0.698498,0.437133,0.5,0.798122,0.8,0.5,1,0.5669,0.5,2,0,0.14,0.5,1,0.14,0.5,11,0,0,0.5,0,0,0.5,0.136479,0.6177,0.5,0.136479,1,0.5,0.358873,0.4604,0.5,0.358873,0,0.5,0.607277,0.2911,0.5,0.607277,1,0.5,0.85446,0.6805,0.5,0.85446,0.1704,0.5,1,0.2627,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0,0.35,1,0.5,0.5,",9);
+	set_preset("0,1708193043096,1,0.525,0,0.53,0,0.7,0.535,0,3,5,0,0.435,0.3,1,0.14,12,6,0,0,0.2,0.0610329,0.33,0.2,0.185446,0.783333,0.2,0.431009,0.3542,0.2,0.765,0.804633,0.2,1,0.6172,0.5,2,0,0,0.5,1,0,0.5,2,0,0.3,0.5,1,0.3,0.5,7,0,0.3539,0.5,0.194836,0.683333,0.5,0.284648,0.425667,0.5,0.42723,0.743333,0.5,0.698498,0.437133,0.5,0.798122,0.8,0.5,1,0.5669,0.5,2,0,0.14,0.5,1,0.14,0.5,11,0,0,0.5,0,0,0.5,0.136479,0.6177,0.5,0.136479,1,0.5,0.358873,0.4604,0.5,0.358873,0,0.5,0.607277,0.2911,0.5,0.607277,1,0.5,0.85446,0.6805,0.5,0.85446,0.1704,0.5,1,0.2627,0.5,2,0,0.5,0.5,1,0.5,0.5,2,0,0,0.35,1,0.5,0.5,",9);
 
 	currentpreset = 0;
 
@@ -113,13 +106,13 @@ SunBurntAudioProcessor::SunBurntAudioProcessor() :
 		state.values[i] = params.pots[i].inflate(apvts.getParameter(params.pots[i].id)->getValue());
 		presets[currentpreset].values[i] = state.values[i];
 		if(params.pots[i].smoothtime > 0) params.pots[i].smooth.setCurrentAndTargetValue(state.values[i]);
-		apvts.addParameterListener(params.pots[i].id,this);
+		add_listener(params.pots[i].id);
 	}
 }
 
 SunBurntAudioProcessor::~SunBurntAudioProcessor(){
+	close();
 	impulsethread.active = false;
-	for(int i = 0; i < paramcount; ++i) apvts.removeParameterListener(params.pots[i].id,this);
 }
 
 const String SunBurntAudioProcessor::getName() const { return "SunBurnt"; }
@@ -136,7 +129,7 @@ int SunBurntAudioProcessor::getCurrentProgram() { return currentpreset; }
 void SunBurntAudioProcessor::setCurrentProgram (int index) {
 	if(currentpreset == index) return;
 	impulsethread.active = false;
-	undoManager.beginNewTransaction((String)"Changed preset to " += presets[index].name);
+	undo_manager.beginNewTransaction((String)"Changed preset to " += presets[index].name);
 	currentpreset = index;
 
 	if(presets[currentpreset].seed == 0)
@@ -149,7 +142,7 @@ void SunBurntAudioProcessor::setCurrentProgram (int index) {
 
 	updatedcurve = true;
 	updatevis = true;
-	undoManager.beginNewTransaction();
+	undo_manager.beginNewTransaction();
 }
 const String SunBurntAudioProcessor::getProgramName (int index) {
 	return { presets[index].name };
@@ -453,10 +446,6 @@ void SunBurntAudioProcessor::setLang(bool isjp) {
 	params.jpmode = isjp;
 	props.getUserSettings()->setValue("Language",isjp?2:1);
 }
-void SunBurntAudioProcessor::setUIScale(double uiscale) {
-	params.uiscale = uiscale;
-	props.getUserSettings()->setValue("UIScale",uiscale);
-}
 
 void SunBurntAudioProcessor::getStateInformation (MemoryBlock& destData) {
 	const char delimiter = '\n';
@@ -521,13 +510,13 @@ void SunBurntAudioProcessor::setStateInformation (const void* data, int sizeInBy
 			}
 		}
 	} catch (const char* e) {
-		logger.debug((String)"Error loading saved data: "+(String)e);
+		debug((String)"Error loading saved data: "+(String)e);
 	} catch(String e) {
-		logger.debug((String)"Error loading saved data: "+e);
+		debug((String)"Error loading saved data: "+e);
 	} catch(std::exception &e) {
-		logger.debug((String)"Error loading saved data: "+(String)e.what());
+		debug((String)"Error loading saved data: "+(String)e.what());
 	} catch(...) {
-		logger.debug((String)"Error loading saved data");
+		debug((String)"Error loading saved data");
 	}
 
 	for(int i = 0; i < paramcount; ++i) {
@@ -542,26 +531,26 @@ void SunBurntAudioProcessor::setStateInformation (const void* data, int sizeInBy
 	updatevis = true;
 	//*/
 }
-const String SunBurntAudioProcessor::getpreset(int presetid, const char delimiter) {
+const String SunBurntAudioProcessor::get_preset(int preset_id, const char delimiter) {
 	std::ostringstream data;
 
 	data << version << delimiter;
 
-	data << presets[presetid].seed << delimiter;
+	data << presets[preset_id].seed << delimiter;
 	for(int v = 0; v < paramcount; ++v)
-		data << presets[presetid].values[v] << delimiter;
+		data << presets[preset_id].values[v] << delimiter;
 	for(int c = 0; c < 8; ++c) {
-		data << presets[presetid].curves[c].points.size() << delimiter;
-		for(int p = 0; p < presets[presetid].curves[c].points.size(); ++p)
-			data << presets[presetid].curves[c].points[p].x << delimiter << presets[presetid].curves[c].points[p].y << delimiter << presets[presetid].curves[c].points[p].tension << delimiter;
+		data << presets[preset_id].curves[c].points.size() << delimiter;
+		for(int p = 0; p < presets[preset_id].curves[c].points.size(); ++p)
+			data << presets[preset_id].curves[c].points[p].x << delimiter << presets[preset_id].curves[c].points[p].y << delimiter << presets[preset_id].curves[c].points[p].tension << delimiter;
 	}
 
 	return data.str();
 }
-void SunBurntAudioProcessor::setpreset(const String& preset, int presetid, const char delimiter, bool printerrors) {
+void SunBurntAudioProcessor::set_preset(const String& preset, int preset_id, const char delimiter, bool print_errors) {
 	impulsethread.active = false;
 	String error = "";
-	String revert = getpreset(presetid);
+	String revert = get_preset(preset_id);
 	try {
 		std::stringstream ss(preset.trim().toRawUTF8());
 		std::string token;
@@ -570,13 +559,13 @@ void SunBurntAudioProcessor::setpreset(const String& preset, int presetid, const
 		int saveversion = std::stoi(token);
 
 		std::getline(ss, token, delimiter);
-		presets[presetid].seed = std::stoll(token);
+		presets[preset_id].seed = std::stoll(token);
 		for(int v = 0; v < paramcount; ++v) {
 			std::getline(ss, token, delimiter);
-			presets[presetid].values[v] = std::stof(token);
+			presets[preset_id].values[v] = std::stof(token);
 		}
 		for(int c = 0; c < 8; ++c) {
-			presets[presetid].curves[c].points.clear();
+			presets[preset_id].curves[c].points.clear();
 			std::getline(ss, token, delimiter);
 			int size = std::stof(token);
 			if(size < 2) throw std::invalid_argument("Invalid point data");
@@ -591,7 +580,7 @@ void SunBurntAudioProcessor::setpreset(const String& preset, int presetid, const
 				if(x > 1 || x < prevx || y > 1 || y < 0 || tension > 1 || tension < 0 || (p == 0 && x != 0) || (p == (size-1) && x != 1))
 					throw std::invalid_argument("Invalid point data");
 				prevx = x;
-				presets[presetid].curves[c].points.push_back(point(x,y,tension));
+				presets[preset_id].curves[c].points.push_back(point(x,y,tension));
 			}
 		}
 	} catch (const char* e) {
@@ -604,13 +593,13 @@ void SunBurntAudioProcessor::setpreset(const String& preset, int presetid, const
 		error = "Error loading saved data";
 	}
 	if(error != "") {
-		if(printerrors)
-			logger.debug(error);
-		setpreset(revert, presetid);
+		if(print_errors)
+			debug(error);
+		set_preset(revert, preset_id);
 		return;
 	}
 
-	if(currentpreset != presetid) return;
+	if(currentpreset != preset_id) return;
 
 	for(int i = 0; i < paramcount; ++i) {
 		apvts.getParameter(params.pots[i].id)->setValueNotifyingHost(params.pots[i].normalize(presets[currentpreset].values[i]));

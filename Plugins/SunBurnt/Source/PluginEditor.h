@@ -4,7 +4,7 @@
 #include "tahoma8.h"
 using namespace gl;
 
-class LookNFeel : public LookAndFeel_V4 {
+class LookNFeel : public plugmachine_look_n_feel {
 public:
 	LookNFeel();
 	~LookNFeel();
@@ -12,12 +12,13 @@ public:
 	int getMenuWindowFlags() override;
 	void drawPopupMenuBackground(Graphics &g, int width, int height) override;
 	void drawPopupMenuItem(Graphics &g, const Rectangle<int> &area, bool isSeparator, bool isActive, bool isHighlighted, bool isTicked, bool hasSubMenu, const String &text, const String &shortcutKeyText, const Drawable *icon, const Colour *textColour) override; //biggest function ive seen ever
+	void getIdealPopupMenuItemSize(const String& text, const bool isSeparator, int standardMenuItemHeight, int& idealWidth, int& idealHeight) override;
+	int getPopupMenuBorderSize() override;
 	Colour bg = Colour::fromFloatRGBA(.15686f,.1451f,.13725f,1.f);
 	Colour inactive = Colour::fromFloatRGBA(.76471f,.77647f,.77647f,1.f);
 	Colour txt = Colour::fromFloatRGBA(.98824f,.98824f,.97647f,1.f);
 	String CJKFont = "n";
 	String ENGFont = "n";
-	float scale = 1.5f;
 };
 struct knob {
 	float value = .5f;
@@ -50,18 +51,14 @@ struct slider {
 	std::vector<int> showon;
 	std::vector<int> dontshowif;
 };
-class handmedown {
+class handmedown : public cool_font {
 public:
 	handmedown() {
-		font.uvmap = {{{54,1,1,26,35,6,-2,14},{53,28,1,29,35,6,-2,17},{57,58,1,25,34,6,-2,13},{50,84,1,29,34,6,-2,17},{56,1,37,30,34,6,-2,18},{51,32,37,28,34,6,-1,17},{52,61,37,26,34,6,-2,14},{55,88,37,27,33,6,-1,15},{49,1,72,17,33,6,-1,5},{48,19,72,29,33,6,-1,17},{109,49,72,34,25,6,8,22},{115,84,72,22,24,6,8,10},{46,107,72,17,17,6,14,5},{32,0,0,0,0,0,0,13},{113,103,92,25,36,6,-2,13}},{{54,1,1,26,35,6,-2,14},{53,28,1,29,35,6,-2,17},{57,58,1,25,34,6,-2,13},{50,84,1,29,34,6,-2,17},{56,1,37,30,34,6,-2,18},{51,32,37,28,34,6,-1,17},{52,61,37,26,34,6,-2,14},{55,88,37,27,33,6,-1,15},{49,1,72,17,33,6,-1,5},{48,19,72,29,33,6,-1,17},{109,49,72,34,25,6,8,22},{115,84,72,22,24,6,8,10},{46,107,72,17,17,6,14,5},{32,0,0,0,0,0,0,13},{113,103,92,25,36,6,-2,13}}};
-		font.kerning = {{{54,55,-2},{54,57,-3},{53,55,-2},{50,55,-2},{51,55,-2},{109,55,-2},{109,57,-3},{115,55,-2},{115,57,-2}},{{54,55,-2},{54,57,-3},{53,55,-2},{50,55,-2},{51,55,-2},{109,55,-2},{109,57,-3},{115,55,-2},{115,57,-2}}}; //NOT YET IMPLEMENTED; looks good already so idk if ill add this
-		font.smooth = true;
-		font.slant = -.3f;
-		font.scale = .5f;
-		font.inframebuffer = true;
-	}
-	void init(OpenGLContext* context, float bannero, int w, int h, float _dpi) {
-		font.init(context, bannero, w, h, _dpi, ImageCache::getFromMemory(BinaryData::handmedown_png, BinaryData::handmedown_pngSize),128,128,33,false,0,0,
+		image = ImageCache::getFromMemory(BinaryData::handmedown_png, BinaryData::handmedown_pngSize);
+		texture_width = 128;
+		texture_height = 128;
+		line_height = 33;
+		vert =
 R"(#version 150 core
 in vec2 aPos;
 uniform vec4 pos;
@@ -74,7 +71,8 @@ void main(){
 	gl_Position.y = pow(max(0,letter-time.x+1.5),4)*-0.0003-gl_Position.y;
 	uv = (aPos*texpos.zw+texpos.xy);
 	uv.y = 1-uv.y;
-})",
+})";
+		frag =
 R"(#version 150 core
 in vec2 uv;
 uniform sampler2D tex;
@@ -101,18 +99,21 @@ void main(){
 	if(dpi > 1)
 		text = (text-.5)*dpi+.5;
 	fragColor = vec4(fg.rgb,text);
-})");
+})";
+		smooth = true;
+		slant = -.3f;
+		scale = .5f;
+		in_frame_buffer = true;
+		uv_map = {{{54,1,1,26,35,6,-2,14},{53,28,1,29,35,6,-2,17},{57,58,1,25,34,6,-2,13},{50,84,1,29,34,6,-2,17},{56,1,37,30,34,6,-2,18},{51,32,37,28,34,6,-1,17},{52,61,37,26,34,6,-2,14},{55,88,37,27,33,6,-1,15},{49,1,72,17,33,6,-1,5},{48,19,72,29,33,6,-1,17},{109,49,72,34,25,6,8,22},{115,84,72,22,24,6,8,10},{46,107,72,17,17,6,14,5},{32,0,0,0,0,0,0,13},{113,103,92,25,36,6,-2,13}},{{54,1,1,26,35,6,-2,14},{53,28,1,29,35,6,-2,17},{57,58,1,25,34,6,-2,13},{50,84,1,29,34,6,-2,17},{56,1,37,30,34,6,-2,18},{51,32,37,28,34,6,-1,17},{52,61,37,26,34,6,-2,14},{55,88,37,27,33,6,-1,15},{49,1,72,17,33,6,-1,5},{48,19,72,29,33,6,-1,17},{109,49,72,34,25,6,8,22},{115,84,72,22,24,6,8,10},{46,107,72,17,17,6,14,5},{32,0,0,0,0,0,0,13},{113,103,92,25,36,6,-2,13}}};
+		kerning = {{{54,55,-2},{54,57,-3},{53,55,-2},{50,55,-2},{51,55,-2},{109,55,-2},{109,57,-3},{115,55,-2},{115,57,-2}},{{54,55,-2},{54,57,-3},{53,55,-2},{50,55,-2},{51,55,-2},{109,55,-2},{109,57,-3},{115,55,-2},{115,57,-2}}}; //NOT YET IMPLEMENTED; looks good already so idk if ill add this
 	}
-	CoolFont font;
 };
-class SunBurntAudioProcessorEditor : public AudioProcessorEditor, public OpenGLRenderer, public AudioProcessorValueTreeState::Listener, private Timer
-{
+class SunBurntAudioProcessorEditor : public plugmachine_gui {
 public:
 	SunBurntAudioProcessorEditor(SunBurntAudioProcessor&, int paramcount, pluginpreset state, pluginparams params);
 	~SunBurntAudioProcessorEditor() override;
 
 	void newOpenGLContextCreated() override;
-	void compileshader(std::unique_ptr<OpenGLShaderProgram> &shader, String vertexshader, String fragmentshader);
 	void renderOpenGL() override;
 	void openGLContextClosing() override;
 	void calcvis();
@@ -131,7 +132,7 @@ public:
 	void mouseUp(const MouseEvent& event) override;
 	void mouseDoubleClick(const MouseEvent& event) override;
 	void mouseWheelMove(const MouseEvent& event, const MouseWheelDetails& wheel) override;
-	int recalchover(float x, float y);
+	int recalc_hover(float x, float y);
 
 	knob knobs[6];
 	int knobcount = 0;
@@ -142,15 +143,7 @@ public:
 	float visline[3408];
 
 private:
-	SunBurntAudioProcessor& audioProcessor;
-
-	OpenGLContext context;
-	unsigned int arraybuffer;
-	float square[8]{
-		0.f,0.f,
-		1.f,0.f,
-		0.f,1.f,
-		1.f,1.f};
+	SunBurntAudioProcessor& audio_processor;
 
 	float websiteht = -1;
 	OpenGLTexture baseentex;
@@ -158,18 +151,18 @@ private:
 	OpenGLTexture disptex;
 	bool jpmode = false;
 	bool prevjpmode = false;
-	std::unique_ptr<OpenGLShaderProgram> baseshader;
+	std::shared_ptr<OpenGLShaderProgram> baseshader;
 
 	OpenGLTexture nonetex;
 	float nonetime = 0;
 	int nonerate = 0;
-	std::unique_ptr<OpenGLShaderProgram> noneshader;
+	std::shared_ptr<OpenGLShaderProgram> noneshader;
 
 	OpenGLTexture selecttex;
 	int curveselection = 0;
-	std::unique_ptr<OpenGLShaderProgram> selectshader;
+	std::shared_ptr<OpenGLShaderProgram> selectshader;
 
-	std::unique_ptr<OpenGLShaderProgram> visshader;
+	std::shared_ptr<OpenGLShaderProgram> visshader;
 
 	int hover = -1;
 	int initialdrag = 0;
@@ -184,12 +177,12 @@ private:
 	int axislock = -1;
 	Point<int> dragpos = Point<int>(0,0);
 	bool delaymode = false;
-	std::unique_ptr<OpenGLShaderProgram> circleshader;
+	std::shared_ptr<OpenGLShaderProgram> circleshader;
 
 	float panelheight = 0;
 	float panelheighttarget = 0;
 	bool panelvisible = false;
-	std::unique_ptr<OpenGLShaderProgram> panelshader;
+	std::shared_ptr<OpenGLShaderProgram> panelshader;
 
 	std::vector<int> slidersvisible;
 	std::vector<String> sliderslabel;
@@ -318,11 +311,11 @@ private:
 	float paperrottarget = 0;
 	float paperrotoffset = 0;
 	bool updatetick = true;
-	std::unique_ptr<OpenGLShaderProgram> papershader;
+	std::shared_ptr<OpenGLShaderProgram> papershader;
 
 	OpenGLTexture overlaytex;
-	OpenGLFrameBuffer framebuffer;
-	std::unique_ptr<OpenGLShaderProgram> ppshader;
+	OpenGLFrameBuffer frame_buffer;
+	std::shared_ptr<OpenGLShaderProgram> ppshader;
 
 	float length = .65f;
 	int sync = 0;
@@ -340,20 +333,7 @@ private:
 	float unalignedx[3] {0,0,0};
 	float unalignedy[3] {0,0,0};
 
-#ifdef BANNER
-	float bannerx = 0;
-	OpenGLTexture bannertex;
-	std::unique_ptr<OpenGLShaderProgram> bannershader;
-#endif
-	float banneroffset = 0;
-
-	float dpi = -10;
-	long unsigned int uiscaleindex = 0;
-	float scaleddpi = -10;
-	std::vector<float> uiscales;
-	bool resetsize = false;
-
-	LookNFeel looknfeel;
+	LookNFeel look_n_feel;
 
 	float timeopentime = -1;
 	float timeclosetime = -1;
