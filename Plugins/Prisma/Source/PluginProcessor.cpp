@@ -765,13 +765,13 @@ void PrismaAudioProcessor::setStateInformation (const void* data, int sizeInByte
 			if(i != currentpreset) presets[i].wet = std::stof(token);
 		}
 	} catch (const char* e) {
-		logger.debug((String)"Error loading saved data: "+(String)e);
+		debug((String)"Error loading saved data: "+(String)e);
 	} catch(String e) {
-		logger.debug((String)"Error loading saved data: "+e);
+		debug((String)"Error loading saved data: "+e);
 	} catch(std::exception &e) {
-		logger.debug((String)"Error loading saved data: "+(String)e.what());
+		debug((String)"Error loading saved data: "+(String)e.what());
 	} catch(...) {
-		logger.debug((String)"Error loading saved data");
+		debug((String)"Error loading saved data");
 	}
 
 	for(int b = 0; b < 3; b++)
@@ -846,7 +846,7 @@ void PrismaAudioProcessor::set_preset(const String& preset, int preset_id, const
 	}
 	if(error != "") {
 		if(print_errors)
-			logger.debug(error);
+			debug(error);
 		set_preset(revert, preset_id);
 		return;
 	}

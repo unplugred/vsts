@@ -62,20 +62,15 @@ juce_add_binary_data("${BaseTargetName}BinaryData" HEADER_NAME BinaryData.h NAME
 	Resources/paper_en.png
 	Resources/paper_jp.png
 	Resources/hands.png
-	Resources/none.png
-	../../Resources/banner.png)
+	Resources/none.png)
 set_target_properties("${BaseTargetName}BinaryData" PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 
 target_link_libraries("${BaseTargetName}" PRIVATE
-	cool_logger
+	plugmachine
 	ea_soundtouch
-	juce::juce_audio_devices
-	juce::juce_audio_plugin_client
-	juce::juce_audio_utils
 	juce::juce_dsp
-	juce::juce_opengl
 	"${BaseTargetName}BinaryData"
 	PUBLIC
-	juce::juce_recommended_config_flags
+	#juce::juce_recommended_warning_flags
 	juce::juce_recommended_lto_flags
-	juce::juce_recommended_warning_flags)
+	juce::juce_recommended_config_flags)

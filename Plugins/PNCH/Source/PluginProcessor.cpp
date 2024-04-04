@@ -196,13 +196,13 @@ void PNCHAudioProcessor::setStateInformation(const void* data, int sizeInBytes) 
 		apvts.getParameter("oversampling")->setValueNotifyingHost(std::stof(token));
 
 	} catch(const char* e) {
-		logger.debug((String)"Error loading saved data: "+(String)e);
+		debug((String)"Error loading saved data: "+(String)e);
 	} catch(String e) {
-		logger.debug((String)"Error loading saved data: "+e);
+		debug((String)"Error loading saved data: "+e);
 	} catch(std::exception &e) {
-		logger.debug((String)"Error loading saved data: "+(String)e.what());
+		debug((String)"Error loading saved data: "+(String)e.what());
 	} catch(...) {
-		logger.debug((String)"Error loading saved data");
+		debug((String)"Error loading saved data");
 	}
 }
 const String PNCHAudioProcessor::get_preset(int preset_id, const char delimiter) {
@@ -241,7 +241,7 @@ void PNCHAudioProcessor::set_preset(const String& preset, int preset_id, const c
 	}
 	if(error != "") {
 		if(print_errors)
-			logger.debug(error);
+			debug(error);
 		set_preset(revert, 0);
 		return;
 	}

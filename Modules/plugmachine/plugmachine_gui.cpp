@@ -11,15 +11,15 @@ String plugmachine_look_n_feel::find_font(String query) {
 	while(std::getline(ss, token, '|'))
 		words.push_back(token);
 
-	int index = -1;
+	int index = 999;
 	auto ft = Font::findAllTypefaceNames();
 	for(const auto &q : ft)
 		for(int i = 0; i < words.size(); ++i)
-			if(q == words[i] && index < i)
+			if(q == words[i] && index > i)
 				index = i;
 
-	if(index == -1)
-		return words[words.size()-1];
+	if(index == 999)
+		return words[0];
 	return words[index];
 }
 String plugmachine_look_n_feel::add_line_breaks(String input, int width) {
@@ -68,8 +68,8 @@ void plugmachine_gui::init(plugmachine_look_n_feel* _look_n_feel) {
 	scaled_dpi = audio_processor.ui_scale;
 	ui_scales.push_back(scaled_dpi);
 #ifdef BANNER
-	setSize(width*scaled_dpi,(height+(do_banner?21:0)/target_dpi)*scaled_dpi);
-	banner_offset = do_banner?(21.f*scaled_dpi/getHeight()):0;
+	setSize(width*scaled_dpi,(height+(do_banner?(21/target_dpi):0))*scaled_dpi);
+	banner_offset = do_banner?(21.f/target_dpi*scaled_dpi/getHeight()):0;
 #else
 	setSize(width*scaled_dpi,height*scaled_dpi);
 	banner_offset = 0;
@@ -91,7 +91,7 @@ void plugmachine_gui::close() {
 }
 
 void plugmachine_gui::draw_init() {
-	audio_processor.logger.init(&context,banner_offset,getWidth(),getHeight());
+	add_font(&debug_font);
 
 #ifdef BANNER
 	if(do_banner) {
@@ -144,23 +144,46 @@ void plugmachine_gui::draw_begin() {
 			ui_scales.clear();
 			while((s/dpi)*pw < w && (s/dpi)*ph < h) {
 				ui_scales.push_back(s/dpi);
-				if(abs(audio_processor.ui_scale-s/dpi) <= dif) {
-					dif = abs(audio_processor.ui_scale-s/dpi);
+				if(fabs(audio_processor.ui_scale-s/dpi) <= dif) {
+					dif = fabs(audio_processor.ui_scale-s/dpi);
 					ui_scale_index = i;
 				}
 				if(i < 4) s += scale_step;
 				else if(i < 8) s += scale_step*2;
 				else if(i < 16) s += scale_step*3;
-				i++;
+				++i;
 			}
 			reset_size = true;
 		}
 	}
 
+	float prev_scaled_dpi = scaled_dpi;
 	if(do_scale)
 		scaled_dpi = ui_scales[ui_scale_index]*dpi;
 	else
 		scaled_dpi = dpi;
+
+	if(scaled_dpi != prev_scaled_dpi || !frame_buffers_initiated) {
+		for(int i = 0; i < frame_buffers.size(); ++i) {
+			if(frame_buffers_initiated) {
+				if(!frame_buffers[i].scaled) continue;
+				frame_buffers[i].buffer->release();
+			}
+
+			if(frame_buffers[i].scaled)
+				frame_buffers[i].buffer->initialise(context, frame_buffers[i].width*scaled_dpi, frame_buffers[i].height*scaled_dpi);
+			else
+				frame_buffers[i].buffer->initialise(context, frame_buffers[i].width, frame_buffers[i].height);
+
+			glBindTexture(GL_TEXTURE_2D, frame_buffers[i].buffer->getTextureID());
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, frame_buffers[i].min_filter);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, frame_buffers[i].mag_filter);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, frame_buffers[i].wrap_s);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, frame_buffers[i].wrap_t);
+		}
+		frame_buffers_initiated = true;
+	}
+
 }
 void plugmachine_gui::draw_end() {
 
@@ -189,15 +212,18 @@ void plugmachine_gui::draw_end() {
 	}
 #endif
 
-	audio_processor.logger.drawlog();
+	std::lock_guard<std::mutex> guard(audio_processor.debug_mutex);
+	debug_font.draw_string(1,1,1,1,0,0,0,0.5,audio_processor.debug_text,0,.01,.99,0,1);
 }
 void plugmachine_gui::draw_close() {
 	for(int i = 0; i < textures.size(); ++i)
 		textures[i]->release();
 	for(int i = 0; i < shaders.size(); ++i)
 		shaders[i]->release();
-
-	audio_processor.logger.font.release();
+	for(int i = 0; i < fonts.size(); ++i)
+		fonts[i]->release();
+	for(int i = 0; i < frame_buffers.size(); ++i)
+		frame_buffers[i].buffer->release();
 
 	context.extensions.glDeleteBuffers(1,&array_buffer);
 }
@@ -207,18 +233,27 @@ void plugmachine_gui::update() {
 		reset_size = false;
 		if(do_scale) {
 #ifdef BANNER
-			setSize(width*ui_scales[ui_scale_index],(height+(do_banner?21:0)/target_dpi)*ui_scales[ui_scale_index]);
+			setSize(width*ui_scales[ui_scale_index],(height+(do_banner?(21/target_dpi):0))*ui_scales[ui_scale_index]);
 #else
 			setSize(width*ui_scales[ui_scale_index],height*ui_scales[ui_scale_index]);
 #endif
 		}
 #ifdef BANNER
 		if(do_banner)
-			banner_offset = 21.f*ui_scales[ui_scale_index]/getHeight();
+			banner_offset = 21.f/target_dpi*ui_scales[ui_scale_index]/getHeight();
 #endif
-		audio_processor.logger.font.width = getWidth();
-		audio_processor.logger.font.height = getHeight();
-		audio_processor.logger.font.banneroffset = banner_offset;
+
+		for(int i = 0; i < fonts.size(); ++i) {
+			if(fonts[i]->is_scaled) {
+				fonts[i]->width = ((float)getWidth())/ui_scales[ui_scale_index];
+				fonts[i]->height = ((float)getHeight())/ui_scales[ui_scale_index];
+				fonts[i]->dpi = dpi*ui_scales[ui_scale_index];
+			} else {
+				fonts[i]->width = getWidth();
+				fonts[i]->height = getHeight();
+			}
+			fonts[i]->banner_offset = banner_offset;
+		}
 		look_n_feel->scale = ui_scales[ui_scale_index];
 	}
 
@@ -233,11 +268,11 @@ void plugmachine_gui::add_listener(String name) {
 	audio_processor.apvts_ref->addParameterListener(name, this);
 	listeners.push_back(name);
 }
-std::shared_ptr<OpenGLShaderProgram> plugmachine_gui::add_shader(String vertexshader, String fragmentshader) {
+std::shared_ptr<OpenGLShaderProgram> plugmachine_gui::add_shader(String vertex_shader, String fragment_shader) {
 	std::shared_ptr<OpenGLShaderProgram> shader = std::make_shared<OpenGLShaderProgram>(context);
-	if(!shader->addVertexShader(vertexshader))
+	if(!shader->addVertexShader(vertex_shader))
 		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Vertex shader error",shader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at melody@unplug.red. THANKS!","OK!");
-	if(!shader->addFragmentShader(fragmentshader))
+	if(!shader->addFragmentShader(fragment_shader))
 		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Fragment shader error",shader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at melody@unplug.red. THANKS!","OK!");
 	shader->link();
 	shaders.push_back(shader);
@@ -252,3 +287,59 @@ void plugmachine_gui::add_texture(OpenGLTexture* texture, const char* binary, co
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap_t);
 	textures.push_back(texture);
 }
+void plugmachine_gui::add_frame_buffer(OpenGLFrameBuffer* frame_buffer, int width, int height, bool scaled, int min_filter, int mag_filter, int wrap_s, int wrap_t) {
+	frame_buffer_plus buffer;
+	buffer.buffer = frame_buffer;
+	buffer.width = width;
+	buffer.height = height;
+	buffer.scaled = scaled;
+	buffer.min_filter = min_filter;
+	buffer.mag_filter = mag_filter;
+	buffer.wrap_s = wrap_s;
+	buffer.wrap_t = wrap_t;
+	frame_buffers.push_back(buffer);
+}
+void plugmachine_gui::add_font(cool_font* font) {
+	if(font->is_scaled)
+		font->draw_init(&context,banner_offset,368,334,dpi);
+	else
+		font->draw_init(&context,banner_offset,getWidth(),getHeight());
+	fonts.push_back(font);
+}
+
+void plugmachine_gui::remove_listener(String name) {
+	audio_processor.apvts_ref->removeParameterListener(name, this);
+	for(int i = 0; i < listeners.size(); ++i)
+		if(listeners[i] == name)
+			listeners.erase(listeners.begin()+i);
+}
+void plugmachine_gui::remove_texture(OpenGLTexture* texture) {
+	for(int i = 0; i < textures.size(); ++i)
+		if(textures[i] == texture)
+			textures.erase(textures.begin()+i);
+	texture->release();
+}
+void plugmachine_gui::remove_frame_buffer(OpenGLFrameBuffer* frame_buffer) {
+	for(int i = 0; i < frame_buffers.size(); ++i)
+		if(frame_buffers[i].buffer == frame_buffer)
+			frame_buffers.erase(frame_buffers.begin()+i);
+	frame_buffer->release();
+}
+void plugmachine_gui::remove_shader(std::shared_ptr<OpenGLShaderProgram> shader) {
+	for(int i = 0; i < shaders.size(); ++i)
+		if(shaders[i] == shader)
+			shaders.erase(shaders.begin()+i);
+	shader->release();
+}
+void plugmachine_gui::remove_font(cool_font* font) {
+	for(int i = 0; i < fonts.size(); ++i)
+		if(fonts[i] == font)
+			fonts.erase(fonts.begin()+i);
+	font->release();
+}
+
+void plugmachine_gui::debug(String	str, bool timestamp) { audio_processor.debug(str, timestamp); }
+void plugmachine_gui::debug(int		str, bool timestamp) { audio_processor.debug(str, timestamp); }
+void plugmachine_gui::debug(float	str, bool timestamp) { audio_processor.debug(str, timestamp); }
+void plugmachine_gui::debug(double	str, bool timestamp) { audio_processor.debug(str, timestamp); }
+void plugmachine_gui::debug(bool	str, bool timestamp) { audio_processor.debug(str, timestamp); }

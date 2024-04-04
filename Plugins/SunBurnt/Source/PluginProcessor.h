@@ -52,7 +52,6 @@ struct pluginparams {
 	int curveselection = 0;
 	potentiometer pots[16];
 	curveparams curves[8];
-	double uiscale = 1.5;
 	bool jpmode = false;
 };
 
@@ -83,7 +82,7 @@ struct pluginpreset {
 	}
 };
 
-class SunBurntAudioProcessor : public AudioProcessor, public AudioProcessorValueTreeState::Listener {
+class SunBurntAudioProcessor : public plugmachine_dsp {
 public:
 	SunBurntAudioProcessor();
 	~SunBurntAudioProcessor() override;
@@ -105,7 +104,6 @@ public:
 	AudioProcessorEditor* createEditor() override;
 	bool hasEditor() const override;
 	void setLang(bool isjp);
-	void setUIScale(double uiscale);
 
 	const String getName() const override;
 
@@ -122,8 +120,9 @@ public:
 
 	void getStateInformation(MemoryBlock& destData) override;
 	void setStateInformation(const void* data, int sizeInBytes) override;
-	const String getpreset(int presetid, const char delimiter = ',');
-	void setpreset(const String& preset, int presetid, const char delimiter = ',', bool printerrors = false);
+	const String get_preset(int preset_id, const char delimiter = ',') override;
+	void set_preset(const String& preset, int preset_id, const char delimiter = ',', bool print_errors = false) override;
+
 	virtual void parameterChanged(const String& parameterID, float newValue);
 	int64 reseed();
 	void movepoint(int index, float x, float y);
@@ -134,9 +133,8 @@ public:
 	void curvefromstring(String str, const char linebreak = ',');
 	void resetcurve();
 
+	AudioProcessorValueTreeState::ParameterLayout createParameters();
 	AudioProcessorValueTreeState apvts;
-
-	UndoManager undoManager;
 
 	int version = 0;
 	const int paramcount = 16;
@@ -148,11 +146,7 @@ public:
 
 	Atomic<bool> updatevis = false;
 
-	CoolLogger logger;
 private:
-	AudioProcessorValueTreeState::ParameterLayout createParameters();
-	ApplicationProperties props;
-
 	int channelnum = 0;
 	int samplesperblock = 0;
 	int samplerate = 44100;

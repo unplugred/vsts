@@ -2,8 +2,9 @@
 
 #pragma once
 #include <juce_audio_utils/juce_audio_utils.h>
-#include <cool_logger/cool_logger.h>
 using namespace juce;
+
+#define CONSOLE_LENGTH 20
 
 class plugmachine_dsp : public AudioProcessor, public AudioProcessorValueTreeState::Listener {
 public:
@@ -24,9 +25,19 @@ public:
 	ApplicationProperties props;
 	void set_ui_scale(double new_ui_scale);
 
-	CoolLogger logger;
 	UndoManager undo_manager;
 
+	void debug(String str, bool timestamp = true);
+	void debug(int str, bool timestamp = true);
+	void debug(float str, bool timestamp = true);
+	void debug(double str, bool timestamp = true);
+	void debug(bool str, bool timestamp = true);
+	std::mutex debug_mutex;
+	String debug_text = "";
+
 private:
+	String debug_list[CONSOLE_LENGTH];
+	int debug_read_pos = 0;
+
 	std::vector<String> listeners;
 };

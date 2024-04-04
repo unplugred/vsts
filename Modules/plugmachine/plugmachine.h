@@ -9,10 +9,11 @@ BEGIN_JUCE_MODULE_DECLARATION
 	name:			plugmachine
 	description:	some boilerplate
 	license:		GPL3
-	dependencies:	juce_audio_utils, cool_logger
+	dependencies:	juce_audio_utils, juce_opengl
 
 END_JUCE_MODULE_DECLARATION
 #endif
 
+#include "cool_font.h"
 #include "plugmachine_dsp.h"
 #include "plugmachine_gui.h"
