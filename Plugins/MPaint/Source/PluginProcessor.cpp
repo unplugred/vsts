@@ -2,13 +2,15 @@
 #include "PluginEditor.h"
 
 MPaintAudioProcessor::MPaintAudioProcessor() :
-	AudioProcessor(BusesProperties().withOutput("Output", AudioChannelSet::stereo(), true)),
-	apvts(*this, &undoManager, "Parameters", createParameters())
-{
+	apvts(*this, &undo_manager, "Parameters", create_parameters()),
+	plugmachine_dsp(BusesProperties().withOutput("Output", AudioChannelSet::stereo(), true), &apvts) {
+
+	init();
+
 	sound = (apvts.getParameter("sound")->getValue())*14;
 	limit = (apvts.getParameter("limit")->getValue())>.5;
-	apvts.addParameterListener("sound", this);
-	apvts.addParameterListener("limit", this);
+	add_listener("sound");
+	add_listener("limit");
 
 	formatmanager.registerBasicFormats();
 	error = false;
@@ -57,8 +59,7 @@ MPaintAudioProcessor::MPaintAudioProcessor() :
 
 MPaintAudioProcessor::~MPaintAudioProcessor() {
 	loaded = true;
-	apvts.removeParameterListener("sound", this);
-	apvts.removeParameterListener("limit", this);
+	close();
 }
 
 const String MPaintAudioProcessor::getName() const { return "MPaint"; }
@@ -203,13 +204,13 @@ void MPaintAudioProcessor::setStateInformation(const void* data, int sizeInBytes
 		apvts.getParameter("limit")->setValueNotifyingHost(std::stoi(token));
 
 	} catch(const char* e) {
-		logger.debug((String)"Error loading saved data: "+(String)e);
+		debug((String)"Error loading saved data: "+(String)e);
 	} catch(String e) {
-		logger.debug((String)"Error loading saved data: "+e);
+		debug((String)"Error loading saved data: "+e);
 	} catch(std::exception &e) {
-		logger.debug((String)"Error loading saved data: "+(String)e.what());
+		debug((String)"Error loading saved data: "+(String)e.what());
 	} catch(...) {
-		logger.debug((String)"Error loading saved data");
+		debug((String)"Error loading saved data");
 	}
 }
 void MPaintAudioProcessor::parameterChanged(const String& parameterID, float newValue) {
@@ -222,7 +223,7 @@ void MPaintAudioProcessor::parameterChanged(const String& parameterID, float new
 
 AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new MPaintAudioProcessor(); }
 
-AudioProcessorValueTreeState::ParameterLayout MPaintAudioProcessor::createParameters() {
+AudioProcessorValueTreeState::ParameterLayout MPaintAudioProcessor::create_parameters() {
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
 	parameters.push_back(std::make_unique<AudioParameterInt	>(ParameterID{"sound",1},"Sound"		,0	,14	,0		,""	,tosound	,fromsound	));
 	parameters.push_back(std::make_unique<AudioParameterBool>(ParameterID{"limit",1},"Limit Voices"			,true	,""	,tobool		,frombool	));
