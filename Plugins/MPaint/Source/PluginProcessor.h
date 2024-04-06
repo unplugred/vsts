@@ -2,7 +2,7 @@
 #include "includes.h"
 #include <future>
 
-class MPaintAudioProcessor : public AudioProcessor, public AudioProcessorValueTreeState::Listener {
+class MPaintAudioProcessor : public plugmachine_dsp {
 public:
 	MPaintAudioProcessor();
 	~MPaintAudioProcessor() override;
@@ -34,9 +34,9 @@ public:
 	void setStateInformation(const void* data, int sizeInBytes) override;
 	virtual void parameterChanged(const String& parameterID, float newValue);
 
+	AudioProcessorValueTreeState::ParameterLayout create_parameters();
 	AudioProcessorValueTreeState apvts;
-	UndoManager undoManager;
-	CoolLogger logger;
+
 	int version = 3;
 
 	Atomic<unsigned char> sound = 0;
@@ -46,8 +46,6 @@ public:
 	Atomic<bool> loaded = false;
 
 private:
-	AudioProcessorValueTreeState::ParameterLayout createParameters();
-
 	Synthesiser synth[15];
 	const int numvoices = 8;
 	AudioFormatManager formatmanager;
