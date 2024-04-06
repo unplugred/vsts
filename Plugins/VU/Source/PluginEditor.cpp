@@ -1,9 +1,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-VuAudioProcessorEditor::VuAudioProcessorEditor(VuAudioProcessor& p, int paramcount, pluginpreset state, potentiometer pots[])
-	: AudioProcessorEditor (&p), audioProcessor (p)
-{
+VUAudioProcessorEditor::VUAudioProcessorEditor(VUAudioProcessor& p, int paramcount, pluginpreset state, potentiometer pots[]) : audio_processor(p), plugmachine_gui(p, 0, 0, 1.f, 1.f, true, false) {
 	for(int i = 0; i < knobcount; i++) {
 		knobs[i].id = pots[i].id;
 		knobs[i].name = pots[i].name;
@@ -11,69 +9,52 @@ VuAudioProcessorEditor::VuAudioProcessorEditor(VuAudioProcessor& p, int paramcou
 		knobs[i].minimumvalue = pots[i].minimumvalue;
 		knobs[i].maximumvalue = pots[i].maximumvalue;
 		knobs[i].defaultvalue = pots[i].defaultvalue;
-		audioProcessor.apvts.addParameterListener(knobs[i].id,this);
+		add_listener(knobs[i].id);
 	}
 
 	multiplier = 1.f/Decibels::decibelsToGain(knobs[0].value);
 	stereodamp = knobs[2].value;
 
-	setOpaque(true);
-	context.setOpenGLVersionRequired(OpenGLContext::OpenGLVersion::openGL3_2);
-	context.setRenderer(this);
-	context.attachTo(*this);
+	init(&look_n_feel);
 
+	int h = audio_processor.height.get();
+	float w = h*(32.f*(stereodamp+1)/19.f);
+#ifdef BANNER
+	getConstrainer()->setFixedAspectRatio(32.f*(stereodamp+1)/19.f-21.f/w);
+#else
+	getConstrainer()->setFixedAspectRatio(32.f*(stereodamp+1)/19.f);
+#endif
+	set_size(round(w),h);
 	setResizable(true,true);
-	int h = audioProcessor.height.get();
-	int w = round(h*((stereodamp>.5f?64.f:32.f)/19.f));
-	audioProcessor.width = w;
+	setResizeLimits(200,200,1920,1080);
+
+	dontscale = false;
+}
+
+VUAudioProcessorEditor::~VUAudioProcessorEditor() {
+	close();
+}
+
+void VUAudioProcessorEditor::resized() {
+	if(dontscale) return;
+	width = getWidth();
 #ifdef BANNER
-	setSize(w,h+21);
-	banneroffset = 21.f/(h+21);
+	height = getHeight()-21;
+	banner_offset = 21.f/getHeight();
+	float w = height*(32.f*(stereodamp+1)/19.f);
+	getConstrainer()->setFixedAspectRatio(32.f*(stereodamp+1)/19.f-21.f/w);
 #else
-	setSize(w,h);
+	height = getHeight();
 #endif
-	setResizeLimits(3,2,3200,950);
-	//getConstrainer()->setFixedAspectRatio((audioProcessor.stereo?64.f:32.f)/19.f);
-
-	startTimerHz(30);
+	audio_processor.height = height;
+	debug_font.width = getWidth();
+	debug_font.height = getHeight();
+	debug_font.banner_offset = banner_offset;
 }
 
-VuAudioProcessorEditor::~VuAudioProcessorEditor() {
-	for(int i = 0; i < knobcount; i++) audioProcessor.apvts.removeParameterListener(knobs[i].id,this);
-	stopTimer();
-	context.detach();
-}
-
-void VuAudioProcessorEditor::resized() {
-	int w = getWidth();
-#ifdef BANNER
-	int h = getHeight()-21;
-#else
-	int h = getHeight();
-#endif
-	if(h != audioProcessor.height.get() && h != prevh) {
-		prevw = w;
-		w = round(h*((32.f+stereodamp*32.f)/19.f));
-	} else if(w != audioProcessor.width.get() && w != prevw) {
-		prevh = h;
-		h = round(w*((19.f-stereodamp*9.5f)/32.f));
-	} else return;
-
-	audioProcessor.width = w;
-	audioProcessor.height = h;
-
-	/*
-	audioProcessor.width = getWidth();
-	audioProcessor.height = getHeight();
-	displaycomp.setBounds(0,0,getWidth(),getHeight());
-	*/
-}
-
-void VuAudioProcessorEditor::newOpenGLContextCreated() {
-	audioProcessor.logger.init(&context,banneroffset,getWidth(),getHeight());
-
-	vushader.reset(new OpenGLShaderProgram(context));
-	if(!vushader->addVertexShader(
+void VUAudioProcessorEditor::newOpenGLContextCreated() {
+	vushader = add_shader(
+//VERT
 R"(#version 150 core
 in vec2 aPos;
 uniform float rotation;
@@ -110,9 +91,8 @@ void main(){
 	metercoords.y -= stereoinv*.06+.04;
 	if(right < .5) lgcoords = aPos*lgsize.xy+vec2(lgsize.z-lgsize.x,lgsize.w);
 	else lgcoords = aPos*lgsize.xy+vec2(lgsize.z,lgsize.w);
-})"))
-		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Vertex shader error",vushader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at melody@unplug.red. THANKS!","OK!");
-	if(!vushader->addFragmentShader(
+})",
+//FRAG
 R"(#version 150 core
 in vec2 v_TexCoord;
 in vec2 metercoords;
@@ -187,84 +167,26 @@ void main(){
 			else fragColor = fragColor*(1-lg.g)+vec4(1.,.4549,.2588,1.)*lg.r;
 		}
 	}
-})"))
-		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Fragment shader error",vushader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at melody@unplug.red. THANKS!","OK!");
-	vushader->link();
 
-	vutex.loadImage(ImageCache::getFromMemory(BinaryData::map_png, BinaryData::map_pngSize));
-	vutex.bind();
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	if(right > .5) fragColor.rgb *= .5;
+})");
 
-	mptex.loadImage(ImageCache::getFromMemory(BinaryData::txtmap_png, BinaryData::txtmap_pngSize));
-	mptex.bind();
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	add_texture(&vutex, BinaryData::map_png, BinaryData::map_pngSize);
+	add_texture(&mptex, BinaryData::txtmap_png, BinaryData::txtmap_pngSize, GL_NEAREST, GL_NEAREST, GL_REPEAT, GL_REPEAT);
+	add_texture(&lgtex, BinaryData::genuine_soundware_png, BinaryData::genuine_soundware_pngSize, GL_NEAREST, GL_NEAREST);
 
-	lgtex.loadImage(ImageCache::getFromMemory(BinaryData::genuine_soundware_png, BinaryData::genuine_soundware_pngSize));
-	lgtex.bind();
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-#ifdef BANNER
-	bannershader.reset(new OpenGLShaderProgram(context));
-	if(!bannershader->addVertexShader(
-//BANNER VERT
-R"(#version 150 core
-in vec2 aPos;
-uniform vec2 texscale;
-uniform vec2 size;
-out vec2 uv;
-void main(){
-	gl_Position = vec4((aPos*vec2(1,size.y))*2-1,0,1);
-	uv = vec2(aPos.x*size.x,1-(1-aPos.y)*texscale.y);
-})"))
-		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Vertex shader error",bannershader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at melody@unplug.red. THANKS!","OK!");
-	if(!bannershader->addFragmentShader(
-//BANNER FRAG
-R"(#version 150 core
-in vec2 uv;
-uniform sampler2D tex;
-uniform vec2 texscale;
-uniform float pos;
-uniform float free;
-uniform float dpi;
-out vec4 fragColor;
-void main(){
-	vec2 col = max(min((texture(tex,vec2(mod(uv.x+pos,1)*texscale.x,uv.y)).rg-.5)*dpi+.5,1),0);
-	fragColor = vec4(vec3(col.r*free+col.g*(1-free)),1);
-})"))
-		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Fragment shader error",bannershader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at melody@unplug.red. THANKS!","OK!");
-	bannershader->link();
-
-	bannertex.loadImage(ImageCache::getFromMemory(BinaryData::banner_png, BinaryData::banner_pngSize));
-	bannertex.bind();
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-#endif
-
-	context.extensions.glGenBuffers(1, &arraybuffer);
+	draw_init();
 }
-void VuAudioProcessorEditor::renderOpenGL() {
+void VUAudioProcessorEditor::renderOpenGL() {
+	draw_begin();
+
 	//glEnable(GL_TEXTURE_2D);
 	//glDisable(GL_LIGHTING);
 	glDisable(GL_BLEND);
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_ALPHA_TEST);
 
-	if(context.getRenderingScale() != dpi) {
-		dpi = context.getRenderingScale();
-	}
-
-	context.extensions.glBindBuffer(GL_ARRAY_BUFFER, arraybuffer);
+	context.extensions.glBindBuffer(GL_ARRAY_BUFFER, array_buffer);
 	vushader->use();
 	context.extensions.glActiveTexture(GL_TEXTURE0);
 	vutex.bind();
@@ -276,13 +198,13 @@ void VuAudioProcessorEditor::renderOpenGL() {
 	lgtex.bind();
 	vushader->setUniform("lgtex", 2);
 
-	vushader->setUniform("banner", banneroffset);
+	vushader->setUniform("banner", banner_offset);
 	vushader->setUniform("rotation", (leftvu-.5f)*(1.47f-stereodamp*.025f));
 	vushader->setUniform("peak", leftpeaklerp);
 	vushader->setUniform("right", 0.f);
 	vushader->setUniform("lgsize",
 		((float)getWidth())/lgtex.getWidth(),
-		((1-banneroffset)*getHeight())/lgtex.getHeight(),
+		((1-banner_offset)*getHeight())/lgtex.getHeight(),
 		164.f/lgtex.getWidth(),
 		(62.f/lgtex.getHeight())*(1-settingsfade));
 
@@ -301,78 +223,42 @@ void VuAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glVertexAttribPointer(coord, 2, GL_FLOAT, GL_FALSE, 0, 0);
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
-	if (stereodamp > .001) {
+	if(stereodamp > .001) {
 		vushader->setUniform("rotation", (rightvu-.5f)*1.445f);
 		vushader->setUniform("peak", rightpeaklerp);
 		vushader->setUniform("right", 1.f);
 		vushader->setUniform("lgsize",
 			((float)getWidth())/lgtex.getWidth()*(1/(stereodamp+1)),
-			((1-banneroffset)*getHeight())/lgtex.getHeight(),
-			164.f/lgtex.getWidth()-(stereodamp/152)*(1-banneroffset)*getHeight()*1.56f,
+			((1-banner_offset)*getHeight())/lgtex.getHeight(),
+			164.f/lgtex.getWidth()-(stereodamp/152)*(1-banner_offset)*getHeight()*1.56f,
 			(62.f/lgtex.getHeight())*(1-settingsfade));
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 	}
 	context.extensions.glDisableVertexAttribArray(coord);
 
-#ifdef BANNER
-	bannershader->use();
-	coord = context.extensions.glGetAttribLocation(bannershader->getProgramID(),"aPos");
-	context.extensions.glEnableVertexAttribArray(coord);
-	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
-	context.extensions.glActiveTexture(GL_TEXTURE0);
-	bannertex.bind();
-	bannershader->setUniform("tex",0);
-	bannershader->setUniform("dpi",dpi);
-#ifdef BETA
-	bannershader->setUniform("texscale",494.f/bannertex.getWidth(),21.f/bannertex.getHeight());
-	bannershader->setUniform("size",getWidth()/494.f,21.f/getHeight());
-	bannershader->setUniform("free",0.f);
-#else
-	bannershader->setUniform("texscale",426.f/bannertex.getWidth(),21.f/bannertex.getHeight());
-	bannershader->setUniform("size",getWidth()/426.f,21.f/getHeight());
-	bannershader->setUniform("free",1.f);
-#endif
-	bannershader->setUniform("pos",bannerx);
-	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
-	context.extensions.glDisableVertexAttribArray(coord);
-#endif
-
-	audioProcessor.logger.drawlog();
+	draw_end();
 }
-void VuAudioProcessorEditor::openGLContextClosing() {
-	vushader->release();
-
-	vutex.release();
-	mptex.release();
-	lgtex.release();
-
-#ifdef BANNER
-	bannershader->release();
-	bannertex.release();
-#endif
-
-	audioProcessor.logger.font.release();
-
-	context.extensions.glDeleteBuffers(1, &arraybuffer);
+void VUAudioProcessorEditor::openGLContextClosing() {
+	draw_close();
 }
-void VuAudioProcessorEditor::paint(Graphics& g) {}
+void VUAudioProcessorEditor::paint(Graphics& g) {}
 
-void VuAudioProcessorEditor::timerCallback() {
-	int buffercount = audioProcessor.buffercount.get();
+void VUAudioProcessorEditor::timerCallback() {
+	int buffercount = audio_processor.buffercount.get();
 	if(buffercount > 0) {
-		leftrms = sqrt(audioProcessor.leftvu.get()/buffercount);
-		rightrms = sqrt(audioProcessor.rightvu.get()/buffercount);
-		audioProcessor.leftvu = 0;
-		audioProcessor.rightvu = 0;
-		audioProcessor.buffercount = 0;
+		leftrms = sqrt(audio_processor.leftvu.get()/buffercount);
+		rightrms = sqrt(audio_processor.rightvu.get()/buffercount);
+		audio_processor.leftvu = 0;
+		audio_processor.rightvu = 0;
+		audio_processor.buffercount = 0;
 
-		if(audioProcessor.leftpeak.get()) {
+		if(audio_processor.leftpeak.get()) {
 			leftpeak = true;
-			audioProcessor.leftpeak = false;
+			audio_processor.leftpeak = false;
 		}
-		if(audioProcessor.rightpeak.get()) {
+		if(audio_processor.rightpeak.get()) {
 			rightpeak = true;
-			audioProcessor.rightpeak = false;
+			audio_processor.rightpeak = false;
 		}
 
 		bypassdetection = 0;
@@ -399,120 +285,103 @@ void VuAudioProcessorEditor::timerCallback() {
 
 	settingsfade = functions::smoothdamp(settingsfade,fmin(settingstimer,1),&settingsvelocity,0.3,-1,.03333f);
 	settingstimer = held?60:fmax(settingstimer-1,0);
-	stereodamp = functions::smoothdamp(stereodamp,knobs[2].value,&stereovelocity,0.3,-1,.03333f);
 	websiteht -= .05f;
 
-	int h = audioProcessor.height.get();
-	int w = 0;
-	if (stereodamp > .001 && stereodamp < .999) {
-		w = round(h*((32.f+stereodamp*32.f)/19.f));
-		audioProcessor.width = w;
-	} else w = audioProcessor.width.get();
+	float prevstereodamp = stereodamp;
+	stereodamp = functions::smoothdamp(stereodamp,knobs[2].value,&stereovelocity,0.3,-1,.03333f);
+	if(prevstereodamp > .0001 && prevstereodamp < .9999) {
+		int h = audio_processor.height.get();
+		float w = h*32.f*(stereodamp+1)/19.f;
 #ifdef BANNER
-	setSize(w,h+21);
-	banneroffset = 21.f/(h+21);
-	bannerx = fmod(bannerx+.0005f,1.f);
+		getConstrainer()->setFixedAspectRatio(32.f*(stereodamp+1)/19.f-21.f/w);
 #else
-	setSize(w,h);
+		getConstrainer()->setFixedAspectRatio(32.f*(stereodamp+1)/19.f);
 #endif
-	audioProcessor.logger.font.width = w;
-	audioProcessor.logger.font.height = h;
-	audioProcessor.logger.font.banneroffset = banneroffset;
-	/*
-	if (displaycomp.stereodamp > .001 && displaycomp.stereodamp < .999) {
-		if(getConstrainer()->getFixedAspectRatio() != 0) getConstrainer()->setFixedAspectRatio(0);
-		setSize(round(getHeight()*((32.f+displaycomp.stereodamp*32.f)/19.f)),getHeight());
-		audioProcessor.width = getWidth();
-		audioProcessor.height = getHeight();
-	} else {
-		double ratio = (knobs[2].value*32.f+32.f)/19.f;
-		if(getConstrainer()->getFixedAspectRatio() != ratio)
-			getConstrainer()->setFixedAspectRatio(ratio);
+		set_size(round(w),h);
 	}
-	*/
 
-	context.triggerRepaint();
+	update();
 }
 
-void VuAudioProcessorEditor::parameterChanged(const String& parameterID, float newValue) {
+void VUAudioProcessorEditor::parameterChanged(const String& parameterID, float newValue) {
 	for(int i = 0; i < knobcount; i++) if(knobs[i].id == parameterID) {
 		if(i == 0) multiplier = 1.f/Decibels::decibelsToGain((float)newValue);
 		knobs[i].value = newValue;
 		return;
 	}
 }
-void VuAudioProcessorEditor::mouseEnter(const MouseEvent& event) {
+void VUAudioProcessorEditor::mouseEnter(const MouseEvent& event) {
 	settingstimer = 120;
 }
-void VuAudioProcessorEditor::mouseMove(const MouseEvent& event) {
+void VUAudioProcessorEditor::mouseMove(const MouseEvent& event) {
 	settingstimer = fmax(settingstimer,60);
 	int prevhover = hover;
-	hover = recalchover(event.x,event.y);
+	hover = recalc_hover(event.x,event.y);
 	if(hover == 3 && prevhover != 3 && websiteht < -.6) websiteht = 1.0f;
 }
-void VuAudioProcessorEditor::mouseExit(const MouseEvent& event) {
+void VUAudioProcessorEditor::mouseExit(const MouseEvent& event) {
 	if(!held) settingstimer = 0;
 }
-void VuAudioProcessorEditor::mouseDown(const MouseEvent& event) {
+void VUAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 	held = true;
 	initialdrag = hover;
 	if(hover == 0 || hover == 1) {
 		initialvalue = knobs[hover].value;
 		valueoffset = 0;
-		audioProcessor.apvts.getParameter(knobs[hover].id)->beginChangeGesture();
-		audioProcessor.undoManager.beginNewTransaction();
+		audio_processor.apvts.getParameter(knobs[hover].id)->beginChangeGesture();
+		audio_processor.undo_manager.beginNewTransaction();
 		dragpos = event.getScreenPosition();
 		event.source.enableUnboundedMouseMovement(true);
 	}
 }
-void VuAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
-	if(initialdrag == 2) hover = recalchover(event.x,event.y)==2?2:-1;
-	else if(initialdrag == 3) hover = recalchover(event.x,event.y)==3?3:-1;
+void VUAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
+	if(initialdrag == 2) hover = recalc_hover(event.x,event.y)==2?2:-1;
+	else if(initialdrag == 3) hover = recalc_hover(event.x,event.y)==3?3:-1;
 	else if(hover == 0 || hover == 1) {
 		float dist = (event.getDistanceFromDragStartY()+event.getDistanceFromDragStartX())*-.04f;
 		float val = dist+valueoffset;
 		int clampval = initialvalue-(val>0?floor(val):ceil(val));
-		audioProcessor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(knobs[hover].normalize(clampval));
+		audio_processor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(knobs[hover].normalize(clampval));
 		valueoffset = fmax(fmin(valueoffset,initialvalue-dist-knobs[hover].minimumvalue+1),initialvalue-dist-knobs[hover].maximumvalue-1);
 	}
 }
-void VuAudioProcessorEditor::mouseUp(const MouseEvent& event) {
+void VUAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 	if(hover == 0 || hover == 1) {
-		audioProcessor.undoManager.setCurrentTransactionName(
+		audio_processor.undo_manager.setCurrentTransactionName(
 			(String)((knobs[hover].value - initialvalue) >= 0 ? "Increased " : "Decreased ") += knobs[hover].name);
-		audioProcessor.apvts.getParameter(knobs[hover].id)->endChangeGesture();
-		audioProcessor.undoManager.beginNewTransaction();
+		audio_processor.apvts.getParameter(knobs[hover].id)->endChangeGesture();
+		audio_processor.undo_manager.beginNewTransaction();
 		event.source.enableUnboundedMouseMovement(false);
 		Desktop::setMousePosition(dragpos);
 	} else if(hover == 2) {
 		bool stereo = knobs[2].value<.5;
-		audioProcessor.apvts.getParameter("stereo")->setValueNotifyingHost(stereo?1:0);
-		audioProcessor.undoManager.setCurrentTransactionName(stereo?"Set to stereo":"Set to mono");
-		audioProcessor.undoManager.beginNewTransaction();
+		audio_processor.apvts.getParameter("stereo")->setValueNotifyingHost(stereo?1:0);
+		audio_processor.undo_manager.setCurrentTransactionName(stereo?"Set to stereo":"Set to mono");
+		audio_processor.undo_manager.beginNewTransaction();
 	} else if(hover == 3) URL("https://vst.unplug.red/").launchInDefaultBrowser();
 	held = false;
-	hover = recalchover(event.x,event.y);
+	hover = recalc_hover(event.x,event.y);
 }
-void VuAudioProcessorEditor::mouseDoubleClick(const MouseEvent& event) {
+void VUAudioProcessorEditor::mouseDoubleClick(const MouseEvent& event) {
 	if(hover != 0 && hover != 1) return;
-	audioProcessor.undoManager.setCurrentTransactionName((String)"Reset " += knobs[hover].name);
-	audioProcessor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(knobs[hover].normalize(knobs[hover].defaultvalue));
-	audioProcessor.undoManager.beginNewTransaction();
+	audio_processor.undo_manager.setCurrentTransactionName((String)"Reset " += knobs[hover].name);
+	audio_processor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(knobs[hover].normalize(knobs[hover].defaultvalue));
+	audio_processor.undo_manager.beginNewTransaction();
 }
-void VuAudioProcessorEditor::mouseWheelMove(const MouseEvent& event, const MouseWheelDetails& wheel) {
+void VUAudioProcessorEditor::mouseWheelMove(const MouseEvent& event, const MouseWheelDetails& wheel) {
 	if((hover != 0 && hover != 1) || wheel.isSmooth) return;
-	audioProcessor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(knobs[hover].normalize(knobs[hover].value+(wheel.deltaY>0?1:-1)));
+	audio_processor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(knobs[hover].normalize(knobs[hover].value+(wheel.deltaY>0?1:-1)));
 }
-int VuAudioProcessorEditor::recalchover(float x, float y) {
+int VUAudioProcessorEditor::recalc_hover(float x, float y) {
 	float xx = (x/getWidth()-.5f)*8*3.8*(knobs[2].value+1);
-	float yy = (y/((1-banneroffset)*getHeight())-.5f)*(7.4f);
+	float yy = (y/((1-banner_offset)*getHeight())-.5f)*(7.4f);
 	if(xx >= 1 && ((xx <= 8 && knobs[0].value <= -10) || xx <= 7) && yy > -1.5 && yy <= -.5)
 		return 0;
 	if(xx >= 1 && xx <= 4 && yy > -.5 && yy <= .5)
 		return 1;
 	if((yy > .5 && yy <= 1.5) && ((knobs[2].value<.5 && xx >= -8 && xx <= -2) || (knobs[2].value>.5 && xx >= -1 && xx <= 3)))
 		return 2;
-	if(x >= (getWidth()-151) && y >= ((1-banneroffset)*getHeight()-49) && x < (getWidth()-1) && y < ((1-banneroffset)*getHeight()-1))
+	if(x >= (getWidth()-151) && y >= ((1-banner_offset)*getHeight()-49) && x < (getWidth()-1) && y < ((1-banner_offset)*getHeight()-1))
 		return 3;
 	return -1;
 }

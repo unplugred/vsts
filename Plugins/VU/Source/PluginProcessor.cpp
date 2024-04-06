@@ -1,10 +1,12 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-VuAudioProcessor::VuAudioProcessor() :
-	AudioProcessor(BusesProperties().withInput("Input",AudioChannelSet::stereo(),true).withOutput("Output",AudioChannelSet::stereo(),true)),
-	apvts(*this, &undoManager, "Parameters", createParameters())
-{
+VUAudioProcessor::VUAudioProcessor() :
+	apvts(*this, &undo_manager, "Parameters", create_parameters()),
+	plugmachine_dsp(BusesProperties().withInput("Input",AudioChannelSet::stereo(),true).withOutput("Output",AudioChannelSet::stereo(),true), &apvts) {
+
+	init();
+
 	for(int i = 0; i < getNumPrograms(); i++) {
 		presets[i] = pluginpreset("Program "+(String)(i+1),-18,5,0);
 	}
@@ -15,40 +17,40 @@ VuAudioProcessor::VuAudioProcessor() :
 
 	for(int i = 0; i < paramcount; i++) {
 		presets[currentpreset].values[i] = pots[i].inflate(apvts.getParameter(pots[i].id)->getValue());
-		apvts.addParameterListener(pots[i].id, this);
+		add_listener(pots[i].id);
 	}
 }
-VuAudioProcessor::~VuAudioProcessor() {
-	for(int i = 0; i < paramcount; i++) apvts.removeParameterListener(pots[i].id, this);
+VUAudioProcessor::~VUAudioProcessor() {
+	close();
 }
 
-const String VuAudioProcessor::getName() const { return "VU"; }
-bool VuAudioProcessor::acceptsMidi() const { return false; }
-bool VuAudioProcessor::producesMidi() const { return false; }
-bool VuAudioProcessor::isMidiEffect() const { return false; }
-double VuAudioProcessor::getTailLengthSeconds() const { return 0.0; }
-int VuAudioProcessor::getNumPrograms() { return 20; }
-int VuAudioProcessor::getCurrentProgram() { return currentpreset; }
-void VuAudioProcessor::setCurrentProgram (int index) {
+const String VUAudioProcessor::getName() const { return "VU"; }
+bool VUAudioProcessor::acceptsMidi() const { return false; }
+bool VUAudioProcessor::producesMidi() const { return false; }
+bool VUAudioProcessor::isMidiEffect() const { return false; }
+double VUAudioProcessor::getTailLengthSeconds() const { return 0.0; }
+int VUAudioProcessor::getNumPrograms() { return 20; }
+int VUAudioProcessor::getCurrentProgram() { return currentpreset; }
+void VUAudioProcessor::setCurrentProgram (int index) {
 	if(currentpreset == index) return;
 
-	undoManager.beginNewTransaction((String)"Changed preset to " += presets[index].name);
+	undo_manager.beginNewTransaction((String)"Changed preset to " += presets[index].name);
 	currentpreset = index;
 
 	for(int i = 0; i < paramcount; i++)
 		apvts.getParameter(pots[i].id)->setValueNotifyingHost(pots[i].normalize(presets[index].values[i]));
 }
-const String VuAudioProcessor::getProgramName (int index) {
+const String VUAudioProcessor::getProgramName (int index) {
 	return { presets[index].name };
 }
-void VuAudioProcessor::changeProgramName (int index, const String& newName) {
+void VUAudioProcessor::changeProgramName (int index, const String& newName) {
 	presets[index].name = newName;
 }
 
-void VuAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {}
-void VuAudioProcessor::releaseResources() {}
+void VUAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {}
+void VUAudioProcessor::releaseResources() {}
 
-bool VuAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const {
+bool VUAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const {
 	if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
 		return false;
 
@@ -56,7 +58,7 @@ bool VuAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 	return (numChannels > 0 && numChannels <= 2);
 }
 
-void VuAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midiMessages) {
+void VUAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midiMessages) {
 	ScopedNoDenormals noDenormals;
 
 	if(buffer.getNumChannels() == 0 || buffer.getNumSamples() == 0) return;
@@ -107,86 +109,87 @@ void VuAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mid
 	}
 }
 
-bool VuAudioProcessor::hasEditor() const { return true; }
-AudioProcessorEditor* VuAudioProcessor::createEditor() {
-	return new VuAudioProcessorEditor(*this,paramcount,presets[currentpreset],pots);
+bool VUAudioProcessor::hasEditor() const { return true; }
+AudioProcessorEditor* VUAudioProcessor::createEditor() {
+	return new VUAudioProcessorEditor(*this,paramcount,presets[currentpreset],pots);
 }
 
-void VuAudioProcessor::getStateInformation (MemoryBlock& destData) {
-	const char linebreak = '\n';
+void VUAudioProcessor::getStateInformation (MemoryBlock& destData) {
+	const char delimiter = '\n';
 	std::ostringstream data;
-	data << version << linebreak
-		<< height.get() << linebreak
-		<< currentpreset << linebreak;
+	data << version << delimiter
+		<< height.get() << delimiter
+		<< currentpreset << delimiter;
 
 	for(int i = 0; i < getNumPrograms(); i++) {
-		data << presets[i].name << linebreak;
+		data << presets[i].name << delimiter;
 		for(int v = 0; v < paramcount; v++)
-			data << presets[i].values[v] << linebreak;
+			data << presets[i].values[v] << delimiter;
 	}
 
 	MemoryOutputStream stream(destData,false);
 	stream.writeString(data.str());
 }
-void VuAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
+void VUAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
+	const char delimiter = '\n';
 	try {
 		std::stringstream ss(String::createStringFromData(data, sizeInBytes).toRawUTF8());
 		std::string token;
 
-		std::getline(ss,token,'\n');
+		std::getline(ss,token,delimiter);
 		int saveversion = std::stoi(token);
 
 		if(saveversion >= 2) {
-			std::getline(ss,token,'\n');
+			std::getline(ss,token,delimiter);
 			height = std::stoi(token);
 
-			std::getline(ss,token,'\n');
+			std::getline(ss,token,delimiter);
 			currentpreset = std::stoi(token);
 
 			for(int i = 0; i < getNumPrograms(); i++) {
-				std::getline(ss, token, '\n');
+				std::getline(ss, token, delimiter);
 				presets[i].name = token;
 				for(int v = 0; v < paramcount; v++) {
-					std::getline(ss, token, '\n');
+					std::getline(ss, token, delimiter);
 					presets[i].values[v] = std::stof(token);
 				}
 			}
 		} else {
 			for(int i = 0; i < 3; i++) {
-				std::getline(ss, token, '\n');
+				std::getline(ss, token, delimiter);
 				presets[currentpreset].values[i] = std::stof(token);
 			}
 
-			std::getline(ss,token,'\n');
+			std::getline(ss,token,delimiter);
 			height = std::stoi(token);
 		}
 	} catch (const char* e) {
-		logger.debug((String)"Error loading saved data: "+(String)e);
+		debug((String)"Error loading saved data: "+(String)e);
 	} catch(String e) {
-		logger.debug((String)"Error loading saved data: "+e);
+		debug((String)"Error loading saved data: "+e);
 	} catch(std::exception &e) {
-		logger.debug((String)"Error loading saved data: "+(String)e.what());
+		debug((String)"Error loading saved data: "+(String)e.what());
 	} catch(...) {
-		logger.debug((String)"Error loading saved data");
+		debug((String)"Error loading saved data");
 	}
 
 	for(int i = 0; i < paramcount; i++) {
 		apvts.getParameter(pots[i].id)->setValueNotifyingHost(pots[i].normalize(presets[currentpreset].values[i]));
 	}
 }
-void VuAudioProcessor::parameterChanged(const String& parameterID, float newValue) {
+void VUAudioProcessor::parameterChanged(const String& parameterID, float newValue) {
 	for(int i = 0; i < paramcount; i++) if(parameterID == pots[i].id) {
 		presets[currentpreset].values[i] = newValue;
 		return;
 	}
 }
 
-AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new VuAudioProcessor(); }
+AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new VUAudioProcessor(); }
 
-AudioProcessorValueTreeState::ParameterLayout VuAudioProcessor::createParameters() {
+AudioProcessorValueTreeState::ParameterLayout VUAudioProcessor::create_parameters() {
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
 	parameters.push_back(std::make_unique<AudioParameterInt	>(ParameterID{"nominal"	,1},"Nominal"	,-24,-6	,-18	,"",todb		,fromdb		));
-	parameters.push_back(std::make_unique<AudioParameterInt	>(ParameterID{"damping"	,1},"Damping"	,1	,9	,5								));
+	parameters.push_back(std::make_unique<AudioParameterInt	>(ParameterID{"damping"	,1},"Damping"	,1	,9	,5									));
 	parameters.push_back(std::make_unique<AudioParameterBool>(ParameterID{"stereo"	,1},"Stereo"			,false	,"",tostereo	,fromstereo	));
 	return { parameters.begin(), parameters.end() };
 }

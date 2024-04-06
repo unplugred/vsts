@@ -42,10 +42,10 @@ struct pluginpreset {
 	}
 };
 
-class VuAudioProcessor	: public AudioProcessor, public AudioProcessorValueTreeState::Listener {
+class VUAudioProcessor : public plugmachine_dsp {
 public:
-	VuAudioProcessor();
-	~VuAudioProcessor() override;
+	VUAudioProcessor();
+	~VUAudioProcessor() override;
 
 	void prepareToPlay (double sampleRate, int samplesPerBlock) override;
 	void releaseResources() override;
@@ -80,15 +80,11 @@ public:
 	Atomic<bool> rightpeak = false;
 	Atomic<int> buffercount = 0;
 
-	Atomic<int> width = 505;
 	Atomic<int> height = 300;
 
 	AudioProcessorValueTreeState apvts;
-	AudioProcessorValueTreeState::ParameterLayout createParameters();
-	UndoManager undoManager;
+	AudioProcessorValueTreeState::ParameterLayout create_parameters();
 	int version = 2;
-
-	CoolLogger logger;
 
 	pluginpreset presets[20];
 	potentiometer pots[3];
@@ -96,7 +92,7 @@ public:
 	const int paramcount = 3;
 private:
 
-	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (VuAudioProcessor)
+	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (VUAudioProcessor)
 };
 
 static std::function<String(int v, int max)> todb = [](int v, int max) {
