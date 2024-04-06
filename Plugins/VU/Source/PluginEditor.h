@@ -18,19 +18,21 @@ struct knob {
 		return val*(maximumvalue-minimumvalue)+minimumvalue;
 	}
 };
-class VuAudioProcessorEditor : public AudioProcessorEditor, public OpenGLRenderer, public AudioProcessorValueTreeState::Listener, private Timer
-{
+
+class VUAudioProcessorEditor : public plugmachine_gui {
 public:
-	VuAudioProcessorEditor(VuAudioProcessor&, int paramcount, pluginpreset state, potentiometer pots[]);
-	~VuAudioProcessorEditor() override;
+	VUAudioProcessorEditor(VUAudioProcessor&, int paramcount, pluginpreset state, potentiometer pots[]);
+	~VUAudioProcessorEditor() override;
 
 	void newOpenGLContextCreated() override;
 	void renderOpenGL() override;
 	void openGLContextClosing() override;
-	void paint (Graphics&) override;
+	void paint(Graphics&) override;
 	void resized() override;
 
+	void timerCallback() override;
 	virtual void parameterChanged(const String& parameterID, float newValue);
+
 	void mouseEnter(const MouseEvent& event) override;
 	void mouseMove(const MouseEvent& event) override;
 	void mouseExit(const MouseEvent& event) override;
@@ -39,7 +41,7 @@ public:
 	void mouseUp(const MouseEvent& event) override;
 	void mouseDoubleClick(const MouseEvent& event) override;
 	void mouseWheelMove(const MouseEvent& event, const MouseWheelDetails& wheel) override;
-	int recalchover(float x, float y);
+	int recalc_hover(float x, float y);
 
 	float leftvu = 0;
 	float rightvu = 0;
@@ -72,38 +74,19 @@ public:
 	Point<int> dragpos;
 
 	int bypassdetection = 0;
-
-	void timerCallback() override;
-
-	int prevh = 0;
-	int prevw = 0;
+	bool dontscale = true;
 
 	knob knobs[3];
 	int knobcount = 3;
 private:
-	VuAudioProcessor& audioProcessor;
+	VUAudioProcessor& audio_processor;
 
-	OpenGLContext context;
-	unsigned int arraybuffer;
+	std::shared_ptr<OpenGLShaderProgram> vushader;
 	OpenGLTexture vutex;
 	OpenGLTexture mptex;
 	OpenGLTexture lgtex;
-	float square[8]{
-		0.f,0.f,
-		1.f,0.f,
-		0.f,1.f,
-		1.f,1.f};
 
-	std::unique_ptr<OpenGLShaderProgram> vushader;
+	plugmachine_look_n_feel look_n_feel;
 
-#ifdef BANNER
-	float bannerx = 0;
-	OpenGLTexture bannertex;
-	std::unique_ptr<OpenGLShaderProgram> bannershader;
-#endif
-	float banneroffset = 0;
-
-	float dpi = 1;
-
-	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(VuAudioProcessorEditor)
+	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(VUAudioProcessorEditor)
 };
