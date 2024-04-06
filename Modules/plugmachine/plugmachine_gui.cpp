@@ -153,8 +153,8 @@ void plugmachine_gui::draw_begin() {
 				else if(i < 16) s += scale_step*3;
 				++i;
 			}
-			reset_size = true;
 		}
+		reset_size = true;
 	}
 
 	float prev_scaled_dpi = scaled_dpi;
@@ -231,16 +231,12 @@ void plugmachine_gui::draw_close() {
 void plugmachine_gui::update() {
 	if(reset_size) {
 		reset_size = false;
-		if(do_scale) {
 #ifdef BANNER
-			setSize(width*ui_scales[ui_scale_index],(height+(do_banner?(21/target_dpi):0))*ui_scales[ui_scale_index]);
-#else
-			setSize(width*ui_scales[ui_scale_index],height*ui_scales[ui_scale_index]);
-#endif
-		}
-#ifdef BANNER
+		setSize(width*ui_scales[ui_scale_index],(height+(do_banner?(21/target_dpi):0))*ui_scales[ui_scale_index]);
 		if(do_banner)
 			banner_offset = 21.f/target_dpi*ui_scales[ui_scale_index]/getHeight();
+#else
+		setSize(width*ui_scales[ui_scale_index],height*ui_scales[ui_scale_index]);
 #endif
 
 		for(int i = 0; i < fonts.size(); ++i) {
@@ -262,6 +258,28 @@ void plugmachine_gui::update() {
 #endif
 
 	context.triggerRepaint();
+}
+
+void plugmachine_gui::set_size(int _width, int _height) {
+	if(width == _width && height == _height) {
+		int w = width*ui_scales[ui_scale_index];
+#ifdef BANNER
+		int h = (height+(do_banner?(21/target_dpi):0))*ui_scales[ui_scale_index];
+#else
+		int h = height*ui_scales[ui_scale_index];
+#endif
+		if(w != getWidth() || h != getHeight())
+			setSize(w,h);
+		return;
+	}
+	width = _width;
+	height = _height;
+	reset_size = true;
+}
+void plugmachine_gui::set_ui_scale(int index) {
+	ui_scale_index = index;
+	audio_processor.set_ui_scale(ui_scales[ui_scale_index]);
+	reset_size = true;
 }
 
 void plugmachine_gui::add_listener(String name) {
