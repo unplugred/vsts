@@ -23,6 +23,8 @@ juce_add_plugin("${BaseTargetName}"
 	AU_COPY_DIR "${freedir}")
 
 target_compile_features("${BaseTargetName}" PRIVATE cxx_std_17)
+add_compile_definitions(BANNER)
+add_compile_definitions(BETA)
 
 clap_juce_extensions_plugin(TARGET "${BaseTargetName}"
 	CLAP_ID "com.unplugred.${BaseTargetName}"
@@ -51,18 +53,17 @@ target_compile_definitions("${BaseTargetName}" PUBLIC
 juce_add_binary_data("${BaseTargetName}BinaryData" HEADER_NAME BinaryData.h NAMESPACE BinaryData SOURCES
 	Resources/base.png
 	Resources/credits.png
-	Resources/oversampling.png
-	../../Resources/banner.png)
+	Resources/oversampling.png)
 set_target_properties("${BaseTargetName}BinaryData" PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 
 target_link_libraries("${BaseTargetName}" PRIVATE
-	cool_logger
+	plugmachine
 	#juce::juce_audio_basics
-	juce::juce_audio_devices
+	#juce::juce_audio_devices
 	#juce::juce_audio_formats
-	juce::juce_audio_plugin_client
+	#juce::juce_audio_plugin_client
 	#juce::juce_audio_processors
-	juce::juce_audio_utils
+	#juce::juce_audio_utils
 	#juce::juce_core
 	#juce::juce_data_structures
 	juce::juce_dsp
@@ -70,10 +71,10 @@ target_link_libraries("${BaseTargetName}" PRIVATE
 	#juce::juce_graphics
 	#juce::juce_gui_basics
 	#juce::juce_gui_extra
-	juce::juce_opengl
+	#juce::juce_opengl
 	#juce::juce_video
 	"${BaseTargetName}BinaryData"
 	PUBLIC
-	juce::juce_recommended_config_flags
+	#juce::juce_recommended_warning_flags
 	juce::juce_recommended_lto_flags
-	juce::juce_recommended_warning_flags)
+	juce::juce_recommended_config_flags)
