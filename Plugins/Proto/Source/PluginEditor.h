@@ -3,6 +3,21 @@
 #include "PluginProcessor.h"
 using namespace gl;
 
+class LookNFeel : public plugmachine_look_n_feel {
+public:
+	LookNFeel();
+	~LookNFeel();
+	Font getPopupMenuFont();
+	void drawPopupMenuBackground(Graphics &g, int width, int height) override;
+	void drawPopupMenuItem(Graphics &g, const Rectangle<int> &area, bool isSeparator, bool isActive, bool isHighlighted, bool isTicked, bool hasSubMenu, const String &text, const String &shortcutKeyText, const Drawable *icon, const Colour *textColour) override; //biggest function ive seen ever
+	void getIdealPopupMenuItemSize(const String& text, const bool isSeparator, int standardMenuItemHeight, int& idealWidth, int& idealHeight) override;
+	int getPopupMenuBorderSize() override;
+	Colour bg1 = Colour::fromFloatRGBA(0.f,0.f,0.f,1.f);
+	Colour fg1 = Colour::fromFloatRGBA(1.f,1.f,0.f,1.f);
+	Colour bg2 = Colour::fromFloatRGBA(0.f,0.f,1.f,1.f);
+	Colour fg2 = Colour::fromFloatRGBA(1.f,1.f,1.f,1.f);
+	String font = "n";
+};
 struct knob {
 	int x = 0;
 	int y = 0;
@@ -20,18 +35,16 @@ struct knob {
 		return val*(maximumvalue-minimumvalue)+minimumvalue;
 	}
 };
-class ProtoAudioProcessorEditor : public AudioProcessorEditor, public OpenGLRenderer, public AudioProcessorValueTreeState::Listener, private Timer
-{
+class ProtoAudioProcessorEditor : public plugmachine_gui {
 public:
 	ProtoAudioProcessorEditor(ProtoAudioProcessor&, int paramcount, pluginpreset state, pluginparams params);
 	~ProtoAudioProcessorEditor() override;
 
 	void newOpenGLContextCreated() override;
-	void compileshader(std::unique_ptr<OpenGLShaderProgram> &shader, String vertexshader, String fragmentshader);
 	void renderOpenGL() override;
 	void openGLContextClosing() override;
 	void calcvis();
-	void paint (Graphics&) override;
+	void paint(Graphics&) override;
 
 	void timerCallback() override;
 
@@ -43,25 +56,17 @@ public:
 	void mouseUp(const MouseEvent& event) override;
 	void mouseDoubleClick(const MouseEvent& event) override;
 	void mouseWheelMove(const MouseEvent& event, const MouseWheelDetails& wheel) override;
-	int recalchover(float x, float y);
+	int recalc_hover(float x, float y);
 
 	knob knobs[6];
 	int knobcount = 0;
 	float visline[2][452];
-	bool isStereo = false;
+	bool is_stereo = false;
 private:
-	ProtoAudioProcessor& audioProcessor;
-
-	OpenGLContext context;
-	unsigned int arraybuffer;
-	float square[8]{
-		0.f,0.f,
-		1.f,0.f,
-		0.f,1.f,
-		1.f,1.f};
+	ProtoAudioProcessor& audio_processor;
 
 	OpenGLTexture basetex;
-	std::unique_ptr<OpenGLShaderProgram> baseshader;
+	std::shared_ptr<OpenGLShaderProgram> baseshader;
 
 	int hover = -1;
 	int initialdrag = 0;
@@ -71,34 +76,27 @@ private:
 	bool finemode = false;
 	float valueoffset = 0;
 	Point<int> dragpos = Point<int>(0,0);
-	std::unique_ptr<OpenGLShaderProgram> knobshader;
+	std::shared_ptr<OpenGLShaderProgram> knobshader;
 
-	std::unique_ptr<OpenGLShaderProgram> blackshader;
+	std::shared_ptr<OpenGLShaderProgram> blackshader;
 
-	std::unique_ptr<OpenGLShaderProgram> visshader;
+	std::shared_ptr<OpenGLShaderProgram> visshader;
 
 	float oversamplingalpha = 0;
 	float oversamplinglerped = 1;
 	bool oversampling = true;
 	OpenGLTexture oversamplingtex;
-	std::unique_ptr<OpenGLShaderProgram> oversamplingshader;
+	std::shared_ptr<OpenGLShaderProgram> oversamplingshader;
 
 	float websiteht = -1;
 	float creditsalpha = 0;
 	OpenGLTexture creditstex;
-	std::unique_ptr<OpenGLShaderProgram> creditsshader;
+	std::shared_ptr<OpenGLShaderProgram> creditsshader;
 
 	float rms = 0;
 	float time = 0;
 
-#ifdef BANNER
-	float bannerx = 0;
-	OpenGLTexture bannertex;
-	std::unique_ptr<OpenGLShaderProgram> bannershader;
-#endif
-	float banneroffset = 0;
-
-	float dpi = 1;
+	LookNFeel look_n_feel;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ProtoAudioProcessorEditor)
 };
