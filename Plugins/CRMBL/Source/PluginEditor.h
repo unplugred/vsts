@@ -4,6 +4,19 @@
 #include "PluginProcessor.h"
 using namespace gl;
 
+class LookNFeel : public plugmachine_look_n_feel {
+public:
+	LookNFeel();
+	~LookNFeel();
+	Font getPopupMenuFont();
+	void drawPopupMenuBackground(Graphics &g, int width, int height) override;
+	void drawPopupMenuItem(Graphics &g, const Rectangle<int> &area, bool isSeparator, bool isActive, bool isHighlighted, bool isTicked, bool hasSubMenu, const String &text, const String &shortcutKeyText, const Drawable *icon, const Colour *textColour) override; //biggest function ive seen ever
+	void getIdealPopupMenuItemSize(const String& text, const bool isSeparator, int standardMenuItemHeight, int& idealWidth, int& idealHeight) override;
+	int getPopupMenuBorderSize() override;
+	Colour bg = Colour::fromFloatRGBA(0.f,0.f,0.f,1.f);
+	Colour fg = Colour::fromFloatRGBA(1.f,1.f,1.f,1.f);
+	String font = "n";
+};
 struct knob {
 	float x = 0;
 	float y = 0;
@@ -16,6 +29,7 @@ struct knob {
 	int index = -1;
 	String id;
 	String name;
+	String description;
 
 	float value = .5f;
 	int hoverstate = 0;
@@ -29,14 +43,12 @@ struct knob {
 		return val*(maximumvalue-minimumvalue)+minimumvalue;
 	}
 };
-class CRMBLAudioProcessorEditor : public AudioProcessorEditor, public OpenGLRenderer, public AudioProcessorValueTreeState::Listener, private Timer
-{
+class CRMBLAudioProcessorEditor : public plugmachine_gui {
 public:
-	CRMBLAudioProcessorEditor (CRMBLAudioProcessor&, int paramcount, pluginpreset state, pluginparams params);
+	CRMBLAudioProcessorEditor(CRMBLAudioProcessor&, int paramcount, pluginpreset state, pluginparams params);
 	~CRMBLAudioProcessorEditor() override;
 
 	void newOpenGLContextCreated() override;
-	void compileshader(std::unique_ptr<OpenGLShaderProgram> &shader, String vertexshader, String fragmentshader);
 	void renderOpenGL() override;
 	void openGLContextClosing() override;
 	void paint(Graphics&) override;
@@ -52,29 +64,21 @@ public:
 	void mouseUp(const MouseEvent& event) override;
 	void mouseDoubleClick(const MouseEvent& event) override;
 	void mouseWheelMove(const MouseEvent& event, const MouseWheelDetails& wheel) override;
-	int recalchover(float x, float y);
+	int recalc_hover(float x, float y);
 
 	knob knobs[11];
 	int knobcount = 11;
 private:
-	CRMBLAudioProcessor& audioProcessor;
+	CRMBLAudioProcessor& audio_processor;
 
 	float time = 0;
 	int sync = 0;
 
-	OpenGLContext context;
-	unsigned int arraybuffer;
-	float square[8]{
-		0.f,0.f,
-		1.f,0.f,
-		0.f,1.f,
-		1.f,1.f};
-
 	OpenGLTexture basetex;
-	std::unique_ptr<OpenGLShaderProgram> baseshader;
+	std::shared_ptr<OpenGLShaderProgram> baseshader;
 
 	float websiteht = -1;
-	std::unique_ptr<OpenGLShaderProgram> logoshader;
+	std::shared_ptr<OpenGLShaderProgram> logoshader;
 
 	int hover = -1;
 	int initialdrag = 0;
@@ -83,12 +87,12 @@ private:
 	bool finemode = false;
 	float valueoffset = 0;
 	Point<int> dragpos = Point<int>(0,0);
-	std::unique_ptr<OpenGLShaderProgram> knobshader;
+	std::shared_ptr<OpenGLShaderProgram> knobshader;
 
 	int pitchnum[4]{1,0,0,0};
 	int timenum[6]{1,0,0,0,0,0};
 	OpenGLTexture numbertex;
-	std::unique_ptr<OpenGLShaderProgram> numbershader;
+	std::shared_ptr<OpenGLShaderProgram> numbershader;
 
 	bool oversampling = true;
 	bool postfb = true;
@@ -100,19 +104,12 @@ private:
 	int dampreadpos = 0;
 
 	OpenGLFrameBuffer feedbackbuffer;
-	std::unique_ptr<OpenGLShaderProgram> feedbackshader;
+	std::shared_ptr<OpenGLShaderProgram> feedbackshader;
 
 	OpenGLFrameBuffer mainbuffer;
-	std::unique_ptr<OpenGLShaderProgram> buffershader;
+	std::shared_ptr<OpenGLShaderProgram> buffershader;
 
-#ifdef BANNER
-	float bannerx = 0;
-	OpenGLTexture bannertex;
-	std::unique_ptr<OpenGLShaderProgram> bannershader;
-#endif
-	float banneroffset = 0;
-
-	float dpi = 1;
+	LookNFeel look_n_feel;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(CRMBLAudioProcessorEditor)
 };

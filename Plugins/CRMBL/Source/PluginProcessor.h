@@ -65,7 +65,7 @@ struct pluginpreset {
 	}
 };
 
-class CRMBLAudioProcessor : public AudioProcessor, public AudioProcessorValueTreeState::Listener, private Timer {
+class CRMBLAudioProcessor : public plugmachine_dsp, private Timer {
 public:
 	CRMBLAudioProcessor();
 	~CRMBLAudioProcessor() override;
@@ -75,9 +75,9 @@ public:
 	void reseteverything();
 	void releaseResources() override;
 
-	bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
+	bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
 
-	void processBlock (AudioBuffer<float>&, MidiBuffer&) override;
+	void processBlock(AudioBuffer<float>&, MidiBuffer&) override;
 	double pnch(double source, float amount);
 	float interpolatesamples(float* buffer, float position, int buffersize);
 
@@ -95,17 +95,20 @@ public:
 
 	int getNumPrograms() override;
 	int getCurrentProgram() override;
-	void setCurrentProgram (int index) override;
-	const String getProgramName (int index) override;
-	void changeProgramName (int index, const String& newName) override;
+	void setCurrentProgram(int index) override;
+	const String getProgramName(int index) override;
+	void changeProgramName(int index, const String& newName) override;
 
-	void getStateInformation (MemoryBlock& destData) override;
-	void setStateInformation (const void* data, int sizeInBytes) override;
+	void getStateInformation(MemoryBlock& destData) override;
+	void setStateInformation(const void* data, int sizeInBytes) override;
+	const String get_preset(int preset_id, const char delimiter = ',') override;
+	void set_preset(const String& preset, int preset_id, const char delimiter = ',', bool print_errors = false) override;
+
 	virtual void parameterChanged(const String& parameterID, float newValue);
 	void randomize();
 
+	AudioProcessorValueTreeState::ParameterLayout create_parameters();
 	AudioProcessorValueTreeState apvts;
-	UndoManager undoManager;
 
 	Atomic<float> rmsadd = 0;
 	Atomic<int> rmscount = 0;
@@ -119,12 +122,10 @@ public:
 	pluginpreset state;
 	pluginparams params;
 	bool lerpchanged[12];
-
-	CoolLogger logger;
-private:
-	AudioProcessorValueTreeState::ParameterLayout createParameters();
-	pluginpreset presets[20];
 	int currentpreset = 0;
+
+private:
+	pluginpreset presets[20];
 	void timerCallback() override;
 	float lerptable[12];
 	float lerpstage = 0;
@@ -160,7 +161,7 @@ private:
 	std::unique_ptr<dsp::Oversampling<float>> os;
 	Random random;
 
-	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (CRMBLAudioProcessor)
+	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(CRMBLAudioProcessor)
 };
 
 static std::function<String(float v, int max)> tolength = [](float v, int max) {
