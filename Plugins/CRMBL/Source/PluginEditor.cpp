@@ -1,11 +1,10 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-CRMBLAudioProcessorEditor::CRMBLAudioProcessorEditor (CRMBLAudioProcessor& p, int paramcount, pluginpreset state, pluginparams params)
-	: AudioProcessorEditor (&p), audioProcessor (p)
-{
+CRMBLAudioProcessorEditor::CRMBLAudioProcessorEditor (CRMBLAudioProcessor& p, int paramcount, pluginpreset state, pluginparams params) : audio_processor (p), plugmachine_gui(p, 507, 465) {
 	//special labels: time, mod, feedback
 	//CLOCK
+	knobs[0].description = "Computer time";
 	knobs[0].index = -1;
 	knobs[0].x = .4282319003;
 	knobs[0].y = .5832025519;
@@ -14,6 +13,7 @@ CRMBLAudioProcessorEditor::CRMBLAudioProcessorEditor (CRMBLAudioProcessor& p, in
 	knobs[0].lineheight = .73;
 	knobs[0].r = .0625f;
 	//FEEDBACK
+	knobs[1].description = "The amount of the output that goes back into the input.\nWhen turned all the way an infinite delay is created.";
 	knobs[1].index = 6;
 	knobs[1].x = .5095732975;
 	knobs[1].y = .7174707256;
@@ -21,6 +21,7 @@ CRMBLAudioProcessorEditor::CRMBLAudioProcessorEditor (CRMBLAudioProcessor& p, in
 	knobs[1].linewidth = .050639065;
 	knobs[1].r = .5;
 	//TIME
+	knobs[2].description = "The amount of time before the signal repeats in milliseconds.\nCan be BPM synced by holding CTRL while dragging.";
 	knobs[2].index = 0;
 	knobs[2].x = .6480072833;
 	knobs[2].y = .6583846315;
@@ -28,6 +29,7 @@ CRMBLAudioProcessorEditor::CRMBLAudioProcessorEditor (CRMBLAudioProcessor& p, in
 	knobs[2].linewidth = .0401800064;
 	knobs[2].r = .1875;
 	//MOD FREQ
+	knobs[3].description = "Frequency of LFO on the delay time.";
 	knobs[3].index = 3;
 	knobs[3].x = .8327202455;
 	knobs[3].y = .5297886311;
@@ -36,6 +38,7 @@ CRMBLAudioProcessorEditor::CRMBLAudioProcessorEditor (CRMBLAudioProcessor& p, in
 	knobs[3].lineheight = 1;
 	knobs[3].r = .4375;
 	//MOD
+	knobs[4].description = "Amplitude of LFO on the delay time.";
 	knobs[4].index = 2;
 	knobs[4].x = .7837187701;
 	knobs[4].y = .470595587;
@@ -44,6 +47,7 @@ CRMBLAudioProcessorEditor::CRMBLAudioProcessorEditor (CRMBLAudioProcessor& p, in
 	knobs[4].lineheight = 1;
 	knobs[4].r = .375;
 	//DRY/WET
+	knobs[5].description = "Mix between the processed and unprocessed signal.";
 	knobs[5].index = 11;
 	knobs[5].x = .4592473633;
 	knobs[5].y = .9123757694;
@@ -51,6 +55,7 @@ CRMBLAudioProcessorEditor::CRMBLAudioProcessorEditor (CRMBLAudioProcessor& p, in
 	knobs[5].linewidth = .0401800064;
 	knobs[5].r = .625;
 	//PINGPONG
+	knobs[6].description = "Shortens the initial delay for the left or right channels.\nIf set to 'PRE' this also affects the feedback, creating interesting polyrythmic patterns.";
 	knobs[6].index = 4;
 	knobs[6].x = .6327409673;
 	knobs[6].y = .7939896811;
@@ -58,6 +63,7 @@ CRMBLAudioProcessorEditor::CRMBLAudioProcessorEditor (CRMBLAudioProcessor& p, in
 	knobs[6].linewidth = .050639065;
 	knobs[6].r = .25;
 	//PITCH
+	knobs[7].description = "Changes the pitch (in semitones) of a pitch shifting effect, applied with each repeat of the signal.\nCan be set to a microtonal value by holding CTRL while dragging.";
 	knobs[7].index = 9;
 	knobs[7].x = .2221832359;
 	knobs[7].y = .3319921158;
@@ -65,6 +71,7 @@ CRMBLAudioProcessorEditor::CRMBLAudioProcessorEditor (CRMBLAudioProcessor& p, in
 	knobs[7].linewidth = .050639065;
 	knobs[7].r = .5625;
 	//CHEW
+	knobs[8].description = "An effect which adds gating and harmonics, applied on every repeat to create a \"chewing\" effect.\nAlso exists as an independent plugin under the name PNCH.";
 	knobs[8].index = 8;
 	knobs[8].x = .1082867784;
 	knobs[8].y = .4330561124;
@@ -72,6 +79,7 @@ CRMBLAudioProcessorEditor::CRMBLAudioProcessorEditor (CRMBLAudioProcessor& p, in
 	knobs[8].linewidth = .050639065;
 	knobs[8].r = .6875;
 	//REVERSE
+	knobs[9].description = "Blends between forward and revered versions of the delay.";
 	knobs[9].index = 7;
 	knobs[9].x = .2314544482;
 	knobs[9].y = .5413354191;
@@ -79,6 +87,7 @@ CRMBLAudioProcessorEditor::CRMBLAudioProcessorEditor (CRMBLAudioProcessor& p, in
 	knobs[9].linewidth = .0401800064;
 	knobs[9].r = .3125;
 	//LOWPASS
+	knobs[10].description = "Applies a low-pass filter, reducing higher frequencies with every repeat.";
 	knobs[10].index = 10;
 	knobs[10].x = .3532976591;
 	knobs[10].y = .3882975081;
@@ -87,6 +96,7 @@ CRMBLAudioProcessorEditor::CRMBLAudioProcessorEditor (CRMBLAudioProcessor& p, in
 	knobs[10].r = .125;
 
 	for(int i = 0; i < knobcount; i++) {
+		knobs[i].description = look_n_feel.add_line_breaks(knobs[i].description);
 		knobs[i].radius += .004;
 		knobs[i].x -= .001;
 		knobs[i].y += .002;
@@ -98,7 +108,7 @@ CRMBLAudioProcessorEditor::CRMBLAudioProcessorEditor (CRMBLAudioProcessor& p, in
 		knobs[i].minimumvalue = params.pots[knobs[i].index].minimumvalue;
 		knobs[i].maximumvalue = params.pots[knobs[i].index].maximumvalue;
 		knobs[i].defaultvalue = params.pots[knobs[i].index].normalize(params.pots[knobs[i].index].defaultvalue);
-		audioProcessor.apvts.addParameterListener(knobs[i].id,this);
+		add_listener(knobs[i].id);
 	}
 	hold = params.holdsmooth.getTargetValue() >.5;
 	oversampling = params.oversampling;
@@ -111,53 +121,31 @@ CRMBLAudioProcessorEditor::CRMBLAudioProcessorEditor (CRMBLAudioProcessor& p, in
 			sync = state.values[i];
 	}
 	recalclabels();
-	audioProcessor.apvts.addParameterListener("oversampling",this);
-	audioProcessor.apvts.addParameterListener("hold",this);
-	audioProcessor.apvts.addParameterListener("pingpostfeedback",this);
-	audioProcessor.apvts.addParameterListener("sync",this);
-
-#ifdef BANNER
-	setSize(507,465+21);
-	banneroffset = 21.f/getHeight();
-#else
-	setSize(507,465);
-#endif
-	setResizable(false, false);
-
-	setOpaque(true);
-	context.setOpenGLVersionRequired(OpenGLContext::OpenGLVersion::openGL3_2);
-	context.setRenderer(this);
-	context.attachTo(*this);
+	add_listener("oversampling");
+	add_listener("hold");
+	add_listener("pingpostfeedback");
+	add_listener("sync");
 
 	rmsdamp.reset(0,.9,-1,30,1);
 	for(int i = 0; i < 32; i++) damparray[i] = 0;
 
-	startTimerHz(30);
+	init(&look_n_feel);
 }
 CRMBLAudioProcessorEditor::~CRMBLAudioProcessorEditor() {
-	for(int i = 1; i < knobcount; i++) audioProcessor.apvts.removeParameterListener(knobs[i].id,this);
-	audioProcessor.apvts.removeParameterListener("oversampling",this);
-	audioProcessor.apvts.removeParameterListener("hold",this);
-	audioProcessor.apvts.removeParameterListener("pingpostfeedback",this);
-	audioProcessor.apvts.removeParameterListener("sync",this);
-	stopTimer();
-	context.detach();
+	close();
 }
 
 void CRMBLAudioProcessorEditor::newOpenGLContextCreated() {
-	audioProcessor.logger.init(&context,banneroffset,getWidth(),getHeight());
-
-	compileshader(baseshader,
+	baseshader = add_shader(
 //BASE VERT
 R"(#version 150 core
 in vec2 aPos;
-uniform vec2 texscale;
 uniform float banner;
 uniform float offset;
 out vec2 uv;
 void main(){
 	gl_Position = vec4(vec2(aPos.x,aPos.y*(1-banner)-offset)*2-1,0,1);
-	uv = vec2(aPos.x*texscale.x,1-(1-aPos.y)*texscale.y);
+	uv = aPos;
 })",
 //BASE FRAG
 R"(#version 150 core
@@ -181,16 +169,15 @@ void main(){
 	}
 })");
 
-	compileshader(logoshader,
+	logoshader = add_shader(
 //LOGO VERT
 R"(#version 150 core
 in vec2 aPos;
 uniform float banner;
-uniform vec2 texscale;
 out vec2 uv;
 void main(){
 	gl_Position = vec4(vec2(aPos.x,aPos.y*(1-banner))*2-1,0,1);
-	uv = vec2(aPos.x*texscale.x,1-(1-aPos.y)*texscale.y);
+	uv = aPos;
 })",
 //LOGO FRAG
 R"(#version 150 core
@@ -208,7 +195,7 @@ void main(){
 		fragColor = vec4(vec2(col.g*(1-max(min((texture(basetex,vec2(min(uv.x+websiteht,.3),uv.y)).b-.5)*dpi+.5,1),0)*.5)),1,col.a);
 })");
 
-	compileshader(knobshader,
+	knobshader = add_shader(
 //KNOB VERT
 R"(#version 150 core
 in vec2 aPos;
@@ -253,7 +240,7 @@ void main(){
 	if(dark > .5) fragColor = vec4(fragColor.r,fragColor.r,fragColor.r,fragColor.a);
 })");
 
-	compileshader(feedbackshader,
+	feedbackshader = add_shader(
 //FEEDBACK VERT
 R"(#version 150 core
 in vec2 aPos;
@@ -316,7 +303,7 @@ void main(){
 	fragColor   = vec4(vec3(col1.r,col2.r,col1.r)*vec3(col1.g,col2.g,col1.g)+(1-vec3(col1.g,col2.g,col1.g))*feedback*fragColor.rgb,1);
 })");
 
-	compileshader(buffershader,
+	buffershader = add_shader(
 //BUFFER VERT
 R"(#version 150 core
 in vec2 aPos;
@@ -342,7 +329,7 @@ void main(){
 	fragColor = vec4(abs(fragColor.rgb*fragColor.a-vec3(pow(reverse,.5),reverse,pow(reverse,2.))),1);
 })");
 
-	compileshader(numbershader,
+	numbershader = add_shader(
 //NUMBER VERT
 R"(#version 150 core
 in vec2 aPos;
@@ -353,7 +340,7 @@ uniform vec2 index;
 uniform int length;
 out vec2 uv;
 void main(){
-	gl_Position = vec4(aPos*size*vec2(length,1)+pos,0,1);
+	gl_Position = vec4(aPos.x*size.x*length+pos.x,(aPos.y*size.y+(1-pos.y))*(1-banner)+banner,0,1);
 	uv = (aPos+index)*vec2(.0625*length,.5);
 })",
 //NUMBER FRAG
@@ -366,96 +353,24 @@ void main(){
 	fragColor = vec4(texture(numbertex,uv).r)*vec4(col,1);
 })");
 
-	basetex.loadImage(ImageCache::getFromMemory(BinaryData::map_png, BinaryData::map_pngSize));
-	basetex.bind();
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	add_texture(&basetex, BinaryData::map_png, BinaryData::map_pngSize);
+	add_texture(&numbertex, BinaryData::numbers_png, BinaryData::numbers_pngSize, GL_NEAREST, GL_NEAREST);
 
-	numbertex.loadImage(ImageCache::getFromMemory(BinaryData::numbers_png, BinaryData::numbers_pngSize));
-	numbertex.bind();
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	add_frame_buffer(&feedbackbuffer, width, height);
+	add_frame_buffer(&mainbuffer, width, height);
 
-	feedbackbuffer.initialise(context, 507*dpi, 465*dpi);
-	glBindTexture(GL_TEXTURE_2D, feedbackbuffer.getTextureID());
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	mainbuffer.initialise(context, 507*dpi, 465*dpi);
-	glBindTexture(GL_TEXTURE_2D, mainbuffer.getTextureID());
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-#ifdef BANNER
-	compileshader(bannershader,
-//BANNER VERT
-R"(#version 150 core
-in vec2 aPos;
-uniform vec2 texscale;
-uniform vec2 size;
-out vec2 uv;
-void main(){
-	gl_Position = vec4((aPos*vec2(1,size.y))*2-1,0,1);
-	uv = vec2(aPos.x*size.x,1-(1-aPos.y)*texscale.y);
-})",
-//BANNER FRAG
-R"(#version 150 core
-in vec2 uv;
-uniform sampler2D tex;
-uniform vec2 texscale;
-uniform float pos;
-uniform float free;
-uniform float dpi;
-out vec4 fragColor;
-void main(){
-	vec2 col = max(min((texture(tex,vec2(mod(uv.x+pos,1)*texscale.x,uv.y)).rg-.5)*dpi+.5,1),0);
-	fragColor = vec4(vec3(col.r*free+col.g*(1-free)),1);
-})");
-
-	bannertex.loadImage(ImageCache::getFromMemory(BinaryData::banner_png, BinaryData::banner_pngSize));
-	bannertex.bind();
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-#endif
-
-	context.extensions.glGenBuffers(1, &arraybuffer);
-}
-void CRMBLAudioProcessorEditor::compileshader(std::unique_ptr<OpenGLShaderProgram> &shader, String vertexshader, String fragmentshader) {
-	shader.reset(new OpenGLShaderProgram(context));
-	if(!shader->addVertexShader(vertexshader))
-		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Vertex shader error",shader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at melody@unplug.red. THANKS!","OK!");
-	if(!shader->addFragmentShader(fragmentshader))
-		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Fragment shader error",shader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at melody@unplug.red. THANKS!","OK!");
-	shader->link();
+	draw_init();
 }
 void CRMBLAudioProcessorEditor::renderOpenGL() {
+	draw_begin();
+
 	//glEnable(GL_TEXTURE_2D);
 	//glDisable(GL_LIGHTING);
 	glEnable(GL_BLEND);
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_LINE_SMOOTH);
 
-	if(context.getRenderingScale() != dpi) {
-		dpi = context.getRenderingScale();
-		feedbackbuffer.release();
-		feedbackbuffer.initialise(context, 507*dpi, 465*dpi);
-		glBindTexture(GL_TEXTURE_2D, feedbackbuffer.getTextureID());
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		mainbuffer.release();
-		mainbuffer.initialise(context, 507*dpi, 465*dpi);
-		glBindTexture(GL_TEXTURE_2D, mainbuffer.getTextureID());
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	}
-
-	context.extensions.glBindBuffer(GL_ARRAY_BUFFER, arraybuffer);
+	context.extensions.glBindBuffer(GL_ARRAY_BUFFER, array_buffer);
 	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -467,17 +382,16 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glActiveTexture(GL_TEXTURE0);
 	basetex.bind();
 	baseshader->setUniform("basetex",0);
-	baseshader->setUniform("banner",banneroffset);
+	baseshader->setUniform("banner",banner_offset);
 	baseshader->setUniform("gb",postfb?1.f:0.f);
-	baseshader->setUniform("texscale",507.f/basetex.getWidth(),465.f/basetex.getHeight());
-	baseshader->setUniform("dpi",(float)fmax(dpi,1));
+	baseshader->setUniform("dpi",(float)fmax(scaled_dpi,1));
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	for(int i = 0; i < knobcount; i++) {
 		knobs[i].yoffset = damparray[((int)round(33+dampreadpos-knobs[i].r*16))%32]*.05f;
 		if(i != 1 && i != 2 && i != 4) {
 			baseshader->setUniform("r",knobs[i].r);
-			baseshader->setUniform("offset",knobs[i].yoffset*(1-banneroffset)*1.15f);
+			baseshader->setUniform("offset",knobs[i].yoffset*(1-banner_offset)*1.15f);
 			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 		}
 	}
@@ -495,21 +409,20 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glActiveTexture(GL_TEXTURE0);
 	basetex.bind();
 	logoshader->setUniform("basetex",0);
-	logoshader->setUniform("banner",banneroffset);
+	logoshader->setUniform("banner",banner_offset);
 	logoshader->setUniform("websiteht",websiteht);
-	logoshader->setUniform("texscale",507.f/basetex.getWidth(),465.f/basetex.getHeight());
-	logoshader->setUniform("dpi",(float)fmax(dpi,1));
+	logoshader->setUniform("dpi",(float)fmax(scaled_dpi,1));
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	context.extensions.glDisableVertexAttribArray(coord);
 
-	float ratio = 465.f/507.f;
+	float ratio = ((float)height)/width;
 	knobshader->use();
 	coord = context.extensions.glGetAttribLocation(knobshader->getProgramID(),"aPos");
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
-	knobshader->setUniform("banner",banneroffset);
+	knobshader->setUniform("banner",banner_offset);
 	knobshader->setUniform("circle",1.f);
 	knobshader->setUniform("dark",0);
 	for(int i = 0; i < knobcount; i++) {
@@ -521,19 +434,18 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 			context.extensions.glActiveTexture(GL_TEXTURE0);
 			basetex.bind();
 			baseshader->setUniform("basetex",0);
-			baseshader->setUniform("texscale",507.f/basetex.getWidth(),465.f/basetex.getHeight());
-			baseshader->setUniform("dpi",(float)fmax(dpi,1));
+			baseshader->setUniform("dpi",(float)fmax(scaled_dpi,1));
 			context.extensions.glEnableVertexAttribArray(coord);
 			context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 			if(i == 1) {
-				baseshader->setUniform("offset",knobs[1].yoffset*(1-banneroffset)*1.15f);
+				baseshader->setUniform("offset",knobs[1].yoffset*(1-banner_offset)*1.15f);
 				baseshader->setUniform("r",knobs[1].r);
 				glDrawArrays(GL_TRIANGLE_STRIP,0,4);
-				baseshader->setUniform("offset",knobs[2].yoffset*(1-banneroffset)*1.15f);
+				baseshader->setUniform("offset",knobs[2].yoffset*(1-banner_offset)*1.15f);
 				baseshader->setUniform("r",knobs[2].r);
 				glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 			} else {
-				baseshader->setUniform("offset",knobs[4].yoffset*(1-banneroffset)*1.15f);
+				baseshader->setUniform("offset",knobs[4].yoffset*(1-banner_offset)*1.15f);
 				baseshader->setUniform("r",knobs[4].r);
 				glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 			}
@@ -582,13 +494,13 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, mainbuffer.getTextureID());
 	feedbackshader->setUniform("maintex",1);
-	feedbackshader->setUniform("banner",banneroffset);
-	float osc = audioProcessor.lastosc.get();
-	float dampmodamp = audioProcessor.lastmodamp.get();
+	feedbackshader->setUniform("banner",banner_offset);
+	float osc = audio_processor.lastosc.get();
+	float dampmodamp = audio_processor.lastmodamp.get();
 	float time = 0;
 	bool outofrange = false;
 	if(sync > 0) {
-		time = ((30*(knobs[2].value*15+1))/audioProcessor.lastbpm.get()-MIN_DLY)/(MAX_DLY-MIN_DLY);
+		time = ((30*(knobs[2].value*15+1))/audio_processor.lastbpm.get()-MIN_DLY)/(MAX_DLY-MIN_DLY);
 		if(time > 1) {
 			outofrange = true;
 			time = 1;
@@ -612,7 +524,7 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 	feedbackshader->setUniform("feedback",knobs[1].value);
 	feedbackshader->setUniform("lowpass",knobs[10].value);
 	feedbackshader->setUniform("ratio",ratio);
-	feedbackshader->setUniform("res",(1-banneroffset)*getHeight(),getWidth());
+	feedbackshader->setUniform("res",(float)height,(float)width);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	context.extensions.glDisableVertexAttribArray(coord);
 
@@ -628,7 +540,7 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, mainbuffer.getTextureID());
 	buffershader->setUniform("maintex",1);
-	buffershader->setUniform("banner",banneroffset);
+	buffershader->setUniform("banner",banner_offset);
 	buffershader->setUniform("wet",knobs[5].value);
 	buffershader->setUniform("reverse",knobs[9].value);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
@@ -641,20 +553,20 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glActiveTexture(GL_TEXTURE0);
 	numbertex.bind();
 	numbershader->setUniform("numbertex",0);
-	float l = 16.f/getWidth();
-	numbershader->setUniform("banner",banneroffset);
-	numbershader->setUniform("size",l,32.f/getHeight());
+	float l = 16.f/width;
+	numbershader->setUniform("banner",banner_offset);
+	numbershader->setUniform("size",l,32.f/height);
 	numbershader->setUniform("length",1);
 	numbershader->setUniform("col",fabs(1-pow(knobs[9].value,.5)),fabs(1-knobs[9].value),fabs(1-pow(knobs[9].value,2.)));
 	for(int i = 0; i < pitchnum[0]; i++) {
 		numbershader->setUniform("pos",knobs[7].x*2-1+knobs[7].radius*ratio+(i-pitchnum[0]*.5f)*l,
-				1-((knobs[7].y+knobs[7].yoffset)*2-knobs[7].radius*.5f+l)*(1-banneroffset));
+				(knobs[7].y+knobs[7].yoffset)*2-knobs[7].radius*.5f+l);
 		numbershader->setUniform("index",pitchnum[i+1],1);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	}
 	for(int i = 0; i < timenum[0]; i++) {
 		numbershader->setUniform("pos",knobs[2].x*2-1+knobs[2].radius*ratio+(i-timenum[0]*.5f)*l,
-				1-((knobs[2].y+knobs[2].yoffset)*2-knobs[2].radius*.6f+l)*(1-banneroffset));
+				(knobs[2].y+knobs[2].yoffset)*2-knobs[2].radius*.6f+l);
 		numbershader->setUniform("index",timenum[i+1],1);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	}
@@ -662,59 +574,16 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 		numbershader->setUniform("length",13);
 		numbershader->setUniform("col",1,0,0);
 		numbershader->setUniform("pos",knobs[2].x*2-1+knobs[2].radius*ratio-6.5f*l,
-				1-((knobs[2].y+knobs[2].yoffset)*2-knobs[2].radius*.6f-l)*(1-banneroffset));
+				(knobs[2].y+knobs[2].yoffset)*2-knobs[2].radius*.6f-l);
 		numbershader->setUniform("index",0.f,0.f);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	}
 	context.extensions.glDisableVertexAttribArray(coord);
 
-#ifdef BANNER
-	bannershader->use();
-	coord = context.extensions.glGetAttribLocation(bannershader->getProgramID(),"aPos");
-	context.extensions.glEnableVertexAttribArray(coord);
-	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
-	context.extensions.glActiveTexture(GL_TEXTURE0);
-	bannertex.bind();
-	bannershader->setUniform("tex",0);
-	bannershader->setUniform("dpi",dpi);
-#ifdef BETA
-	bannershader->setUniform("texscale",494.f/bannertex.getWidth(),21.f/bannertex.getHeight());
-	bannershader->setUniform("size",getWidth()/494.f,21.f/getHeight());
-	bannershader->setUniform("free",0.f);
-#else
-	bannershader->setUniform("texscale",426.f/bannertex.getWidth(),21.f/bannertex.getHeight());
-	bannershader->setUniform("size",getWidth()/426.f,21.f/getHeight());
-	bannershader->setUniform("free",1.f);
-#endif
-	bannershader->setUniform("pos",bannerx);
-	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
-	context.extensions.glDisableVertexAttribArray(coord);
-#endif
-
-	audioProcessor.logger.drawlog();
+	draw_end();
 }
 void CRMBLAudioProcessorEditor::openGLContextClosing() {
-	baseshader->release();
-	logoshader->release();
-	knobshader->release();
-	feedbackshader->release();
-	buffershader->release();
-	numbershader->release();
-
-	basetex.release();
-	numbertex.release();
-
-	feedbackbuffer.release();
-	mainbuffer.release();
-
-#ifdef BANNER
-	bannershader->release();
-	bannertex.release();
-#endif
-
-	audioProcessor.logger.font.release();
-
-	context.extensions.glDeleteBuffers(1,&arraybuffer);
+	draw_close();
 }
 void CRMBLAudioProcessorEditor::paint (Graphics& g) { }
 
@@ -728,22 +597,18 @@ void CRMBLAudioProcessorEditor::timerCallback() {
 
 	if(websiteht > -.3) websiteht -= .023;
 
-	if(audioProcessor.rmscount.get() > 0) {
-		rms = sqrt(audioProcessor.rmsadd.get()/audioProcessor.rmscount.get());
+	if(audio_processor.rmscount.get() > 0) {
+		rms = sqrt(audio_processor.rmsadd.get()/audio_processor.rmscount.get());
 		if(knobs[5].value > .4f) rms = rms/knobs[5].value;
 		else rms *= 2.5f;
-		audioProcessor.rmsadd = 0;
-		audioProcessor.rmscount = 0;
+		audio_processor.rmsadd = 0;
+		audio_processor.rmscount = 0;
 	} else rms *= .9f;
 
 	dampreadpos = (dampreadpos+1)%32;
 	damparray[dampreadpos] = rmsdamp.nextvalue(rms,0);
 
-#ifdef BANNER
-	bannerx = fmod(bannerx+.0005f,1.f);
-#endif
-
-	context.triggerRepaint();
+	update();
 }
 
 void CRMBLAudioProcessorEditor::parameterChanged(const String& parameterID, float newValue) {
@@ -819,7 +684,7 @@ void CRMBLAudioProcessorEditor::recalclabels() {
 }
 void CRMBLAudioProcessorEditor::mouseMove(const MouseEvent& event) {
 	int prevhover = hover;
-	hover = recalchover(event.x,event.y);
+	hover = recalc_hover(event.x,event.y);
 	if(hover == -5 && prevhover != -5 && websiteht <= -.3) websiteht = .19f;
 	if(prevhover != hover && held == 0) {
 		if(hover > -1) knobs[hover].hoverstate = -4;
@@ -830,31 +695,82 @@ void CRMBLAudioProcessorEditor::mouseExit(const MouseEvent& event) {
 	hover = -1;
 }
 void CRMBLAudioProcessorEditor::mouseDown(const MouseEvent& event) {
+	if(dpi < 0) return;
+	if(event.mods.isRightButtonDown()) {
+		hover = recalc_hover(event.x,event.y);
+		std::unique_ptr<PopupMenu> rightclickmenu(new PopupMenu());
+		std::unique_ptr<PopupMenu> scalemenu(new PopupMenu());
+
+		int i = 20;
+		while(++i < (ui_scales.size()+21))
+			scalemenu->addItem(i,(String)round(ui_scales[i-21]*100)+"%",true,(i-21)==ui_scale_index);
+
+		rightclickmenu->setLookAndFeel(&look_n_feel);
+		rightclickmenu->addItem(1,"'Copy preset",true);
+		rightclickmenu->addItem(2,"'Paste preset",audio_processor.is_valid_preset_string(SystemClipboard::getTextFromClipboard()));
+		rightclickmenu->addItem(3,"'Randomize",true);
+		rightclickmenu->addSeparator();
+		rightclickmenu->addSubMenu("'Scale",*scalemenu);
+
+		String description = "";
+		if(hover > -1) {
+			description = knobs[hover].description;
+		} else {
+			if(hover == -2)
+				description = "If set to 'POST', the ping-pong knob shortens the initial delay for the left or right channels.\nIf set to 'PRE' this also affects the feedback, creating interesting polyrythmic patterns.";
+			else if(hover == -3)
+				description = "Turns oversampling on/off";
+			else if(hover == -4)
+				description = "Disables input and sets feedback to 100%, thus holding the current sound until disabled.";
+			else if(hover == -5)
+				description = "Trust the process!";
+			description = look_n_feel.add_line_breaks(description);
+		}
+		if(description != "") {
+			rightclickmenu->addSeparator();
+			rightclickmenu->addItem(-1,"'"+description,false);
+		}
+
+		rightclickmenu->showMenuAsync(PopupMenu::Options(),[this](int result){
+			if(result <= 0) return;
+			else if(result >= 20) {
+				set_ui_scale(result-21);
+			} else if(result == 1) { //copy preset
+				SystemClipboard::copyTextToClipboard(audio_processor.get_preset(audio_processor.currentpreset));
+			} else if(result == 2) { //paste preset
+				audio_processor.set_preset(SystemClipboard::getTextFromClipboard(), audio_processor.currentpreset);
+			} else if(result == 3) {
+				audio_processor.randomize();
+			}
+		});
+		return;
+	}
+
 	held = -1;
 	initialdrag = hover;
 	if(hover > -1) {
 		initialvalue = knobs[hover].value;
 		valueoffset = 0;
-		audioProcessor.undoManager.beginNewTransaction();
-		audioProcessor.apvts.getParameter(knobs[hover].id)->beginChangeGesture();
-		audioProcessor.lerpchanged[knobs[hover].index] = true;
+		audio_processor.undo_manager.beginNewTransaction();
+		audio_processor.apvts.getParameter(knobs[hover].id)->beginChangeGesture();
+		audio_processor.lerpchanged[knobs[hover].index] = true;
 		dragpos = event.getScreenPosition();
 		event.source.enableUnboundedMouseMovement(true);
 	} else if(hover == -2) {
 		postfb = !postfb;
-		audioProcessor.apvts.getParameter("pingpostfeedback")->setValueNotifyingHost(postfb?1.f:0.f);
-		audioProcessor.undoManager.setCurrentTransactionName(postfb?"Pingpong post feedback":"Pingpong pre feedback");
-		audioProcessor.undoManager.beginNewTransaction();
+		audio_processor.apvts.getParameter("pingpostfeedback")->setValueNotifyingHost(postfb?1.f:0.f);
+		audio_processor.undo_manager.setCurrentTransactionName(postfb?"Pingpong post feedback":"Pingpong pre feedback");
+		audio_processor.undo_manager.beginNewTransaction();
 	} else if(hover == -3) {
 		oversampling = !oversampling;
-		audioProcessor.apvts.getParameter("oversampling")->setValueNotifyingHost(oversampling?1.f:0.f);
-		audioProcessor.undoManager.setCurrentTransactionName(oversampling?"Turned oversampling on":"Turned oversampling off");
-		audioProcessor.undoManager.beginNewTransaction();
+		audio_processor.apvts.getParameter("oversampling")->setValueNotifyingHost(oversampling?1.f:0.f);
+		audio_processor.undo_manager.setCurrentTransactionName(oversampling?"Turned oversampling on":"Turned oversampling off");
+		audio_processor.undo_manager.beginNewTransaction();
 	} else if (hover == -4) {
 		hold = !hold;
-		audioProcessor.apvts.getParameter("hold")->setValueNotifyingHost(hold?1.f:0.f);
-		audioProcessor.undoManager.setCurrentTransactionName(hold?"Hold":"Unhold");
-		audioProcessor.undoManager.beginNewTransaction();
+		audio_processor.apvts.getParameter("hold")->setValueNotifyingHost(hold?1.f:0.f);
+		audio_processor.undo_manager.setCurrentTransactionName(hold?"Hold":"Unhold");
+		audio_processor.undo_manager.beginNewTransaction();
 	}
 }
 void CRMBLAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
@@ -870,32 +786,33 @@ void CRMBLAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 
 		float value = initialvalue-(event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*(finemode?.0005f:.005f)*(hover==7?.2:1);
 		if(hover == 7 && !event.mods.isCtrlDown()) {
-			audioProcessor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(round((value-valueoffset)*48)/48.f);
+			audio_processor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(round((value-valueoffset)*48)/48.f);
 		} else if(knobs[hover].id == "time") {
 			if(event.mods.isCtrlDown()) {
-				audioProcessor.apvts.getParameter("sync")->setValueNotifyingHost((fmax(value-valueoffset,0)*15+1)*.0625);
+				audio_processor.apvts.getParameter("sync")->setValueNotifyingHost((fmax(value-valueoffset,0)*15+1)*.0625);
 			} else {
-				if(sync > 0) audioProcessor.apvts.getParameter("sync")->setValueNotifyingHost(0);
-				audioProcessor.apvts.getParameter("time")->setValueNotifyingHost(value-valueoffset);
+				if(sync > 0) audio_processor.apvts.getParameter("sync")->setValueNotifyingHost(0);
+				audio_processor.apvts.getParameter("time")->setValueNotifyingHost(value-valueoffset);
 			}
 		} else {
-			audioProcessor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(value-valueoffset);
+			audio_processor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(value-valueoffset);
 		}
 
 		valueoffset = fmax(fmin(valueoffset,value+.1f),value-1.1f);
 	}
 }
 void CRMBLAudioProcessorEditor::mouseUp(const MouseEvent& event) {
+	if(dpi < 0) return;
 	if(hover > -1) {
-		audioProcessor.undoManager.setCurrentTransactionName(
+		audio_processor.undo_manager.setCurrentTransactionName(
 			(String)((knobs[hover].value - initialvalue) >= 0 ? "Increased " : "Decreased ") += knobs[hover].name);
-		audioProcessor.apvts.getParameter(knobs[hover].id)->endChangeGesture();
-		audioProcessor.undoManager.beginNewTransaction();
+		audio_processor.apvts.getParameter(knobs[hover].id)->endChangeGesture();
+		audio_processor.undo_manager.beginNewTransaction();
 		event.source.enableUnboundedMouseMovement(false);
 		Desktop::setMousePosition(dragpos);
 	} else {
 		int prevhover = hover;
-		hover = recalchover(event.x,event.y);
+		hover = recalc_hover(event.x,event.y);
 		if(hover == -5) {
 			if(prevhover == -5) URL("https://vst.unplug.red/").launchInDefaultBrowser();
 			else if(websiteht <= -.3) websiteht = .19f;
@@ -906,35 +823,154 @@ void CRMBLAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 }
 void CRMBLAudioProcessorEditor::mouseDoubleClick(const MouseEvent& event) {
 	if(hover > -1) {
-		audioProcessor.undoManager.setCurrentTransactionName((String)"Reset " += knobs[hover].name);
-		audioProcessor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(knobs[hover].defaultvalue);
+		audio_processor.undo_manager.setCurrentTransactionName((String)"Reset " += knobs[hover].name);
+		audio_processor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(knobs[hover].defaultvalue);
 		if(knobs[hover].id == "time")
-			audioProcessor.apvts.getParameter("sync")->setValueNotifyingHost(0);
-		audioProcessor.undoManager.beginNewTransaction();
+			audio_processor.apvts.getParameter("sync")->setValueNotifyingHost(0);
+		audio_processor.undo_manager.beginNewTransaction();
 	}
 }
 void CRMBLAudioProcessorEditor::mouseWheelMove(const MouseEvent& event, const MouseWheelDetails& wheel) {
 	if(wheel.deltaY == 0) return;
 	if(hover == 7 && !event.mods.isCtrlDown())
-		audioProcessor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(
+		audio_processor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(
 			round(knobs[hover].value*48+(wheel.deltaY>0?1:-1))/48.);
 	else if(hover > -1)
-		audioProcessor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(
+		audio_processor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(
 			knobs[hover].value+wheel.deltaY*((event.mods.isShiftDown() || event.mods.isAltDown())?.03f:.2f));
 }
-int CRMBLAudioProcessorEditor::recalchover(float x, float y) {
+int CRMBLAudioProcessorEditor::recalc_hover(float x, float y) {
+	if(dpi < 0) return -1;
+	x /= ui_scales[ui_scale_index];
+	y /= ui_scales[ui_scale_index];
+
 	if (x >= 9 && x <= 160 && y >= 335 && y <= 456) {
 		if(x <= 50 && y <= 378) return -4;
 		else if(x <= 119 && y >= 382 && y <= 402) return -3;
 		else if(y >= 406) return -5;
 		return -1;
-	} else if(x >= 336 && x <= 381 && (y-knobs[6].yoffset*465) >= 380 && (y-knobs[6].yoffset*465) <= 421) return -2;
+	} else if(x >= 336 && x <= 381 && (y-knobs[6].yoffset*height) >= 380 && (y-knobs[6].yoffset*height) <= 421) return -2;
 	float r = 0, xx = 0, yy = 0;
 	for(int i = knobcount-1; i >= 1; i--) {
-		r = knobs[i].radius*465*.5;
-		xx = knobs[i].x*getWidth()+r-x;
-		yy = (knobs[i].y+knobs[i].yoffset)*465-r-y;
+		r = knobs[i].radius*height*.5;
+		xx = knobs[i].x*width+r-x;
+		yy = (knobs[i].y+knobs[i].yoffset)*height-r-y;
 		if(sqrt(xx*xx+yy*yy)<= r) return i;
 	}
 	return -1;
+}
+
+LookNFeel::LookNFeel() {
+	setColour(PopupMenu::backgroundColourId,Colour::fromFloatRGBA(0.f,0.f,0.f,0.f));
+	font = find_font("Tahoma|Helvetica Neue|Helvetica|Roboto");
+}
+LookNFeel::~LookNFeel() {
+}
+Font LookNFeel::getPopupMenuFont() {
+	return Font(font,"Regular",18.f*scale);
+}
+void LookNFeel::drawPopupMenuBackground(Graphics &g, int width, int height) {
+	g.setColour(fg);
+	g.fillRect(0,0,width,height);
+	g.setColour(bg);
+	g.fillRect(scale,scale,width-2*scale,height-2*scale);
+}
+void LookNFeel::drawPopupMenuItem(Graphics &g, const Rectangle<int> &area, bool isSeparator, bool isActive, bool isHighlighted, bool isTicked, bool hasSubMenu, const String &text, const String &shortcutKeyText, const Drawable *icon, const Colour *textColour) {
+	if(isSeparator) {
+		g.setColour(fg);
+		g.fillRect(0,0,area.getWidth(),area.getHeight());
+		return;
+	}
+
+	bool removeleft = text.startsWith("'");
+	if(isHighlighted && isActive) {
+		g.setColour(fg);
+		g.fillRect(0,0,area.getWidth(),area.getHeight());
+		g.setColour(bg);
+	} else {
+		g.setColour(fg);
+	}
+	if(textColour != nullptr)
+		g.setColour(*textColour);
+
+	auto r = area;
+	if(removeleft) r.removeFromLeft(5*scale);
+	else r.removeFromLeft(area.getHeight());
+
+	Font font = getPopupMenuFont();
+	if(!isActive && removeleft) font.setItalic(true);
+	float maxFontHeight = ((float)r.getHeight())/1.45f;
+	if(font.getHeight() > maxFontHeight)
+		font.setHeight(maxFontHeight);
+	g.setFont(font);
+
+	Rectangle<float> iconArea = area.toFloat().withX(area.getX()+(r.getX()-area.getX())*.5f-area.getHeight()*.5f).withWidth(area.getHeight());
+	if(icon != nullptr)
+		icon->drawWithin(g, iconArea.reduced(2), RectanglePlacement::centred | RectanglePlacement::onlyReduceInSize, 1.f);
+	else if(isTicked)
+		g.fillEllipse(iconArea.reduced(iconArea.getHeight()*.3f));
+
+	if(hasSubMenu) {
+		float s = area.getHeight()*.35f;
+		float x = area.getX()+area.getWidth()-area.getHeight()*.5f-s*.35f;
+		float y = area.getCentreY();
+		Path path;
+		path.startNewSubPath
+				   (x,y-s*.5f);
+		path.lineTo(x+s*.7f,y);
+		path.lineTo(x,y+s*.5f);
+		path.lineTo(x,y-s*.5f);
+		g.fillPath(path);
+	}
+
+	if(removeleft)
+		g.drawFittedText(text.substring(1), r, Justification::centredLeft, 1);
+	else
+		g.drawFittedText(text, r, Justification::centredLeft, 1);
+
+	if(shortcutKeyText.isNotEmpty()) {
+		Font f2 = font;
+		f2.setHeight(f2.getHeight()*.75f);
+		f2.setHorizontalScale(.95f);
+		g.setFont(f2);
+		g.drawText(shortcutKeyText, r, Justification::centredRight, true);
+	}
+}
+int LookNFeel::getPopupMenuBorderSize() {
+	return (int)floor(scale);
+}
+void LookNFeel::getIdealPopupMenuItemSize(const String& text, const bool isSeparator, int standardMenuItemHeight, int& idealWidth, int& idealHeight)
+{
+	if(isSeparator) {
+		idealWidth = 50*scale;
+		idealHeight = (int)floor(scale);
+	} else {
+		Font font(getPopupMenuFont());
+
+		if(standardMenuItemHeight > 0 && font.getHeight() > standardMenuItemHeight/1.3f)
+			font.setHeight(standardMenuItemHeight/1.3f);
+
+		bool removeleft = text.startsWith("'");
+		String newtext = text;
+		if(removeleft)
+			newtext = text.substring(1);
+
+		int idealheightsingle = (int)floor(font.getHeight()*1.3);
+
+		std::stringstream ss(newtext.trim().toRawUTF8());
+		std::string token;
+		idealWidth = 0;
+		int lines = 0;
+		while(std::getline(ss, token, '\n')) {
+			idealWidth = fmax(idealWidth,font.getStringWidth(token));
+			++lines;
+		}
+
+		if(removeleft)
+			idealWidth += idealheightsingle*2-5*scale;
+		else
+			idealWidth += idealheightsingle;
+
+		idealHeight = (int)floor(font.getHeight()*(lines+.3));
+	}
 }

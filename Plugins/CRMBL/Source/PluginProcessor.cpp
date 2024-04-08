@@ -2,14 +2,16 @@
 #include "PluginEditor.h"
 
 CRMBLAudioProcessor::CRMBLAudioProcessor() :
-	AudioProcessor(BusesProperties().withInput("Input",AudioChannelSet::stereo(),true).withOutput("Output",AudioChannelSet::stereo(),true)),
-	apvts(*this, &undoManager, "Parameters", createParameters())
-{
+	apvts(*this, &undo_manager, "Parameters", create_parameters()),
+	plugmachine_dsp(BusesProperties().withInput("Input",AudioChannelSet::stereo(),true).withOutput("Output",AudioChannelSet::stereo(),true), &apvts) {
+
+	init();
+
 	//										,time	,sync	,modamp	,modfreq,pingpon,pingpos,feedbac,reverse,chew	,pitch	,lowpass,wet	,
 	//presets[0] = pluginpreset("Default"	,0.32f	,0.0f	,0.15f	,0.5f	,0.0f	,1.0f	,0.5f	,0.0f	,0.0f	,0.0f	,0.3f	,0.4	);
 	for(int i = 0; i < getNumPrograms(); i++) {
 		//presets[i] = presets[0];
-		presets[i].name = "Program " + (String)(i+1);
+		presets[i].name = "Program "+(String)(i+1);
 	}
 
 	params.pots[0] = potentiometer("Time (MS)"			,"time"				,.001f	,presets[0].values[0]	);
@@ -28,20 +30,18 @@ CRMBLAudioProcessor::CRMBLAudioProcessor() :
 	for(int i = 0; i < paramcount; i++) {
 		state.values[i] = params.pots[i].inflate(apvts.getParameter(params.pots[i].id)->getValue());
 		if(params.pots[i].smoothtime > 0) params.pots[i].smooth.setCurrentAndTargetValue(state.values[i]);
-		apvts.addParameterListener(params.pots[i].id, this);
+		add_listener(params.pots[i].id);
 	}
 	params.hold = apvts.getParameter("hold")->getValue() > .5 ? 1 : 0;
 	params.holdsmooth.setCurrentAndTargetValue(params.hold);
-	apvts.addParameterListener("hold", this);
 	params.oversampling = apvts.getParameter("oversampling")->getValue() > .5;
-	apvts.addParameterListener("oversampling", this);
-	apvts.addParameterListener("randomize", this);
+	add_listener("hold");
+	add_listener("oversampling");
+	add_listener("randomize");
 }
 
 CRMBLAudioProcessor::~CRMBLAudioProcessor(){
-	for(int i = 0; i < paramcount; i++) apvts.removeParameterListener(params.pots[i].id, this);
-	apvts.removeParameterListener("hold", this);
-	apvts.removeParameterListener("oversampling", this);
+	close();
 }
 
 const String CRMBLAudioProcessor::getName() const { return "CRMBL"; }
@@ -52,10 +52,10 @@ double CRMBLAudioProcessor::getTailLengthSeconds() const { return 0.0; }
 
 int CRMBLAudioProcessor::getNumPrograms() { return 20; }
 int CRMBLAudioProcessor::getCurrentProgram() { return currentpreset; }
-void CRMBLAudioProcessor::setCurrentProgram (int index) {
+void CRMBLAudioProcessor::setCurrentProgram(int index) {
 	if(currentpreset == index) return;
 
-	undoManager.beginNewTransaction((String)"Changed preset to " += presets[index].name);
+	undo_manager.beginNewTransaction((String)"Changed preset to " += presets[index].name);
 	for(int i = 0; i < paramcount; i++) {
 		if(lerpstage < .001 || lerpchanged[i])
 			lerptable[i] = params.pots[i].normalize(presets[currentpreset].values[i]);
@@ -80,7 +80,7 @@ void CRMBLAudioProcessor::timerCallback() {
 		for(int i = 0; i < paramcount; i++) if(!lerpchanged[i])
 			apvts.getParameter(params.pots[i].id)->setValueNotifyingHost(params.pots[i].normalize(presets[currentpreset].values[i]));
 		lerpstage = 0;
-		undoManager.beginNewTransaction();
+		undo_manager.beginNewTransaction();
 		stopTimer();
 		return;
 	}
@@ -89,14 +89,14 @@ void CRMBLAudioProcessor::timerCallback() {
 		apvts.getParameter(params.pots[i].id)->setValueNotifyingHost(lerptable[i]);
 	}
 }
-const String CRMBLAudioProcessor::getProgramName (int index) {
+const String CRMBLAudioProcessor::getProgramName(int index) {
 	return { presets[index].name };
 }
-void CRMBLAudioProcessor::changeProgramName (int index, const String& newName) {
+void CRMBLAudioProcessor::changeProgramName(int index, const String& newName) {
 	presets[index].name = newName;
 }
 
-void CRMBLAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {
+void CRMBLAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
 	if(!saved && sampleRate > 60000) {
 		params.oversampling = false;
 		apvts.getParameter("oversampling")->setValueNotifyingHost(0);
@@ -170,14 +170,14 @@ void CRMBLAudioProcessor::reseteverything() {
 }
 void CRMBLAudioProcessor::releaseResources() { }
 
-bool CRMBLAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const {
-	if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
+bool CRMBLAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const {
+	if(layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
 		return false;
 
 	return (layouts.getMainInputChannels() > 0);
 }
 
-void CRMBLAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midiMessages) {
+void CRMBLAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMessages) {
 	ScopedNoDenormals noDenormals;
 
 	if(buffer.getNumChannels() == 0 || buffer.getNumSamples() == 0) return;
@@ -185,8 +185,8 @@ void CRMBLAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 		changechannelnum(buffer.getNumChannels());
 	saved = true;
 
-	for (auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
-		buffer.clear (i, 0, buffer.getNumSamples());
+	for(auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
+		buffer.clear(i, 0, buffer.getNumSamples());
 
 	float prmsadd = rmsadd.get();
 	int prmscount = rmscount.get();
@@ -246,7 +246,7 @@ void CRMBLAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 			if(dampmodamp > 0) osc = (sin(crntsmpl*MathConstants<double>::twoPi)*.5+.5)*dampmodamp;
 			else osc = 0;
 
-			for (int channel = 0; channel < channelnum; ++channel) {
+			for(int channel = 0; channel < channelnum; ++channel) {
 				double channelval = 1-time;
 				if(state.values[5] < 1 && state.values[4] != 0 && channelnum > 1) {
 					channelval = (double)channel/(channelnum-1);
@@ -269,7 +269,7 @@ void CRMBLAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 			}
 			damppitchlatency.nextvalue(pitchlatency,0);
 
-			for (int channel = 0; channel < channelnum; ++channel) {
+			for(int channel = 0; channel < channelnum; ++channel) {
 				delayProcessData[channel][sample] = channelData[channel][sample+startread]*(1-params.hold)+interpolatesamples(delayData[channel],
 					sample+delaybufferindex-fmax((delaytimelerpData[channel][sample]*(MAX_DLY-MIN_DLY)+MIN_DLY)*samplerate-damppitchlatency.v_current[0],512)+delaybuffernumsamples
 					,delaybuffernumsamples)*(1-(1-state.values[6])*(1-params.hold));
@@ -367,7 +367,7 @@ void CRMBLAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& 
 			state.values[11] = params.pots[11].smooth.getNextValue();
 			damppitchlatency.nextvalue(pitchlatency,1);
 
-			for (int channel = 0; channel < channelnum; ++channel) {
+			for(int channel = 0; channel < channelnum; ++channel) {
 				//vis
 				if(prmscount < samplerate*2) {
 					prmsadd += fmin(channelData[channel][sample+startread]*channelData[channel][sample+startread],1);
@@ -455,80 +455,81 @@ AudioProcessorEditor* CRMBLAudioProcessor::createEditor() {
 	return new CRMBLAudioProcessorEditor(*this,paramcount,presets[currentpreset],params);
 }
 
-void CRMBLAudioProcessor::getStateInformation (MemoryBlock& destData) {
-	const char linebreak = '\n';
+void CRMBLAudioProcessor::getStateInformation(MemoryBlock& destData) {
+	const char delimiter = '\n';
 	std::ostringstream data;
 
-	data << version << linebreak
-		<< currentpreset << linebreak
-		<< params.holdsmooth.getTargetValue() << linebreak
-		<< (params.oversampling?1:0) << linebreak;
+	data << version << delimiter
+		<< currentpreset << delimiter
+		<< params.holdsmooth.getTargetValue() << delimiter
+		<< (params.oversampling?1:0) << delimiter;
 
 	for(int i = 0; i < getNumPrograms(); i++) {
-		data << presets[i].name << linebreak;
+		data << presets[i].name << delimiter;
 		for(int v = 0; v < paramcount; v++)
-			data << presets[i].values[v] << linebreak;
+			data << presets[i].values[v] << delimiter;
 	}
 
 	MemoryOutputStream stream(destData, false);
 	stream.writeString(data.str());
 }
-void CRMBLAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
+void CRMBLAudioProcessor::setStateInformation(const void* data, int sizeInBytes) {
+	const char delimiter = '\n';
 	saved = true;
 	try {
 		std::stringstream ss(String::createStringFromData(data, sizeInBytes).toRawUTF8());
 		std::string token;
 
-		std::getline(ss, token, '\n');
+		std::getline(ss, token, delimiter);
 		int saveversion = std::stoi(token);
 
-		std::getline(ss, token, '\n');
+		std::getline(ss, token, delimiter);
 		currentpreset = std::stoi(token);
 
 		if(saveversion >= 1) {
-			std::getline(ss, token, '\n');
+			std::getline(ss, token, delimiter);
 			params.hold = std::stof(token) > .5 ? 1 : 0;
 
-			std::getline(ss, token, '\n');
+			std::getline(ss, token, delimiter);
 			params.oversampling = std::stof(token) > .5;
 
 			for(int i = 0; i < getNumPrograms(); i++) {
-				std::getline(ss, token, '\n');
+				std::getline(ss, token, delimiter);
 				presets[i].name = token;
 				for(int v = 0; v < paramcount; v++) {
-					std::getline(ss, token, '\n');
+					std::getline(ss, token, delimiter);
 					presets[i].values[v] = std::stof(token);
 				}
 			}
 		} else {
 			for(int i = 0; i < 12; i++) {
-				std::getline(ss, token, '\n');
+				std::getline(ss, token, delimiter);
 				presets[currentpreset].values[i] = std::stof(token);
 			}
 
-			std::getline(ss, token, '\n');
+			std::getline(ss, token, delimiter);
 			params.hold = std::stof(token) > .5 ? 1 : 0;
 
-			std::getline(ss, token, '\n');
+			std::getline(ss, token, delimiter);
 			params.oversampling = std::stof(token)>.5;
 
 			for(int i = 0; i < 8; i++) {
-				std::getline(ss, token, '\n');
+				std::getline(ss, token, delimiter);
 				presets[i].name = token;
 				for(int v = 0; v < 12; v++) {
-					std::getline(ss, token, '\n');
+					std::getline(ss, token, delimiter);
 					if(currentpreset != i) presets[i].values[v] = std::stof(token);
 				}
 			}
 		}
-	} catch (const char* e) {
-		logger.debug((String)"Error loading saved data: "+(String)e);
+	} catch(const char* e) {
+		debug((String)"Error loading saved data: "+(String)e);
 	} catch(String e) {
-		logger.debug((String)"Error loading saved data: "+e);
+		debug((String)"Error loading saved data: "+e);
 	} catch(std::exception &e) {
-		logger.debug((String)"Error loading saved data: "+(String)e.what());
+		debug((String)"Error loading saved data: "+(String)e.what());
 	} catch(...) {
-		logger.debug((String)"Error loading saved data");
+		debug((String)"Error loading saved data");
 	}
 
 	for(int i = 0; i < paramcount; i++) {
@@ -542,6 +543,53 @@ void CRMBLAudioProcessor::setStateInformation (const void* data, int sizeInBytes
 	params.holdsmooth.setCurrentAndTargetValue(params.hold);
 	apvts.getParameter("oversampling")->setValueNotifyingHost(params.oversampling);
 }
+const String CRMBLAudioProcessor::get_preset(int preset_id, const char delimiter) {
+	std::ostringstream data;
+
+	data << version << delimiter;
+	for(int v = 0; v < paramcount; v++)
+		data << presets[preset_id].values[v] << delimiter;
+
+	return data.str();
+}
+void CRMBLAudioProcessor::set_preset(const String& preset, int preset_id, const char delimiter, bool print_errors) {
+	String error = "";
+	String revert = get_preset(preset_id);
+	try {
+		std::stringstream ss(preset.trim().toRawUTF8());
+		std::string token;
+
+		std::getline(ss, token, delimiter);
+		int save_version = std::stoi(token);
+
+		for(int v = 0; v < paramcount; v++) {
+			std::getline(ss, token, delimiter);
+			presets[preset_id].values[v] = std::stof(token);
+		}
+
+	} catch(const char* e) {
+		error = "Error loading saved data: "+(String)e;
+	} catch(String e) {
+		error = "Error loading saved data: "+e;
+	} catch(std::exception &e) {
+		error = "Error loading saved data: "+(String)e.what();
+	} catch(...) {
+		error = "Error loading saved data";
+	}
+	if(error != "") {
+		if(print_errors)
+			debug(error);
+		set_preset(revert, preset_id);
+		return;
+	}
+
+	if(currentpreset != preset_id) return;
+
+	for(int i = 0; i < paramcount; i++) {
+		apvts.getParameter(params.pots[i].id)->setValueNotifyingHost(params.pots[i].normalize(presets[currentpreset].values[i]));
+	}
+}
+
 void CRMBLAudioProcessor::parameterChanged(const String& parameterID, float newValue) {
 	if(parameterID == "hold") {
 		params.holdsmooth.setTargetValue(newValue>.5?1:0);
@@ -622,7 +670,7 @@ void CRMBLAudioProcessor::randomize() {
 
 AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new CRMBLAudioProcessor(); }
 
-AudioProcessorValueTreeState::ParameterLayout CRMBLAudioProcessor::createParameters() {
+AudioProcessorValueTreeState::ParameterLayout CRMBLAudioProcessor::create_parameters() {
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"time"			,1},"Time (MS)"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.32f	,"",AudioProcessorParameter::genericParameter	,tolength		,fromlength		));
 	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"sync"			,1},"Time (Eighth note)"								,0		,16		 ,0		,""												,toen			,fromen			));
