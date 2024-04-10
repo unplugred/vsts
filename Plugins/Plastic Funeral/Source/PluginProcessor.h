@@ -52,7 +52,7 @@ struct pluginpreset {
 	}
 };
 
-class PFAudioProcessor : public AudioProcessor, public AudioProcessorValueTreeState::Listener, private Timer {
+class PFAudioProcessor : public plugmachine_dsp, private Timer {
 public:
 	PFAudioProcessor();
 	~PFAudioProcessor() override;
@@ -64,7 +64,7 @@ public:
 
 	bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
 
-	void processBlock (AudioBuffer<float>&, MidiBuffer&) override;
+	void processBlock(AudioBuffer<float>&, MidiBuffer&) override;
 	float plasticfuneral(float source, int channel, int channelcount, pluginpreset stt, float nrm);
 	float normalizegain(float fat, float dry);
 	void setoversampling(bool toggle);
@@ -81,17 +81,19 @@ public:
 
 	int getNumPrograms() override;
 	int getCurrentProgram() override;
-	void setCurrentProgram (int index) override;
+	void setCurrentProgram(int index) override;
 	const String getProgramName(int index) override;
 	void changeProgramName(int index, const String& newName) override;
 
 	void getStateInformation(MemoryBlock& destData) override;
 	void setStateInformation(const void* data, int sizeInBytes) override;
+	const String get_preset(int preset_id, const char delimiter = ',') override;
+	void set_preset(const String& preset, int preset_id, const char delimiter = ',', bool print_errors = false) override;
+
 	virtual void parameterChanged(const String& parameterID, float newValue);
- 
+
 	AudioProcessorValueTreeState apvts;
-	UndoManager undoManager;
-	CoolLogger logger;
+	AudioProcessorValueTreeState::ParameterLayout create_parameters();
 
 	Atomic<float> rmsadd = 0;
 	Atomic<int> rmscount = 0;
@@ -102,11 +104,10 @@ public:
 	pluginpreset state;
 	pluginparams params;
 	bool lerpchanged[6];
+	int currentpreset = 0;
 
 private:
-	AudioProcessorValueTreeState::ParameterLayout createParameters();
 	pluginpreset presets[20];
-	int currentpreset = 0;
 	void timerCallback() override;
 	float lerptable[6];
 	float lerpstage = 0;
@@ -125,5 +126,5 @@ private:
 	float curdry = -1000;
 	double curnorm = 1;
 
-	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PFAudioProcessor)
+	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PFAudioProcessor)
 };
