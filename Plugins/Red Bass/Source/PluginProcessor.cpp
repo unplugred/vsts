@@ -2,9 +2,11 @@
 #include "PluginEditor.h"
 
 RedBassAudioProcessor::RedBassAudioProcessor() :
-	AudioProcessor(BusesProperties().withInput("Input",AudioChannelSet::stereo(),true).withOutput("Output",AudioChannelSet::stereo(),true)),
-	apvts(*this, &undoManager, "Parameters", createParameters())
-{
+	apvts(*this, &undo_manager, "Parameters", create_parameters()),
+	plugmachine_dsp(BusesProperties().withInput("Input",AudioChannelSet::stereo(),true).withOutput("Output",AudioChannelSet::stereo(),true), &apvts) {
+
+	init();
+
 	for(int i = 0; i < getNumPrograms(); i++)
 		presets[i].name = "Program " + (String)(i+1);
 
@@ -19,16 +21,15 @@ RedBassAudioProcessor::RedBassAudioProcessor() :
 	for(int i = 0; i < paramcount; i++) {
 		state.values[i] = params.pots[i].inflate(apvts.getParameter(params.pots[i].id)->getValue());
 		if(params.pots[i].smoothtime > 0) params.pots[i].smooth.setCurrentAndTargetValue(state.values[i]);
-		apvts.addParameterListener(params.pots[i].id, this);
+		add_listener(params.pots[i].id);
 	}
 	params.monitor = apvts.getParameter("monitor")->getValue() > .5 ? 1 : 0;
 	params.monitorsmooth.setCurrentAndTargetValue(params.monitor);
-	apvts.addParameterListener("monitor", this);
+	add_listener("monitor");
 }
 
 RedBassAudioProcessor::~RedBassAudioProcessor(){
-	for(int i = 0; i < paramcount; i++) apvts.removeParameterListener(params.pots[i].id, this);
-	apvts.removeParameterListener("monitor", this);
+	close();
 }
 
 const String RedBassAudioProcessor::getName() const { return "Red Bass"; }
@@ -39,10 +40,10 @@ double RedBassAudioProcessor::getTailLengthSeconds() const { return 0.0; }
 
 int RedBassAudioProcessor::getNumPrograms() { return 20; }
 int RedBassAudioProcessor::getCurrentProgram() { return currentpreset; }
-void RedBassAudioProcessor::setCurrentProgram (int index) {
+void RedBassAudioProcessor::setCurrentProgram(int index) {
 	if(currentpreset == index) return;
 
-	undoManager.beginNewTransaction((String)"Changed preset to " += presets[index].name);
+	undo_manager.beginNewTransaction((String)"Changed preset to " += presets[index].name);
 	for(int i = 0; i < paramcount; i++) {
 		if(lerpstage < .001 || lerpchanged[i])
 			lerptable[i] = params.pots[i].normalize(presets[currentpreset].values[i]);
@@ -61,7 +62,7 @@ void RedBassAudioProcessor::timerCallback() {
 		for(int i = 0; i < paramcount; i++) if(!lerpchanged[i])
 			apvts.getParameter(params.pots[i].id)->setValueNotifyingHost(params.pots[i].normalize(presets[currentpreset].values[i]));
 		lerpstage = 0;
-		undoManager.beginNewTransaction();
+		undo_manager.beginNewTransaction();
 		stopTimer();
 		return;
 	}
@@ -70,14 +71,14 @@ void RedBassAudioProcessor::timerCallback() {
 		apvts.getParameter(params.pots[i].id)->setValueNotifyingHost(lerptable[i]);
 	}
 }
-const String RedBassAudioProcessor::getProgramName (int index) {
+const String RedBassAudioProcessor::getProgramName(int index) {
 	return { presets[index].name };
 }
-void RedBassAudioProcessor::changeProgramName (int index, const String& newName) {
+void RedBassAudioProcessor::changeProgramName(int index, const String& newName) {
 	presets[index].name = newName;
 }
 
-void RedBassAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {
+void RedBassAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
 	samplesperblock = samplesPerBlock;
 	samplerate = sampleRate;
 
@@ -109,22 +110,22 @@ void RedBassAudioProcessor::reseteverything() {
 }
 void RedBassAudioProcessor::releaseResources() { }
 
-bool RedBassAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const {
-	if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
+bool RedBassAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const {
+	if(layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
 		return false;
 
 	return (layouts.getMainInputChannels() > 0);
 }
 
-void RedBassAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midiMessages) {
+void RedBassAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMessages) {
 	ScopedNoDenormals noDenormals;
 
 	if(buffer.getNumChannels() == 0 || buffer.getNumSamples() == 0) return;
 	if(buffer.getNumChannels() != channelnum)
 		changechannelnum(buffer.getNumChannels());
 
-	for (auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
-		buffer.clear (i, 0, buffer.getNumSamples());
+	for(auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
+		buffer.clear(i, 0, buffer.getNumSamples());
 
 	float prmsadd = rmsadd.get();
 	int prmscount = rmscount.get();
@@ -136,7 +137,7 @@ void RedBassAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer
 
 	double sidechain = 0;
 	double osc = 0;
-	for (int sample = 0; sample < numsamples; ++sample) {
+	for(int sample = 0; sample < numsamples; ++sample) {
 		for(int i = 0; i < paramcount; i++) if(params.pots[i].smoothtime > 0)
 			state.values[i] = params.pots[i].smooth.getNextValue();
 		params.monitor = params.monitorsmooth.getNextValue();
@@ -197,43 +198,44 @@ AudioProcessorEditor* RedBassAudioProcessor::createEditor() {
 	return new RedBassAudioProcessorEditor(*this,paramcount,state,params);
 }
 
-void RedBassAudioProcessor::getStateInformation (MemoryBlock& destData) {
-	const char linebreak = '\n';
+void RedBassAudioProcessor::getStateInformation(MemoryBlock& destData) {
+	const char delimiter = '\n';
 	std::ostringstream data;
 
-	data << version << linebreak
-		<< currentpreset << linebreak
-		<< params.monitorsmooth.getTargetValue() << linebreak;
+	data << version << delimiter
+		<< currentpreset << delimiter
+		<< params.monitorsmooth.getTargetValue() << delimiter;
 
 	for(int i = 0; i < getNumPrograms(); i++) {
-		data << presets[i].name << linebreak;
+		data << presets[i].name << delimiter;
 		for(int v = 0; v < paramcount; v++)
-			data << presets[i].values[v] << linebreak;
+			data << presets[i].values[v] << delimiter;
 	}
 
 	MemoryOutputStream stream(destData, false);
 	stream.writeString(data.str());
 }
-void RedBassAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
+void RedBassAudioProcessor::setStateInformation(const void* data, int sizeInBytes) {
+	const char delimiter = '\n';
 	try {
 		std::stringstream ss(String::createStringFromData(data, sizeInBytes).toRawUTF8());
 		std::string token;
 
-		std::getline(ss, token, '\n');
+		std::getline(ss, token, delimiter);
 		int saveversion = std::stoi(token);
 
 		if(saveversion >= 2) {
-			std::getline(ss, token, '\n');
+			std::getline(ss, token, delimiter);
 			currentpreset = std::stoi(token);
 
-			std::getline(ss, token, '\n');
+			std::getline(ss, token, delimiter);
 			params.monitor = std::stof(token) > .5 ? 1 : 0;
 
 			for(int i = 0; i < getNumPrograms(); i++) {
-				std::getline(ss, token, '\n');
+				std::getline(ss, token, delimiter);
 				presets[i].name = token;
 				for(int v = 0; v < paramcount; v++) {
-					std::getline(ss, token, '\n');
+					std::getline(ss, token, delimiter);
 					float val = std::stof(token);
 					if(saveversion <= 2 && params.pots[v].id == "threshold") val = pow(pow(val,2)*7/7.079,.5);
 					presets[i].values[v] = std::stof(token);
@@ -241,7 +243,7 @@ void RedBassAudioProcessor::setStateInformation (const void* data, int sizeInByt
 			}
 		} else {
 			for(int i = 0; i < 8; i++) {
-				std::getline(ss, token, '\n');
+				std::getline(ss, token, delimiter);
 				int ii = i<5?i:(i-1);
 				if(i == 5) params.monitor = std::stof(token) > .5 ? 1 : 0;
 				else {
@@ -254,14 +256,14 @@ void RedBassAudioProcessor::setStateInformation (const void* data, int sizeInByt
 				}
 			}
 		}
-	} catch (const char* e) {
-		logger.debug((String)"Error loading saved data: "+(String)e);
+	} catch(const char* e) {
+		debug((String)"Error loading saved data: "+(String)e);
 	} catch(String e) {
-		logger.debug((String)"Error loading saved data: "+e);
+		debug((String)"Error loading saved data: "+e);
 	} catch(std::exception &e) {
-		logger.debug((String)"Error loading saved data: "+(String)e.what());
+		debug((String)"Error loading saved data: "+(String)e.what());
 	} catch(...) {
-		logger.debug((String)"Error loading saved data");
+		debug((String)"Error loading saved data");
 	}
 
 	for(int i = 0; i < paramcount; i++) {
@@ -274,6 +276,54 @@ void RedBassAudioProcessor::setStateInformation (const void* data, int sizeInByt
 	apvts.getParameter("monitor")->setValueNotifyingHost(params.monitor);
 	params.monitorsmooth.setCurrentAndTargetValue(params.monitor);
 }
+const String RedBassAudioProcessor::get_preset(int preset_id, const char delimiter) {
+	std::ostringstream data;
+
+	data << version << delimiter;
+	for(int v = 0; v < paramcount; v++)
+		data << presets[preset_id].values[v] << delimiter;
+
+	return data.str();
+}
+void RedBassAudioProcessor::set_preset(const String& preset, int preset_id, const char delimiter, bool print_errors) {
+	String error = "";
+	String revert = get_preset(preset_id);
+	try {
+		std::stringstream ss(preset.trim().toRawUTF8());
+		std::string token;
+
+		std::getline(ss, token, delimiter);
+		int save_version = std::stoi(token);
+
+		for(int v = 0; v < paramcount; v++) {
+			std::getline(ss, token, delimiter);
+			float val = std::stof(token);
+			presets[preset_id].values[v] = std::stof(token);
+		}
+
+	} catch(const char* e) {
+		error = "Error loading saved data: "+(String)e;
+	} catch(String e) {
+		error = "Error loading saved data: "+e;
+	} catch(std::exception &e) {
+		error = "Error loading saved data: "+(String)e.what();
+	} catch(...) {
+		error = "Error loading saved data";
+	}
+	if(error != "") {
+		if(print_errors)
+			debug(error);
+		set_preset(revert, preset_id);
+		return;
+	}
+
+	if(currentpreset != preset_id) return;
+
+	for(int i = 0; i < paramcount; i++) {
+		apvts.getParameter(params.pots[i].id)->setValueNotifyingHost(params.pots[i].normalize(presets[currentpreset].values[i]));
+	}
+}
+
 void RedBassAudioProcessor::parameterChanged(const String& parameterID, float newValue) {
 	if(parameterID == "monitor") {
 		params.monitorsmooth.setTargetValue(newValue>.5?1:0);
@@ -300,7 +350,7 @@ void RedBassAudioProcessor::parameterChanged(const String& parameterID, float ne
 
 AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new RedBassAudioProcessor(); }
 
-AudioProcessorValueTreeState::ParameterLayout RedBassAudioProcessor::createParameters() {
+AudioProcessorValueTreeState::ParameterLayout RedBassAudioProcessor::create_parameters() {
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"freq"		,1},"Frequency"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.58f	,"",AudioProcessorParameter::genericParameter	,tofreq			,fromfreq		));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"threshold"	,1},"Threshold"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.02f	,"",AudioProcessorParameter::genericParameter	,tothreshold	,fromthreshold	));

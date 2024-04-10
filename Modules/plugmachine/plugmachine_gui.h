@@ -58,7 +58,7 @@ public:
 
 	void add_listener(String name);
 	void add_texture(OpenGLTexture* texture, const char* binary, const int binary_size, int min_filter = GL_LINEAR, int mag_filter = GL_LINEAR, int wrap_s = GL_CLAMP_TO_EDGE, int wrap_t = GL_CLAMP_TO_EDGE);
-	void add_frame_buffer(OpenGLFrameBuffer* frame_buffer, int width, int height, bool scaled = true, int min_filter = GL_LINEAR, int mag_filter = GL_LINEAR, int wrap_s = GL_CLAMP_TO_EDGE, int wrap_t = GL_CLAMP_TO_EDGE);
+	void add_frame_buffer(OpenGLFrameBuffer* frame_buffer, int width, int height, bool scaled_x = true, bool scaled_y = true, int min_filter = GL_LINEAR, int mag_filter = GL_LINEAR, int wrap_s = GL_CLAMP_TO_EDGE, int wrap_t = GL_CLAMP_TO_EDGE);
 	std::shared_ptr<OpenGLShaderProgram> add_shader(String vertex_shader, String fragment_shader);
 	void add_font(cool_font* font);
 
@@ -98,7 +98,8 @@ private:
 
 		int width;
 		int height;
-		bool scaled = true;
+		bool scaled_x = true;
+		bool scaled_y = true;
 		int min_filter = GL_LINEAR;
 		int mag_filter = GL_LINEAR;
 		int wrap_s = GL_CLAMP_TO_EDGE;
