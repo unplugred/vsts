@@ -55,19 +55,19 @@ struct pluginparams {
 	SmoothedValue<float,ValueSmoothingTypes::Linear> monitorsmooth;
 };
 
-class RedBassAudioProcessor : public AudioProcessor, public AudioProcessorValueTreeState::Listener, private Timer {
+class RedBassAudioProcessor : public plugmachine_dsp, private Timer {
 public:
 	RedBassAudioProcessor();
 	~RedBassAudioProcessor() override;
 
-	void prepareToPlay (double sampleRate, int samplesPerBlock) override;
+	void prepareToPlay(double sampleRate, int samplesPerBlock) override;
 	void changechannelnum(int newchannelnum);
 	void reseteverything();
 	void releaseResources() override;
 
-	bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
+	bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
 
-	void processBlock (AudioBuffer<float>&, MidiBuffer&) override;
+	void processBlock(AudioBuffer<float>&, MidiBuffer&) override;
 
 	AudioProcessorEditor* createEditor() override;
 	bool hasEditor() const override;
@@ -81,12 +81,15 @@ public:
 
 	int getNumPrograms() override;
 	int getCurrentProgram() override;
-	void setCurrentProgram (int index) override;
-	const String getProgramName (int index) override;
-	void changeProgramName (int index, const String& newName) override;
+	void setCurrentProgram(int index) override;
+	const String getProgramName(int index) override;
+	void changeProgramName(int index, const String& newName) override;
 
-	void getStateInformation (MemoryBlock& destData) override;
-	void setStateInformation (const void* data, int sizeInBytes) override;
+	void getStateInformation(MemoryBlock& destData) override;
+	void setStateInformation(const void* data, int sizeInBytes) override;
+	const String get_preset(int preset_id, const char delimiter = ',') override;
+	void set_preset(const String& preset, int preset_id, const char delimiter = ',', bool print_errors = false) override;
+
 	virtual void parameterChanged(const String& parameterID, float newValue);
 
 	double calculateattack(double value);
@@ -95,8 +98,8 @@ public:
 	double calculatefrequency(double value);
 	double calculatethreshold(double value);
  
+	AudioProcessorValueTreeState::ParameterLayout create_parameters();
 	AudioProcessorValueTreeState apvts;
-	UndoManager undoManager;
 
 	Atomic<float> rmsadd = 0;
 	Atomic<int> rmscount = 0;
@@ -107,12 +110,10 @@ public:
 	pluginpreset state;
 	pluginparams params;
 	bool lerpchanged[7];
-
-	CoolLogger logger;
-private:
-	AudioProcessorValueTreeState::ParameterLayout createParameters();
-	pluginpreset presets[20];
 	int currentpreset = 0;
+
+private:
+	pluginpreset presets[20];
 	void timerCallback() override;
 	float lerptable[7];
 	float lerpstage = 0;
@@ -125,7 +126,7 @@ private:
 	int samplesperblock = 0;
 	float samplerate = 44100;
 
-	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (RedBassAudioProcessor)
+	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(RedBassAudioProcessor)
 };
 
 static std::function<String(float v, int max)> tofreq = [](float v, int max) {

@@ -166,20 +166,19 @@ void plugmachine_gui::draw_begin() {
 	if(scaled_dpi != prev_scaled_dpi || !frame_buffers_initiated) {
 		for(int i = 0; i < frame_buffers.size(); ++i) {
 			if(frame_buffers_initiated) {
-				if(!frame_buffers[i].scaled) continue;
+				if(!frame_buffers[i].scaled_x && !frame_buffers[i].scaled_y) continue;
 				frame_buffers[i].buffer->release();
 			}
 
-			if(frame_buffers[i].scaled)
-				frame_buffers[i].buffer->initialise(context, frame_buffers[i].width*scaled_dpi, frame_buffers[i].height*scaled_dpi);
-			else
-				frame_buffers[i].buffer->initialise(context, frame_buffers[i].width, frame_buffers[i].height);
+			frame_buffers[i].buffer->initialise(context, frame_buffers[i].width*(frame_buffers[i].scaled_x?scaled_dpi:1), frame_buffers[i].height*(frame_buffers[i].scaled_y?scaled_dpi:1));
 
 			glBindTexture(GL_TEXTURE_2D, frame_buffers[i].buffer->getTextureID());
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, frame_buffers[i].min_filter);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, frame_buffers[i].mag_filter);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, frame_buffers[i].wrap_s);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, frame_buffers[i].wrap_t);
+
+			frame_buffers[i].buffer->clear(Colours::black);
 		}
 		frame_buffers_initiated = true;
 	}
@@ -305,12 +304,13 @@ void plugmachine_gui::add_texture(OpenGLTexture* texture, const char* binary, co
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap_t);
 	textures.push_back(texture);
 }
-void plugmachine_gui::add_frame_buffer(OpenGLFrameBuffer* frame_buffer, int width, int height, bool scaled, int min_filter, int mag_filter, int wrap_s, int wrap_t) {
+void plugmachine_gui::add_frame_buffer(OpenGLFrameBuffer* frame_buffer, int width, int height, bool scaled_x, bool scaled_y, int min_filter, int mag_filter, int wrap_s, int wrap_t) {
 	frame_buffer_plus buffer;
 	buffer.buffer = frame_buffer;
 	buffer.width = width;
 	buffer.height = height;
-	buffer.scaled = scaled;
+	buffer.scaled_x = scaled_x;
+	buffer.scaled_y = scaled_y;
 	buffer.min_filter = min_filter;
 	buffer.mag_filter = mag_filter;
 	buffer.wrap_s = wrap_s;
