@@ -3,6 +3,22 @@
 #include "PluginProcessor.h"
 using namespace gl;
 
+class LookNFeel : public plugmachine_look_n_feel {
+public:
+	LookNFeel();
+	~LookNFeel();
+	Font getPopupMenuFont();
+	int getMenuWindowFlags() override;
+	void drawPopupMenuBackground(Graphics &g, int width, int height) override;
+	void drawPopupMenuItem(Graphics &g, const Rectangle<int> &area, bool isSeparator, bool isActive, bool isHighlighted, bool isTicked, bool hasSubMenu, const String &text, const String &shortcutKeyText, const Drawable *icon, const Colour *textColour) override; //biggest function ive seen ever
+	void getIdealPopupMenuItemSize(const String& text, const bool isSeparator, int standardMenuItemHeight, int& idealWidth, int& idealHeight) override;
+	int getPopupMenuBorderSize() override;
+	Colour bg = Colour::fromFloatRGBA(.95f,.95f,.95f,1.f);
+	Colour fg = Colour::fromFloatRGBA(.05f,.05f,.05f,1.f);
+	Colour ht = Colour::fromFloatRGBA(.85f,.85f,.85f,1.f);
+	String font = "n";
+};
+
 struct knob {
 	int x = 0;
 	int y = 0;
@@ -32,14 +48,12 @@ struct bubble {
 	float yspeed = 0;
 	float xoffset = 0;
 };
-class PisstortionAudioProcessorEditor : public AudioProcessorEditor, public OpenGLRenderer, public AudioProcessorValueTreeState::Listener, private Timer
-{
+class PisstortionAudioProcessorEditor : public plugmachine_gui {
 public:
 	PisstortionAudioProcessorEditor (PisstortionAudioProcessor&, int paramcount, pluginpreset state, pluginparams params);
 	~PisstortionAudioProcessorEditor() override;
 
 	void newOpenGLContextCreated() override;
-	void compileshader(std::unique_ptr<OpenGLShaderProgram> &shader, String vertexshader, String fragmentshader);
 	void renderOpenGL() override;
 	void openGLContextClosing() override;
 	void calcvis();
@@ -55,67 +69,52 @@ public:
 	void mouseUp(const MouseEvent& event) override;
 	void mouseDoubleClick(const MouseEvent& event) override;
 	void mouseWheelMove(const MouseEvent& event, const MouseWheelDetails& wheel) override;
-	int recalchover(float x, float y);
+	int recalc_hover(float x, float y);
 
 	void bubbleregen(int i);
 
 	knob knobs[6];
 	int knobcount = 0;
 	float visline[2][2712];
-	bool isStereo = false;
+	bool is_stereo = false;
 private:
-	PisstortionAudioProcessor& audioProcessor;
+	PisstortionAudioProcessor& audio_processor;
 
 	int hover = -1;
 	int initialdrag = 0;
 	int held = 0;
 	float initialvalue = 0;
 
-	OpenGLContext context;
-	unsigned int arraybuffer;
-	float square[8]{
-		0.f,0.f,
-		1.f,0.f,
-		0.f,1.f,
-		1.f,1.f};
-
 	OpenGLTexture basetex;
-	std::unique_ptr<OpenGLShaderProgram> baseshader;
+	std::shared_ptr<OpenGLShaderProgram> baseshader;
 
 	bool finemode = false;
 	float valueoffset = 0;
 	Point<int> dragpos = Point<int>(0,0);
 	OpenGLTexture knobtex;
-	std::unique_ptr<OpenGLShaderProgram> knobshader;
+	std::shared_ptr<OpenGLShaderProgram> knobshader;
 
-	std::unique_ptr<OpenGLShaderProgram> visshader;
+	std::shared_ptr<OpenGLShaderProgram> visshader;
 
 	float oversamplingalpha = 0;
 	float oversamplinglerped = 1;
 	int oversampling = 1;
-	std::unique_ptr<OpenGLShaderProgram> oversamplingshader;
+	std::shared_ptr<OpenGLShaderProgram> oversamplingshader;
 
 	float websiteht = -1;
 	float creditsalpha = 0;
 	OpenGLTexture creditstex;
-	std::unique_ptr<OpenGLShaderProgram> creditsshader;
+	std::shared_ptr<OpenGLShaderProgram> creditsshader;
 
 	float rms = 0;
 	float rmslerped = 0;
 	OpenGLFrameBuffer framebuffer;
-	std::unique_ptr<OpenGLShaderProgram> circleshader;
+	std::shared_ptr<OpenGLShaderProgram> circleshader;
 
 	bubble bubbles[20];
 	Random random;
 
-#ifdef BANNER
-	float bannerx = 0;
-	OpenGLTexture bannertex;
-	std::unique_ptr<OpenGLShaderProgram> bannershader;
-#endif
-	float banneroffset = 0;
-
-	float dpi = 1;
+	LookNFeel look_n_feel;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PisstortionAudioProcessorEditor)
 };
