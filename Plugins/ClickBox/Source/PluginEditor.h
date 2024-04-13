@@ -3,6 +3,29 @@
 #include "PluginProcessor.h"
 using namespace gl;
 
+class LookNFeel : public plugmachine_look_n_feel {
+public:
+	LookNFeel();
+	~LookNFeel();
+	Font getPopupMenuFont();
+	int getMenuWindowFlags() override;
+	void drawPopupMenuBackground(Graphics &g, int width, int height) override;
+	void drawPopupMenuItem(Graphics &g, const Rectangle<int> &area, bool isSeparator, bool isActive, bool isHighlighted, bool isTicked, bool hasSubMenu, const String &text, const String &shortcutKeyText, const Drawable *icon, const Colour *textColour) override; //biggest function ive seen ever
+	void getIdealPopupMenuItemSize(const String& text, const bool isSeparator, int standardMenuItemHeight, int& idealWidth, int& idealHeight) override;
+	int getPopupMenuBorderSize() override;
+	Colour bg = Colour::fromFloatRGBA(.10546875f,.10546875f,.10546875f,1.f);
+	Colour fg = Colour::fromFloatRGBA(.23828125f,.23828125f,.23828125f,1.f);
+	String font = "n";
+	float colors[18]{
+		1.f,0.f,.5625f,
+		.4335938f,0.f,1.f,
+		0.f,.5664063f,1.f,
+		0.f,1.f,.4296875f,
+		.5664063f,1.f,0.f,
+		1.f,.4296875f,0.f
+	};
+};
+
 struct slider {
 	float x=0,y=0,w=1,h=.13671875f;
 	int hx=5,hy=5,hw=251,hh=30;
@@ -28,17 +51,15 @@ struct mousepos {
 	bool automated = false;
 	int col = 0;
 };
-class ClickBoxAudioProcessorEditor	: public AudioProcessorEditor, public OpenGLRenderer, public AudioProcessorValueTreeState::Listener, private Timer {
+class ClickBoxAudioProcessorEditor : public plugmachine_gui {
 public:
-	ClickBoxAudioProcessorEditor (ClickBoxAudioProcessor&, int paramcount, pluginpreset state, pluginparams params);
+	ClickBoxAudioProcessorEditor(ClickBoxAudioProcessor&, int paramcount, pluginpreset state, pluginparams params);
 	~ClickBoxAudioProcessorEditor() override;
 
 	void newOpenGLContextCreated() override;
-	void compileshader(std::unique_ptr<OpenGLShaderProgram> &shader, String vertexshader, String fragmentshader);
 	void renderOpenGL() override;
 	void openGLContextClosing() override;
-	void paint (Graphics&) override;
-	void resized() override;
+	void paint(Graphics&) override;
 
 	void timerCallback() override;
 
@@ -51,13 +72,15 @@ public:
 	void mouseUp(const MouseEvent& event) override;
 	void mouseDoubleClick(const MouseEvent& event) override;
 	void mouseWheelMove(const MouseEvent& event, const MouseWheelDetails& wheel) override;
-	int recalchover(float x, float y);
+	int recalc_hover(float x, float y);
 
 	float getr(float hue);
 	float getg(float hue);
 	float getb(float hue);
 
 private:
+	ClickBoxAudioProcessor& audio_processor;
+
 	float colors[18]{
 		1.f,0.f,.5625f,
 		.4335938f,0.f,1.f,
@@ -67,51 +90,41 @@ private:
 		1.f,.4296875f,0.f
 	};
 
-	ClickBoxAudioProcessor& audioProcessor;
-
 	int hover = -1;
 	int initialdrag = 0;
 	float initialvalue = 0;
 
-	OpenGLContext context;
-	unsigned int arraybuffer;
-	float square[8]{
-		0.f,0.f,
-		1.f,0.f,
-		0.f,1.f,
-		1.f,1.f};
-
-	std::unique_ptr<OpenGLShaderProgram> clearshader;
+	std::shared_ptr<OpenGLShaderProgram> clearshader;
 
 	int slidercount = 0;
 	slider sliders[6];
 	
 	Point<int> dragpos;
 	OpenGLTexture slidertex;
-	std::unique_ptr<OpenGLShaderProgram> slidershader;
+	std::shared_ptr<OpenGLShaderProgram> slidershader;
 
 	bool trailactive = false;
 	int mousecolor = 0;
 	bool overridee = false;
 	mousepos prevpos[7];
 	OpenGLTexture cursortex;
-	std::unique_ptr<OpenGLShaderProgram> cursorshader;
+	std::shared_ptr<OpenGLShaderProgram> cursorshader;
 
 	float websiteht = -1;
 	bool credits = false;
 	float shadertime = 0;
 	OpenGLTexture creditstex;
-	std::unique_ptr<OpenGLShaderProgram> creditsshader;
+	std::shared_ptr<OpenGLShaderProgram> creditsshader;
 
 	float randoms[8];
 	float randomsblend = 0;
 	float ppamount = 0;
 	OpenGLFrameBuffer framebuffer;
-	std::unique_ptr<OpenGLShaderProgram> ppshader;
+	std::shared_ptr<OpenGLShaderProgram> ppshader;
 
 	Random random;
 
-	float dpi = 1;
+	LookNFeel look_n_feel;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ClickBoxAudioProcessorEditor)
 };

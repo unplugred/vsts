@@ -57,7 +57,7 @@ struct pluginpreset {
 	}
 };
 
-class ClickBoxAudioProcessor : public AudioProcessor, public AudioProcessorValueTreeState::Listener, private Timer {
+class ClickBoxAudioProcessor : public plugmachine_dsp, private Timer {
 public:
 	ClickBoxAudioProcessor();
 	~ClickBoxAudioProcessor() override;
@@ -87,10 +87,13 @@ public:
 
 	void getStateInformation(MemoryBlock& destData) override;
 	void setStateInformation(const void* data, int sizeInBytes) override;
+	const String get_preset(int preset_id, const char delimiter = ',') override;
+	void set_preset(const String& preset, int preset_id, const char delimiter = ',', bool print_errors = false) override;
+
 	virtual void parameterChanged(const String& parameterID, float newValue);
 
+	AudioProcessorValueTreeState::ParameterLayout create_parameters();
 	AudioProcessorValueTreeState apvts;
-	UndoManager undoManager;
 	
 	Atomic<float> x = .5f;
 	Atomic<float> y = .5f;
@@ -102,12 +105,10 @@ public:
 	pluginpreset state;
 	pluginparams params;
 	bool lerpchanged[6];
-
-	CoolLogger logger;
+	int currentpreset = 0;
 
 private:
 	pluginpreset presets[20];
-	int currentpreset = 0;
 	void timerCallback() override;
 	float lerptable[6];
 	float lerpstage = 0;
@@ -122,7 +123,5 @@ private:
 	float oldi = .0f;
 	float rms;
 
-	AudioProcessorValueTreeState::ParameterLayout createParameters();
-
-	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ClickBoxAudioProcessor)
+	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ClickBoxAudioProcessor)
 };

@@ -2,9 +2,11 @@
 #include "PluginEditor.h"
 
 ClickBoxAudioProcessor::ClickBoxAudioProcessor() :
-	AudioProcessor(BusesProperties().withInput("Input",AudioChannelSet::stereo(),true).withOutput("Output",AudioChannelSet::stereo(),true)),
-	apvts(*this, &undoManager, "Parameters", createParameters())
-{
+	apvts(*this, &undo_manager, "Parameters", create_parameters()),
+	plugmachine_dsp(BusesProperties().withInput("Input",AudioChannelSet::stereo(),true).withOutput("Output",AudioChannelSet::stereo(),true), &apvts) {
+
+	init();
+
 	for(int i = 0; i < getNumPrograms(); i++)
 		presets[i].name = "Program " + (String)(i+1);
 
@@ -18,24 +20,21 @@ ClickBoxAudioProcessor::ClickBoxAudioProcessor() :
 	for(int i = 0; i < paramcount; i++) {
 		state.values[i] = params.pots[i].inflate(apvts.getParameter(params.pots[i].id)->getValue());
 		if(params.pots[i].smoothtime > 0) params.pots[i].smooth.setCurrentAndTargetValue(state.values[i]);
-		apvts.addParameterListener(params.pots[i].id, this);
+		add_listener(params.pots[i].id);
 	}
 	params.x = apvts.getParameter("x")->getValue();
 	params.xsmooth.setCurrentAndTargetValue(params.x);
-	apvts.addParameterListener("x", this);
+	add_listener("x");
 	params.y = apvts.getParameter("y")->getValue();
 	params.ysmooth.setCurrentAndTargetValue(params.y);
-	apvts.addParameterListener("y", this);
+	add_listener("y");
 	params.overridee = apvts.getParameter("override")->getValue() > .5;
-	apvts.addParameterListener("override", this);
+	add_listener("override");
 
 	prlin.init();
 }
 ClickBoxAudioProcessor::~ClickBoxAudioProcessor() {
-	for(int i = 0; i < paramcount; i++) apvts.removeParameterListener(params.pots[i].id, this);
-	apvts.removeParameterListener("x", this);
-	apvts.removeParameterListener("y", this);
-	apvts.removeParameterListener("override", this);
+	close();
 }
 
 const String ClickBoxAudioProcessor::getName() const { return "ClickBox"; }
@@ -48,7 +47,7 @@ int ClickBoxAudioProcessor::getCurrentProgram() { return currentpreset; }
 void ClickBoxAudioProcessor::setCurrentProgram(int index) {
 	if(currentpreset == index) return;
 
-	undoManager.beginNewTransaction((String)"Changed preset to " += presets[index].name);
+	undo_manager.beginNewTransaction((String)"Changed preset to " += presets[index].name);
 	for(int i = 0; i < paramcount; i++) {
 		if(lerpstage < .001 || lerpchanged[i])
 			lerptable[i] = params.pots[i].normalize(presets[currentpreset].values[i]);
@@ -73,7 +72,7 @@ void ClickBoxAudioProcessor::timerCallback() {
 		for(int i = 0; i < paramcount; i++) if(!lerpchanged[i])
 			apvts.getParameter(params.pots[i].id)->setValueNotifyingHost(params.pots[i].normalize(presets[currentpreset].values[i]));
 		lerpstage = 0;
-		undoManager.beginNewTransaction();
+		undo_manager.beginNewTransaction();
 		stopTimer();
 		return;
 	}
@@ -82,10 +81,10 @@ void ClickBoxAudioProcessor::timerCallback() {
 		apvts.getParameter(params.pots[i].id)->setValueNotifyingHost(lerptable[i]);
 	}
 }
-const String ClickBoxAudioProcessor::getProgramName (int index) {
+const String ClickBoxAudioProcessor::getProgramName(int index) {
 	return { presets[index].name };
 }
-void ClickBoxAudioProcessor::changeProgramName (int index, const String& newName) {
+void ClickBoxAudioProcessor::changeProgramName(int index, const String& newName) {
 	presets[index].name = newName;
 }
 
@@ -98,18 +97,18 @@ void ClickBoxAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBloc
 void ClickBoxAudioProcessor::releaseResources() { }
 
 bool ClickBoxAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const {
-	if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
+	if(layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
 		return false;
 
-	return (layouts.getMainInputChannels() > 0);
+	return(layouts.getMainInputChannels() > 0);
 }
 
 void ClickBoxAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMessages) {
 	ScopedNoDenormals noDenormals;
 
 	if(buffer.getNumChannels() == 0 || buffer.getNumSamples() == 0) return;
-	for (auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
-		buffer.clear (i, 0, buffer.getNumSamples());
+	for(auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
+		buffer.clear(i, 0, buffer.getNumSamples());
 
 	float* const* channelData = buffer.getArrayOfWritePointers();
 	int channelnum = buffer.getNumChannels();
@@ -192,68 +191,69 @@ AudioProcessorEditor* ClickBoxAudioProcessor::createEditor() {
 }
 
 void ClickBoxAudioProcessor::getStateInformation(MemoryBlock& destData) {
-	const char linebreak = '\n';
+	const char delimiter = '\n';
 	std::ostringstream data;
-	data << version << linebreak
-		<< currentpreset << linebreak
-		<< params.x << linebreak
-		<< params.y << linebreak;
+	data << version << delimiter
+		<< currentpreset << delimiter
+		<< params.x << delimiter
+		<< params.y << delimiter;
 
 	for(int i = 0; i < getNumPrograms(); i++) {
-		data << presets[i].name << linebreak;
+		data << presets[i].name << delimiter;
 		for(int v = 0; v < paramcount; v++)
-			data << presets[i].values[v] << linebreak;
+			data << presets[i].values[v] << delimiter;
 	}
 
 	MemoryOutputStream stream(destData, false);
 	stream.writeString(data.str());
 }
-void ClickBoxAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
+void ClickBoxAudioProcessor::setStateInformation(const void* data, int sizeInBytes) {
+	const char delimiter = '\n';
 	try {
 		std::stringstream ss(String::createStringFromData(data,sizeInBytes).toRawUTF8());
 		std::string token;
 
-		std::getline(ss,token,'\n');
+		std::getline(ss,token,delimiter);
 		int saveversion = stoi(token);
 
 		if(saveversion >= 3) {
-			std::getline(ss,token,'\n');
+			std::getline(ss,token,delimiter);
 			currentpreset = stoi(token);
 
-			std::getline(ss,token,'\n');
+			std::getline(ss,token,delimiter);
 			params.x = stof(token);
 
-			std::getline(ss,token,'\n');
+			std::getline(ss,token,delimiter);
 			params.y = stof(token);
 
 			for(int i = 0; i < getNumPrograms(); i++) {
-				std::getline(ss, token, '\n');
+				std::getline(ss, token, delimiter);
 				presets[i].name = token;
 				for(int v = 0; v < paramcount; v++) {
-					std::getline(ss, token, '\n');
+					std::getline(ss, token, delimiter);
 					presets[i].values[v] = std::stof(token);
 				}
 			}
 		} else {
-			std::getline(ss,token,'\n');
+			std::getline(ss,token,delimiter);
 			params.x = stof(token);
 
-			std::getline(ss,token,'\n');
+			std::getline(ss,token,delimiter);
 			params.y = stof(token);
 
 			for(int i = 0; i < 6; i++) {
-				std::getline(ss, token, '\n');
+				std::getline(ss, token, delimiter);
 				presets[currentpreset].values[i] = std::stof(token);
 			}
 		}
 	} catch(const char* e) {
-		logger.debug((String)"Error loading saved data: "+(String)e);
+		debug((String)"Error loading saved data: "+(String)e);
 	} catch(String e) {
-		logger.debug((String)"Error loading saved data: "+e);
+		debug((String)"Error loading saved data: "+e);
 	} catch(std::exception &e) {
-		logger.debug((String)"Error loading saved data: "+(String)e.what());
+		debug((String)"Error loading saved data: "+(String)e.what());
 	} catch(...) {
-		logger.debug((String)"Error loading saved data");
+		debug((String)"Error loading saved data");
 	}
 
 	for(int i = 0; i < paramcount; i++) {
@@ -268,6 +268,53 @@ void ClickBoxAudioProcessor::setStateInformation (const void* data, int sizeInBy
 	apvts.getParameter("y")->setValueNotifyingHost(params.y);
 	params.ysmooth.setCurrentAndTargetValue(params.y);
 }
+const String ClickBoxAudioProcessor::get_preset(int preset_id, const char delimiter) {
+	std::ostringstream data;
+
+	data << version << delimiter;
+	for(int v = 0; v < paramcount; v++)
+		data << presets[preset_id].values[v] << delimiter;
+
+	return data.str();
+}
+void ClickBoxAudioProcessor::set_preset(const String& preset, int preset_id, const char delimiter, bool print_errors) {
+	String error = "";
+	String revert = get_preset(preset_id);
+	try {
+		std::stringstream ss(preset.trim().toRawUTF8());
+		std::string token;
+
+		std::getline(ss, token, delimiter);
+		int save_version = std::stoi(token);
+
+		for(int v = 0; v < paramcount; v++) {
+			std::getline(ss, token, delimiter);
+			presets[preset_id].values[v] = std::stof(token);
+		}
+
+	} catch(const char* e) {
+		error = "Error loading saved data: "+(String)e;
+	} catch(String e) {
+		error = "Error loading saved data: "+e;
+	} catch(std::exception &e) {
+		error = "Error loading saved data: "+(String)e.what();
+	} catch(...) {
+		error = "Error loading saved data";
+	}
+	if(error != "") {
+		if(print_errors)
+			debug(error);
+		set_preset(revert, preset_id);
+		return;
+	}
+
+	if(currentpreset != preset_id) return;
+
+	for(int i = 0; i < paramcount; i++) {
+		apvts.getParameter(params.pots[i].id)->setValueNotifyingHost(params.pots[i].normalize(presets[currentpreset].values[i]));
+	}
+}
+
 void ClickBoxAudioProcessor::parameterChanged(const String& parameterID, float newValue) {
 	if(parameterID == "override") {
 		params.overridee = newValue > .5;
@@ -299,7 +346,7 @@ void ClickBoxAudioProcessor::parameterChanged(const String& parameterID, float n
 
 AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new ClickBoxAudioProcessor(); }
 
-AudioProcessorValueTreeState::ParameterLayout ClickBoxAudioProcessor::createParameters() {
+AudioProcessorValueTreeState::ParameterLayout ClickBoxAudioProcessor::create_parameters() {
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"x"			,1},"X"					,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"y"			,1},"Y"					,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	));

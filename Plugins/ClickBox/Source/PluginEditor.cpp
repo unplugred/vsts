@@ -1,7 +1,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-ClickBoxAudioProcessorEditor::ClickBoxAudioProcessorEditor (ClickBoxAudioProcessor& p, int paramcount, pluginpreset state, pluginparams params) : AudioProcessorEditor (&p), audioProcessor (p) {
+ClickBoxAudioProcessorEditor::ClickBoxAudioProcessorEditor(ClickBoxAudioProcessor& p, int paramcount, pluginpreset state, pluginparams params) : audio_processor(p), plugmachine_gui(p, 256, 256, 1.f, .5f, false) {
 	sliders[0].hy = 116;
 	sliders[0].hh = 146;
 	sliders[0].y = .4453125f;
@@ -48,8 +48,8 @@ ClickBoxAudioProcessorEditor::ClickBoxAudioProcessorEditor (ClickBoxAudioProcess
 		sliders[i].maximumvalue = params.pots[i].maximumvalue;
 		sliders[i].defaultvalue = params.pots[i].normalize(params.pots[i].defaultvalue);
 		slidercount++;
-		audioProcessor.apvts.addParameterListener(sliders[i].id, this);
-	
+		add_listener(sliders[i].id);
+
 		if(sliders[i].isslider) sliders[i].coloffset = random.nextFloat();
 		float r = sliders[i].isslider?(sliders[i].value*3*sliders[i].w+sliders[i].coloffset):random.nextFloat();
 		sliders[i].r = getr(r);
@@ -62,26 +62,14 @@ ClickBoxAudioProcessorEditor::ClickBoxAudioProcessorEditor (ClickBoxAudioProcess
 
 	for(int i = 0; i < 8; i++) randoms[i] = random.nextFloat();
 
-	setSize(256,256);
-	setResizable(false,false);
-
-	setOpaque(true);
-	context.setOpenGLVersionRequired(OpenGLContext::OpenGLVersion::openGL3_2);
-	context.setRenderer(this);
-	context.attachTo(*this);
-
-	startTimerHz(30);
+	init(&look_n_feel);
 }
 ClickBoxAudioProcessorEditor::~ClickBoxAudioProcessorEditor() {
-	for(int i = 0; i < slidercount; i++) audioProcessor.apvts.removeParameterListener(sliders[i].id,this);
-	stopTimer();
-	context.detach();
+	close();
 }
 
 void ClickBoxAudioProcessorEditor::newOpenGLContextCreated() {
-	audioProcessor.logger.init(&context,0,getWidth(),getHeight());
-
-	compileshader(clearshader,
+	clearshader = add_shader(
 //CLEAR VERT
 R"(#version 150 core
 in vec2 aPos;
@@ -95,17 +83,18 @@ void main() {
 	fragColor = vec4(.10546875,.10546875,.10546875,.15);
 })");
 
-	compileshader(slidershader,
+	slidershader = add_shader(
 //SLIDER VERT
 R"(#version 150 core
 in vec2 aPos;
 uniform vec4 texscale;
 uniform vec2 margin;
+uniform float scale;
 out vec2 texcoord;
 out float sliderpos;
 void main() {
 	texcoord = vec2(aPos.x*texscale.z+texscale.x,1-((1-aPos.y)*texscale.w+texscale.y));
-	gl_Position = vec4(texcoord*2-1,0,1);
+	gl_Position = vec4(texcoord/scale*2-1,0,1);
 	sliderpos = aPos.x*margin.x-margin.y;
 })",
 //SLIDER FRAG
@@ -132,21 +121,22 @@ void main() {
 	fragColor = vec4(color,alpha);
 })");
 
-	compileshader(creditsshader,
+	creditsshader = add_shader(
 //CREDITS VERT
 R"(#version 150 core
 in vec2 aPos;
 uniform float texscale;
 uniform vec3 rot;
+uniform float scale;
 out vec2 texcoord;
 out vec2 shadercoord;
 void main() {
-	gl_Position = vec4(aPos*vec2(2,2*texscale)-1,0,1);
-	shadercoord = (gl_Position.xy+vec2(0,.5))*1.2;
+	gl_Position = vec4(aPos/scale*2*vec2(1,texscale)-1,0,1);
+	shadercoord = (aPos*2*vec2(1,texscale)-vec2(1,.5))*1.2;
 	shadercoord = vec2(
 		shadercoord.x*cos(rot.z)-shadercoord.y*sin(rot.z),
 		shadercoord.x*sin(rot.z)+shadercoord.y*cos(rot.z));
-	texcoord = gl_Position.xy*.5+.5;
+	texcoord = vec2(aPos.x,aPos.y*texscale);
 })",
 //CREDITS FRAG
 R"(#version 150 core
@@ -190,7 +180,7 @@ void main() {
 	} else fragColor = vec4(0);
 })");
 
-	compileshader(ppshader,
+	ppshader = add_shader(
 //PP VERT
 R"(#version 150 core
 in vec2 aPos;
@@ -213,15 +203,17 @@ out vec4 fragColor;
 void main() {
 	vec4 col = texture(tex,texcoord);
 
+	float noise = 0;
 	if(col.r > .2 || col.g > .2 || col.b > .2) {
-		float noise = texture(noisetex,texcoord+randomsone.xy).g;
+		noise += texture(noisetex,texcoord+randomsone.xy).g;
 		noise += texture(noisetex,texcoord+randomsone.zw).g;
-		noise += texture(noisetex,texcoord+randomstwo.xy).g*(1-randomsblend)+texture(noisetex,texcoord+randomstwo.zw).g*randomsblend;
+		noise += texture(noisetex,texcoord+randomstwo.xy).g*(1-randomsblend);
+		noise += texture(noisetex,texcoord+randomstwo.zw).g*randomsblend;
 		noise /= 3;
 
-		vec2 coord = texcoord;
+		vec2 coord = floor(texcoord*256)/256;
 		if(mod(coord.x*3482+coord.y*43928,1)>.5) {
-		if(noise < intensity) coord.x -= .00390625;
+			if(noise < intensity) coord.x -= .00390625;
 			else if(noise > (1-intensity)) coord.x += .00390625;
 		} else {
 			if(noise < intensity) coord.y -= .00390625;
@@ -234,7 +226,7 @@ void main() {
 	fragColor = vec4(col.rgb*col.a+.10546875*(1-col.a),1);
 })");
 
-	compileshader(cursorshader,
+	cursorshader = add_shader(
 //CURSOR VERT
 R"(#version 150 core
 in vec2 aPos;
@@ -265,58 +257,23 @@ void main() {
 	}
 })");
 
-	slidertex.loadImage(ImageCache::getFromMemory(BinaryData::tex_png,BinaryData::tex_pngSize));
-	slidertex.bind();
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
+	add_texture(&slidertex, BinaryData::tex_png,BinaryData::tex_pngSize, GL_NEAREST, GL_NEAREST, GL_REPEAT, GL_REPEAT);
+	add_texture(&creditstex, BinaryData::credits_png,BinaryData::credits_pngSize, GL_NEAREST, GL_NEAREST, GL_REPEAT, GL_REPEAT);
+	add_texture(&cursortex, BinaryData::cursor_png,BinaryData::cursor_pngSize, GL_NEAREST, GL_NEAREST, GL_REPEAT, GL_REPEAT);
 
-	creditstex.loadImage(ImageCache::getFromMemory(BinaryData::credits_png,BinaryData::credits_pngSize));
-	creditstex.bind();
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
+	add_frame_buffer(&framebuffer, width, height, false, false, GL_NEAREST, GL_NEAREST);
 
-	framebuffer.initialise(context,256*dpi,256*dpi);
-	glBindTexture(GL_TEXTURE_2D, framebuffer.getTextureID());
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
-
-	cursortex.loadImage(ImageCache::getFromMemory(BinaryData::cursor_png,BinaryData::cursor_pngSize));
-	cursortex.bind();
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
-
-	context.extensions.glGenBuffers(1,&arraybuffer);
-}
-void ClickBoxAudioProcessorEditor::compileshader(std::unique_ptr<OpenGLShaderProgram> &shader, String vertexshader, String fragmentshader) {
-	shader.reset(new OpenGLShaderProgram(context));
-	if(!shader->addVertexShader(vertexshader))
-		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Vertex shader error",shader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at melody@unplug.red. THANKS!","OK!");
-	if(!shader->addFragmentShader(fragmentshader))
-		AlertWindow::showMessageBoxAsync(AlertWindow::WarningIcon,"Fragment shader error",shader->getLastError()+"\n\nPlease mail me this info along with your graphics card and os details at melody@unplug.red. THANKS!","OK!");
-	shader->link();
+	draw_init();
 }
 void ClickBoxAudioProcessorEditor::renderOpenGL() {
+	draw_begin();
+
 	//glEnable(GL_TEXTURE_2D);
 	//glDisable(GL_LIGHTING);
 	glEnable(GL_BLEND);
 	glDisable(GL_DEPTH_TEST);
 
-	if(context.getRenderingScale() != dpi) {
-		dpi = context.getRenderingScale();
-		framebuffer.release();
-		framebuffer.initialise(context,256*dpi,256*dpi);
-		glBindTexture(GL_TEXTURE_2D, framebuffer.getTextureID());
-		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
-	}
-
-	context.extensions.glBindBuffer(GL_ARRAY_BUFFER,arraybuffer);
+	context.extensions.glBindBuffer(GL_ARRAY_BUFFER,array_buffer);
 	glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
 	framebuffer.makeCurrentRenderingTarget();
 	auto coord = context.extensions.glGetAttribLocation(clearshader->getProgramID(),"aPos");
@@ -336,6 +293,7 @@ void ClickBoxAudioProcessorEditor::renderOpenGL() {
 	slidershader->setUniform("col",.23828125f,.23828125f,.23828125f);
 	slidershader->setUniform("margin",0.f);
 	slidershader->setUniform("hover",0.f);
+	slidershader->setUniform("scale",ui_scales[ui_scale_index]);
 	coord = context.extensions.glGetAttribLocation(slidershader->getProgramID(),"aPos");
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
@@ -366,6 +324,7 @@ void ClickBoxAudioProcessorEditor::renderOpenGL() {
 		creditsshader->setUniform("texscale",.5546875f);
 		creditsshader->setUniform("htpos",websiteht);
 		creditsshader->setUniform("lineoffset",shadertime*.5f);
+		creditsshader->setUniform("scale",ui_scales[ui_scale_index]);
 		creditsshader->setUniform("rot",
 			sin(shadertime*.37f)*3,
 			cos(shadertime*.37f)*3,
@@ -381,7 +340,7 @@ void ClickBoxAudioProcessorEditor::renderOpenGL() {
 	}
 	context.extensions.glDisableVertexAttribArray(coord);
 
-	context.extensions.glBindFramebuffer (GL_FRAMEBUFFER, context.getFrameBufferID());
+	context.extensions.glBindFramebuffer(GL_FRAMEBUFFER, context.getFrameBufferID());
 
 	ppshader->use();
 	context.extensions.glActiveTexture(GL_TEXTURE0);
@@ -391,8 +350,16 @@ void ClickBoxAudioProcessorEditor::renderOpenGL() {
 	slidertex.bind();
 	ppshader->setUniform("noisetex",1);
 	ppshader->setUniform("intensity",ppamount);
-	ppshader->setUniform("randomsone",randoms[0],randoms[1],randoms[2],randoms[3]);
-	ppshader->setUniform("randomstwo",randoms[4],randoms[5],randoms[6],randoms[7]);
+	ppshader->setUniform("randomsone",
+			((float)floor(randoms[0]*width ))/width ,
+			((float)floor(randoms[1]*height))/height,
+			((float)floor(randoms[2]*width ))/width ,
+			((float)floor(randoms[3]*height))/height);
+	ppshader->setUniform("randomstwo",
+			((float)floor(randoms[4]*width ))/width ,
+			((float)floor(randoms[5]*height))/height,
+			((float)floor(randoms[6]*width ))/width ,
+			((float)floor(randoms[7]*height))/height);
 	ppshader->setUniform("randomsblend",randomsblend);
 	coord = context.extensions.glGetAttribLocation(ppshader->getProgramID(),"aPos");
 	context.extensions.glEnableVertexAttribArray(coord);
@@ -420,25 +387,12 @@ void ClickBoxAudioProcessorEditor::renderOpenGL() {
 	}
 	context.extensions.glDisableVertexAttribArray(coord);
 
-	audioProcessor.logger.drawlog();
+	draw_end();
 }
 void ClickBoxAudioProcessorEditor::openGLContextClosing() {
-	slidershader->release();
-	cursorshader->release();
-	creditsshader->release();
-	ppshader->release();
-
-	slidertex.release();
-	cursortex.release();
-	creditstex.release();
-	framebuffer.release();
-
-	audioProcessor.logger.font.release();
-
-	context.extensions.glDeleteBuffers(1,&arraybuffer);
+	draw_close();
 }
-void ClickBoxAudioProcessorEditor::paint (Graphics& g) {}
-void ClickBoxAudioProcessorEditor::resized() {}
+void ClickBoxAudioProcessorEditor::paint(Graphics& g) {}
 
 void ClickBoxAudioProcessorEditor::timerCallback() {
 	shadertime += .02f;
@@ -455,11 +409,11 @@ void ClickBoxAudioProcessorEditor::timerCallback() {
 		randoms[6] = random.nextFloat();
 		randoms[7] = random.nextFloat();
 	}
-	ppamount = ppamount*.7f + .3f*fmin(sqrt(sqrt(audioProcessor.i.get()*20)),.4f);
+	ppamount = ppamount*.7f + .3f*fmin(sqrt(sqrt(audio_processor.i.get()*20)),.4f);
 
 	if(!overridee) {
-		prevpos[1].x = floor(audioProcessor.x.get()*246+5)/256.f;
-		prevpos[1].y = floor(audioProcessor.y.get()*106+5)/256.f;
+		prevpos[1].x = floor(audio_processor.x.get()*246+5)/((float)width);
+		prevpos[1].y = floor(audio_processor.y.get()*106+5)/((float)height);
 		prevpos[1].automated = true;
 		if(prevpos[1].x == prevpos[2].x && prevpos[1].y == prevpos[2].y && prevpos[2].automated == true)
 			prevpos[2].x = -1000;
@@ -473,14 +427,14 @@ void ClickBoxAudioProcessorEditor::timerCallback() {
 		prevpos[0].col = mousecolor;
 	}
 
-	context.triggerRepaint();
-
 	for(int i = 6; i > 0; i--) {
 		prevpos[i].x = prevpos[i-1].x;
 		prevpos[i].y = prevpos[i-1].y;
 		prevpos[i].automated = prevpos[i-1].automated;
 		prevpos[i].col = prevpos[i-1].col;
 	}
+
+	update();
 }
 
 void ClickBoxAudioProcessorEditor::parameterChanged(const String& parameterID, float newValue) {
@@ -495,10 +449,10 @@ void ClickBoxAudioProcessorEditor::parameterChanged(const String& parameterID, f
 	}
 }
 void ClickBoxAudioProcessorEditor::mouseMove(const MouseEvent& event) {
-	prevpos[0].x = event.x*.00390625f;
-	prevpos[0].y = event.y*.00390625f;
+	prevpos[0].x = event.x/ui_scales[ui_scale_index]/width;
+	prevpos[0].y = event.y/ui_scales[ui_scale_index]/height;
 	int prevhover = hover;
-	hover = recalchover(event.x,event.y);
+	hover = recalc_hover(event.x,event.y);
 	if(hover == -3 && prevhover != -3 && websiteht > .16015625f) websiteht = -.78515625;
 }
 void ClickBoxAudioProcessorEditor::mouseEnter(const MouseEvent& event) {
@@ -510,64 +464,92 @@ void ClickBoxAudioProcessorEditor::mouseExit(const MouseEvent& event) {
 	hover = -1;
 }
 void ClickBoxAudioProcessorEditor::mouseDown(const MouseEvent& event) {
+	if(dpi < 0) return;
 	if(event.mods.isRightButtonDown()) {
-		credits = !credits;
-		hover = recalchover(event.x,event.y);
+		hover = recalc_hover(event.x,event.y);
+		std::unique_ptr<PopupMenu> rightclickmenu(new PopupMenu());
+		std::unique_ptr<PopupMenu> scalemenu(new PopupMenu());
+
+		int i = 20;
+		while(++i < (ui_scales.size()+21))
+			scalemenu->addItem(i,(String)round(ui_scales[i-21]*100)+"%",true,(i-21)==ui_scale_index);
+
+		rightclickmenu->setLookAndFeel(&look_n_feel);
+		rightclickmenu->addItem(1,"'Copy preset",true);
+		rightclickmenu->addItem(2,"'Paste preset",audio_processor.is_valid_preset_string(SystemClipboard::getTextFromClipboard()));
+		rightclickmenu->addSeparator();
+		rightclickmenu->addSubMenu("'Scale",*scalemenu);
+		rightclickmenu->addSeparator();
+		rightclickmenu->addItem(3,"'Credits",true);
+		rightclickmenu->showMenuAsync(PopupMenu::Options(),[this](int result){
+			if(result <= 0) return;
+			else if(result >= 20) {
+				set_ui_scale(result-21);
+			} else if(result == 1) { //copy preset
+				SystemClipboard::copyTextToClipboard(audio_processor.get_preset(0));
+			} else if(result == 2) { //paste preset
+				audio_processor.set_preset(SystemClipboard::getTextFromClipboard(), 0);
+			} else if(result == 3) { //credits
+				credits = true;
+			}
+		});
 		return;
 	}
+
 	initialdrag = hover;
 	if(hover > -1) {
 		initialvalue = sliders[hover].value;
-		audioProcessor.undoManager.beginNewTransaction();
-		audioProcessor.apvts.getParameter(sliders[hover].id)->beginChangeGesture();
-		audioProcessor.lerpchanged[hover] = true;
+		audio_processor.undo_manager.beginNewTransaction();
+		audio_processor.apvts.getParameter(sliders[hover].id)->beginChangeGesture();
+		audio_processor.lerpchanged[hover] = true;
 		if(sliders[hover].isslider)
-			audioProcessor.apvts.getParameter(sliders[hover].id)->setValueNotifyingHost(((float)event.x-sliders[hover].hx-2)/(sliders[hover].hw-sliders[hover].hx-4));
+			audio_processor.apvts.getParameter(sliders[hover].id)->setValueNotifyingHost(((float)event.x/ui_scales[ui_scale_index]-sliders[hover].hx-2)/(sliders[hover].hw-sliders[hover].hx-4));
 		else
-			audioProcessor.apvts.getParameter(sliders[hover].id)->setValueNotifyingHost(1-initialvalue);
+			audio_processor.apvts.getParameter(sliders[hover].id)->setValueNotifyingHost(1-initialvalue);
 	} else if(hover == -2) {
-		audioProcessor.undoManager.beginNewTransaction();
+		audio_processor.undo_manager.beginNewTransaction();
 		overridee = true;
-		audioProcessor.apvts.getParameter("x")->setValueNotifyingHost((event.x-5)*.0040650407f);
-		audioProcessor.apvts.getParameter("y")->setValueNotifyingHost((event.y-5)*.0094339623f);
-		audioProcessor.apvts.getParameter("override")->setValueNotifyingHost(1.f);
+		audio_processor.apvts.getParameter("x")->setValueNotifyingHost((event.x/ui_scales[ui_scale_index]-5)*.0040650407f);
+		audio_processor.apvts.getParameter("y")->setValueNotifyingHost((event.y/ui_scales[ui_scale_index]-5)*.0094339623f);
+		audio_processor.apvts.getParameter("override")->setValueNotifyingHost(1.f);
 		mousecolor = prevpos[0].col;
 	}
 }
 void ClickBoxAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 	if(event.mods.isRightButtonDown()) return;
-	prevpos[0].x = event.x*.00390625f;
-	prevpos[0].y = event.y*.00390625f;
+	prevpos[0].x = event.x/ui_scales[ui_scale_index]/width;
+	prevpos[0].y = event.y/ui_scales[ui_scale_index]/height;
 	if(initialdrag > -1) {
 		if(sliders[initialdrag].isslider)
-			audioProcessor.apvts.getParameter(sliders[hover].id)->setValueNotifyingHost(((float)event.x-sliders[hover].hx-2)/(sliders[hover].hw-sliders[hover].hx-4));
+			audio_processor.apvts.getParameter(sliders[hover].id)->setValueNotifyingHost(((float)event.x/ui_scales[ui_scale_index]-sliders[hover].hx-2)/(sliders[hover].hw-sliders[hover].hx-4));
 		else {
-			hover = recalchover(event.x,event.y)==initialdrag?initialdrag:-1;
-			audioProcessor.apvts.getParameter(sliders[initialdrag].id)->setValueNotifyingHost(hover==-1?initialvalue:(1-initialvalue));
+			hover = recalc_hover(event.x,event.y)==initialdrag?initialdrag:-1;
+			audio_processor.apvts.getParameter(sliders[initialdrag].id)->setValueNotifyingHost(hover==-1?initialvalue:(1-initialvalue));
 		}
 	} else if(hover == -2) {
-		audioProcessor.apvts.getParameter("x")->setValueNotifyingHost((event.x-5)*.0040650407f);
-		audioProcessor.apvts.getParameter("y")->setValueNotifyingHost((event.y-5)*.0094339623f);
+		audio_processor.apvts.getParameter("x")->setValueNotifyingHost((event.x/ui_scales[ui_scale_index]-5)*.0040650407f);
+		audio_processor.apvts.getParameter("y")->setValueNotifyingHost((event.y/ui_scales[ui_scale_index]-5)*.0094339623f);
 	} else if(initialdrag == -3) {
 		int prevhover = hover;
-		hover = recalchover(event.x,event.y)==-3?-3:-1;
+		hover = recalc_hover(event.x,event.y)==-3?-3:-1;
 		if(initialdrag == -3 && hover == -3 && prevhover != -3 && websiteht > .16015625) websiteht = -.78515625;
 	} else if(initialdrag == -4) {
-		hover = recalchover(event.x,event.y)==-4?-4:-1;
+		hover = recalc_hover(event.x,event.y)==-4?-4:-1;
 	}
 }
 void ClickBoxAudioProcessorEditor::mouseUp(const MouseEvent& event) {
+	if(dpi < 0) return;
 	if(event.mods.isRightButtonDown()) return;
 	if(hover > -1) {
-		audioProcessor.undoManager.setCurrentTransactionName(
+		audio_processor.undo_manager.setCurrentTransactionName(
 			(String)((sliders[hover].value - initialvalue) >= 0 ? "Increased " : "Decreased ") += sliders[hover].name);
-		audioProcessor.apvts.getParameter(sliders[hover].id)->endChangeGesture();
-		audioProcessor.undoManager.beginNewTransaction();
+		audio_processor.apvts.getParameter(sliders[hover].id)->endChangeGesture();
+		audio_processor.undo_manager.beginNewTransaction();
 	} else if(hover == -2) {
 		overridee = false;
-		audioProcessor.apvts.getParameter("override")->setValueNotifyingHost(0.f);
-		audioProcessor.undoManager.setCurrentTransactionName("Altered XY");
-		audioProcessor.undoManager.beginNewTransaction();
+		audio_processor.apvts.getParameter("override")->setValueNotifyingHost(0.f);
+		audio_processor.undo_manager.setCurrentTransactionName("Altered XY");
+		audio_processor.undo_manager.beginNewTransaction();
 	} else if(hover == -3) {
 		URL("https://vst.unplug.red/").launchInDefaultBrowser();
 	} else if(hover == -4) {
@@ -577,19 +559,23 @@ void ClickBoxAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 void ClickBoxAudioProcessorEditor::mouseDoubleClick(const MouseEvent& event) {
 	if(hover <= -1) return;
 	if(!sliders[hover].isslider) return;
-	audioProcessor.undoManager.setCurrentTransactionName((String)"Reset " += sliders[hover].name);
-	audioProcessor.apvts.getParameter(sliders[hover].id)->setValueNotifyingHost(sliders[hover].defaultvalue);
-	audioProcessor.undoManager.beginNewTransaction();
+	audio_processor.undo_manager.setCurrentTransactionName((String)"Reset " += sliders[hover].name);
+	audio_processor.apvts.getParameter(sliders[hover].id)->setValueNotifyingHost(sliders[hover].defaultvalue);
+	audio_processor.undo_manager.beginNewTransaction();
 }
 void ClickBoxAudioProcessorEditor::mouseWheelMove(const MouseEvent& event, const MouseWheelDetails& wheel) {
 	if(hover <= -1) return;
 	if(!sliders[hover].isslider) return;
-	audioProcessor.apvts.getParameter(sliders[hover].id)->setValueNotifyingHost(
+	audio_processor.apvts.getParameter(sliders[hover].id)->setValueNotifyingHost(
 		sliders[hover].value+wheel.deltaY*((event.mods.isShiftDown() || event.mods.isAltDown())?.03f:.2f));
 }
-int ClickBoxAudioProcessorEditor::recalchover(float x, float y) {
+int ClickBoxAudioProcessorEditor::recalc_hover(float x, float y) {
+	if(dpi < 0) return -1;
+	x /= ui_scales[ui_scale_index];
+	y /= ui_scales[ui_scale_index];
+
 	if(x>=5 && x<=251 && y>=5 && y<=111) return -2;
-	if (credits) {
+	if(credits) {
 		if(x>=55 && x<=201 && y>=161 && y<=205) return -3;
 		if(x>=189 && x<=253 && y>=240 && y<=253) return -4;
 	} else for(int i = 0; i < slidercount; i++) {
@@ -615,4 +601,129 @@ float ClickBoxAudioProcessorEditor::getb(float hue) {
 	float h = hue*6;
 	float m = fmod(h,1.f);
 	return colors[(int)fmod(floor(h),6)*3+2]*(1-m)+colors[(int)fmod(ceil(h),6)*3+2]*m;
+}
+
+LookNFeel::LookNFeel() {
+	setColour(PopupMenu::backgroundColourId,Colour::fromFloatRGBA(0.f,0.f,0.f,0.f));
+	font = find_font("Arial|Helvetica Neue|Helvetica|Roboto");
+}
+LookNFeel::~LookNFeel() {
+}
+Font LookNFeel::getPopupMenuFont() {
+	Font fontt = Font(font,"Regular",18.f*scale);
+	fontt.setBold(true);
+	fontt.setExtraKerningFactor(-.05f);
+	return fontt;
+}
+int LookNFeel::getMenuWindowFlags() {
+	//return ComponentPeer::windowHasDropShadow;
+	return 0;
+}
+void LookNFeel::drawPopupMenuBackground(Graphics &g, int width, int height) {
+	g.setColour(bg);
+	g.fillRoundedRectangle(0,0,width,height,2*scale);
+}
+void LookNFeel::drawPopupMenuItem(Graphics &g, const Rectangle<int> &area, bool isSeparator, bool isActive, bool isHighlighted, bool isTicked, bool hasSubMenu, const String &text, const String &shortcutKeyText, const Drawable *icon, const Colour *textColour) {
+	if(isSeparator) {
+		g.setColour(fg);
+		g.fillRect(0,0,area.getWidth(),area.getHeight());
+		return;
+	}
+
+	float h = fabs((text.hashCode()%12288)/2048.f);
+	float m = fmod(h,1.f);
+	Colour ht = Colour::fromFloatRGBA(
+		colors[(int)fmod(floor(h),6)*3  ]*(1-m)+colors[(int)fmod(ceil(h),6)*3  ]*m,
+		colors[(int)fmod(floor(h),6)*3+1]*(1-m)+colors[(int)fmod(ceil(h),6)*3+1]*m,
+		colors[(int)fmod(floor(h),6)*3+2]*(1-m)+colors[(int)fmod(ceil(h),6)*3+2]*m,1.f);
+
+	bool removeleft = text.startsWith("'");
+	if(isHighlighted && isActive) {
+		g.setColour(ht);
+		g.fillRoundedRectangle(0,0,area.getWidth(),area.getHeight(),2*scale);
+		g.setColour(bg);
+	} else g.setColour(ht);
+	if(textColour != nullptr)
+		g.setColour(*textColour);
+
+	auto r = area;
+	if(removeleft) r.removeFromLeft(5*scale);
+	else r.removeFromLeft(area.getHeight());
+
+	Font font = getPopupMenuFont();
+	if(!isActive && removeleft) font.setItalic(true);
+	float maxFontHeight = ((float)r.getHeight())/1.45f;
+	if(font.getHeight() > maxFontHeight)
+		font.setHeight(maxFontHeight);
+	g.setFont(font);
+
+	Rectangle<float> iconArea = area.toFloat().withX(area.getX()+(r.getX()-area.getX())*.5f-area.getHeight()*.5f).withWidth(area.getHeight());
+	if(icon != nullptr)
+		icon->drawWithin(g, iconArea.reduced(2), RectanglePlacement::centred | RectanglePlacement::onlyReduceInSize, 1.f);
+	else if(isTicked)
+		g.fillEllipse(iconArea.reduced(iconArea.getHeight()*.3f));
+
+	if(hasSubMenu) {
+		float s = area.getHeight()*.35f;
+		float x = area.getX()+area.getWidth()-area.getHeight()*.5f-s*.35f;
+		float y = area.getCentreY();
+		Path path;
+		path.startNewSubPath
+				   (x,y-s*.5f);
+		path.lineTo(x+s*.7f,y);
+		path.lineTo(x,y+s*.5f);
+		path.lineTo(x,y-s*.5f);
+		g.fillPath(path);
+	}
+
+	if(removeleft)
+		g.drawFittedText(text.substring(1), r, Justification::centredLeft, 1);
+	else
+		g.drawFittedText(text, r, Justification::centredLeft, 1);
+
+	if(shortcutKeyText.isNotEmpty()) {
+		Font f2 = font;
+		f2.setHeight(f2.getHeight()*.75f);
+		f2.setHorizontalScale(.95f);
+		g.setFont(f2);
+		g.drawText(shortcutKeyText, r, Justification::centredRight, true);
+	}
+}
+int LookNFeel::getPopupMenuBorderSize() {
+	return 0;
+}
+void LookNFeel::getIdealPopupMenuItemSize(const String& text, const bool isSeparator, int standardMenuItemHeight, int& idealWidth, int& idealHeight)
+{
+	if(isSeparator) {
+		idealWidth = 50*scale;
+		idealHeight = (int)round(2*scale);
+	} else {
+		Font font(getPopupMenuFont());
+
+		if(standardMenuItemHeight > 0 && font.getHeight() > standardMenuItemHeight/1.3f)
+			font.setHeight(standardMenuItemHeight/1.3f);
+
+		bool removeleft = text.startsWith("'");
+		String newtext = text;
+		if(removeleft)
+			newtext = text.substring(1);
+
+		int idealheightsingle = (int)floor(font.getHeight()*1.3);
+
+		std::stringstream ss(newtext.trim().toRawUTF8());
+		std::string token;
+		idealWidth = 0;
+		int lines = 0;
+		while(std::getline(ss, token, '\n')) {
+			idealWidth = fmax(idealWidth,font.getStringWidth(token));
+			++lines;
+		}
+
+		if(removeleft)
+			idealWidth += idealheightsingle*2-5*scale;
+		else
+			idealWidth += idealheightsingle;
+
+		idealHeight = (int)floor(font.getHeight()*(lines+.3));
+	}
 }
