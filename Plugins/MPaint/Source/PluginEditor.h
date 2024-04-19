@@ -25,7 +25,7 @@ public:
 	void newOpenGLContextCreated() override;
 	void renderOpenGL() override;
 	void openGLContextClosing() override;
-	void paint (Graphics&) override;
+	void paint(Graphics&) override;
 
 	void timerCallback() override;
 	virtual void parameterChanged(const String& parameterID, float newValue);
@@ -50,5 +50,5 @@ private:
 
 	LookNFeel look_n_feel;
 
-	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MPaintAudioProcessorEditor)
+	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MPaintAudioProcessorEditor)
 };

@@ -1260,6 +1260,8 @@ void PrismaAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 				description = "Switches between presets A and B";
 			else if(hover == -12)
 				description = (String)"Copies preset "+(isb?"B to A":"A to B");
+			else if(hover == -13)
+				description = "Trust the process!";
 			else if(hover <= -17 && hover >= -20 && hoverbutton > -1) {
 				if(hoverbutton == 0)
 					description = "Mutes the selected band";
@@ -1278,9 +1280,7 @@ void PrismaAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		rightclickmenu->showMenuAsync(PopupMenu::Options(),[this](int result){
 			if(result <= 0) return;
 			else if(result >= 20) {
-				ui_scale_index = result-21;
-				audio_processor.set_ui_scale(ui_scales[ui_scale_index]);
-				reset_size = true;
+				set_ui_scale(result-21);
 			} else if(result == 1) { //copy preset
 				SystemClipboard::copyTextToClipboard(audio_processor.get_preset(audio_processor.currentpreset));
 			} else if(result == 2) { //paste preset
@@ -1608,6 +1608,7 @@ void PrismaAudioProcessorEditor::recalc_hover(float x, float y) {
 	hover = floor(x/114.f)*4+floor((y-106)/78.f);
 	hoverknob = state[0].modulesvalues[hover].id != 0 && fmod((x/114.f),1) > .3;
 }
+
 LookNFeel::LookNFeel() {
 	setColour(PopupMenu::backgroundColourId,Colour::fromFloatRGBA(0.f,0.f,0.f,0.f));
 	font = find_font("Arial|Helvetica Neue|Helvetica|Roboto");
@@ -1615,7 +1616,10 @@ LookNFeel::LookNFeel() {
 LookNFeel::~LookNFeel() {
 }
 Font LookNFeel::getPopupMenuFont() {
-	return Font(font,"Regular",14.f*scale);
+	Font fontt = Font(font,"Regular",14.f*scale);
+	fontt.setHorizontalScale(1.2f);
+	fontt.setExtraKerningFactor(-.05f);
+	return fontt;
 }
 void LookNFeel::drawPopupMenuBackground(Graphics &g, int width, int height) {
 	g.setColour(txt);
@@ -1654,8 +1658,8 @@ void LookNFeel::drawPopupMenuItem(Graphics &g, const Rectangle<int> &area, bool 
 	else r.removeFromLeft(area.getHeight());
 
 	Font font = getPopupMenuFont();
-	float maxFontHeight = ((float)r.getHeight())/1.45f;
 	if(!isActive && removeleft) font.setBold(true);
+	float maxFontHeight = ((float)r.getHeight())/1.45f;
 	if(font.getHeight() > maxFontHeight)
 		font.setHeight(maxFontHeight);
 	g.setFont(font);

@@ -37,7 +37,7 @@ PrismaAudioProcessor::PrismaAudioProcessor() :
 		add_listener("b"+(String)b+"solo");
 
 		pots.bands[b].bypass = apvts.getParameter("b" + (String)b + "bypass")->getValue();
-		pots.bands[b].bypasssmooth = pots.bands[b].bypass>.5?1.f:0.f;
+		pots.bands[b].bypasssmooth = pots.bands[b].bypass?1.f:0.f;
 		pots.bands[b].bandbypass.setCurrentAndTargetValue(pots.bands[b].bypasssmooth);
 		add_listener("b"+(String)b+"bypass");
 	}
@@ -79,13 +79,15 @@ double PrismaAudioProcessor::getTailLengthSeconds() const { return 0.0; }
 
 int PrismaAudioProcessor::getNumPrograms() { return 20; }
 int PrismaAudioProcessor::getCurrentProgram() { return currentpreset; }
-void PrismaAudioProcessor::setCurrentProgram (int index) {
+void PrismaAudioProcessor::setCurrentProgram(int index) {
 	if(currentpreset == index) return;
 
 	undo_manager.beginNewTransaction((String)"Changed preset to " += presets[index].name);
 	transition = true;
 	currentpreset = index;
 
+	for(int b = 0; b < 3; b++)
+		crossovertruevalue[b] = presets[currentpreset].crossover[b];
 	for(int b = 0; b < 4; b++) {
 		for(int m = 0; m < 4; m++) {
 			apvts.getParameter("b"+(String)b+"m"+(String)m+"val")->setValueNotifyingHost(presets[currentpreset].values[b][m]);
@@ -96,14 +98,14 @@ void PrismaAudioProcessor::setCurrentProgram (int index) {
 	}
 	apvts.getParameter("wet")->setValueNotifyingHost(presets[currentpreset].wet);
 }
-const String PrismaAudioProcessor::getProgramName (int index) {
+const String PrismaAudioProcessor::getProgramName(int index) {
 	return { presets[index].name };
 }
-void PrismaAudioProcessor::changeProgramName (int index, const String& newName) {
+void PrismaAudioProcessor::changeProgramName(int index, const String& newName) {
 	presets[index].name = newName;
 }
 
-void PrismaAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {
+void PrismaAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
 	if(!saved && sampleRate > 60000) {
 		pots.oversampling = 0;
 		apvts.getParameter("oversampling")->setValueNotifyingHost(0);
@@ -173,32 +175,27 @@ void PrismaAudioProcessor::reseteverything() {
 		}
 	}
 
-	//lowpass+highpass modules
-	modulefilters.resize(channelnum*16);
-	dsp::ProcessSpec monospec;
-	monospec.sampleRate = samplerate*(pots.oversampling?2:1);
-	monospec.maximumBlockSize = samplesperblock;
-	monospec.numChannels = 1;
-	for(int c = 0; c < channelnum; c++) {
-		for(int b = 0; b < 4; b++) {
+	for(int b = 0; b < 4; b++) {
+		for(int c = 0; c < channelnum; c++) {
+			//sample divide
+			for(int m = 0; m < 4; m++)
+				sampleandhold[c*16+b*4+m] = 0;
 
 			//dc filter
 			dcfilter.reset(b*channelnum+c);
 
 			//declick
 			declick[c*4+b] = 0;
-			declickprogress[b] = 0;
+		}
+		declickprogress[b] = 0;
 
-			//sample divide
-			for(int m = 0; m < 4; m++) {
-				sampleandhold[c*16+b*4+m] = 0;
-
-				//lowpass+highpass modules
-				if(state[pots.isb?1:0].id[b][m] == 15 || state[pots.isb?1:0].id[b][m] == 16) {
-					modulefilters[c*16+b*4+m].reset();
-					(*modulefilters[c*16+b*4+m].parameters.get()).type = state[pots.isb?1:0].id[b][m] == 15 ? dsp::StateVariableFilter::Parameters<float>::Type::lowPass : dsp::StateVariableFilter::Parameters<float>::Type::highPass;
-					modulefilters[c*16+b*4+m].prepare(monospec);
-				}
+		for(int m = 0; m < 4; m++) {
+			//lowpass+highpass modules
+			if(state[pots.isb?1:0].id[b][m] == 15 || state[pots.isb?1:0].id[b][m] == 16) {
+				modulefilters[b*4+m].prepare(spec);
+				modulefilters[b*4+m].setType(state[pots.isb?1:0].id[b][m] == 15 ? dsp::StateVariableTPTFilterType::lowpass : dsp::StateVariableTPTFilterType::highpass);
+				modulefilters[b*4+m].setResonance(state[pots.isb?1:0].id[b][m] == 15 ? 1.2 : 1.1);
+				modulefilters[b*4+m].reset();
 			}
 		}
 	}
@@ -213,8 +210,8 @@ void PrismaAudioProcessor::reseteverything() {
 }
 void PrismaAudioProcessor::releaseResources() { }
 
-bool PrismaAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const {
-	if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
+bool PrismaAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const {
+	if(layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
 		return false;
 
 	return (layouts.getMainInputChannels() > 0);
@@ -228,8 +225,8 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 		changechannelnum(buffer.getNumChannels());
 	saved = true;
 
-	for (auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
-		buffer.clear (i, 0, buffer.getNumSamples());
+	for(auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
+		buffer.clear(i, 0, buffer.getNumSamples());
 
 	bool isoversampling = pots.oversampling;
 
@@ -474,14 +471,14 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 				} else if(state[pots.isb?1:0].id[b][m] == 15 || state[pots.isb?1:0].id[b][m] == 16) {
 					for(int s = 0; s < numsamples; ++s) {
 						state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
+						if(state[pots.isb?1:0].id[b][m] == 15) //low pass
+							modulefilters[b*4+m].setCutoffFrequency(calcfilter(1-state[pots.isb?1:0].values[b][m]));
+						else //high pass
+							modulefilters[b*4+m].setCutoffFrequency(calcfilter(state[pots.isb?1:0].values[b][m]));
 						for(int c = 0; c < channelnum; ++c) {
 							if(std::isinf(wetChannelData[b][c][s]) || std::isnan(wetChannelData[b][c][s]))
 								wetChannelData[b][c][s] = 0;
-							if(state[pots.isb?1:0].id[b][m] == 15) //low pass
-								(*modulefilters[c*16+b*4+m].parameters.get()).setCutOffFrequency(samplerate*(pots.oversampling?2:1),calcfilter(1-state[pots.isb?1:0].values[b][m]),1.2);
-							else //high pass
-								(*modulefilters[c*16+b*4+m].parameters.get()).setCutOffFrequency(samplerate*(pots.oversampling?2:1),calcfilter(state[pots.isb?1:0].values[b][m]),1.1);
-							wetChannelData[b][c][s] = modulefilters[c*16+b*4+m].processSample(wetChannelData[b][c][s]);
+							wetChannelData[b][c][s] = modulefilters[b*4+m].processSample(c,wetChannelData[b][c][s]);
 						}
 					}
 				}
@@ -540,21 +537,21 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 
 	if(isoversampling) {
 		osbuffer.clear();
-		for(int b = 0; b < 4; b++) for (int c = 0; c < channelnum; ++c)
+		for(int b = 0; b < 4; b++) for(int c = 0; c < channelnum; ++c)
 			osbuffer.addFrom(c,0,filterbuffers[b],c,0,numsamples);
 		os->processSamplesDown(block);
 		numsamples = buffer.getNumSamples();
 	} else {
 		buffer.clear();
-		for(int b = 0; b < 4; b++) for (int c = 0; c < channelnum; ++c)
+		for(int b = 0; b < 4; b++) for(int c = 0; c < channelnum; ++c)
 			buffer.addFrom(c,0,filterbuffers[b],c,0,numsamples);
 	}
 
 	if(dofft.get()) {
 		float* const* channelData = buffer.getArrayOfWritePointers();
-		for (int s = 0; s < numsamples; ++s) {
+		for(int s = 0; s < numsamples; ++s) {
 			float avg = 0;
-			for (int c = 0; c < channelnum; ++c) avg += channelData[c][s];
+			for(int c = 0; c < channelnum; ++c) avg += channelData[c][s];
 			if(channelnum <= 1) pushNextSampleIntoFifo(avg);
 			else pushNextSampleIntoFifo(avg/channelnum);
 		}
@@ -582,18 +579,15 @@ void PrismaAudioProcessor::setoversampling(bool toggle) {
 	spec.sampleRate = s;
 	spec.maximumBlockSize = samplesperblock;
 	spec.numChannels = channelnum;
+
 	for(int i = 0; i < 9; i++) crossover[i].prepare(spec);
 
-	dsp::ProcessSpec monospec;
-	monospec.sampleRate = s;
-	monospec.maximumBlockSize = samplesperblock;
-	monospec.numChannels = 1;
-	for(int c = 0; c < channelnum; c++) {
-		for(int b = 0; b < 4; b++) {
-			for(int m = 0; m < 4; m++) {
-				if(state[pots.isb?1:0].id[b][m] == 15 || state[pots.isb?1:0].id[b][m] == 16) {
-					modulefilters[c*16+b*4+m].prepare(monospec);
-				}
+	for(int b = 0; b < 4; b++) {
+		for(int m = 0; m < 4; m++) {
+			if(state[pots.isb?1:0].id[b][m] == 15 || state[pots.isb?1:0].id[b][m] == 16) {
+				modulefilters[b*4+m].prepare(spec);
+				modulefilters[b*4+m].setType(state[pots.isb?1:0].id[b][m] == 15 ? dsp::StateVariableTPTFilterType::lowpass : dsp::StateVariableTPTFilterType::highpass);
+				modulefilters[b*4+m].setResonance(state[pots.isb?1:0].id[b][m] == 15 ? 1.2 : 1.1);
 			}
 		}
 	}
@@ -637,7 +631,7 @@ AudioProcessorEditor* PrismaAudioProcessor::createEditor() {
 	return new PrismaAudioProcessorEditor(*this,presets[currentpreset],pots);
 }
 
-void PrismaAudioProcessor::getStateInformation (MemoryBlock& destData) {
+void PrismaAudioProcessor::getStateInformation(MemoryBlock& destData) {
 	const char delimiter = '\n';
 	std::ostringstream data;
 
@@ -686,7 +680,7 @@ void PrismaAudioProcessor::getStateInformation (MemoryBlock& destData) {
 	MemoryOutputStream stream(destData, false);
 	stream.writeString(data.str());
 }
-void PrismaAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
+void PrismaAudioProcessor::setStateInformation(const void* data, int sizeInBytes) {
 	const char delimiter = '\n';
 	saved = true;
 	try {
@@ -764,7 +758,7 @@ void PrismaAudioProcessor::setStateInformation (const void* data, int sizeInByte
 			std::getline(ss, token, delimiter);
 			if(i != currentpreset) presets[i].wet = std::stof(token);
 		}
-	} catch (const char* e) {
+	} catch(const char* e) {
 		debug((String)"Error loading saved data: "+(String)e);
 	} catch(String e) {
 		debug((String)"Error loading saved data: "+e);
@@ -835,7 +829,7 @@ void PrismaAudioProcessor::set_preset(const String& preset, int preset_id, const
 		std::getline(ss, token, delimiter);
 		presets[preset_id].wet = std::stof(token);
 
-	} catch (const char* e) {
+	} catch(const char* e) {
 		error = "Error loading saved data: "+(String)e;
 	} catch(String e) {
 		error = "Error loading saved data: "+e;
@@ -939,16 +933,14 @@ void PrismaAudioProcessor::parameterChanged(const String& parameterID, float new
 		if(newValue == 10) {
 			holdtime[b*4+m] = 0;
 			for(int c = 0; c < channelnum; c++) sampleandhold[c*16+b*4+m] = 0;
-		} else if(newValue == 15 || newValue == 16) {
-			dsp::ProcessSpec monospec;
-			monospec.sampleRate = samplerate*(pots.oversampling?2:1);
-			monospec.maximumBlockSize = samplesperblock;
-			monospec.numChannels = 1;
-			for(int c = 0; c < channelnum; c++) {
-				modulefilters[c*16+b*4+m].reset();
-				(*modulefilters[c*16+b*4+m].parameters.get()).type = newValue == 15 ? dsp::StateVariableFilter::Parameters<float>::Type::lowPass : dsp::StateVariableFilter::Parameters<float>::Type::highPass;
-				modulefilters[c*16+b*4+m].prepare(monospec);
-			}
+		} else if((newValue == 15 || newValue == 16) && channelnum > 0 && samplesperblock > 0) {
+			dsp::ProcessSpec spec;
+			spec.sampleRate = samplerate*(pots.oversampling?2:1);
+			spec.maximumBlockSize = samplesperblock;
+			spec.numChannels = channelnum;
+			modulefilters[b*4+m].prepare(spec);
+			modulefilters[b*4+m].setType(newValue == 15 ? dsp::StateVariableTPTFilterType::lowpass : dsp::StateVariableTPTFilterType::highpass);
+			modulefilters[b*4+m].setResonance(state[pots.isb?1:0].id[b][m] == 15 ? 1.2 : 1.1);
 		}
 
 		state[pots.isb?1:0].id[b][m] = newValue;
@@ -982,6 +974,8 @@ void PrismaAudioProcessor::switchpreset(bool isbb) {
 	transition = true;
 	pots.isb = isbb;
 
+	for(int b = 0; b < 3; b++)
+		crossovertruevalue[b] = newstate.crossover[b];
 	for(int b = 0; b < 4; b++) {
 		for(int m = 0; m < 4; m++) {
 			apvts.getParameter("b"+(String)b+"m"+(String)m+"val")->setValueNotifyingHost(newstate.values[b][m]);

@@ -1,8 +1,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-MPaintAudioProcessorEditor::MPaintAudioProcessorEditor(MPaintAudioProcessor& p, unsigned char soundd) : audio_processor(p), plugmachine_gui(p, 234, 20, 2.f, 1.f, false)
-{
+MPaintAudioProcessorEditor::MPaintAudioProcessorEditor(MPaintAudioProcessor& p, unsigned char soundd) : audio_processor(p), plugmachine_gui(p, 234, 20, 2.f, 1.f, false) {
 	add_listener("sound");
 	sound = soundd;
 	error = audio_processor.error.get();
@@ -106,7 +105,7 @@ void MPaintAudioProcessorEditor::renderOpenGL() {
 void MPaintAudioProcessorEditor::openGLContextClosing() {
 	draw_close();
 }
-void MPaintAudioProcessorEditor::paint (Graphics& g) { }
+void MPaintAudioProcessorEditor::paint(Graphics& g) { }
 
 void MPaintAudioProcessorEditor::timerCallback() {
 	if(!loaded) {

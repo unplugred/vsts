@@ -167,8 +167,6 @@ void main(){
 			else fragColor = fragColor*(1-lg.g)+vec4(1.,.4549,.2588,1.)*lg.r;
 		}
 	}
-
-	if(right > .5) fragColor.rgb *= .5;
 })");
 
 	add_texture(&vutex, BinaryData::map_png, BinaryData::map_pngSize);

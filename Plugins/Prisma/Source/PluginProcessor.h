@@ -54,9 +54,9 @@ public:
 	void reseteverything();
 	void releaseResources() override;
 
-	bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
+	bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
 
-	void processBlock (AudioBuffer<float>&, MidiBuffer&) override;
+	void processBlock(AudioBuffer<float>&, MidiBuffer&) override;
 	void setoversampling(bool toggle);
 
 	void pushNextSampleIntoFifo(float sample) noexcept;
@@ -74,12 +74,12 @@ public:
 
 	int getNumPrograms() override;
 	int getCurrentProgram() override;
-	void setCurrentProgram (int index) override;
-	const String getProgramName (int index) override;
-	void changeProgramName (int index, const String& newName) override;
+	void setCurrentProgram(int index) override;
+	const String getProgramName(int index) override;
+	void changeProgramName(int index, const String& newName) override;
 
-	void getStateInformation (MemoryBlock& destData) override;
-	void setStateInformation (const void* data, int sizeInBytes) override;
+	void getStateInformation(MemoryBlock& destData) override;
+	void setStateInformation(const void* data, int sizeInBytes) override;
 	const String get_preset(int preset_id, const char delimiter = ',') override;
 	void set_preset(const String& preset, int preset_id, const char delimiter = ',', bool print_errors = false) override;
 
@@ -132,7 +132,7 @@ private:
 	std::array<juce::AudioBuffer<float>,4> filterbuffers;
 	std::array<juce::AudioBuffer<float>,4> wetbuffers;
 
-	std::vector<dsp::StateVariableFilter::Filter<float>> modulefilters;
+	std::array<dsp::StateVariableTPTFilter<float>,16> modulefilters;
 
 	std::vector<float> sampleandhold;
 	float holdtime[16];
@@ -146,7 +146,7 @@ private:
 	dsp::FFT forwardFFT;
 	dsp::WindowingFunction<float> window;
 
-	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PrismaAudioProcessor)
+	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PrismaAudioProcessor)
 };
 
 static std::function<String(float v, int max)> tonormalized = [](float v, int max) {

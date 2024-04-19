@@ -135,7 +135,7 @@ void ClickBoxAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer
 			time += samplessincelastperlin*.00001f;
 			float compensation = 0;
 			float newx = params.x, newy = params.y;
-			if(params.overridee < .5) {
+			if(!params.overridee) {
 				newx = prlin.noise(time,0)*.5f+.5f;
 				newy = prlin.noise(0,time)*.5f+.5f;
 				compensation = fabs(oldautomod-state.values[5])*sqrt((newx-params.x)*(newx-params.x)+(newy-params.y)*(newy-params.y));

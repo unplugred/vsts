@@ -14,11 +14,11 @@ struct point {
 };
 struct curve {
 	curve() { }
-	curve(String str, const char linebreak = ',');
-	String tostring(const char linebreak = ',');
+	curve(String str, const char delimiter = ',');
+	String tostring(const char delimiter = ',');
 	std::vector<point> points;
 	static double calctension(double interp, double tension);
-	static bool isvalidcurvestring(String str, const char linebreak = ',');
+	static bool isvalidcurvestring(String str, const char delimiter = ',');
 };
 class curveiterator {
 public:

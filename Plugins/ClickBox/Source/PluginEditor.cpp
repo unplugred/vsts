@@ -486,9 +486,9 @@ void ClickBoxAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 			else if(result >= 20) {
 				set_ui_scale(result-21);
 			} else if(result == 1) { //copy preset
-				SystemClipboard::copyTextToClipboard(audio_processor.get_preset(0));
+				SystemClipboard::copyTextToClipboard(audio_processor.get_preset(audio_processor.currentpreset));
 			} else if(result == 2) { //paste preset
-				audio_processor.set_preset(SystemClipboard::getTextFromClipboard(), 0);
+				audio_processor.set_preset(SystemClipboard::getTextFromClipboard(), audio_processor.currentpreset);
 			} else if(result == 3) { //credits
 				credits = true;
 			}

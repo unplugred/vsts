@@ -570,7 +570,7 @@ int PFAudioProcessorEditor::recalc_hover(float x, float y) {
 
 LookNFeel::LookNFeel() {
 	setColour(PopupMenu::backgroundColourId,Colour::fromFloatRGBA(0.f,0.f,0.f,0.f));
-	font = find_font("Consolas|Noto Mono|DejaVu Sans Mono|Menlo|Andale Mono|SF Mono|Lucida Console|Liberation Mono");
+	font = find_font("Times New Roman|Times|Liberation Serif|Nimbus Roman No 9 L|FreeSerif|Hoefler Text|Georgia|Garamond");
 }
 LookNFeel::~LookNFeel() {
 }
@@ -579,19 +579,19 @@ Font LookNFeel::getPopupMenuFont() {
 }
 void LookNFeel::drawPopupMenuBackground(Graphics &g, int width, int height) {
 	g.setColour(bg);
-	g.fillRect(0,0,width,height);
+	g.fillRoundedRectangle(0,0,width,height,scale);
 }
 void LookNFeel::drawPopupMenuItem(Graphics &g, const Rectangle<int> &area, bool isSeparator, bool isActive, bool isHighlighted, bool isTicked, bool hasSubMenu, const String &text, const String &shortcutKeyText, const Drawable *icon, const Colour *textColour) {
 	if(isSeparator) {
 		g.setColour(fg);
-		g.fillRect(2*scale,0.f,area.getWidth()-4*scale,(float)area.getHeight());
+		g.fillRoundedRectangle(2*scale,0.f,area.getWidth()-4*scale,(float)area.getHeight(),scale);
 		return;
 	}
 
 	bool removeleft = text.startsWith("'");
 	if(isHighlighted && isActive) {
 		g.setColour(fg);
-		g.fillRect(0,0,area.getWidth(),area.getHeight());
+		g.fillRoundedRectangle(0,0,area.getWidth(),area.getHeight(),scale);
 		g.setColour(bg);
 	} else {
 		g.setColour(fg);

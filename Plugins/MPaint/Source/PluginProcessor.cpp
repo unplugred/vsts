@@ -108,10 +108,10 @@ void MPaintAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 				coolerbuffer.addEvent(MidiMessage::noteOn(1,voicecycle[v], 1.f), timetillnoteplay);
 
 	MidiBuffer prevsoundbuffer;
-	MidiMessage message(0xf0);
-	MidiBuffer::Iterator i(midiMessages);
-	int time = 0;
-	while(i.getNextEvent(message, time)) {
+	for(const MidiMessageMetadata metadata : midiMessages) {
+		MidiMessage message = metadata.getMessage();
+		int time = metadata.samplePosition;
+
 		if(message.isNoteOn() && message.getNoteNumber() >= 59 && message.getNoteNumber() <= 79) {
 			currentvoice = (currentvoice+1)%3;
 
@@ -181,26 +181,27 @@ AudioProcessorEditor* MPaintAudioProcessor::createEditor() {
 }
 
 void MPaintAudioProcessor::getStateInformation(MemoryBlock& destData) {
-	const char linebreak = '\n';
+	const char delimiter = '\n';
 	std::ostringstream data;
 	data << version
-		<< linebreak << (int)(sound.get())
-		<< linebreak << (limit.get()?1:0) << linebreak;
+		<< delimiter << (int)(sound.get())
+		<< delimiter << (limit.get()?1:0) << delimiter;
 	MemoryOutputStream stream(destData, false);
 	stream.writeString(data.str());
 }
 void MPaintAudioProcessor::setStateInformation(const void* data, int sizeInBytes) {
+	const char delimiter = '\n';
 	try {
 		std::stringstream ss(String::createStringFromData(data, sizeInBytes).toRawUTF8());
 		std::string token;
 
-		std::getline(ss, token, '\n');
+		std::getline(ss, token, delimiter);
 		int saveversion = std::stoi(token);
 
-		std::getline(ss, token, '\n');
+		std::getline(ss, token, delimiter);
 		apvts.getParameter("sound")->setValueNotifyingHost(std::stoi(token)/14.f);
 
-		std::getline(ss, token, '\n');
+		std::getline(ss, token, delimiter);
 		apvts.getParameter("limit")->setValueNotifyingHost(std::stoi(token));
 
 	} catch(const char* e) {

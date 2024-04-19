@@ -24,6 +24,7 @@ struct knob {
 	float value = .5f;
 	String id;
 	String name;
+	String description = "";
 	float minimumvalue = 0.f;
 	float maximumvalue = 1.f;
 	float defaultvalue = 0.f;
@@ -39,6 +40,7 @@ struct slider {
 	String id;
 	String name;
 	String displayname;
+	String description = "";
 	float minimumvalue = 0.f;
 	float maximumvalue = 1.f;
 	float defaultvalue = 0.f;
@@ -117,7 +119,7 @@ public:
 	void renderOpenGL() override;
 	void openGLContextClosing() override;
 	void calcvis();
-	void paint (Graphics&) override;
+	void paint(Graphics&) override;
 
 	void timerCallback() override;
 
@@ -139,6 +141,7 @@ public:
 	slider sliders[5];
 	int slidercount = 0;
 	curve curves[8];
+	String curvedescriptions[8];
 	int curveindex[5] = {0,1,3,5,7};
 	float visline[3408];
 

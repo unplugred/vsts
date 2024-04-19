@@ -199,11 +199,10 @@ void CRMBLAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& m
 
 	double bpm = 120;
 	if(state.values[1] > 0) {
-		if(getPlayHead() != nullptr) {
-			AudioPlayHead::CurrentPositionInfo cpi;
-			getPlayHead()->getCurrentPosition(cpi);
-			if(cpi.bpm != lastbpm.get()) lastbpm = cpi.bpm;
-			bpm = cpi.bpm;
+		if(auto bpmfromhost = *getPlayHead()->getPosition()->getBpm()) {
+			if(bpmfromhost != lastbpm.get())
+				lastbpm = bpmfromhost;
+			bpm = bpmfromhost;
 		} else bpm = lastbpm.get();
 	}
 

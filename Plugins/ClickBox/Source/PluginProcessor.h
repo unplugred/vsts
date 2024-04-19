@@ -114,7 +114,7 @@ private:
 	float lerpstage = 0;
 
 	float oldautomod = 0;
-	float oldoverride = 1;
+	bool oldoverride = true;
 
 	Random random;
 	perlin prlin;
