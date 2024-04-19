@@ -1,7 +1,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-CRMBLAudioProcessorEditor::CRMBLAudioProcessorEditor (CRMBLAudioProcessor& p, int paramcount, pluginpreset state, pluginparams params) : audio_processor (p), plugmachine_gui(p, 507, 465) {
+CRMBLAudioProcessorEditor::CRMBLAudioProcessorEditor(CRMBLAudioProcessor& p, int paramcount, pluginpreset state, pluginparams params) : audio_processor(p), plugmachine_gui(p, 507, 465) {
 	//special labels: time, mod, feedback
 	//CLOCK
 	knobs[0].description = "Computer time";
@@ -585,7 +585,7 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 void CRMBLAudioProcessorEditor::openGLContextClosing() {
 	draw_close();
 }
-void CRMBLAudioProcessorEditor::paint (Graphics& g) { }
+void CRMBLAudioProcessorEditor::paint(Graphics& g) { }
 
 void CRMBLAudioProcessorEditor::timerCallback() {
 	for(int i = 0; i < knobcount; i++) {
@@ -766,7 +766,7 @@ void CRMBLAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		audio_processor.apvts.getParameter("oversampling")->setValueNotifyingHost(oversampling?1.f:0.f);
 		audio_processor.undo_manager.setCurrentTransactionName(oversampling?"Turned oversampling on":"Turned oversampling off");
 		audio_processor.undo_manager.beginNewTransaction();
-	} else if (hover == -4) {
+	} else if(hover == -4) {
 		hold = !hold;
 		audio_processor.apvts.getParameter("hold")->setValueNotifyingHost(hold?1.f:0.f);
 		audio_processor.undo_manager.setCurrentTransactionName(hold?"Hold":"Unhold");
@@ -844,7 +844,7 @@ int CRMBLAudioProcessorEditor::recalc_hover(float x, float y) {
 	x /= ui_scales[ui_scale_index];
 	y /= ui_scales[ui_scale_index];
 
-	if (x >= 9 && x <= 160 && y >= 335 && y <= 456) {
+	if(x >= 9 && x <= 160 && y >= 335 && y <= 456) {
 		if(x <= 50 && y <= 378) return -4;
 		else if(x <= 119 && y >= 382 && y <= 402) return -3;
 		else if(y >= 406) return -5;

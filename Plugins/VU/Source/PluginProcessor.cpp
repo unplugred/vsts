@@ -31,7 +31,7 @@ bool VUAudioProcessor::isMidiEffect() const { return false; }
 double VUAudioProcessor::getTailLengthSeconds() const { return 0.0; }
 int VUAudioProcessor::getNumPrograms() { return 20; }
 int VUAudioProcessor::getCurrentProgram() { return currentpreset; }
-void VUAudioProcessor::setCurrentProgram (int index) {
+void VUAudioProcessor::setCurrentProgram(int index) {
 	if(currentpreset == index) return;
 
 	undo_manager.beginNewTransaction((String)"Changed preset to " += presets[index].name);
@@ -40,35 +40,34 @@ void VUAudioProcessor::setCurrentProgram (int index) {
 	for(int i = 0; i < paramcount; i++)
 		apvts.getParameter(pots[i].id)->setValueNotifyingHost(pots[i].normalize(presets[index].values[i]));
 }
-const String VUAudioProcessor::getProgramName (int index) {
+const String VUAudioProcessor::getProgramName(int index) {
 	return { presets[index].name };
 }
-void VUAudioProcessor::changeProgramName (int index, const String& newName) {
+void VUAudioProcessor::changeProgramName(int index, const String& newName) {
 	presets[index].name = newName;
 }
 
-void VUAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {}
+void VUAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {}
 void VUAudioProcessor::releaseResources() {}
 
-bool VUAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const {
-	if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
+bool VUAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const {
+	if(layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
 		return false;
 
 	int numChannels = layouts.getMainInputChannels();
 	return (numChannels > 0 && numChannels <= 2);
 }
 
-void VUAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midiMessages) {
+void VUAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMessages) {
 	ScopedNoDenormals noDenormals;
 
 	if(buffer.getNumChannels() == 0 || buffer.getNumSamples() == 0) return;
 	int channelnum = getTotalNumInputChannels();
 
 	float leftrms = 0, rightrms = 0, newleftpeak = leftpeak.get(), newrightpeak = rightpeak.get();
-	for (int channel = 0; channel < fmin(channelnum,2); ++channel)
-	{
+	for(int channel = 0; channel < fmin(channelnum,2); ++channel) {
 		const float* channelData = buffer.getReadPointer(channel);
-		for (int sample = 0; sample < buffer.getNumSamples(); ++sample) {
+		for(int sample = 0; sample < buffer.getNumSamples(); ++sample) {
 			float data = channelData[sample];
 			data *= data;
 			if(channel == 0) {
@@ -86,7 +85,7 @@ void VUAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& mid
 	}
 
 	if(JUCEApplication::isStandaloneApp()) buffer.clear();
-	else for (auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
+	else for(auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
 		buffer.clear(i, 0, buffer.getNumSamples());
 
 	buffercount = buffercount.get()+1;
@@ -114,7 +113,7 @@ AudioProcessorEditor* VUAudioProcessor::createEditor() {
 	return new VUAudioProcessorEditor(*this,paramcount,presets[currentpreset],pots);
 }
 
-void VUAudioProcessor::getStateInformation (MemoryBlock& destData) {
+void VUAudioProcessor::getStateInformation(MemoryBlock& destData) {
 	const char delimiter = '\n';
 	std::ostringstream data;
 	data << version << delimiter
@@ -130,7 +129,7 @@ void VUAudioProcessor::getStateInformation (MemoryBlock& destData) {
 	MemoryOutputStream stream(destData,false);
 	stream.writeString(data.str());
 }
-void VUAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
+void VUAudioProcessor::setStateInformation(const void* data, int sizeInBytes) {
 	const char delimiter = '\n';
 	try {
 		std::stringstream ss(String::createStringFromData(data, sizeInBytes).toRawUTF8());
@@ -163,7 +162,7 @@ void VUAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
 			std::getline(ss,token,delimiter);
 			height = std::stoi(token);
 		}
-	} catch (const char* e) {
+	} catch(const char* e) {
 		debug((String)"Error loading saved data: "+(String)e);
 	} catch(String e) {
 		debug((String)"Error loading saved data: "+e);

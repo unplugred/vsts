@@ -24,11 +24,11 @@ public:
 	void newOpenGLContextCreated() override;
 	void renderOpenGL() override;
 	void openGLContextClosing() override;
-	void paint (Graphics&) override;
+	void paint(Graphics&) override;
 
 	void timerCallback() override;
-
 	virtual void parameterChanged(const String& parameterID, float newValue);
+
 	void mouseMove(const MouseEvent& event) override;
 	void mouseExit(const MouseEvent& event) override;
 	void mouseDown(const MouseEvent& event) override;
@@ -65,5 +65,5 @@ private:
 
 	LookNFeel look_n_feel;
 
-	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PNCHAudioProcessorEditor)
+	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PNCHAudioProcessorEditor)
 };

@@ -103,10 +103,11 @@ void RedBassAudioProcessor::reseteverything() {
 	spec.sampleRate = samplerate;
 	spec.maximumBlockSize = samplesperblock;
 	spec.numChannels = 1;
-	filter.reset();
-	(*filter.parameters.get()).setCutOffFrequency(samplerate,calculatelowpass(state.values[4]));
-	(*filter.parameters.get()).type = dsp::StateVariableFilter::Parameters<float>::Type::lowPass;
 	filter.prepare(spec);
+	filter.setType(dsp::StateVariableTPTFilterType::lowpass);
+	filter.setCutoffFrequency(calculatelowpass(state.values[4]));
+	filter.setResonance(1./MathConstants<double>::sqrt2);
+	filter.reset();
 }
 void RedBassAudioProcessor::releaseResources() { }
 
@@ -164,8 +165,8 @@ void RedBassAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer&
 
 		sidechain = sidechain/channelnum;
 
-		if(state.values[4] < 1) sidechain = filter.processSample(sidechain);
-		else filter.processSample(sidechain);
+		if(state.values[4] < 1) sidechain = filter.processSample(0,sidechain);
+		else filter.processSample(0,sidechain);
 		if(params.monitor > 0) for(int channel = 0; channel < channelnum; ++channel)
 			channelData[channel][sample] += sidechain*params.monitor;
 
@@ -297,7 +298,6 @@ void RedBassAudioProcessor::set_preset(const String& preset, int preset_id, cons
 
 		for(int v = 0; v < paramcount; v++) {
 			std::getline(ss, token, delimiter);
-			float val = std::stof(token);
 			presets[preset_id].values[v] = std::stof(token);
 		}
 
@@ -341,7 +341,7 @@ void RedBassAudioProcessor::parameterChanged(const String& parameterID, float ne
 			else if(parameterID == "threshold")
 				envelopefollower.setthreshold(calculatethreshold(state.values[1]), samplerate);
 			else if(parameterID == "lowpass")
-				(*filter.parameters.get()).setCutOffFrequency(samplerate,calculatelowpass(state.values[4]));
+				filter.setCutoffFrequency(calculatelowpass(state.values[4]));
 		}
 		if(lerpstage < .001 || lerpchanged[i]) presets[currentpreset].values[i] = newValue;
 		return;

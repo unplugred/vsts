@@ -324,10 +324,6 @@ void ProtoAudioProcessor::set_preset(const String& preset, int preset_id, const 
 
 	for(int i = 0; i < paramcount; i++) {
 		apvts.getParameter(params.pots[i].id)->setValueNotifyingHost(params.pots[i].normalize(presets[currentpreset].values[i]));
-		if(params.pots[i].smoothtime > 0) {
-			params.pots[i].smooth.setCurrentAndTargetValue(presets[currentpreset].values[i]);
-			state.values[i] = presets[currentpreset].values[i];
-		}
 	}
 }
 

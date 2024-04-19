@@ -2,7 +2,7 @@
 #include "PluginEditor.h"
 
 PNCHAudioProcessor::PNCHAudioProcessor() :
-	apvts(*this, &undo_manager, "Parameters", createParameters()),
+	apvts(*this, &undo_manager, "Parameters", create_parameters()),
 	plugmachine_dsp(BusesProperties().withInput("Input",AudioChannelSet::stereo(),true).withOutput("Output",AudioChannelSet::stereo(),true), &apvts) {
 
 	init();
@@ -116,7 +116,7 @@ void PNCHAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& mi
 		}
 	}
 
-	if(isoversampling > 0) os->processSamplesDown(block);
+	if(isoversampling) os->processSamplesDown(block);
 
 	rmsadd = prmsadd;
 	rmscount = prmscount;
@@ -230,7 +230,7 @@ void PNCHAudioProcessor::set_preset(const String& preset, int preset_id, const c
 		std::getline(ss, token, delimiter);
 		apvts.getParameter("oversampling")->setValueNotifyingHost(std::stof(token));
 
-	} catch (const char* e) {
+	} catch(const char* e) {
 		error = "Error loading saved data: "+(String)e;
 	} catch(String e) {
 		error = "Error loading saved data: "+e;
@@ -257,7 +257,7 @@ void PNCHAudioProcessor::parameterChanged(const String& parameterID, float newVa
 
 AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new PNCHAudioProcessor(); }
 
-AudioProcessorValueTreeState::ParameterLayout PNCHAudioProcessor::createParameters() {
+AudioProcessorValueTreeState::ParameterLayout PNCHAudioProcessor::create_parameters() {
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"amount"		,1},"Amount"		,juce::NormalisableRange<float>(0.0f,1.0f)	,0.0f	));
 	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"oversampling",1},"Over-Sampling"												,true	));

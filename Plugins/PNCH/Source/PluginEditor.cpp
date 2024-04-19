@@ -1,8 +1,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-PNCHAudioProcessorEditor::PNCHAudioProcessorEditor (PNCHAudioProcessor& p, float amountt) : audio_processor(p), plugmachine_gui(p, 128, 148, 1.f, 1.f)
-{
+PNCHAudioProcessorEditor::PNCHAudioProcessorEditor(PNCHAudioProcessor& p, float amountt) : audio_processor(p), plugmachine_gui(p, 128, 148, 1.f, 1.f) {
 	amount = amountt;
 	add_listener("amount");
 
@@ -131,7 +130,7 @@ void PNCHAudioProcessorEditor::renderOpenGL() {
 	baseshader->setUniform("tex",0);
 	baseshader->setUniform("texscale",25.f/basetex.getWidth(),21.f/basetex.getHeight());
 	baseshader->setUniform("banner",banner_offset);
-	baseshader->setUniform("letterscale",128/25.f,148/21.f);
+	baseshader->setUniform("letterscale",width/25.f,height/21.f);
 	baseshader->setUniform("amount",(float)floor(amount*31));
 	baseshader->setUniform("colone",c1.getFloatRed(),c1.getFloatGreen(),c1.getFloatBlue());
 	baseshader->setUniform("coltwo",c2.getFloatRed(),c2.getFloatGreen(),c2.getFloatBlue());
@@ -156,7 +155,7 @@ void PNCHAudioProcessorEditor::renderOpenGL() {
 		knobshader->setUniform("tex",0);
 		knobshader->setUniform("banner",banner_offset);
 		float rotato = (amount-.5f)*5.f;
-		knobshader->setUniform("knobrot",round(sin(rotato)*38)/128.f,round(cos(rotato)*38)/148.f);
+		knobshader->setUniform("knobrot",((float)round(sin(rotato)*38))/width,((float)round(cos(rotato)*38))/height);
 		knobshader->setUniform("shake",.03125f*(random.nextFloat()-.5f)*10.f*rms,.027027f*(1-banner_offset)*(random.nextFloat()-.5f)*10.f*rms);
 		knobshader->setUniform("colone",c1.getFloatRed(),c1.getFloatGreen(),c1.getFloatBlue());
 		knobshader->setUniform("coltwo",c2.getFloatRed(),c2.getFloatGreen(),c2.getFloatBlue());
@@ -171,7 +170,7 @@ void PNCHAudioProcessorEditor::renderOpenGL() {
 void PNCHAudioProcessorEditor::openGLContextClosing() {
 	draw_close();
 }
-void PNCHAudioProcessorEditor::paint (Graphics& g) { }
+void PNCHAudioProcessorEditor::paint(Graphics& g) { }
 
 void PNCHAudioProcessorEditor::timerCallback() {
 	if(audio_processor.rmscount.get() > 0) {
@@ -221,9 +220,7 @@ void PNCHAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		rightclickmenu->showMenuAsync(PopupMenu::Options(),[this](int result){
 			if(result <= 0) return;
 			else if(result >= 20) {
-				ui_scale_index = result-21;
-				audio_processor.set_ui_scale(ui_scales[ui_scale_index]);
-				reset_size = true;
+				set_ui_scale(result-21);
 			} else if(result == 1) { //copy preset
 				SystemClipboard::copyTextToClipboard(audio_processor.get_preset(0));
 			} else if(result == 2) { //paste preset
@@ -270,7 +267,6 @@ void PNCHAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 }
 void PNCHAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 	if(dpi < 0) return;
-	if(event.mods.isRightButtonDown()) return;
 	if(hover == 0) {
 		audio_processor.undo_manager.setCurrentTransactionName((amount - initialvalue) >= 0 ? "Increased amount" : "Decreased amount");
 		audio_processor.apvts.getParameter("amount")->endChangeGesture();
@@ -295,7 +291,7 @@ int PNCHAudioProcessorEditor::recalc_hover(float x, float y) {
 	x /= ui_scales[ui_scale_index];
 	y /= ui_scales[ui_scale_index];
 
-	if (credits) {
+	if(credits) {
 		if(x >= 69 && x <= 97 && y >= 93 && y <= 117) return 1;
 		if(x >= 8 && x <= 59 && y >= 112 && y <= 137) return 2;
 	} else {

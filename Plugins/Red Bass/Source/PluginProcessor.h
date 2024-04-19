@@ -120,7 +120,7 @@ private:
 
 	double crntsmpl = 0;
 	EnvelopeFollower envelopefollower;
-	dsp::StateVariableFilter::Filter<float> filter;
+	dsp::StateVariableTPTFilter<float> filter;
 
 	int channelnum = 0;
 	int samplesperblock = 0;

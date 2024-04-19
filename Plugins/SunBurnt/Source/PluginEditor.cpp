@@ -43,6 +43,33 @@ SunBurntAudioProcessorEditor::SunBurntAudioProcessorEditor(SunBurntAudioProcesso
 	for(int i = 0; i < 8; i++)
 		curves[i] = state.curves[i];
 
+	knobs[0].description = "Gain of unprocessed signal.";
+	knobs[1].description = "Gain of processed signal.";
+	knobs[2].description = "The amount of reflections in the reverb.\nAt low values the reverb begins to sound like a delay.\nWhen turned all the way down, the plugin enters tap-delay mode in which every point in the volume curve represents a tap.\nThis knob is irrelevant if the Density curve is enabled.";
+	knobs[3].description = "Length of the reverb in seconds.\nWhen rotated while holding CTRL, BPM sync mode can be enabled.";
+	knobs[4].description = "Depth of vibrato applied to wet input before entering the reverb.\nThis helps create a thicker and wider sound.";
+	knobs[5].description = "Speed of vibrato applied to wet input before entering the reverb.\nThis helps create a thicker and wider sound.";
+	sliders[0].description = "Cut-off frequency of filter applied on the wet signal to remove unwanted low frequency content.";
+	sliders[1].description = "Resonance of High-Pass filter applied on the wet signal.\nCan be used for creative sound design at higher values when the High-Pass curve is enabled.";
+	sliders[2].description = "Cut-off frequency of filter applied on the wet signal to remove unwanted high frequency content.";
+	sliders[3].description = "Resonance of Low-Pass filter applied on the wet signal.\nCan be used for creative sound design at higher values when the Low-Pass curve is enabled.";
+	sliders[4].description = "Amount of semitones shifted by the pitch shifter.";
+	curvedescriptions[0] = "Empty slot.";
+	curvedescriptions[1] = "Curve representing the cut-off frequency of a filter which removes lower frequencies.";
+	curvedescriptions[2] = "Curve representing the resonance of the High-Pass filter, which can be used for creative sound design.";
+	curvedescriptions[3] = "Curve representing the cut-off frequency of a filter which removes higher frequencies.";
+	curvedescriptions[4] = "Curve representing the resonance of the Low-Pass filter, which can be used for creative sound design.";
+	curvedescriptions[5] = "Curve representing the panning of the reverb along its tail.\nCan be used for creative effects.";
+	curvedescriptions[6] = "Curve representing the amount of reflections in the reverb along its tail.\nAt low values the reverb begins to sound like a delay.\nWhen turned all the way down, the plugin enters tap-delay mode in which every point in the volume curve represents a tap.";
+	curvedescriptions[7] = "Curve representing a blend between a regular and pitched version of the signal along its tail.\nCan be used to add a bit of sparkle at the end of a tail, or exploited for more creative effects.";
+
+	for(int i = 0; i < 6; i++)
+		knobs[i].description = look_n_feel.add_line_breaks(knobs[i].description);
+	for(int i = 0; i < 5; i++)
+		sliders[i].description = look_n_feel.add_line_breaks(sliders[i].description);
+	for(int i = 0; i < 8; i++)
+		curvedescriptions[i] = look_n_feel.add_line_breaks(curvedescriptions[i]);
+
 	calcvis();
 	randcubes(state.seed);
 
@@ -264,7 +291,7 @@ uniform vec2 knobpos;
 uniform float banner;
 out vec2 uv;
 void main(){
-	gl_Position = vec4(vec2(aPos.x*knobscale.x+knobpos.x,(aPos.y*knobscale.y+knobpos.y)*(1-banner)-banner),0,1);
+	gl_Position = vec4(aPos.x*knobscale.x+knobpos.x,(aPos.y*knobscale.y+knobpos.y)*(1-banner)-banner,0,1);
 	uv = aPos*2-1;
 })",
 //CIRCLE FRAG
@@ -858,7 +885,7 @@ void SunBurntAudioProcessorEditor::calcvis() {
 		currenty = nexty;
 	}
 }
-void SunBurntAudioProcessorEditor::paint (Graphics& g) { }
+void SunBurntAudioProcessorEditor::paint(Graphics& g) { }
 
 void SunBurntAudioProcessorEditor::timerCallback() {
 	if(websiteht >= -.65761f) websiteht -= .03f;
@@ -1089,35 +1116,6 @@ void SunBurntAudioProcessorEditor::mouseMove(const MouseEvent& event) {
 	if(hover == -16 && prevhover != -16 && websiteht <= -.65761f) websiteht = 0;
 	if(menuindex <= 0 || prevhover == hover)
 		return;
-	switch(hover) {
-		case -1:
-			hoverid = -1;
-			break;
-		case 0:
-			hoverid = 0;
-			break;
-		case 1:
-			hoverid = 5;
-			break;
-		case 2:
-			hoverid = 7;
-			break;
-		case 3:
-			hoverid = 6;
-			break;
-		case 4:
-			hoverid = 1;
-			break;
-		case 5:
-			hoverid = 3;
-			break;
-		case 6:
-			hoverid = 2;
-			break;
-		case 7:
-			hoverid = 4;
-			break;
-	}
 	itemenabled = false;
 	if(hoverid > 0)
 		for(int i = 1; i < 5; ++i)
@@ -1170,14 +1168,36 @@ void SunBurntAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		rightclickmenu->addSeparator();
 		rightclickmenu->addSubMenu(jpmode?(String::fromUTF8("'スケール")):("'Scale"),*scalemenu);
 		rightclickmenu->addSubMenu(jpmode?(String::fromUTF8("'言語")):("'Language"),*langmenu);
-		rightclickmenu->addSeparator();
-		rightclickmenu->addItem(-1,"'Trust the process!",false);
+
+		String description = "";
+		if(menuindex > 0 && hover > -1) {
+			description = curvedescriptions[hoverid];
+		} else if(hover < knobcount && hover != -1) {
+			if(hover > -1)
+				description = knobs[hover].description;
+			else if(hover > -10)
+				description = curvedescriptions[curveindex[(int)ceil(hover*.5)+5]];
+			else if(hover < -20)
+				description = sliders[slidersvisible[hover+30]].description;
+			else {
+				if(hover == -10)
+					description = "Curve representing the shape of the reverb's tale, influencing its attack and release, and other characteristics.";
+				else if(hover == -15)
+					description = "Randomize seed.\nThis changes the reflections, and mostly has an effect in a lower density value.";
+				else if(hover == -16)
+					description = "Trust the process!";
+				description = look_n_feel.add_line_breaks(description);
+			}
+		}
+		if(description != "") {
+			rightclickmenu->addSeparator();
+			rightclickmenu->addItem(-1,"'"+description,false);
+		}
+
 		rightclickmenu->showMenuAsync(PopupMenu::Options(),[this](int result){
 			if(result <= 0) return;
 			else if(result >= 20) { //size
-				ui_scale_index = result-21;
-				audio_processor.set_ui_scale(ui_scales[ui_scale_index]);
-				reset_size = true;
+				set_ui_scale(result-21);
 			} else if(result >= 10) { //lang
 				jpmode = result==12;
 				audio_processor.setLang(result==12);
@@ -1240,7 +1260,7 @@ void SunBurntAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		}
 	} else if(hover >= -10 && hover <= -2) {
 		if((hover+9)%2 == 0 || hover == -10) {
-			curveselection = ceil(hover*.5+5);
+			curveselection = ceil(hover*.5)+5;
 			audio_processor.params.curveselection = curveselection;
 			calcvis();
 			recalcsliders();
@@ -1567,17 +1587,48 @@ int SunBurntAudioProcessorEditor::recalc_hover(float x, float y) {
 	if(menuindex > 0) {
 		float rotx = (x-158)*cos(paperrot)-(y-161)*sin(paperrot)+160;
 		float roty = (x-158)*sin(paperrot)+(y-161)*cos(paperrot)+160;
+		int h = -1;
 		if(jpmode) {
 			if(rotx < 61 || roty < 117 || rotx >= 255 || roty >= 241)
-				return -1;
+				h = -1;
 			else
-				return (rotx>=158?1:0)+floor((roty-117)/31)*2;
+				h = (rotx>=158?1:0)+floor((roty-117)/31)*2;
 		} else {
 			if(rotx < 60 || roty < 106 || rotx >= 266 || roty >= 234)
-				return -1;
+				h = -1;
 			else
-				return (rotx>=163?1:0)+floor((roty-106)/32)*2;
+				h = (rotx>=163?1:0)+floor((roty-106)/32)*2;
 		}
+		switch(h) {
+			case -1:
+				hoverid = -1;
+				break;
+			case 0:
+				hoverid = 0;
+				break;
+			case 1:
+				hoverid = 5;
+				break;
+			case 2:
+				hoverid = 7;
+				break;
+			case 3:
+				hoverid = 6;
+				break;
+			case 4:
+				hoverid = 1;
+				break;
+			case 5:
+				hoverid = 3;
+				break;
+			case 6:
+				hoverid = 2;
+				break;
+			case 7:
+				hoverid = 4;
+				break;
+		}
+		return h;
 	}
 
 	if(y < 7) return -1;

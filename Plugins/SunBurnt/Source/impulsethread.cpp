@@ -23,6 +23,8 @@ void createimpulse::run() {
 
 	double out = 0;
 	double agc = 0;
+	highpassfilter.reset();
+	lowpassfilter.reset();
 
 	Random random(seed);
 	double values[8];
@@ -39,6 +41,11 @@ void createimpulse::run() {
 		values[5] = valuesraw[5];
 		values[6] = pow(valuesraw[6],4);
 		values[7] = valuesraw[7];
+
+		highpassfilter.setCutoffFrequency(values[1]);
+		highpassfilter.setResonance(values[2]);
+		lowpassfilter.setCutoffFrequency(values[3]);
+		lowpassfilter.setResonance(values[4]);
 
 		for (int c = 0; c < channelnum; ++c) {
 
@@ -62,15 +69,19 @@ void createimpulse::run() {
 			}
 
 			//low pass
-			if(valuesactive[3] || values[3] < 20000) {
-				(*lowpassfilters[c].parameters.get()).setCutOffFrequency(samplerate,values[3],values[4]);
-				out = lowpassfilters[c].processSample(out);
+			if(valuesactive[3]) {
+				if(values[3] < 20000)
+					out = lowpassfilter.processSample(c, out);
+				else
+					lowpassfilter.processSample(c, out);
 			}
 
 			//high pass
-			if(valuesactive[1] || values[1] > 20) {
-				(*highpassfilters[c].parameters.get()).setCutOffFrequency(samplerate,values[1],values[2]);
-				out = highpassfilters[c].processSample(out);
+			if(valuesactive[1]) {
+				if(values[1] > 20)
+					out = highpassfilter.processSample(c, out);
+				else
+					highpassfilter.processSample(c, out);
 			}
 
 			if(!active.get()) return;

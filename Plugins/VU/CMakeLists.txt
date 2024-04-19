@@ -51,7 +51,6 @@ target_compile_definitions("${BaseTargetName}" PUBLIC
 
 juce_add_binary_data("${BaseTargetName}BinaryData" HEADER_NAME BinaryData.h NAMESPACE BinaryData SOURCES
 	Resources/genuine_soundware.png
-	Resources/icon.png
 	Resources/map.png
 	Resources/txtmap.png)
 set_target_properties("${BaseTargetName}BinaryData" PROPERTIES POSITION_INDEPENDENT_CODE TRUE)

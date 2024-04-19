@@ -230,64 +230,65 @@ AudioProcessorEditor* PFAudioProcessor::createEditor() {
 }
 
 void PFAudioProcessor::getStateInformation(MemoryBlock& destData) {
-	const char linebreak = '\n';
+	const char delimiter = '\n';
 	std::ostringstream data;
 
-	data << version << linebreak
-		<< currentpreset << linebreak
-		<< (params.oversampling?1:0) << linebreak;
+	data << version << delimiter
+		<< currentpreset << delimiter
+		<< (params.oversampling?1:0) << delimiter;
 
 	for(int i = 0; i < getNumPrograms(); i++) {
-		data << presets[i].name << linebreak;
+		data << presets[i].name << delimiter;
 		for(int v = 0; v < paramcount; v++)
-			data << presets[i].values[v] << linebreak;
+			data << presets[i].values[v] << delimiter;
 	}
 
 	MemoryOutputStream stream(destData, false);
 	stream.writeString(data.str());
 }
 void PFAudioProcessor::setStateInformation(const void* data, int sizeInBytes) {
+	const char delimiter = '\n';
 	saved = true;
 	try {
 		std::stringstream ss(String::createStringFromData(data, sizeInBytes).toRawUTF8());
 		std::string token;
 
-		std::getline(ss, token, '\n');
+		std::getline(ss, token, delimiter);
 		int saveversion = std::stoi(token);
 
-		std::getline(ss, token, '\n');
+		std::getline(ss, token, delimiter);
 		currentpreset = std::stoi(token);
 
 		if(saveversion >= 4) {
-			std::getline(ss, token, '\n');
+			std::getline(ss, token, delimiter);
 			params.oversampling = std::stof(token) > .5;
 
 			for(int i = 0; i < getNumPrograms(); i++) {
-				std::getline(ss, token, '\n');
+				std::getline(ss, token, delimiter);
 				presets[i].name = token;
 				for(int v = 0; v < paramcount; v++) {
-					std::getline(ss, token, '\n');
+					std::getline(ss, token, delimiter);
 					presets[i].values[v] = std::stof(token);
 				}
 			}
 		} else {
 			for(int i = 0; i < 6; i++) {
-				std::getline(ss, token, '\n');
+				std::getline(ss, token, delimiter);
 				presets[currentpreset].values[i] = std::stof(token);
 			}
 
 			if(saveversion > 1) {
-				std::getline(ss, token, '\n');
+				std::getline(ss, token, delimiter);
 				float val = std::stof(token);
 				if(saveversion <= 2) val = val > 1.5 ? 1 : 0;
 				params.oversampling = val>.5;
 			}
 
 			for(int i = 0; i < 8; i++) {
-				std::getline(ss, token, '\n');
+				std::getline(ss, token, delimiter);
 				presets[i].name = token;
 				for(int v = 0; v < 5; v++) {
-					std::getline(ss, token, '\n');
+					std::getline(ss, token, delimiter);
 					if(currentpreset != i) presets[i].values[v] = std::stof(token);
 				}
 			}

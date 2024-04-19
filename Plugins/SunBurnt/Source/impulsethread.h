@@ -14,8 +14,8 @@ public:
 	Atomic<bool> generated = false;
 	int revlength = 0;
 	int taillength = 0;
-	std::vector<dsp::StateVariableFilter::Filter<float>> highpassfilters;
-	std::vector<dsp::StateVariableFilter::Filter<float>> lowpassfilters;
+	dsp::StateVariableTPTFilter<float> highpassfilter;
+	dsp::StateVariableTPTFilter<float> lowpassfilter;
 	std::vector<AudioBuffer<float>> impulsebuffer;
 	std::vector<AudioBuffer<float>> impulseeffectbuffer;
 	std::vector<float*> impulsechanneldata;

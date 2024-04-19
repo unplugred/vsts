@@ -50,14 +50,14 @@ struct bubble {
 };
 class PisstortionAudioProcessorEditor : public plugmachine_gui {
 public:
-	PisstortionAudioProcessorEditor (PisstortionAudioProcessor&, int paramcount, pluginpreset state, pluginparams params);
+	PisstortionAudioProcessorEditor(PisstortionAudioProcessor&, int paramcount, pluginpreset state, pluginparams params);
 	~PisstortionAudioProcessorEditor() override;
 
 	void newOpenGLContextCreated() override;
 	void renderOpenGL() override;
 	void openGLContextClosing() override;
 	void calcvis();
-	void paint (Graphics&) override;
+	void paint(Graphics&) override;
 
 	void timerCallback() override;
 
@@ -116,5 +116,5 @@ private:
 
 	LookNFeel look_n_feel;
 
-	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PisstortionAudioProcessorEditor)
+	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PisstortionAudioProcessorEditor)
 };

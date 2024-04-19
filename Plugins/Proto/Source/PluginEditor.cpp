@@ -487,7 +487,7 @@ int ProtoAudioProcessorEditor::recalc_hover(float x, float y) {
 
 LookNFeel::LookNFeel() {
 	setColour(PopupMenu::backgroundColourId,Colour::fromFloatRGBA(0.f,0.f,0.f,0.f));
-	font = find_font("Tahoma|Helvetica Neue|Helvetica|Roboto");
+	font = find_font("Consolas|Noto Mono|DejaVu Sans Mono|Menlo|Andale Mono|SF Mono|Lucida Console|Liberation Mono");
 }
 LookNFeel::~LookNFeel() {
 }

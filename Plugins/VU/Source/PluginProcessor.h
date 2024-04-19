@@ -47,12 +47,12 @@ public:
 	VUAudioProcessor();
 	~VUAudioProcessor() override;
 
-	void prepareToPlay (double sampleRate, int samplesPerBlock) override;
+	void prepareToPlay(double sampleRate, int samplesPerBlock) override;
 	void releaseResources() override;
 
 	bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
 
-	void processBlock (AudioBuffer<float>&, MidiBuffer&) override;
+	void processBlock(AudioBuffer<float>&, MidiBuffer&) override;
 
 	AudioProcessorEditor* createEditor() override;
 	bool hasEditor() const override;
@@ -70,8 +70,8 @@ public:
 	const String getProgramName(int index) override;
 	void changeProgramName(int index, const String& newName) override;
 
-	void getStateInformation (MemoryBlock& destData) override;
-	void setStateInformation (const void* data, int sizeInBytes) override;
+	void getStateInformation(MemoryBlock& destData) override;
+	void setStateInformation(const void* data, int sizeInBytes) override;
 	virtual void parameterChanged(const String& parameterID, float newValue);
 
 	Atomic<float> leftvu = 0;
@@ -92,7 +92,7 @@ public:
 	const int paramcount = 3;
 private:
 
-	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (VUAudioProcessor)
+	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(VUAudioProcessor)
 };
 
 static std::function<String(int v, int max)> todb = [](int v, int max) {

@@ -9,7 +9,7 @@ int SunBurntAudioProcessor::findcurve(int index) {
 	return -1;
 }
 SunBurntAudioProcessor::SunBurntAudioProcessor() :
-	apvts(*this, &undo_manager, "Parameters", createParameters()),
+	apvts(*this, &undo_manager, "Parameters", create_parameters()),
 	plugmachine_dsp(BusesProperties().withInput("Input",AudioChannelSet::stereo(),true).withOutput("Output",AudioChannelSet::stereo(),true), &apvts) {
 
 	init();
@@ -126,7 +126,7 @@ double SunBurntAudioProcessor::getTailLengthSeconds() const {
 
 int SunBurntAudioProcessor::getNumPrograms() { return 18; }
 int SunBurntAudioProcessor::getCurrentProgram() { return currentpreset; }
-void SunBurntAudioProcessor::setCurrentProgram (int index) {
+void SunBurntAudioProcessor::setCurrentProgram(int index) {
 	if(currentpreset == index) return;
 	impulsethread.active = false;
 	undo_manager.beginNewTransaction((String)"Changed preset to " += presets[index].name);
@@ -144,14 +144,14 @@ void SunBurntAudioProcessor::setCurrentProgram (int index) {
 	updatevis = true;
 	undo_manager.beginNewTransaction();
 }
-const String SunBurntAudioProcessor::getProgramName (int index) {
+const String SunBurntAudioProcessor::getProgramName(int index) {
 	return { presets[index].name };
 }
-void SunBurntAudioProcessor::changeProgramName (int index, const String& newName) {
+void SunBurntAudioProcessor::changeProgramName(int index, const String& newName) {
 	presets[index].name = newName;
 }
 
-void SunBurntAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) {
+void SunBurntAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
 	samplesperblock = samplesPerBlock;
 	samplerate = sampleRate;
 
@@ -171,12 +171,6 @@ void SunBurntAudioProcessor::reseteverything() {
 
 	dampvibratodepth.reset(0,.2,-1,samplerate,channelnum);
 
-	dsp::ProcessSpec monospec;
-	monospec.sampleRate = samplerate;
-	monospec.maximumBlockSize = samplesperblock;
-	monospec.numChannels = 1;
-
-	vibratobuffer.setSize(channelnum,(int)floor(MAX_VIBRATO*samplerate));
 	vibratobuffer.clear();
 	wetbuffer.setSize(channelnum,samplesperblock);
 	effectbuffer.setSize(channelnum,samplesperblock);
@@ -189,8 +183,6 @@ void SunBurntAudioProcessor::reseteverything() {
 	impulsethread.taillength = 0;
 	impulsethread.samplerate = samplerate;
 	impulsethread.channelnum = channelnum;
-	impulsethread.highpassfilters.resize(channelnum);
-	impulsethread.lowpassfilters.resize(channelnum);
 	impulsethread.impulsechanneldata.resize(channelnum);
 	impulsethread.impulseeffectchanneldata.resize(channelnum);
 
@@ -208,17 +200,21 @@ void SunBurntAudioProcessor::reseteverything() {
 		convolvereffect[0].reset(new dsp::Convolution);
 	}
 
-	for(int c = 0; c < channelnum; ++c) {
-		impulsethread.highpassfilters[c].reset();
-		impulsethread.lowpassfilters[c].reset();
-		(*impulsethread.highpassfilters[c].parameters.get()).type = dsp::StateVariableFilter::Parameters<float>::Type::highPass;
-		(*impulsethread.lowpassfilters[c].parameters.get()).type = dsp::StateVariableFilter::Parameters<float>::Type::lowPass;
-		impulsethread.highpassfilters[c].prepare(monospec);
-		impulsethread.lowpassfilters[c].prepare(monospec);
+	dsp::ProcessSpec spec;
+	spec.sampleRate = samplerate;
+	spec.maximumBlockSize = samplesperblock;
+	spec.numChannels = channelnum;
 
-		if(channelnum > 2) {
-			convolver[c].reset(new dsp::Convolution);
-			convolvereffect[c].reset(new dsp::Convolution);
+	vibratobuffer.setSize(channelnum,(int)floor(MAX_VIBRATO*samplerate));
+	impulsethread.highpassfilter.prepare(spec);
+	impulsethread.lowpassfilter.prepare(spec);
+	impulsethread.highpassfilter.setType(dsp::StateVariableTPTFilterType::highpass);
+	impulsethread.lowpassfilter.setType(dsp::StateVariableTPTFilterType::lowpass);
+
+	if(channelnum > 2) {
+		for(int c = 0; c < channelnum; ++c) {
+				convolver[c].reset(new dsp::Convolution);
+				convolvereffect[c].reset(new dsp::Convolution);
 		}
 	}
 
@@ -245,21 +241,21 @@ void SunBurntAudioProcessor::resetconvolution() {
 	} else {
 		spec.numChannels = channelnum;
 		convolver[0]->reset();
-		convolver[0]->prepare(spec);
 		convolvereffect[0]->reset();
+		convolver[0]->prepare(spec);
 		convolvereffect[0]->prepare(spec);
 	}
 }
 void SunBurntAudioProcessor::releaseResources() { }
 
-bool SunBurntAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const {
-	if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
+bool SunBurntAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const {
+	if(layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
 		return false;
 
 	return (layouts.getMainInputChannels() > 0);
 }
 
-void SunBurntAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midiMessages) {
+void SunBurntAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMessages) {
 	ScopedNoDenormals noDenormals;
 
 	if(buffer.getNumChannels() == 0 || buffer.getNumSamples() == 0) return;
@@ -278,14 +274,12 @@ void SunBurntAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffe
 	//get bpm
 	double bpm = 120;
 	if(state.values[4] > 0) {
-		if(getPlayHead() != nullptr) {
-			AudioPlayHead::CurrentPositionInfo cpi;
-			getPlayHead()->getCurrentPosition(cpi);
-			if(cpi.bpm != lastbpm) {
-				lastbpm = cpi.bpm;
+		if(auto bpmfromhost = *getPlayHead()->getPosition()->getBpm()) {
+			if(bpmfromhost != lastbpm) {
+				lastbpm = bpmfromhost;
 				updatedcurvebpmcooldown = .5f;
 			}
-			bpm = cpi.bpm;
+			bpm = bpmfromhost;
 		} else bpm = lastbpm;
 	}
 
@@ -351,14 +345,14 @@ void SunBurntAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffe
 	//vibrato
 	int buffersize = (int)floor(MAX_VIBRATO*samplerate);
 	float* const* vibratobufferdata = vibratobuffer.getArrayOfWritePointers();
-	for (int s = 0; s < numsamples; ++s) {
+	for(int s = 0; s < numsamples; ++s) {
 		state.values[5] = params.pots[5].smooth.getNextValue();
 		state.values[6] = params.pots[6].smooth.getNextValue();
 
 		vibratoindex = (vibratoindex+1)%buffersize;
 		double vibratospeed = pow(state.values[6]*2+.2,2);
 		vibratophase = fmod(vibratophase+vibratospeed/samplerate,1);
-		for (int c = 0; c < channelnum; ++c) {
+		for(int c = 0; c < channelnum; ++c) {
 			vibratobufferdata[c][vibratoindex] = drychanneldata[c][s];
 			double vibratodepth = dampvibratodepth.nextvalue(pow(state.values[5],4)/vibratospeed,c);
 			if(vibratodepth > 0.0000000001) {
@@ -392,8 +386,8 @@ void SunBurntAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffe
 				AudioData::InterleavedSource<Format>{&pitchprocessbuffer.front(),channelnum},
 				AudioData::NonInterleavedDest<Format>{effectbuffer.getArrayOfWritePointers(),channelnum},numsamples);
 		} else {
-			for (int c = 0; c < channelnum; ++c)
-				for (int s = 0; s < numsamples; ++s)
+			for(int c = 0; c < channelnum; ++c)
+				for(int s = 0; s < numsamples; ++s)
 					effectchanneldata[c][s] = wetchanneldata[c][s];
 		}
 	}
@@ -421,11 +415,11 @@ void SunBurntAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffe
 		}
 	}
 
-	for (int s = 0; s < numsamples; ++s) {
+	for(int s = 0; s < numsamples; ++s) {
 		state.values[0] = params.pots[0].smooth.getNextValue();
 		state.values[1] = params.pots[1].smooth.getNextValue();
 
-		for (int c = 0; c < channelnum; ++c) {
+		for(int c = 0; c < channelnum; ++c) {
 			//dry wet
 			if(pitchactive)
 				drychanneldata[c][s] = drychanneldata[c][s]*state.values[0]+(wetchanneldata[c][s]+effectchanneldata[c][s])*pow(state.values[1]*2,2);
@@ -447,7 +441,7 @@ void SunBurntAudioProcessor::setLang(bool isjp) {
 	props.getUserSettings()->setValue("Language",isjp?2:1);
 }
 
-void SunBurntAudioProcessor::getStateInformation (MemoryBlock& destData) {
+void SunBurntAudioProcessor::getStateInformation(MemoryBlock& destData) {
 	const char delimiter = '\n';
 	std::ostringstream data;
 
@@ -468,7 +462,7 @@ void SunBurntAudioProcessor::getStateInformation (MemoryBlock& destData) {
 	MemoryOutputStream stream(destData, false);
 	stream.writeString(data.str());
 }
-void SunBurntAudioProcessor::setStateInformation (const void* data, int sizeInBytes) {
+void SunBurntAudioProcessor::setStateInformation(const void* data, int sizeInBytes) {
 	//*/
 	const char delimiter = '\n';
 	impulsethread.active = false;
@@ -509,7 +503,7 @@ void SunBurntAudioProcessor::setStateInformation (const void* data, int sizeInBy
 				}
 			}
 		}
-	} catch (const char* e) {
+	} catch(const char* e) {
 		debug((String)"Error loading saved data: "+(String)e);
 	} catch(String e) {
 		debug((String)"Error loading saved data: "+e);
@@ -583,7 +577,7 @@ void SunBurntAudioProcessor::set_preset(const String& preset, int preset_id, con
 				presets[preset_id].curves[c].points.push_back(point(x,y,tension));
 			}
 		}
-	} catch (const char* e) {
+	} catch(const char* e) {
 		error = "Error loading saved data: "+(String)e;
 	} catch(String e) {
 		error = "Error loading saved data: "+e;
@@ -603,10 +597,6 @@ void SunBurntAudioProcessor::set_preset(const String& preset, int preset_id, con
 
 	for(int i = 0; i < paramcount; ++i) {
 		apvts.getParameter(params.pots[i].id)->setValueNotifyingHost(params.pots[i].normalize(presets[currentpreset].values[i]));
-		if(params.pots[i].smoothtime > 0) {
-			params.pots[i].smooth.setCurrentAndTargetValue(presets[currentpreset].values[i]);
-			state.values[i] = presets[currentpreset].values[i];
-		}
 	}
 	state.seed = presets[currentpreset].seed;
 	updatedcurve = true;
@@ -692,7 +682,7 @@ void SunBurntAudioProcessor::curvefromstring(String str, const char delimiter) {
 	String revert = presets[currentpreset].curves[i].tostring();
 	try {
 		presets[currentpreset].curves[i] = curve(str,delimiter);
-	} catch (...) {
+	} catch(...) {
 		presets[currentpreset].curves[i] = curve(revert);
 	}
 	updatevis = true;
@@ -713,7 +703,7 @@ void SunBurntAudioProcessor::resetcurve() {
 
 AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new SunBurntAudioProcessor(); }
 
-AudioProcessorValueTreeState::ParameterLayout SunBurntAudioProcessor::createParameters() {
+AudioProcessorValueTreeState::ParameterLayout SunBurntAudioProcessor::create_parameters() {
 
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"dry"			,1},"Dry"					,NormalisableRange<float>( 0.0f	,1.0f	),1.0f	,"",AudioProcessorParameter::genericParameter	,topercent		,frompercent	));

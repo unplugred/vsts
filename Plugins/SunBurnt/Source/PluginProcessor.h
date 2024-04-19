@@ -129,11 +129,11 @@ public:
 	void movetension(int index, float tension);
 	void addpoint(int index, float x, float y);
 	void deletepoint(int index);
-	const String curvetostring(const char linebreak = ',');
-	void curvefromstring(String str, const char linebreak = ',');
+	const String curvetostring(const char delimiter = ',');
+	void curvefromstring(String str, const char delimiter = ',');
 	void resetcurve();
 
-	AudioProcessorValueTreeState::ParameterLayout createParameters();
+	AudioProcessorValueTreeState::ParameterLayout create_parameters();
 	AudioProcessorValueTreeState apvts;
 
 	int version = 0;
@@ -169,7 +169,7 @@ private:
 	functions::dampendvalue dampvibratodepth;
 	int lastbpm = 120;
 
-	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SunBurntAudioProcessor)
+	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SunBurntAudioProcessor)
 };
 
 static std::function<String(float v, int max)> topercent = [](float v, int max) {
