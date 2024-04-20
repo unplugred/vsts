@@ -702,11 +702,11 @@ void PrismaAudioProcessor::setStateInformation(const void* data, int sizeInBytes
 					std::getline(ss, token, delimiter);
 					state[i].values[b][m] = std::stof(token);
 					std::getline(ss, token, delimiter);
-					state[i].id[b][m] = std::stoi(token); // TODO: weird else here
+					state[i].id[b][m] = std::stoi(token);
 				}
 				if(b >= 1) {
 					std::getline(ss, token, delimiter);
-					state[i].crossover[b-1] = std::stof(token); // ELSE HERE TOO
+					state[i].crossover[b-1] = std::stof(token);
 				}
 				std::getline(ss, token, delimiter);
 				state[i].gain[b] = std::stof(token);
