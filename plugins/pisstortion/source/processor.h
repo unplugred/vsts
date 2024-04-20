@@ -1,6 +1,6 @@
 #pragma once
 #include "includes.h"
-#include "DCFilter.h"
+#include "dcfilter.h"
 
 struct potentiometer {
 public:
@@ -119,7 +119,7 @@ private:
 	AudioBuffer<float> osbuffer;
 	std::vector<float*> ospointerarray;
 
-	DCFilter dcfilter;
+	dcfilter dcfilter;
 
 	int channelnum = 0;
 	int samplesperblock = 0;

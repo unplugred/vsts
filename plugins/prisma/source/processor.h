@@ -1,6 +1,6 @@
 #pragma once
 #include "includes.h"
-#include "DCFilter.h"
+#include "dcfilter.h"
 
 #define MODULE_COUNT 16
 
@@ -125,7 +125,7 @@ private:
 	int samplesperblock = 0;
 	int samplerate = 44100;
 
-	DCFilter dcfilter;
+	dcfilter dcfilter;
 	bool removedc[4] { false,false,false,false };
 
 	dsp::LinkwitzRileyFilter<float> crossover[9];
