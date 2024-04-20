@@ -1,18 +1,18 @@
-name: Pisstortion Build
+name: Plastic Funeral Build
 
 env:
-  LOWER: pisstortion
-  PLUG: Pisstortion
-  NOSPACE: Pisstortion
+  LOWER: plasticfuneral
+  PLUG: Plastic Funeral
+  NOSPACE: PlasticFuneral
 
 on:
   push:
     paths:
-      - '**Pisstortion**'
+      - '**plasticfuneral**'
       - 'rebuild_all.txt'
   pull_request:
     paths:
-      - '**Pisstortion**'
+      - '**plasticfuneral**'
       - 'rebuild_all.txt'
     branches:
       - master
@@ -155,7 +155,7 @@ jobs:
         sudo cp -R -f "setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.component" "/Library/Audio/Plug-Ins/Components/${{ env.PLUG }}.component"
         killall -9 AudioComponentRegistrar
         auval -a
-        auval -strict -v aufx Piss Ured
+        auval -strict -v aufx Vctz Ured
 
     - name: (windows) configure free
       if: startsWith(matrix.os, 'windows')
@@ -235,7 +235,7 @@ jobs:
         sudo cp -R -f "setup/${{ matrix.folder }}/free/${{ env.PLUG }}.component" "/Library/Audio/Plug-Ins/Components/${{ env.PLUG }}.component"
         killall -9 AudioComponentRegistrar
         auval -a
-        auval -strict -v aufx Piss Ured
+        auval -strict -v aufx Vctz Ured
 
     - name: (windows) build installer
       if: startsWith(matrix.os, 'windows')

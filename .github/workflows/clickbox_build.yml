@@ -1,18 +1,18 @@
-name: MPaint Build
+name: ClickBox Build
 
 env:
-  LOWER: mpaint
-  PLUG: MPaint
-  NOSPACE: MPaint
+  LOWER: clickbox
+  PLUG: ClickBox
+  NOSPACE: ClickBox
 
 on:
   push:
     paths:
-      - '**MPaint**'
+      - '**clickbox**'
       - 'rebuild_all.txt'
   pull_request:
     paths:
-      - '**MPaint**'
+      - '**clickbox**'
       - 'rebuild_all.txt'
     branches:
       - master
@@ -94,7 +94,6 @@ jobs:
       run: |
         cmake --build "${{ matrix.folder }}" --config Release --target ${{ env.NOSPACE }}_VST3
         cmake --build "${{ matrix.folder }}" --config Release --target ${{ env.NOSPACE }}_CLAP
-        cmake --build "${{ matrix.folder }}" --config Release --target ${{ env.NOSPACE }}_Standalone
 
     - name: (mac) build
       if: startsWith(matrix.os, 'macos')
@@ -110,28 +109,18 @@ jobs:
         rm -r "setup/${{ matrix.folder }}/free/${{ env.PLUG }}.vst3"
         mv "setup/${{ env.PLUG }}.vst3" "setup/${{ matrix.folder }}/free/${{ env.PLUG }}.vst3"
         mv "${{ matrix.folder }}/plugins/${{ env.LOWER }}/${{ env.NOSPACE }}_artefacts/Release/CLAP/${{ env.PLUG }}.clap" "setup/${{ matrix.folder }}/free/${{ env.PLUG }}.clap"
-        mv "${{ matrix.folder }}/plugins/${{ env.LOWER }}/${{ env.NOSPACE }}_artefacts/Release/Standalone/${{ env.PLUG }}.exe" "setup/${{ matrix.folder }}/free/${{ env.PLUG }}.exe"
-        cp -r "plugins/${{ env.PLUG }}/Samples" "setup/${{ matrix.folder }}/other/${{ env.PLUG }}"
-        cp -r "plugins/${{ env.PLUG }}/Samples" "setup/${{ matrix.folder }}/free/${{ env.PLUG }}"
-        cp "plugins/${{ env.PLUG }}/how to install ${{ env.PLUG }}.txt" "setup/${{ matrix.folder }}/free/how to install ${{ env.PLUG }}.txt"
 
     - name: (linux) package
       if: startsWith(matrix.os, 'ubuntu')
       id: package_linux
       run: |
         mv "${{ matrix.folder }}/plugins/${{ env.LOWER }}/${{ env.NOSPACE }}_artefacts/CLAP/${{ env.PLUG }}.clap" "setup/${{ matrix.folder }}/free/${{ env.PLUG }}.clap"
-        mv "${{ matrix.folder }}/plugins/${{ env.LOWER }}/${{ env.NOSPACE }}_artefacts/Standalone/${{ env.PLUG }}" "setup/${{ matrix.folder }}/free/${{ env.PLUG }} Standalone"
-        cp -r "plugins/${{ env.PLUG }}/Samples" "setup/${{ matrix.folder }}/free/${{ env.PLUG }}"
-        cp "plugins/${{ env.PLUG }}/how to install ${{ env.PLUG }}.txt" "setup/${{ matrix.folder }}/free/how to install ${{ env.PLUG }}.txt"
 
     - name: (mac) package
       if: startsWith(matrix.os, 'macos')
       id: package_mac
       run: |
         mv "${{ matrix.folder }}/plugins/${{ env.LOWER }}/${{ env.NOSPACE }}_artefacts/Release/CLAP/${{ env.PLUG }}.clap" "setup/${{ matrix.folder }}/free/${{ env.PLUG }}.clap"
-        mv "${{ matrix.folder }}/plugins/${{ env.LOWER }}/${{ env.NOSPACE }}_artefacts/Release/Standalone/${{ env.PLUG }}.app" "setup/${{ matrix.folder }}/free/${{ env.PLUG }}.app"
-        cp -r "plugins/${{ env.PLUG }}/Samples" "setup/${{ matrix.folder }}/free/${{ env.PLUG }}"
-        cp "plugins/${{ env.PLUG }}/how to install ${{ env.PLUG }} (mac).txt" "setup/${{ matrix.folder }}/free/how to install ${{ env.PLUG }}.txt"
 
     - name: (mac) code signing
       if: startsWith(matrix.os, 'macos')
@@ -139,31 +128,24 @@ jobs:
       run: |
         codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION }}" -v "setup/${{ matrix.folder }}/free/${{ env.PLUG }}.vst3" --deep --strict --options=runtime --timestamp
         codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION }}" -v "setup/${{ matrix.folder }}/free/${{ env.PLUG }}.clap" --deep --strict --options=runtime --timestamp
-        codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION }}" -v "setup/${{ matrix.folder }}/free/${{ env.PLUG }}.app" --deep --strict --options=runtime --timestamp
         codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION }}" -v "setup/${{ matrix.folder }}/free/${{ env.PLUG }}.component" --deep --strict --options=runtime --timestamp
         zip -r "setup/${{ matrix.folder }}/free/${{ env.LOWER }}_vst3.zip" "setup/${{ matrix.folder }}/free/${{ env.PLUG }}.vst3"
         zip -r "setup/${{ matrix.folder }}/free/${{ env.LOWER }}_clap.zip" "setup/${{ matrix.folder }}/free/${{ env.PLUG }}.clap"
-        zip -r "setup/${{ matrix.folder }}/free/${{ env.LOWER }}_standalone.zip" "setup/${{ matrix.folder }}/free/${{ env.PLUG }}.app"
         zip -r "setup/${{ matrix.folder }}/free/${{ env.LOWER }}_au.zip" "setup/${{ matrix.folder }}/free/${{ env.PLUG }}.component"
         rm -r "setup/${{ matrix.folder }}/free/${{ env.PLUG }}.vst3"
         rm -r "setup/${{ matrix.folder }}/free/${{ env.PLUG }}.clap"
-        rm -r "setup/${{ matrix.folder }}/free/${{ env.PLUG }}.app"
         rm -r "setup/${{ matrix.folder }}/free/${{ env.PLUG }}.component"
         xcrun notarytool submit "setup/${{ matrix.folder }}/free/${{ env.LOWER }}_vst3.zip" --apple-id ${{ secrets.NOTARIZATION_USERNAME }} --password ${{ secrets.NOTARIZATION_PASSWORD }} --team-id ${{ secrets.TEAM_ID }} --wait
         xcrun notarytool submit "setup/${{ matrix.folder }}/free/${{ env.LOWER }}_clap.zip" --apple-id ${{ secrets.NOTARIZATION_USERNAME }} --password ${{ secrets.NOTARIZATION_PASSWORD }} --team-id ${{ secrets.TEAM_ID }} --wait
-        xcrun notarytool submit "setup/${{ matrix.folder }}/free/${{ env.LOWER }}_standalone.zip" --apple-id ${{ secrets.NOTARIZATION_USERNAME }} --password ${{ secrets.NOTARIZATION_PASSWORD }} --team-id ${{ secrets.TEAM_ID }} --wait
         xcrun notarytool submit "setup/${{ matrix.folder }}/free/${{ env.LOWER }}_au.zip" --apple-id ${{ secrets.NOTARIZATION_USERNAME }} --password ${{ secrets.NOTARIZATION_PASSWORD }} --team-id ${{ secrets.TEAM_ID }} --wait
         unzip "setup/${{ matrix.folder }}/free/${{ env.LOWER }}_vst3.zip"
         unzip "setup/${{ matrix.folder }}/free/${{ env.LOWER }}_clap.zip"
-        unzip "setup/${{ matrix.folder }}/free/${{ env.LOWER }}_standalone.zip"
         unzip "setup/${{ matrix.folder }}/free/${{ env.LOWER }}_au.zip"
         rm "setup/${{ matrix.folder }}/free/${{ env.LOWER }}_vst3.zip"
         rm "setup/${{ matrix.folder }}/free/${{ env.LOWER }}_clap.zip"
-        rm "setup/${{ matrix.folder }}/free/${{ env.LOWER }}_standalone.zip"
         rm "setup/${{ matrix.folder }}/free/${{ env.LOWER }}_au.zip"
         xcrun stapler staple "setup/${{ matrix.folder }}/free/${{ env.PLUG }}.vst3"
         xcrun stapler staple "setup/${{ matrix.folder }}/free/${{ env.PLUG }}.clap"
-        xcrun stapler staple "setup/${{ matrix.folder }}/free/${{ env.PLUG }}.app"
         xcrun stapler staple "setup/${{ matrix.folder }}/free/${{ env.PLUG }}.component"
 
     - name: (mac) auval
@@ -173,17 +155,16 @@ jobs:
         sudo cp -R -f "setup/${{ matrix.folder }}/free/${{ env.PLUG }}.component" "/Library/Audio/Plug-Ins/Components/${{ env.PLUG }}.component"
         killall -9 AudioComponentRegistrar
         auval -a
-        auval -strict -v aumu Mpnt Ured
+        auval -strict -v aufx Poc9 Ured
 
     - name: (windows) build installer
       if: startsWith(matrix.os, 'windows')
       id: installer_windows
       run: |
         cd setup
-        iscc "innosetup.iss" "/DPluginName=${{ env.PLUG }}" "/DVersion=free" "/DNoPaid" "/DStandalone" "/DOtherData"
+        iscc "innosetup.iss" "/DPluginName=${{ env.PLUG }}" "/DVersion=free" "/DNoPaid"
         mkdir "${{ matrix.folder }}/free/Manual install"
         mv "${{ matrix.folder }}/free/*.*" "${{ matrix.folder }}/free/Manual install/"
-        mv "${{ matrix.folder }}/free/${{ env.PLUG }}/" "${{ matrix.folder }}/free/Manual install/"
         mv "Output/${{ env.PLUG }} Installer.exe" "${{ matrix.folder }}/free"
 
     - name: (mac) import installer certificates
@@ -203,27 +184,17 @@ jobs:
       run: |
         cd setup
         chmod +rx "./assets/scripts/postinstall"
-        mkdir -p "${{ matrix.folder }}/free/Manual install"
-        mv "${{ matrix.folder }}/free/${{ env.PLUG }}/" "${{ matrix.folder }}/free/Manual install/"
-        mv "${{ matrix.folder }}/free/${{ env.PLUG }}.component" "${{ matrix.folder }}/free/Manual install/"
-        pkgbuild --install-location "/Library/Audio/Plug-Ins/Components" --identifier "com.unplugred.${{ env.NOSPACE }}-au.pkg" --scripts "./assets/scripts" --version 1.1.1 --root "${{ matrix.folder }}/free/Manual install" "${{ env.NOSPACE }}-au.pkg"
-        mv "${{ matrix.folder }}/free/Manual install/${{ env.PLUG }}.component" "${{ matrix.folder }}/free/"
-        mv "${{ matrix.folder }}/free/${{ env.PLUG }}.vst3" "${{ matrix.folder }}/free/Manual install/"
-        pkgbuild --install-location "/Library/Audio/Plug-Ins/VST3/UnplugRed" --identifier "com.unplugred.${{ env.NOSPACE }}-vst3.pkg" --version 1.1.1 --root "${{ matrix.folder }}/free/Manual install" "${{ env.NOSPACE }}-vst3.pkg"
-        mv "${{ matrix.folder }}/free/Manual install/${{ env.PLUG }}.vst3" "${{ matrix.folder }}/free/"
-        mv "${{ matrix.folder }}/free/${{ env.PLUG }}.clap" "${{ matrix.folder }}/free/Manual install/"
-        pkgbuild --install-location "/Library/Audio/Plug-Ins/CLAP/UnplugRed" --identifier "com.unplugred.${{ env.NOSPACE }}-clap.pkg" --version 1.1.1 --root "${{ matrix.folder }}/free/Manual install" "${{ env.NOSPACE }}-clap.pkg"
-        mv "${{ matrix.folder }}/free/Manual install/${{ env.PLUG }}.clap" "${{ matrix.folder }}/free/"
-        mv "${{ matrix.folder }}/free/${{ env.PLUG }}.app" "${{ matrix.folder }}/free/Manual install/"
-        pkgbuild --install-location "/Applications" --identifier "com.unplugred.${{ env.NOSPACE }}-standalone.pkg" --version 1.1.1 --root "${{ matrix.folder }}/free/Manual install" "${{ env.NOSPACE }}-standalone.pkg"
-        python3 productbuild.py --pluginname "${{ env.PLUG }}" --version "free" --nopaid --standalone --otherdata
+        pkgbuild --install-location "/Library/Audio/Plug-Ins/Components" --identifier "com.unplugred.${{ env.NOSPACE }}-au.pkg" --scripts "./assets/scripts" --version 1.1.1 --component "${{ matrix.folder }}/free/${{ env.PLUG }}.component" "${{ env.NOSPACE }}-au.pkg"
+        pkgbuild --install-location "/Library/Audio/Plug-Ins/VST3/UnplugRed" --identifier "com.unplugred.${{ env.NOSPACE }}-vst3.pkg" --version 1.1.1 --component "${{ matrix.folder }}/free/${{ env.PLUG }}.vst3" "${{ env.NOSPACE }}-vst3.pkg"
+        pkgbuild --install-location "/Library/Audio/Plug-Ins/CLAP/UnplugRed" --identifier "com.unplugred.${{ env.NOSPACE }}-clap.pkg" --version 1.1.1 --component "${{ matrix.folder }}/free/${{ env.PLUG }}.clap" "${{ env.NOSPACE }}-clap.pkg"
+        python3 productbuild.py --pluginname "${{ env.PLUG }}" --version "free" --nopaid
         productbuild --timestamp --sign "${{ secrets.DEVELOPER_ID_INSTALLER }}" --distribution "${{ env.PLUG }}.xml" --resources "./assets/" "${{ env.PLUG }} Installer.pkg"
         xcrun notarytool submit "${{ env.PLUG }} Installer.pkg" --apple-id ${{ secrets.NOTARIZATION_USERNAME }} --password ${{ secrets.NOTARIZATION_PASSWORD }} --team-id ${{ secrets.TEAM_ID }} --wait
         xcrun stapler staple "${{ env.PLUG }} Installer.pkg"
+        mkdir -p "${{ matrix.folder }}/free/Manual install"
         mv "${{ matrix.folder }}/free/${{ env.PLUG }}.component" "${{ matrix.folder }}/free/Manual install/"
         mv "${{ matrix.folder }}/free/${{ env.PLUG }}.vst3" "${{ matrix.folder }}/free/Manual install/"
         mv "${{ matrix.folder }}/free/${{ env.PLUG }}.clap" "${{ matrix.folder }}/free/Manual install/"
-        mv "${{ matrix.folder }}/free/how to install ${{ env.PLUG }}.txt" "${{ matrix.folder }}/free/Manual install/"
         mv "${{ env.PLUG }} Installer.pkg" "${{ matrix.folder }}/free"
 
     - uses: actions/upload-artifact@v3
