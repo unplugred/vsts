@@ -1,18 +1,18 @@
-name: CRMBL Build
+name: Prisma Build
 
 env:
-  LOWER: crmbl
-  PLUG: CRMBL
-  NOSPACE: CRMBL
+  LOWER: prisma
+  PLUG: Prisma
+  NOSPACE: Prisma
 
 on:
   push:
     paths:
-      - '**CRMBL**'
+      - '**prisma**'
       - 'rebuild_all.txt'
   pull_request:
     paths:
-      - '**CRMBL**'
+      - '**prisma**'
       - 'rebuild_all.txt'
     branches:
       - master
@@ -106,7 +106,7 @@ jobs:
       id: package_windows
       run: |
         mv "setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.vst3/Contents/x86_64-win/${{ env.PLUG }}.vst3" "setup/${{ env.PLUG }}.vst3"
-        rm -r "setup/${{ matrix.folder }}/paid/${{ env.LOWER }}.vst3"
+        rm -r "setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.vst3"
         mv "setup/${{ env.PLUG }}.vst3" "setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.vst3"
         mv "${{ matrix.folder }}/plugins/${{ env.LOWER }}/${{ env.NOSPACE }}_artefacts/Release/CLAP/${{ env.PLUG }}.clap" "setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.clap"
 
@@ -155,7 +155,7 @@ jobs:
         sudo cp -R -f "setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.component" "/Library/Audio/Plug-Ins/Components/${{ env.PLUG }}.component"
         killall -9 AudioComponentRegistrar
         auval -a
-        auval -strict -v aufx Crmb Ured
+        auval -strict -v aufx Prsm Ured
 
     - name: (windows) configure free
       if: startsWith(matrix.os, 'windows')
@@ -235,7 +235,7 @@ jobs:
         sudo cp -R -f "setup/${{ matrix.folder }}/free/${{ env.PLUG }}.component" "/Library/Audio/Plug-Ins/Components/${{ env.PLUG }}.component"
         killall -9 AudioComponentRegistrar
         auval -a
-        auval -strict -v aufx Crmb Ured
+        auval -strict -v aufx Prsm Ured
 
     - name: (windows) build installer
       if: startsWith(matrix.os, 'windows')

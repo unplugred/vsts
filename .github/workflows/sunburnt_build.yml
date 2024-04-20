@@ -8,11 +8,11 @@ env:
 on:
   push:
     paths:
-      - '**SunBurnt**'
+      - '**sunburnt**'
       - 'rebuild_all.txt'
   pull_request:
     paths:
-      - '**SunBurnt**'
+      - '**sunburnt**'
       - 'rebuild_all.txt'
     branches:
       - master

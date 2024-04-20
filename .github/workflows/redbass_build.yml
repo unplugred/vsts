@@ -8,13 +8,11 @@ env:
 on:
   push:
     paths:
-      - '**Red Bass**'
-      - '**RedBass**'
+      - '**redbass**'
       - 'rebuild_all.txt'
   pull_request:
     paths:
-      - '**Red Bass**'
-      - '**RedBass**'
+      - '**redbass**'
       - 'rebuild_all.txt'
     branches:
       - master
