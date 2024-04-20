@@ -45,7 +45,7 @@ jobs:
     concurrency: build_${{ matrix.os }}
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: (linux) install juce dependencies
       if: startsWith(matrix.os, 'ubuntu')
@@ -56,7 +56,7 @@ jobs:
 
     - name: cache stuff
       id: cache_stuff
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: "${{ matrix.folder }}"
         key: "${{ matrix.folder }}"
@@ -319,12 +319,13 @@ jobs:
         mv "${{ env.PLUG }} Installer.pkg" "${{ matrix.folder }}/paid"
         mv "${{ env.PLUG }} Free Installer.pkg" "${{ matrix.folder }}/free"
 
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: ${{ env.PLUG }} ${{ matrix.name }}
         path: setup/${{ matrix.folder }}/paid
 
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: ${{ env.PLUG }} Free ${{ matrix.name }}
         path: setup/${{ matrix.folder }}/free
+        compression-level: 9
