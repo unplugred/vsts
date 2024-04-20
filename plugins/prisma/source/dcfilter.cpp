@@ -1,7 +1,7 @@
 //adapted from https://musicdsp.org/en/latest/Filters/135-dc-filter.html
-#include "DCFilter.h"
+#include "dcfilter.h"
 
-void DCFilter::init(int samplerate, int channels) {
+void dcfilter::init(int samplerate, int channels) {
 	R = 1-(31.5/(double)samplerate); //CUTOFF 5Hz
 
 	if(prevout.size() != channels || previn.size() != channels) {
@@ -14,7 +14,7 @@ void DCFilter::init(int samplerate, int channels) {
 	}
 }
 
-double DCFilter::process(double in, int channel) {
+double dcfilter::process(double in, int channel) {
 	//if(channel > (previn.size()-1)) DBG("HEYYYYYYYY");
 	double out = in-previn[channel]+prevout[channel]*R;
 	previn[channel] = in;
@@ -22,7 +22,7 @@ double DCFilter::process(double in, int channel) {
 	return out;
 }
 
-void DCFilter::reset(int channel) {
+void dcfilter::reset(int channel) {
 	previn[channel] = 0;
 	prevout[channel] = 0;
 }
