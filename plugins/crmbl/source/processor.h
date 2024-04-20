@@ -1,7 +1,7 @@
 #pragma once
 #include "includes.h"
 #include "functions.h"
-#include "dcfilter.h"
+#include "dc_filter.h"
 
 #define MAX_DLY 6.0
 #define MIN_DLY 0.02
@@ -157,7 +157,7 @@ private:
 	int blocksizething = 0;
 
 	soundtouch::SoundTouch pitchshift;
-	dcfilter dcfilter;
+	dc_filter dcfilter;
 	std::unique_ptr<dsp::Oversampling<float>> os;
 	Random random;
 

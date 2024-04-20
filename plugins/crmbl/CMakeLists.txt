@@ -30,7 +30,7 @@ clap_juce_extensions_plugin(TARGET "${BaseTargetName}"
 	CLAP_USE_JUCE_PARAMETER_RANGES ALL)
 
 target_sources("${BaseTargetName}" PRIVATE
-	source/dcfilter.cpp
+	source/dc_filter.cpp
 	source/functions.cpp
 	source/editor.cpp
 	source/processor.cpp)

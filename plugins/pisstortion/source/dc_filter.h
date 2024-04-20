@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
 
-class dcfilter {
+class dc_filter {
 public:
 	void init(int samplerate, int channels);
 	double process(double in, int channel);
