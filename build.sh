@@ -81,50 +81,61 @@ read -p "Plugin code: " -n 2 -r
 echo
 case $REPLY in
 	pl)
+		vl=plasticfuneral
 		vn=PlasticFuneral
 		vs="Plastic Funeral"
 		;;
 	vu)
+		vl=vu
 		vn=VU
 		vs=VU
 		vc=y
 		;;
 	cl)
+		vl=clickbox
 		vn=ClickBox
 		vs=ClickBox
 		va=free
 		;;
 	pi)
+		vl=pisstortion
 		vn=Pisstortion
 		vs=Pisstortion
 		;;
 	pn)
+		vl=pnch
 		vn=PNCH
 		vs=PNCH
 		;;
 	po)
+		vl=proto
 		vn=Proto
 		vs=Proto
 		;;
 	re)
+		vl=redbass
 		vn=RedBass
 		vs="Red Bass"
 		;;
 	mp)
+		vl=mpaint
 		vn=MPaint
 		vs=MPaint
 		vc=y
 		va=free
 		;;
 	cr)
+		vl=crmbl
 		vn=CRMBL
 		vs=CRMBL
 		;;
 	pr)
+		vl=prisma
 		vn=Prisma
 		vs=Prisma
 		;;
 	su)
+		vl=sunburnt
 		vn=SunBurnt
 		vs=SunBurnt
 		;;
@@ -153,31 +164,31 @@ case $REPLY in
 		cmake --build ${vf} --config ${vm} --target SunBurnt_CLAP
 		if [[ "$OSTYPE" =~ ^msys ]] || [[ "$OSTYPE" =~ ^cygwin ]]
 		then
-			cp "./${vf}/Plugins/Plastic Funeral/PlasticFuneral_artefacts/${vm}/CLAP/Plastic Funeral.clap" "./Setup/${vf}/paid/Plastic Funeral.clap"
-			cp "./${vf}/Plugins/VU/VU_artefacts/${vm}/CLAP/VU.clap" "./Setup/${vf}/paid/VU.clap"
-			cp "./${vf}/Plugins/VU/VU_artefacts/${vm}/Standalone/VU.exe" "./Setup/${vf}/paid/VU.exe"
-			cp "./${vf}/Plugins/ClickBox/ClickBox_artefacts/${vm}/CLAP/ClickBox.clap" "./Setup/${vf}/free/ClickBox.clap"
-			cp "./${vf}/Plugins/Pisstortion/Pisstortion_artefacts/${vm}/CLAP/Pisstortion.clap" "./Setup/${vf}/paid/Pisstortion.clap"
-			cp "./${vf}/Plugins/PNCH/PNCH_artefacts/${vm}/CLAP/PNCH.clap" "./Setup/${vf}/paid/PNCH.clap"
-			cp "./${vf}/Plugins/Red Bass/RedBass_artefacts/${vm}/CLAP/Red Bass.clap" "./Setup/${vf}/paid/Red Bass.clap"
-			cp "./${vf}/Plugins/MPaint/MPaint_artefacts/${vm}/CLAP/MPaint.clap" "./Setup/${vf}/free/MPaint.clap"
-			cp "./${vf}/Plugins/MPaint/MPaint_artefacts/${vm}/Standalone/MPaint.exe" "./Setup/${vf}/free/MPaint.exe"
-			cp "./${vf}/Plugins/CRMBL/CRMBL_artefacts/${vm}/CLAP/CRMBL.clap" "./Setup/${vf}/paid/CRMBL.clap"
-			cp "./${vf}/Plugins/Prisma/Prisma_artefacts/${vm}/CLAP/Prisma.clap" "./Setup/${vf}/paid/Prisma.clap"
-			cp "./${vf}/Plugins/SunBurnt/SunBurnt_artefacts/${vm}/CLAP/SunBurnt.clap" "./Setup/${vf}/paid/SunBurnt.clap"
+			cp "./${vf}/plugins/plasticfuneral/PlasticFuneral_artefacts/${vm}/CLAP/Plastic Funeral.clap" "./setup/${vf}/paid/Plastic Funeral.clap"
+			cp "./${vf}/plugins/vu/VU_artefacts/${vm}/CLAP/VU.clap" "./setup/${vf}/paid/VU.clap"
+			cp "./${vf}/plugins/vu/VU_artefacts/${vm}/Standalone/VU.exe" "./setup/${vf}/paid/VU.exe"
+			cp "./${vf}/plugins/clickbox/ClickBox_artefacts/${vm}/CLAP/ClickBox.clap" "./setup/${vf}/free/ClickBox.clap"
+			cp "./${vf}/plugins/pisstortion/Pisstortion_artefacts/${vm}/CLAP/Pisstortion.clap" "./setup/${vf}/paid/Pisstortion.clap"
+			cp "./${vf}/plugins/pnch/PNCH_artefacts/${vm}/CLAP/PNCH.clap" "./setup/${vf}/paid/PNCH.clap"
+			cp "./${vf}/plugins/redbass/RedBass_artefacts/${vm}/CLAP/Red Bass.clap" "./setup/${vf}/paid/Red Bass.clap"
+			cp "./${vf}/plugins/mpaint/MPaint_artefacts/${vm}/CLAP/MPaint.clap" "./setup/${vf}/free/MPaint.clap"
+			cp "./${vf}/plugins/mpaint/MPaint_artefacts/${vm}/Standalone/MPaint.exe" "./setup/${vf}/free/MPaint.exe"
+			cp "./${vf}/plugins/crmbl/CRMBL_artefacts/${vm}/CLAP/CRMBL.clap" "./setup/${vf}/paid/CRMBL.clap"
+			cp "./${vf}/plugins/prisma/Prisma_artefacts/${vm}/CLAP/Prisma.clap" "./setup/${vf}/paid/Prisma.clap"
+			cp "./${vf}/plugins/sunburnt/SunBurnt_artefacts/${vm}/CLAP/SunBurnt.clap" "./setup/${vf}/paid/SunBurnt.clap"
 		else
-			cp "./${vf}/Plugins/Plastic Funeral/PlasticFuneral_artefacts/CLAP/Plastic Funeral.clap" "./Setup/${vf}/paid/Plastic Funeral.clap"
-			cp "./${vf}/Plugins/VU/VU_artefacts/CLAP/VU.clap" "./Setup/${vf}/paid/VU.clap"
-			cp "./${vf}/Plugins/VU/VU_artefacts/Standalone/VU" "./Setup/${vf}/paid/VU"
-			cp "./${vf}/Plugins/ClickBox/ClickBox_artefacts/CLAP/ClickBox.clap" "./Setup/${vf}/free/ClickBox.clap"
-			cp "./${vf}/Plugins/Pisstortion/Pisstortion_artefacts/CLAP/Pisstortion.clap" "./Setup/${vf}/paid/Pisstortion.clap"
-			cp "./${vf}/Plugins/PNCH/PNCH_artefacts/CLAP/PNCH.clap" "./Setup/${vf}/paid/PNCH.clap"
-			cp "./${vf}/Plugins/Red Bass/RedBass_artefacts/CLAP/Red Bass.clap" "./Setup/${vf}/paid/Red Bass.clap"
-			cp "./${vf}/Plugins/MPaint/MPaint_artefacts/CLAP/MPaint.clap" "./Setup/${vf}/free/MPaint.clap"
-			cp "./${vf}/Plugins/MPaint/MPaint_artefacts/Standalone/MPaint" "./Setup/${vf}/free/MPaint"
-			cp "./${vf}/Plugins/CRMBL/CRMBL_artefacts/CLAP/CRMBL.clap" "./Setup/${vf}/paid/CRMBL.clap"
-			cp "./${vf}/Plugins/Prisma/Prisma_artefacts/CLAP/Prisma.clap" "./Setup/${vf}/paid/Prisma.clap"
-			cp "./${vf}/Plugins/SunBurnt/SunBurnt_artefacts/CLAP/SunBurnt.clap" "./Setup/${vf}/paid/SunBurnt.clap"
+			cp "./${vf}/plugins/plasticfuneral/PlasticFuneral_artefacts/CLAP/Plastic Funeral.clap" "./setup/${vf}/paid/Plastic Funeral.clap"
+			cp "./${vf}/plugins/vu/VU_artefacts/CLAP/VU.clap" "./setup/${vf}/paid/VU.clap"
+			cp "./${vf}/plugins/vu/VU_artefacts/Standalone/VU" "./setup/${vf}/paid/VU"
+			cp "./${vf}/plugins/clickbox/ClickBox_artefacts/CLAP/ClickBox.clap" "./setup/${vf}/free/ClickBox.clap"
+			cp "./${vf}/plugins/pisstortion/Pisstortion_artefacts/CLAP/Pisstortion.clap" "./setup/${vf}/paid/Pisstortion.clap"
+			cp "./${vf}/plugins/pnch/PNCH_artefacts/CLAP/PNCH.clap" "./setup/${vf}/paid/PNCH.clap"
+			cp "./${vf}/plugins/redbass/RedBass_artefacts/CLAP/Red Bass.clap" "./setup/${vf}/paid/Red Bass.clap"
+			cp "./${vf}/plugins/mpaint/MPaint_artefacts/CLAP/MPaint.clap" "./setup/${vf}/free/MPaint.clap"
+			cp "./${vf}/plugins/mpaint/MPaint_artefacts/Standalone/MPaint" "./setup/${vf}/free/MPaint"
+			cp "./${vf}/plugins/crmbl/CRMBL_artefacts/CLAP/CRMBL.clap" "./setup/${vf}/paid/CRMBL.clap"
+			cp "./${vf}/plugins/prisma/Prisma_artefacts/CLAP/Prisma.clap" "./setup/${vf}/paid/Prisma.clap"
+			cp "./${vf}/plugins/sunburnt/SunBurnt_artefacts/CLAP/SunBurnt.clap" "./setup/${vf}/paid/SunBurnt.clap"
 		fi
 		read -p "done."
 		exit 1
@@ -239,16 +250,16 @@ then
 	cmake --build ${vf} --config ${vm} --target ${vn}_CLAP
 	if [[ "$OSTYPE" =~ ^msys ]] || [[ "$OSTYPE" =~ ^cygwin ]]
 	then
-		cp "./${vf}/Plugins/${vs}/${vn}_artefacts/${vm}/CLAP/${vs}.clap" "./Setup/${vf}/${va}/${vs}.clap"
+		cp "./${vf}/plugins/${vl}/${vn}_artefacts/${vm}/CLAP/${vs}.clap" "./setup/${vf}/${va}/${vs}.clap"
 		if [ $vc == y ]
 		then
-			cp "./${vf}/Plugins/${vs}/${vn}_artefacts/${vm}/Standalone/${vs}.exe" "./Setup/${vf}/${va}/${vs}.exe"
+			cp "./${vf}/plugins/${vl}/${vn}_artefacts/${vm}/Standalone/${vs}.exe" "./setup/${vf}/${va}/${vs}.exe"
 		fi
 	else
-		cp "./${vf}/Plugins/${vs}/${vn}_artefacts/CLAP/${vs}.clap" "./Setup/${vf}/${va}/${vs}.clap"
+		cp "./${vf}/plugins/${vl}/${vn}_artefacts/CLAP/${vs}.clap" "./setup/${vf}/${va}/${vs}.clap"
 		if [ $vc == y ]
 		then
-			cp "./${vf}/Plugins/${vs}/${vn}_artefacts/Standalone/${vs}" "./Setup/${vf}/${va}/${vs}"
+			cp "./${vf}/plugins/${vl}/${vn}_artefacts/Standalone/${vs}" "./setup/${vf}/${va}/${vs}"
 		fi
 	fi
 else
@@ -256,9 +267,9 @@ else
 	then
 		if [[ "$OSTYPE" =~ ^msys ]] || [[ "$OSTYPE" =~ ^cygwin ]]
 		then
-			cp "./${vf}/Plugins/${vs}/${vn}_artefacts/${vm}/CLAP/${vs}.clap" "./Setup/${vf}/${va}/${vs}.clap"
+			cp "./${vf}/plugins/${vl}/${vn}_artefacts/${vm}/CLAP/${vs}.clap" "./setup/${vf}/${va}/${vs}.clap"
 		else
-			cp "./${vf}/Plugins/${vs}/${vn}_artefacts/CLAP/${vs}.clap" "./Setup/${vf}/${va}/${vs}.clap"
+			cp "./${vf}/plugins/${vl}/${vn}_artefacts/CLAP/${vs}.clap" "./setup/${vf}/${va}/${vs}.clap"
 		fi
 	else
 		if [ $vp == ${vn}_Standalone ]
@@ -267,9 +278,9 @@ else
 			then
 				if [[ "$OSTYPE" =~ ^msys ]] || [[ "$OSTYPE" =~ ^cygwin ]]
 				then
-					cp "./${vf}/Plugins/${vs}/${vn}_artefacts/${vm}/Standalone/${vs}.exe" "./Setup/${vf}/${va}/${vs}.exe"
+					cp "./${vf}/plugins/${vl}/${vn}_artefacts/${vm}/Standalone/${vs}.exe" "./setup/${vf}/${va}/${vs}.exe"
 				else
-					cp "./${vf}/Plugins/${vs}/${vn}_artefacts/Standalone/${vs}" "./Setup/${vf}/${va}/${vs}"
+					cp "./${vf}/plugins/${vl}/${vn}_artefacts/Standalone/${vs}" "./setup/${vf}/${va}/${vs}"
 				fi
 			fi
 		fi
@@ -279,8 +290,8 @@ if [ $vr == y ]
 then
 	if [[ "$OSTYPE" =~ ^msys ]] || [[ "$OSTYPE" =~ ^cygwin ]]
 	then
-		"./${vf}/Plugins/${vs}/${vn}_artefacts/${vm}/Standalone/${vs}.exe"
+		"./${vf}/plugins/${vl}/${vn}_artefacts/${vm}/Standalone/${vs}.exe"
 	else
-		"./${vf}/Plugins/${vs}/${vn}_artefacts/Standalone/${vs}"
+		"./${vf}/plugins/${vl}/${vn}_artefacts/Standalone/${vs}"
 	fi
 fi
