@@ -1,12 +1,8 @@
 **/.DS_Store
-Builds
 build
 build_linux
 build_windows
 build_mac
 .vscode
-JuceLibraryCode
-!JuceLibraryCode/AppData.h
-!JuceLibraryCode/BinaryData.*
-RedVJ/source/Source/presets
-Setup/Output
+setup/Output
+setup/zips
