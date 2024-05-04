@@ -35,16 +35,16 @@ WizardImageStretch=false
 WizardSmallImageFile=assets\smallimage\{#PluginName}.bmp
 
 [Files]
-Source: "build_windows\{#Version}\{#PluginName}.vst3"; DestDir: "{commoncf64}\VST3\UnplugRed\"; Components: VST3; Flags: ignoreversion
-Source: "build_windows\{#Version}\{#PluginName}.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
+Source: "build_win\{#Version}\{#PluginName}.vst3"; DestDir: "{commoncf64}\VST3\UnplugRed\"; Components: VST3; Flags: ignoreversion
+Source: "build_win\{#Version}\{#PluginName}.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
 #ifdef Standalone
-Source: "build_windows\{#Version}\{#PluginName}.exe"; DestDir: {code:GetDir|1}; Components: Standalone; Flags: ignoreversion
+Source: "build_win\{#Version}\{#PluginName}.exe"; DestDir: {code:GetDir|1}; Components: Standalone; Flags: ignoreversion
 #endif
 #ifdef OtherData
-Source: "build_windows\other\{#PluginName}\*.*"; DestDir: "{commoncf64}\VST3\UnplugRed\{#PluginName}"; Components: VST3; Flags: recursesubdirs onlyifdoesntexist
-Source: "build_windows\other\{#PluginName}\*.*"; DestDir: "{code:GetDir|0}\{#PluginName}"; Components: CLAP; Flags: recursesubdirs onlyifdoesntexist
+Source: "build_win\other\{#PluginName}\*"; DestDir: "{commoncf64}\VST3\UnplugRed\"; Components: VST3; Flags: recursesubdirs onlyifdoesntexist
+Source: "build_win\other\{#PluginName}\*"; DestDir: "{code:GetDir|0}"; Components: CLAP; Flags: recursesubdirs onlyifdoesntexist
 #ifdef Standalone
-Source: "build_windows\other\{#PluginName}\*.*"; DestDir: "{code:GetDir|1}\{#PluginName}"; Components: Standalone; Flags: recursesubdirs onlyifdoesntexist
+Source: "build_win\other\{#PluginName}\*"; DestDir: "{code:GetDir|1}"; Components: Standalone; Flags: recursesubdirs onlyifdoesntexist
 #endif
 #endif
 

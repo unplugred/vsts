@@ -31,31 +31,31 @@ WizardImageStretch=false
 WizardSmallImageFile=assets\smallimage\{#PluginName}.bmp
 
 [Files]
-Source: "build_windows\paid\Plastic Funeral.vst3"; DestDir: "{commoncf64}\VST3\UnplugRed\"; Components: VST3; Flags: ignoreversion
-Source: "build_windows\paid\VU.vst3"; DestDir: "{commoncf64}\VST3\UnplugRed\"; Components: VST3; Flags: ignoreversion
-Source: "build_windows\free\ClickBox.vst3"; DestDir: "{commoncf64}\VST3\UnplugRed\"; Components: VST3; Flags: ignoreversion
-Source: "build_windows\paid\Pisstortion.vst3"; DestDir: "{commoncf64}\VST3\UnplugRed\"; Components: VST3; Flags: ignoreversion
-Source: "build_windows\paid\PNCH.vst3"; DestDir: "{commoncf64}\VST3\UnplugRed\"; Components: VST3; Flags: ignoreversion
-Source: "build_windows\paid\Red Bass.vst3"; DestDir: "{commoncf64}\VST3\UnplugRed\"; Components: VST3; Flags: ignoreversion
-Source: "build_windows\free\MPaint.vst3"; DestDir: "{commoncf64}\VST3\UnplugRed\"; Components: VST3; Flags: ignoreversion
-Source: "build_windows\other\MPaint\*.*"; DestDir: "{commoncf64}\VST3\UnplugRed\MPaint"; Components: VST3; Flags: recursesubdirs onlyifdoesntexist
-Source: "build_windows\paid\CRMBL.vst3"; DestDir: "{commoncf64}\VST3\Unplugred\"; Components: VST3; Flags: ignoreversion
-Source: "build_windows\paid\Prisma.vst3"; DestDir: "{commoncf64}\VST3\UnplugRed\"; Components: VST3; Flags: ignoreversion
-Source: "build_windows\paid\SunBurnt.vst3"; DestDir: "{commoncf64}\VST3\UnplugRed\"; Components: VST3; Flags: ignoreversion
-Source: "build_windows\paid\Plastic Funeral.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
-Source: "build_windows\paid\VU.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
-Source: "build_windows\free\ClickBox.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
-Source: "build_windows\paid\Pisstortion.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
-Source: "build_windows\paid\PNCH.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
-Source: "build_windows\paid\Red Bass.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
-Source: "build_windows\free\MPaint.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
-Source: "build_windows\other\MPaint\*.*"; DestDir: "{code:GetDir|0}\MPaint"; Components: CLAP; Flags: recursesubdirs onlyifdoesntexist
-Source: "build_windows\paid\CRMBL.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
-Source: "build_windows\paid\Prisma.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
-Source: "build_windows\paid\SunBurnt.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
-Source: "build_windows\paid\VU.exe"; DestDir: {code:GetDir|1}; Components: Standalone; Flags: ignoreversion
-Source: "build_windows\free\MPaint.exe"; DestDir: {code:GetDir|1}; Components: Standalone; Flags: ignoreversion
-Source: "build_windows\other\MPaint\*.*"; DestDir: "{code:GetDir|1}\MPaint"; Components: Standalone; Flags: recursesubdirs onlyifdoesntexist
+Source: "build_win\paid\Plastic Funeral.vst3"; DestDir: "{commoncf64}\VST3\UnplugRed\"; Components: VST3; Flags: ignoreversion
+Source: "build_win\paid\VU.vst3"; DestDir: "{commoncf64}\VST3\UnplugRed\"; Components: VST3; Flags: ignoreversion
+Source: "build_win\free\ClickBox.vst3"; DestDir: "{commoncf64}\VST3\UnplugRed\"; Components: VST3; Flags: ignoreversion
+Source: "build_win\paid\Pisstortion.vst3"; DestDir: "{commoncf64}\VST3\UnplugRed\"; Components: VST3; Flags: ignoreversion
+Source: "build_win\paid\PNCH.vst3"; DestDir: "{commoncf64}\VST3\UnplugRed\"; Components: VST3; Flags: ignoreversion
+Source: "build_win\paid\Red Bass.vst3"; DestDir: "{commoncf64}\VST3\UnplugRed\"; Components: VST3; Flags: ignoreversion
+Source: "build_win\free\MPaint.vst3"; DestDir: "{commoncf64}\VST3\UnplugRed\"; Components: VST3; Flags: ignoreversion
+Source: "build_win\other\MPaint\*"; DestDir: "{commoncf64}\VST3\UnplugRed\"; Components: VST3; Flags: recursesubdirs onlyifdoesntexist
+Source: "build_win\paid\CRMBL.vst3"; DestDir: "{commoncf64}\VST3\Unplugred\"; Components: VST3; Flags: ignoreversion
+Source: "build_win\paid\Prisma.vst3"; DestDir: "{commoncf64}\VST3\UnplugRed\"; Components: VST3; Flags: ignoreversion
+Source: "build_win\paid\SunBurnt.vst3"; DestDir: "{commoncf64}\VST3\UnplugRed\"; Components: VST3; Flags: ignoreversion
+Source: "build_win\paid\Plastic Funeral.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
+Source: "build_win\paid\VU.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
+Source: "build_win\free\ClickBox.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
+Source: "build_win\paid\Pisstortion.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
+Source: "build_win\paid\PNCH.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
+Source: "build_win\paid\Red Bass.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
+Source: "build_win\free\MPaint.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
+Source: "build_win\other\MPaint\*"; DestDir: "{code:GetDir|0}"; Components: CLAP; Flags: recursesubdirs onlyifdoesntexist
+Source: "build_win\paid\CRMBL.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
+Source: "build_win\paid\Prisma.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
+Source: "build_win\paid\SunBurnt.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
+Source: "build_win\paid\VU.exe"; DestDir: {code:GetDir|1}; Components: Standalone; Flags: ignoreversion
+Source: "build_win\free\MPaint.exe"; DestDir: {code:GetDir|1}; Components: Standalone; Flags: ignoreversion
+Source: "build_win\other\MPaint\*"; DestDir: "{code:GetDir|1}"; Components: Standalone; Flags: recursesubdirs onlyifdoesntexist
 
 [Icons]
 Name: {group}\Uninstall {#PluginName}; Filename: {uninstallexe}

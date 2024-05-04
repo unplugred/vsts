@@ -1,8 +1,10 @@
 **/.DS_Store
+.vscode
 build
 build_linux
-build_windows
+build_win
 build_mac
-.vscode
+saved_data.json
 setup/Output
+setup/temp
 setup/zips

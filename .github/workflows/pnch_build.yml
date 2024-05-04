@@ -27,7 +27,7 @@ jobs:
             name: "Win64",
             os: windows-latest,
             compiler: "Visual Studio 17 2022",
-            folder: "build_windows"
+            folder: "build_win"
           }
         - {
             name: "Linux",
@@ -77,14 +77,14 @@ jobs:
         p12-file-base64: ${{ secrets.DEV_ID_APP_CERT }}
         p12-password: ${{ secrets.DEV_ID_APP_PASSWORD }}
 
-    - name: (windows) configure
-      if: startsWith(matrix.os, 'windows')
-      id: configure_windows
+    - name: (win) configure
+      if: startsWith(matrix.os, 'win')
+      id: configure_win
       run: |
         cmake -DBANNERTYPE=0 -B "${{ matrix.folder }}" -G "${{ matrix.compiler }}" -T host=x64 -A x64
 
     - name: (unix) configure
-      if: ${{ !startsWith(matrix.os, 'windows') }}
+      if: ${{ !startsWith(matrix.os, 'win') }}
       id: configure
       run: |
         cmake -DBANNERTYPE=0 -B "${{ matrix.folder }}" -G "${{ matrix.compiler }}"
@@ -101,9 +101,9 @@ jobs:
       run: |
         cmake --build "${{ matrix.folder }}" --config Release --target ${{ env.NOSPACE }}_AU
 
-    - name: (windows) package
-      if: startsWith(matrix.os, 'windows')
-      id: package_windows
+    - name: (win) package
+      if: startsWith(matrix.os, 'win')
+      id: package_win
       run: |
         mv "setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.vst3/Contents/x86_64-win/${{ env.PLUG }}.vst3" "setup/${{ env.PLUG }}.vst3"
         rm -r "setup/${{ matrix.folder }}/paid/${{ env.PLUG }}.vst3"
@@ -157,14 +157,14 @@ jobs:
         auval -a
         auval -strict -v aufx Pnch Ured
 
-    - name: (windows) configure free
-      if: startsWith(matrix.os, 'windows')
-      id: configure_windows_free
+    - name: (win) configure free
+      if: startsWith(matrix.os, 'win')
+      id: configure_win_free
       run: |
         cmake -DBANNERTYPE=1 -B "${{ matrix.folder }}" -G "${{ matrix.compiler }}" -T host=x64 -A x64
 
     - name: (unix) configure free
-      if: ${{ !startsWith(matrix.os, 'windows') }}
+      if: ${{ !startsWith(matrix.os, 'win') }}
       id: configure_free
       run: |
         cmake -DBANNERTYPE=1 -B "${{ matrix.folder }}" -G "${{ matrix.compiler }}"
@@ -181,9 +181,9 @@ jobs:
       run: |
         cmake --build "${{ matrix.folder }}" --config Release --target ${{ env.NOSPACE }}_AU
 
-    - name: (windows) package free
-      if: startsWith(matrix.os, 'windows')
-      id: package_windows_free
+    - name: (win) package free
+      if: startsWith(matrix.os, 'win')
+      id: package_win_free
       run: |
         mv "setup/${{ matrix.folder }}/free/${{ env.PLUG }}.vst3/Contents/x86_64-win/${{ env.PLUG }}.vst3" "setup/${{ env.PLUG }}.vst3"
         rm -r "setup/${{ matrix.folder }}/free/${{ env.PLUG }}.vst3"
@@ -237,9 +237,9 @@ jobs:
         auval -a
         auval -strict -v aufx Pnch Ured
 
-    - name: (windows) build installer
-      if: startsWith(matrix.os, 'windows')
-      id: installer_windows
+    - name: (win) build installer
+      if: startsWith(matrix.os, 'win')
+      id: installer_win
       run: |
         cd setup
         iscc "innosetup.iss" "/DPluginName=${{ env.PLUG }}" "/DVersion=paid"

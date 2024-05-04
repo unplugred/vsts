@@ -1,0 +1,840 @@
+import os
+import sys
+import shutil
+import json
+import shlex
+from zipfile import ZipFile
+
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
+codes = {
+	"version": ["free","paid","beta"],
+	"plugin": [],
+	"config": ["Debug","Release"],
+	"target": [],
+	"run": ["yes","no"],
+	"system": []
+}
+
+systems = [{
+	"name": "Mac",
+	"code": "mac",
+	"image": "macos-13",
+	"compiler": "Xcode",
+	"executable": ".app"
+},{
+	"name": "Win64",
+	"code": "win",
+	"image": "windows-latest",
+	"compiler": "Visual Studio 17 2022",
+	"executable": ".exe"
+},{
+	"name": "Linux",
+	"code": "linux",
+	"image": "ubuntu-20.04",
+	"compiler": "Unix Makefiles",
+	"executable": ""
+}]
+for i in range(len(systems)):
+	codes["system"].append(systems[i]["name"])
+if sys.platform == "darwin":
+	system = 0
+	import pty
+elif sys.platform == "win32" or sys.platform == "cygwin":
+	system = 1
+	import subprocess
+else:
+	system = 2
+	import pty
+
+plugins = [{
+	"name": "Plastic Funeral",
+	"code": "Vctz"
+},{
+	"name": "VU",
+	"code": "V6sd",
+	"standalone": True
+},{
+	"name": "ClickBox",
+	"code": "Poc9",
+	"paid": False
+},{
+	"name": "Pisstortion",
+	"code": "Piss"
+},{
+	"name": "PNCH",
+	"code": "Pnch"
+},{
+	"name": "Proto",
+	"code": "Prtt",
+	"paid": False,
+	"in_bundle": False
+},{
+	"name": "Red Bass",
+	"code": "Rdbs"
+},{
+	"name": "MPaint",
+	"code": "Mpnt",
+	"standalone": True,
+	"paid": False,
+	"additional_files": [{
+		"path": "samples",
+		"output": "MPaint samples",
+		"versions": ["mac_free","win_free","linux_free"],
+		"copy": True
+	},{
+		"path": "how_to_install_mpaint_mac.txt",
+		"output": "Manual install/how to install mpaint.txt",
+		"versions": ["mac_free"],
+		"copy": False
+	},{
+		"path": "how_to_install_mpaint.txt",
+		"output": "Manual install/how to install mpaint.txt",
+		"versions": ["win_free"],
+		"copy": False
+	},{
+		"path": "how_to_install_mpaint.txt",
+		"output": "how to install mpaint.txt",
+		"versions": ["linux_free"],
+		"copy": False
+	}]
+},{
+	"name": "CRMBL",
+	"code": "Crmb"
+},{
+	"name": "Prisma",
+	"code": "Prsm"
+},{
+	"name": "SunBurnt",
+	"code": "Snbt"
+}]
+for i in range(len(plugins)):
+	if "standalone" not in plugins[i]:
+		plugins[i]["standalone"] = False
+	if "paid" not in plugins[i]:
+		plugins[i]["paid"] = True
+	if "additional_files" not in plugins[i]:
+		plugins[i]["additional_files"] = []
+	if "in_bundle" not in plugins[i]:
+		plugins[i]["in_bundle"] = True
+	codes["plugin"].append(plugins[i]["name"])
+
+targets = [{
+	"name": "Audio Unit",
+	"code": "AU",
+	"extension": ".component",
+	"description": "For Logic and GarageBand",
+	"mac_location": "/Library/Audio/Plug-Ins/Components"
+},{
+	"name": "CLAP",
+	"code": "CLAP",
+	"extension": ".clap",
+	"description": "For Reaper and Bitwig (currently)",
+	"mac_location": "/Library/Audio/Plug-Ins/CLAP/UnplugRed"
+},{
+	"name": "VST3",
+	"code": "VST3",
+	"extension": ".vst3",
+	"description": "For everything else",
+	"mac_location": "/Library/Audio/Plug-Ins/VST3/UnplugRed"
+},{
+	"name": "Standalone",
+	"code": "Standalone",
+	"extension": systems[system]["executable"],
+	"description": "For you. No DAW required",
+	"mac_location": "/Applications"
+}]
+for i in range(len(targets)):
+	codes["target"].append(targets[i]["name"])
+
+valid_secrets = [
+	"KEYCHAIN_PASSWORD",
+	"DEV_ID_APP_CERT",
+	"DEV_ID_APP_PASSWORD",
+	"DEV_ID_INSTALL_CERT",
+	"DEV_ID_INSTALL_PASSWORD",
+	"NOTARIZATION_USERNAME",
+	"NOTARIZATION_PASSWORD",
+	"TEAM_ID",
+	"DEVELOPER_ID_APPLICATION",
+	"DEVELOPER_ID_INSTALLER",
+]
+saved_data = { "is_free": [], "secrets": {} }
+for i in range(len(systems)):
+	saved_data["is_free"].append(False)
+if os.path.isfile("saved_data.json"):
+	with open("saved_data.json",'r') as open_file:
+		saved_data = json.load(open_file)
+
+
+def fuzzy_match(term,data):
+	lower = str(term).replace(' ','').lower()
+	if lower != "":
+		for result in data:
+			if result.replace(' ','').lower().startswith(lower):
+				return result
+
+	return None
+
+def get_plugin(term):
+	lower = str(term).replace(' ','').lower()
+	if lower != "":
+		for plugin in plugins:
+			if plugin["name"].replace(' ','').lower().startswith(lower):
+				return plugin
+
+	error("Unknown plugin: "+term)
+
+def get_system(term):
+	lower = str(term).replace(' ','').lower()
+	if lower != "":
+		for i in range(len(systems)):
+			if systems[i]["name"].replace(' ','').lower().startswith(lower) or str(i) == lower:
+				return systems[i]
+
+	error("Unknown system: "+term)
+
+def get_target(term):
+	lower = str(term).replace(' ','').lower()
+	if lower != "":
+		for target in targets:
+			if target["name"].replace(' ','').lower().startswith(lower):
+				return target
+
+	error("Unknown target: "+term)
+
+
+def debug(string):
+	print('\033[1m'+string+'\033[0m')
+
+def alert(string):
+	print('\033[1m\033[93m'+string+'\033[0m')
+
+def error(string, exit_code=1):
+	print('\033[1m\033[91m'+string+'\033[0m')
+	sys.exit(exit_code)
+
+def run_command(cmd,ignore_errors=False):
+	debug("RUNNING COMMAND: "+cmd)
+
+	if systems[system]["code"] == "win":
+		os.environ['SYSTEMD_COLORS'] = '1'
+		process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+		while process.poll() == None:
+			print(process.stdout.readline().decode("UTF-8"),end='')
+		return_code = process.returncode
+	else:
+		return_code = pty.spawn(shlex.split(cmd), lambda fd: os.read(fd, 1024))
+
+	if return_code != 0:
+		if ignore_errors:
+			alert("Exited with return code "+str(return_code))
+		else:
+			error("Exited with return code "+str(return_code)+", exiting...",return_code)
+
+def join(arr):
+	return '/'.join(arr)
+
+def move(path, output):
+	debug("MOVING PATH "+path+" TO "+output)
+
+	if not os.path.exists(path):
+		error("Invalid path: "+path)
+	if not os.path.isdir(os.path.dirname(output)):
+		error("Invalid path: "+output)
+
+	os.replace(path, output)
+
+def copy(path, output):
+	debug("COPYING PATH "+path+" TO "+output)
+
+	if not os.path.exists(path):
+		error("Invalid path: "+path)
+	if output.endswith('/'):
+		if not os.path.isdir(os.path.abspath(output+"..")):
+			error("Invalid path: "+output)
+	elif not os.path.isdir(os.path.dirname(output)):
+		error("Invalid path: "+output)
+
+	if os.path.isdir(path):
+		if os.path.exists(output):
+			shutil.rmtree(output)
+		shutil.copytree(path,output)
+	else:
+		shutil.copy2(path, output)
+
+def remove(path):
+	debug("REMOVING PATH "+path)
+
+	if not os.path.exists(path):
+		alert("Path already removed: "+path)
+		return
+
+	if os.path.isdir(path):
+		shutil.rmtree(path)
+	else:
+		os.remove(path)
+
+def create_dir(path):
+	debug("CREATING DIRECTORY "+path)
+
+	if os.path.isdir(path):
+		alert("Directory "+path+" already exists.")
+		return
+
+	os.makedirs(path)
+
+def zip_files(path, output, zip_level=6):
+	debug("ZIPPING "+path+" TO "+output)
+
+	if not os.path.exists(path):
+		error("Invalid path: "+path)
+	if not os.path.isdir(os.path.dirname(output)) or not output.endswith(".zip"):
+		error("Invalid path: "+output)
+
+	with ZipFile(output,'w',compresslevel=zip_level) as zf:
+		if os.path.isfile(path):
+			zf.write(path)
+		else:
+			for root, dirs, files in os.walk(path):
+				for file in files:
+					zf.write(join([root,file]),os.path.relpath(join([root,file]),path))
+
+def unzip_files(path, output=None):
+	debug("UNZIPPING "+path+" TO "+output)
+
+	if not os.path.isfile(path) or not path.endswith(".zip"):
+		error("Invalid path: "+path)
+	if output != None and not os.path.isdir(os.path.dirname(output)):
+		error("Invalid path: "+output)
+
+	with ZipFile(path,'r') as zf:
+		zf.extractall(path=output)
+
+def product_build(plugin):
+	debug("GENERATING PRODUCTBUILD XML")
+	nospace = plugin.replace(' ','')
+	lower = nospace.lower()
+	version_tag = ""
+	if plugin == "Everything Bundle":
+		is_paid = True
+		standalone = True
+	else:
+		is_paid = get_plugin(plugin)["paid"]
+		standalone = get_plugin(plugin)["standalone"]
+	if is_paid and saved_data["is_free"][system]:
+		version_tag = "-free"
+
+	file = open(lower+version_tag+".xml","w")
+	file.write('''<?xml version="1.0" encoding="utf-8"?>
+<installer-gui-script minSpecVersion="1">
+	<title>'''+plugin+''' Install</title>
+	<domains enable_anywhere="false" enable_currentUserHome="false" enable_localSystem="true"/>
+	<allowed-os-versions>
+		<os-version min="10.13"/>
+	</allowed-os-versions>
+	<options customize="always" require-scripts="false" rootVolumeOnly="true"/>
+	<welcome file="pages/welcome.html" mime-type="text/html"/>
+	<conclusion file="pages/conclusion.html" mime-type="text/html"/>
+	<choices-outline>''')
+	for target in targets:
+		if target["name"] == "Standalone" and not standalone:
+			continue
+		file.write('''
+		<line choice="'''+target["code"].lower()+'''"/>''')
+	file.write('''
+	</choices-outline>''')
+	for target in targets:
+		if target["name"] == "Standalone" and not standalone:
+			continue
+		file.write('''
+	<choice id="'''+target["code"].lower()+"\" title=\""+target["name"]+"\" description=\""+target["description"]+'''">
+		<pkg-ref id="com.unplugred.'''+nospace+version_tag+"-"+target["code"].lower()+"\">"+nospace+version_tag+"-"+target["code"].lower()+'''.pkg</pkg-ref>
+	</choice>''')
+	file.write('''
+</installer-gui-script>
+''')
+	file.close()
+
+
+def prepare():
+	debug("PREPARING DEPENDENCIES")
+	if systems[system]["code"] == "mac":
+		run_command("sudo xcode-select -s '/Applications/Xcode_15.1.app/Contents/Developer'")
+	elif "linux":
+		run_command("sudo apt-get update",True)
+		run_command("sudo apt-get install g++ libasound2-dev libjack-jackd2-dev ladspa-sdk libcurl4-openssl-dev libfreetype6-dev libx11-dev libxcomposite-dev libxcursor-dev libxcursor-dev libxext-dev libxinerama-dev libxrandr-dev libxrender-dev libwebkit2gtk-4.0-dev libglu1-mesa-dev mesa-common-dev",True)
+
+def update_secrets(secrets):
+	debug("UPDATING SECRETS")
+	for secret in secrets:
+		split = secret.split('=',1)
+		if split[0].upper() in valid_secrets:
+			saved_data["secrets"][split[0].upper()] = split[1]
+		else:
+			error("Unknown secret: "+split[0])
+	with open("saved_data.json","w") as out_file:
+		json.dump(saved_data,out_file);
+
+def configure(version):
+	debug("CONFIGURING "+version.upper()+" VERSION")
+	saved_data["is_free"][system] = version != "paid"
+	with open("saved_data.json","w") as out_file:
+		json.dump(saved_data,out_file);
+
+	version_num = 0
+	if version == "free":
+		version_num = 1
+	elif version == "beta":
+		version_num = 2
+	cmd = "cmake -DBANNERTYPE="+str(version_num)+" -B \"build_"+systems[system]["code"]+"\" -G "
+	if systems[system]["code"] == "win":
+		run_command(cmd+"\""+systems[system]["compiler"]+"\" -T host=x64 -A x64")
+	else:
+		run_command(cmd+"\""+systems[system]["compiler"]+"\"")
+
+def build(plugin, config, target):
+	debug("BUILDING "+plugin.upper()+", CONFIG "+config.upper()+", TARGET "+target.upper())
+
+	if target == "Audio Unit" and systems[system]["code"] != "mac":
+		alert("Cannot build audio unit on "+systems[system]["name"]+", skipping...")
+		return
+
+	nospace = plugin.replace(' ','')
+	lower = nospace.lower()
+	free = "free" if (saved_data["is_free"][system] or not get_plugin(plugin)["paid"]) else "paid"
+	folder = "build_"+systems[system]["code"]
+	file_extension = get_target(target)["extension"]
+
+	create_dir(join(["setup",folder,free]))
+	target_path = join(["setup",folder,free,plugin+file_extension])
+
+	run_command("cmake --build \""+folder+"\" --config "+config+" --target "+nospace+"_"+get_target(target)["code"])
+
+	if systems[system]["code"] == "mac":
+		if target == "CLAP":
+			copy(join([folder,"plugins",lower,nospace+"_artefacts",config,"CLAP",plugin+".clap"]),target_path)
+		elif target == "Standalone":
+			copy(join([folder,"plugins",lower,nospace+"_artefacts",config,"Standalone",plugin+".app"]),target_path)
+
+		if saved_data["secrets"] != {}:
+			zip_path = join(["setup",folder,free,lower+("_free_" if saved_data["is_free"][system] and get_plugin(plugin)["paid"] else "_")+get_target(target)["code"].lower()+".zip"])
+			run_command("codesign --force -s \""+saved_data["secrets"]["DEVELOPER_ID_APPLICATION"]+"\" -v \""+target_path+" --deep --strict --options=runtime --timestamp")
+			zip_files(target_path,zip_path)
+			remove(target_path)
+			run_command("xcrun notarytool submit \""+zip_path+"\" --apple-id "+saved_data["secrets"]["NOTARIZATION_USERNAME"]+" --password "+saved_data["secrets"]["NOTARIZATION_PASSWORD"]+" --team-id "+saved_data["secrets"]["TEAM_ID"]+" --wait")
+			unzip_files(zip_path)
+			remove(zip_path)
+			run_command("xcrun stapler staple \""+target_path+"\"")
+			if target == "Audio Unit":
+				copy(target_path,join([get_target(target)["mac_location"],plugin+".component"]))
+				run_command("killall -9 AudioComponentRegistrar")
+				run_command("auval -a")
+				run_command("auval -strict -v aufx "+get_plugin(plugin)["code"]+" Ured")
+
+	elif systems[system]["code"] == "win":
+		if target == "VST3":
+			move(join([target_path,"Contents","x86_64-win",plugin+file_extension]),join(["setup",plugin+file_extension]))
+			remove(target_path)
+			move(join(["setup",plugin+file_extension]),target_path)
+		elif target == "CLAP":
+			copy(join([folder,"plugins",lower,nospace+"_artefacts",config,"CLAP",plugin+file_extension]),target_path)
+		elif target == "Standalone":
+			copy(join([folder,"plugins",lower,nospace+"_artefacts",config,"Standalone",plugin+file_extension]),target_path)
+		for file in get_plugin(plugin)["additional_files"]:
+			if ("win_"+free) in file["versions"] and file["copy"] and systems[system]["code"] == "win":
+				if not os.path.isdir(join(["setup",folder,"other",plugin])):
+					create_dir(join(["setup",folder,"other",plugin]))
+				copy(join(["plugins",lower,file["path"]]),join(["setup",folder,"other",plugin,file["output"]]))
+
+	else:
+		if target == "CLAP":
+			copy(join([folder,"plugins",lower,nospace+"_artefacts","CLAP",plugin+".clap"]),target_path)
+		elif target == "Standalone":
+			copy(join([folder,"plugins",lower,nospace+"_artefacts","Standalone",plugin]),target_path)
+
+def run_plugin(plugin, config):
+	artefact_path = join(["build_"+systems[system]["code"],"plugins",plugin.replace(' ','').lower(),plugin.replace(' ','')+"_artefacts"])
+	if systems[system]["code"] == "linux":
+		run_command("\""+join([artefact_path       ,"Standalone",plugin+systems[system]["executable"]])+"\"")
+	else:
+		run_command("\""+join([artefact_path,config,"Standalone",plugin+systems[system]["executable"]])+"\"")
+
+def build_installer(plugin, system_i, zip_result=True):
+	debug("BUILDING INSTALLER FOR "+plugin.upper())
+
+	nospace = plugin.replace(' ','')
+	lower = nospace.lower()
+	free = "free" if (saved_data["is_free"][system] or not get_plugin(plugin)["paid"]) else "paid"
+	folder = "build_"+get_system(system_i)["code"]
+
+	remove(join(["setup","temp"]))
+	create_dir(join(["setup","temp"]))
+	if get_system(system_i)["code"] == "mac" or get_system(system_i)["code"] == "win":
+		create_dir(join(["setup","temp","Manual install"]))
+
+	def if_free(str):
+		if get_plugin(plugin)["paid"] and saved_data["is_free"][system]:
+			return str
+		else:
+			return ""
+	installer = plugin+if_free(" Free")+" Installer"
+
+	other_data = False
+	for file in get_plugin(plugin)["additional_files"]:
+		if (get_system(system_i)["code"]+"_"+free) in file["versions"] and file["copy"] and get_system(system_i)["code"] != "linux":
+			copy(join(["plugins",lower,file["path"]]),join(["setup","temp","Manual install",file["output"],""]))
+			if get_system(system_i)["code"] == "win":
+				other_data = True
+
+	if get_system(system_i)["code"] == "mac":
+		prevpath = os.getcwd()
+		os.chdir(prevpath+"/setup") # TODO: i dont like this
+		identifier = nospace+if_free("-free")
+		run_command("chmod +rx \"./assets/scripts/postinstall\"")
+		for target in targets:
+			if target["name"] == "Standalone" and not get_plugin(plugin)["standalone"]:
+				continue
+			copy(join([folder,free,plugin+target["extension"]]),join(["temp","Manual install",plugin+target["extension"]]))
+			run_command("pkgbuild --install-location \""+target["mac_location"]+"\" --identifier \"com.unplugred."+identifier+"-"+target["code"].lower()+".pkg\""+(" --scripts \"./assets/scripts\"" if target["name"] == "Audio Unit" else "")+" --version 1.1.1 --root \""+join(["temp","Manual install"])+"\" \""+identifier+"-"+target["code"].lower()+".pkg\"")
+			move(join(["temp","Manual install",plugin+target["extension"]]),join(["temp",plugin+target["extension"]]))
+		product_build(plugin)
+		run_command("productbuild --timestamp --sign \""+saved_data["secrets"]["DEVELOPER_ID_INSTALLER"]+"\" --distribution \""+identifier+".xml\" --resources \"./assets/\" \""+installer+".pkg\"")
+		run_command("xcrun notarytool submit \""+installer+".pkg\" --apple-id "+saved_data["secrets"]["NOTARIZATION_USERNAME"]+" --password "+saved_data["secrets"]["NOTARIZATION_PASSWORD"]+" --team-id "+saved_data["secrets"]["TEAM_ID"]+" --wait")
+		run_command("xcrun stapler staple \""+installer+".pkg\"")
+		for target in targets:
+			if get_plugin(plugin)["standalone"] or target["name"] != "Standalone":
+				move(join(["temp",plugin+target["extension"]]),join(["temp","Manual install",plugin+target["extension"]]))
+		move(installer+".pkg",join(["temp",""]))
+		os.chdir(prevpath)
+
+	elif get_system(system_i)["code"] == "win":
+		cmd = "iscc \""+join(["setup","innosetup.iss"])+"\" \"/DPluginName="+plugin+"\" \"/DVersion="+free+"\""
+		if not get_plugin(plugin)["paid"]:
+			cmd += " \"/DNoPaid\""
+		if get_plugin(plugin)["standalone"]:
+			cmd += " \"/DStandalone\""
+		if other_data:
+			cmd += " \"/DOtherData\""
+		run_command(cmd)
+		for target in targets:
+			if target["name"] == "Audio Unit":
+				continue
+			if get_plugin(plugin)["standalone"] or target["name"] != "Standalone":
+				copy(join(["setup",folder,free,plugin+target["extension"]]),join(["setup","temp","Manual install",plugin+target["extension"]]))
+		move(join(["setup","Output",installer+".exe"]),join(["setup","temp",installer+".exe"]))
+
+	else:
+		for target in targets:
+			if target["name"] == "Audio Unit":
+				continue
+			if get_plugin(plugin)["standalone"] or target["name"] != "Standalone":
+				copy(join(["setup",folder,free,plugin+target["extension"]]),join(["setup","temp",plugin+target["extension"]]))
+
+	for file in get_plugin(plugin)["additional_files"]:
+		if (get_system(system_i)["code"]+"_"+free) in file["versions"] and not (file["copy"] and get_system(system_i)["code"] != "linux"):
+			copy(join(["plugins",lower,file["path"]]),join(["setup","temp",file["output"]]))
+
+	if zip_result:
+		zip_files(join(["setup","temp"]),join(["setup","zips",plugin+if_free(" Free")+" "+get_system(system_i)["name"]+".zip"]),9)
+
+def build_everything_bundle(system_i):
+	debug("BUILDING EVERYTHING BUNDLE")
+
+	remove(join(["setup","temp"]))
+	create_dir(join(["setup","temp"]))
+	for plugin in plugins:
+		if plugin["in_bundle"]:
+			unzip_files(join(["setup","zips",plugin["name"]+" "+get_system(system_i)["name"]+".zip"]),join(["setup","temp"]))
+
+	if get_system(system_i)["code"] == "mac" and systems[system]["code"] == "mac":
+		prevpath = os.getcwd()
+		os.chdir(prevpath+"/setup") # TODO: i dont like this
+		debug("BUILDING INSTALLER FOR EVERYTHING BUNDLE")
+		identifier = "everythingbundle"
+		run_command("chmod +rx \"./assets/scripts/postinstall\"")
+		for target in targets:
+			for plugin in plugins:
+				if plugin["in_bundle"] and (plugin["standalone"] or target["name"] != "Standalone"):
+					move(join(["temp","Manual install",plugin["name"]+target["extension"]]),join(["temp",plugin["name"]+target["extension"]]))
+		for target in targets:
+			for plugin in plugins:
+				if plugin["in_bundle"] and (plugin["standalone"] or target["name"] != "Standalone"):
+					move(join(["temp",plugin["name"]+target["extension"]]),join(["temp","Manual install",plugin["name"]+target["extension"]]))
+			run_command("pkgbuild --install-location \""+target["mac_location"]+"\" --identifier \"com.unplugred."+identifier+"-"+target["code"].lower()+".pkg\""+(" --scripts \"./assets/scripts\"" if target["name"] == "Audio Unit" else "")+" --version 1.1.1 --root \""+join(["temp","Manual install"])+"\" \""+identifier+"-"+target["code"].lower()+".pkg\"")
+			for plugin in plugins:
+				if plugin["in_bundle"] and (plugin["standalone"] or target["name"] != "Standalone"):
+					move(join(["temp","Manual install",plugin["name"]+target["extension"]]),join(["temp",plugin["name"]+target["extension"]]))
+		product_build("Everything Bundle")
+		run_command("productbuild --timestamp --sign \""+saved_data["secrets"]["DEVELOPER_ID_INSTALLER"]+"\" --distribution \""+identifier+".xml\" --resources \"./assets/\" \"Everything Bundle Installer.pkg\"")
+		run_command("xcrun notarytool submit \"Everything Bundle Installer.pkg\" --apple-id "+saved_data["secrets"]["NOTARIZATION_USERNAME"]+" --password "+saved_data["secrets"]["NOTARIZATION_PASSWORD"]+" --team-id "+saved_data["secrets"]["TEAM_ID"]+" --wait")
+		run_command("xcrun stapler staple \"Everything Bundle Installer.pkg\"")
+		for target in targets:
+			for plugin in plugins:
+				if plugin["in_bundle"] and (plugin["standalone"] or target["name"] != "Standalone"):
+					move(join(["temp",plugin["name"]+target["extension"]]),join(["temp","Manual install",plugin["name"]+target["extension"]]))
+		move("Everything Bundle Installer.pkg",join(["temp",""]))
+		os.chdir(prevpath)
+
+	elif get_system(system_i)["code"] == "win" and systems[system]["code"] == "win":
+		debug("BUILDING INSTALLER FOR EVERYTHING BUNDLE")
+		for plugin in plugins:
+			if not plugin["in_bundle"]:
+				continue
+			for target in targets:
+				if target["name"] != "Audio Unit" and (plugin["standalone"] or target["name"] != "Standalone"):
+					copy(join(["setup","temp","Manual install",plugin["name"]+target["extension"]]),join(["setup","build_win","paid" if plugin["paid"] else "free",plugin["name"]+target["extension"]]))
+			remove(join(["setup","temp",plugin["name"]+" Installer.exe"]))
+			for file in plugin["additional_files"]:
+				if ("win_"+("paid" if plugin["paid"] else "free")) in file["versions"] and file["copy"]:
+					if not os.path.isdir(join(["setup","build_win","other",plugin["name"]])):
+						create_dir(join(["setup","build_win","other",plugin["name"]]))
+					copy(join(["setup","temp","Manual install",file["output"]]),join(["setup","build_win","other",plugin["name"],file["output"]]))
+		run_command("iscc \""+join(["setup","innosetup everything.iss"])+"\"")
+		move(join(["setup","Output","Everything Bundle Installer.exe"]),join(["setup","temp","Everything Bundle Installer.exe"]))
+
+	zip_files(join(["setup","temp"]),join(["setup","zips","Everything Bundle "+get_system(system_i)["name"]+".zip"]),9)
+
+
+def build_all():
+	debug("BUILDING ALL")
+	prepare()
+	for free in ["free","paid"]:
+		configure(free)
+		for plugin in plugins:
+			if plugin["paid"] or free == "free":
+				for target in targets:
+					if target["name"] == "Audio Unit" and systems[system]["code"] != "mac":
+						continue
+					if not plugin["standalone"] and target["name"] == "Standalone":
+						continue
+					build(plugin["name"],"Release",target["name"])
+				build_installer(plugin["name"],system,True)
+	build_everything_bundle(system)
+
+def write_actions():
+	for plugin in plugins:
+		path = join([".github","workflows",plugin["name"].replace(' ','').lower()+"_build.yml"])
+		debug("WRITING GITHUB ACTIONS WORKFLOW TO "+path)
+		file = open(path,"w")
+		file.write("name: "+plugin["name"]+'''
+
+env:
+  PLUG: '''+plugin["name"]+'''
+  LOWER: '''+plugin["name"].replace(' ','').lower()+'''
+
+on:
+  push:
+    paths:
+      - '**'''+plugin["name"].replace(' ','').lower()+'''**'
+      - 'rebuild_all.txt'
+  pull_request:
+    paths:
+      - '**'''+plugin["name"].replace(' ','').lower()+'''**'
+      - 'rebuild_all.txt'
+    branches:
+      - master
+
+jobs:
+  build:
+    name: build
+    strategy:
+      matrix:
+        include:''')
+		for system_i in systems:
+			file.write('''
+        - {
+            name: "'''+system_i["name"]+'''",
+            os: '''+system_i["image"]+''',
+            folder: "build_'''+system_i["code"]+'''"
+          }''')
+		file.write('''
+    runs-on: ${{ matrix.os }}
+    concurrency: build_${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: cache stuff
+      id: cache-stuff
+      uses: actions/cache@v4
+      with:
+        path: "${{ matrix.folder }}"
+        key: "${{ matrix.folder }}"
+
+    - name: prepare
+      id: prepare
+      run: |
+        python3 build.py prepare
+        python3 build.py secrets KEYCHAIN_PASSWORD=${{ secrets.KEYCHAIN_PASSWORD }} DEV_ID_APP_CERT=${{ secrets.DEV_ID_APP_CERT }} DEV_ID_APP_PASSWORD=${{ secrets.DEV_ID_APP_PASSWORD }} DEV_ID_INSTALL_CERT=${{ secrets.DEV_ID_INSTALL_CERT }} DEV_ID_INSTALL_PASSWORD=${{ secrets.DEV_ID_INSTALL_PASSWORD }} NOTARIZATION_USERNAME=${{ secrets.NOTARIZATION_USERNAME }} NOTARIZATION_PASSWORD=${{ secrets.NOTARIZATION_PASSWORD }} TEAM_ID=${{ secrets.TEAM_ID }} DEVELOPER_ID_APPLICATION=${{ secrets.DEVELOPER_ID_APPLICATION }} DEVELOPER_ID_INSTALLER=${{ secrets.DEVELOPER_ID_INSTALLER }}
+
+    - name: (mac) import certificates
+      id: import-certificates
+      if: startsWith(matrix.os, 'mac')
+      uses: apple-actions/import-codesign-certs@v2
+      with:
+        keychain: unplugred
+        keychain-password: ${{ secrets.KEYCHAIN_PASSWORD }}
+        p12-file-base64: ${{ secrets.DEV_ID_APP_CERT }}
+        p12-password: ${{ secrets.DEV_ID_APP_PASSWORD }}
+
+    - name: (mac) import installer certificates
+      id: import-installer-certificates
+      if: startsWith(matrix.os, 'mac')
+      uses: apple-actions/import-codesign-certs@v2
+      with:
+        keychain: unplugred
+        keychain-password: ${{ secrets.KEYCHAIN_PASSWORD }}
+        p12-file-base64: ${{ secrets.DEV_ID_INSTALL_CERT }}
+        p12-password: ${{ secrets.DEV_ID_INSTALL_PASSWORD }}
+        create-keychain: false
+''')
+		for version in ["paid","free"]:
+			if not plugin["paid"] and version == "paid":
+				continue
+			version_tag = [" free","-free"," Free"] if (plugin["paid"] and version == "free") else ["","",""]
+			file.write('''
+    - name: configure'''+version_tag[0]+'''
+      id: configure'''+version_tag[1]+'''
+      run: |
+        python3 build.py configure '''+version+'''
+''')
+			for target in targets:
+				if target["name"] == "Standalone" and not plugin["standalone"]:
+					continue
+				file.write('''
+    - name: build '''+target["name"].lower()+version_tag[0]+'''
+      id: build-'''+target["code"].lower()+version_tag[1])
+				if target["name"] == "Audio Unit":
+					file.write('''
+      if: startsWith(matrix.os, 'mac')''')
+				file.write('''
+      run: |
+        python3 ${{ env.LOWER }} release '''+target["code"].lower()+'''
+''')
+			file.write('''
+    - name: installer'''+version_tag[0]+'''
+      id: installer'''+version_tag[1]+'''
+      run: |
+        python3 ${{ env.LOWER }} installer
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: ${{ env.PLUG }}'''+version_tag[2]+''' ${{ matrix.name }}
+        path: setup/temp
+        compression-level: 9
+''')
+		file.write('''
+    - name: cleanup
+      id: cleanup
+      run: |
+        rm -r setup/temp
+        rm saved_data.json''')
+		file.close()
+
+def run_program(string):
+	if string.strip() == "":
+		error("You must specify arguments!")
+	args = string.lower().split(' ')
+
+	if "configure".startswith(args[0]) and ',' not in string and len(args) <= 2:
+		match = "free"
+		if len(args) == 2:
+			match = fuzzy_match(args[1],codes["version"])
+			if match == None:
+				error("Unknown version: "+args[1])
+		configure(match)
+		return
+
+	to_build = {}
+	arguments = ["plugin","config","target","run","system"]
+	for argument in arguments:
+		to_build[argument] = []
+	installer = False
+	everything = False
+	for i in range(len(args)):
+		if i > 4 or (i > 3 and ("Standalone" not in to_build["target"] or not installer)) or (i > 2 and "Standalone" not in to_build["target"] and not installer):
+			error("Unexpected number of arguments!")
+		if (i == 0 and "everythingbundle".startswith(args[i])) or (i == 2 and "all".startswith(args[i])):
+			if i == 0:
+				everything = True
+			for n in codes[arguments[i]]:
+				to_build[arguments[i]].append(n)
+			continue
+		if i == 1 and "installer".startswith(args[i]) and ',' not in args[i]:
+			installer = True
+			continue
+		if i == 3 and ',' in args[i]:
+			error("Argument "+arguments[i]+" can only have one value")
+		sub_args = args[i].split(',')
+		for n in range(len(sub_args)):
+			if i == 2 and "installer".startswith(sub_args[n]):
+					if installer:
+						error("Argument Installer used more than once!")
+					installer = True
+					continue
+			match = fuzzy_match(sub_args[n],codes[arguments[i]])
+			if match == None:
+				if i == 0 and ',' not in args[i]:
+					if len(args) == 1:
+						if "prepare".startswith(sub_args[n]):
+							prepare()
+							return
+						elif "actions".startswith(sub_args[n]):
+							write_actions()
+							return
+					elif "secrets".startswith(sub_args[n]) and len(args) > 1:
+						update_secrets(args[1:])
+				if installer:
+					match = fuzzy_match(sub_args[n],codes["system"])
+					if match == None:
+						error("Unknown system: "+sub_args[n])
+					if match in to_build["system"]:
+						error("Argument "+match+" used more than once!")
+					to_build["system"].append(match)
+					continue
+				error("Unknown "+arguments[i]+": "+sub_args[n])
+			if match in to_build[arguments[i]]:
+				error("Argument "+match+" used more than once!")
+			to_build[arguments[i]].append(match)
+	if installer and len(to_build["target"]) == 0 and len(to_build["config"]) > 0:
+		error("Cannot use config "+to_build["config"][0]+" to build an installer")
+
+	if len(to_build["system"]) == 0:
+		if len(to_build["target"]) == 0 and everything:
+			for system_i in systems:
+				to_build["system"].append(system_i["name"])
+		else:
+			to_build["system"].append(systems[system]["name"])
+	if len(to_build["config"]) == 0:
+		to_build["config"].append("Debug")
+	if len(to_build["target"]) == 0 and not installer:
+		to_build["target"].append("Standalone")
+	if len(to_build["run"]) == 0:
+		to_build["run"].append("yes" if "Standalone" in to_build["target"] else "no")
+
+	if installer and len(to_build["target"]) == 0:
+		if everything:
+			for system_i in to_build["system"]:
+				build_everything_bundle(system_i)
+		else:
+			for plugin in to_build["plugin"]:
+				for system_i in to_build["system"]:
+					build_installer(plugin,system_i)
+		return
+
+	for plugin in to_build["plugin"]:
+		for config in to_build["config"]:
+			for target in to_build["target"]:
+				build(plugin,config,target)
+			if to_build["run"][0] == "yes":
+				run_plugin(plugin,config)
+		if installer:
+			for system_i in to_build["system"]:
+				build_installer(plugin,system_i)
+	if everything and installer:
+		for system_i in to_build["system"]:
+			build_everything_bundle(system_i)
+
+if __name__ == "__main__":
+	run_program(' '.join(sys.argv[1:]))
