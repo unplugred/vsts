@@ -113,7 +113,7 @@ jobs:
         mv "${{ matrix.folder }}/plugins/${{ env.LOWER }}/${{ env.NOSPACE }}_artefacts/Release/Standalone/${{ env.PLUG }}.exe" "setup/${{ matrix.folder }}/free/${{ env.PLUG }}.exe"
         cp -r "plugins/${{ env.LOWER }}/samples" "setup/${{ matrix.folder }}/other/${{ env.PLUG }}"
         cp -r "plugins/${{ env.LOWER }}/samples" "setup/${{ matrix.folder }}/free/${{ env.PLUG }}"
-        cp "plugins/${{ env.LOWER }}/how_to_install_${{ env.NOSPACE }}.txt" "setup/${{ matrix.folder }}/free/how to install ${{ env.PLUG }}.txt"
+        cp "plugins/${{ env.LOWER }}/how_to_install_${{ env.LOWER }}.txt" "setup/${{ matrix.folder }}/free/how to install ${{ env.PLUG }}.txt"
 
     - name: (linux) package
       if: startsWith(matrix.os, 'ubuntu')
@@ -122,7 +122,7 @@ jobs:
         mv "${{ matrix.folder }}/plugins/${{ env.LOWER }}/${{ env.NOSPACE }}_artefacts/CLAP/${{ env.PLUG }}.clap" "setup/${{ matrix.folder }}/free/${{ env.PLUG }}.clap"
         mv "${{ matrix.folder }}/plugins/${{ env.LOWER }}/${{ env.NOSPACE }}_artefacts/Standalone/${{ env.PLUG }}" "setup/${{ matrix.folder }}/free/${{ env.PLUG }} Standalone"
         cp -r "plugins/${{ env.LOWER }}/samples" "setup/${{ matrix.folder }}/free/${{ env.PLUG }}"
-        cp "plugins/${{ env.LOWER }}/how_to_install_${{ env.NOSPACE }}.txt" "setup/${{ matrix.folder }}/free/how to install ${{ env.PLUG }}.txt"
+        cp "plugins/${{ env.LOWER }}/how_to_install_${{ env.LOWER }}.txt" "setup/${{ matrix.folder }}/free/how to install ${{ env.PLUG }}.txt"
 
     - name: (mac) package
       if: startsWith(matrix.os, 'macos')
@@ -131,7 +131,7 @@ jobs:
         mv "${{ matrix.folder }}/plugins/${{ env.LOWER }}/${{ env.NOSPACE }}_artefacts/Release/CLAP/${{ env.PLUG }}.clap" "setup/${{ matrix.folder }}/free/${{ env.PLUG }}.clap"
         mv "${{ matrix.folder }}/plugins/${{ env.LOWER }}/${{ env.NOSPACE }}_artefacts/Release/Standalone/${{ env.PLUG }}.app" "setup/${{ matrix.folder }}/free/${{ env.PLUG }}.app"
         cp -r "plugins/${{ env.LOWER }}/samples" "setup/${{ matrix.folder }}/free/${{ env.PLUG }}"
-        cp "plugins/${{ env.LOWER }}/how_to_install_${{ env.NOSPACE }}_mac.txt" "setup/${{ matrix.folder }}/free/how to install ${{ env.PLUG }}.txt"
+        cp "plugins/${{ env.LOWER }}/how_to_install_${{ env.LOWER }}_mac.txt" "setup/${{ matrix.folder }}/free/how to install ${{ env.PLUG }}.txt"
 
     - name: (mac) code signing
       if: startsWith(matrix.os, 'macos')
