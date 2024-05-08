@@ -307,7 +307,10 @@ def zip_files(path, output, zip_level=6):
 					zf.write(join([root,file]),os.path.relpath(join([root,file]),path))
 
 def unzip_files(path, output=None):
-	debug("UNZIPPING "+path+" TO "+output)
+	if output == None:
+		debug("UNZIPPING "+path)
+	else:
+		debug("UNZIPPING "+path+" TO "+output)
 
 	if not os.path.isfile(path) or not path.endswith(".zip"):
 		error("Invalid path: "+path)
@@ -540,8 +543,6 @@ def build_installer(plugin, system_i, zip_result=True):
 	for file in get_plugin(plugin)["additional_files"]:
 		if (get_system(system_i)["code"]+"_"+free) in file["versions"] and not (file["copy"] and get_system(system_i)["code"] != "linux"):
 			copy(join(["plugins",lower,file["path"]]),join(["setup","temp",file["output"]]))
-
-	copy("saved_data.json",join(["setup","temp"]))
 
 	if zip_result:
 		create_dir(join(["setup","zips"]))
