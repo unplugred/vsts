@@ -784,6 +784,7 @@ def run_program(string):
 							return
 					elif "secrets".startswith(sub_args[n]) and len(args) > 1:
 						update_secrets(args[1:])
+						return
 				if installer:
 					match = fuzzy_match(sub_args[n],codes["system"])
 					if match == None:
