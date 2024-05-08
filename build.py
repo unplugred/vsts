@@ -215,7 +215,10 @@ def error(string, exit_code=1):
 	sys.exit(exit_code)
 
 def run_command(cmd,ignore_errors=False):
-	debug("RUNNING COMMAND: "+cmd)
+	censored_command = cmd
+	for secret in saved_data["secrets"].values():
+		cmd.replace(secret,"***")
+	debug("RUNNING COMMAND: "+censored_command)
 
 	if systems[system]["code"] == "win":
 		os.environ['SYSTEMD_COLORS'] = '1'
@@ -419,7 +422,7 @@ def build(plugin, config, target):
 
 		if saved_data["secrets"] != {}:
 			zip_path = join(["setup",folder,free,lower+("_free_" if saved_data["is_free"][system] and get_plugin(plugin)["paid"] else "_")+get_target(target)["code"].lower()+".zip"])
-			run_command("codesign --force -s \""+saved_data["secrets"]["DEVELOPER_ID_APPLICATION"]+"\" -v \""+target_path+" --deep --strict --options=runtime --timestamp")
+			run_command("codesign --force -s \""+saved_data["secrets"]["DEVELOPER_ID_APPLICATION"]+"\" -v \""+target_path+"\" --deep --strict --options=runtime --timestamp")
 			zip_files(target_path,zip_path)
 			remove(target_path)
 			run_command("xcrun notarytool submit \""+zip_path+"\" --apple-id "+saved_data["secrets"]["NOTARIZATION_USERNAME"]+" --password "+saved_data["secrets"]["NOTARIZATION_PASSWORD"]+" --team-id "+saved_data["secrets"]["TEAM_ID"]+" --wait")
@@ -534,6 +537,8 @@ def build_installer(plugin, system_i, zip_result=True):
 	for file in get_plugin(plugin)["additional_files"]:
 		if (get_system(system_i)["code"]+"_"+free) in file["versions"] and not (file["copy"] and get_system(system_i)["code"] != "linux"):
 			copy(join(["plugins",lower,file["path"]]),join(["setup","temp",file["output"]]))
+
+	copy("saved_data.json",join(["setup","temp"]))
 
 	if zip_result:
 		create_dir(join(["setup","zips"]))
