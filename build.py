@@ -212,7 +212,10 @@ def alert(string):
 
 def error(string, exit_code=1):
 	print('\033[1m\033[91m'+string+'\033[0m')
-	sys.exit(exit_code)
+	if exit_code == 256:
+		sys.exit(1)
+	else:
+		sys.exit(exit_code)
 
 def run_command(cmd,ignore_errors=False):
 	censored_command = cmd
@@ -492,7 +495,7 @@ def build_installer(plugin, system_i, zip_result=True):
 
 	if get_system(system_i)["code"] == "mac":
 		prevpath = os.getcwd()
-		os.chdir(prevpath+"/setup") # TODO: i dont like this
+		os.chdir(join([prevpath,"setup"])) # TODO: i dont like this
 		identifier = nospace+if_free("-free")
 		run_command("chmod +rx \"./assets/scripts/postinstall\"")
 		for target in targets:
@@ -555,7 +558,7 @@ def build_everything_bundle(system_i):
 
 	if get_system(system_i)["code"] == "mac" and systems[system]["code"] == "mac":
 		prevpath = os.getcwd()
-		os.chdir(prevpath+"/setup") # TODO: i dont like this
+		os.chdir(join([prevpath,"setup"])) # TODO: i dont like this
 		debug("BUILDING INSTALLER FOR EVERYTHING BUNDLE")
 		identifier = "everythingbundle"
 		run_command("chmod +rx \"./assets/scripts/postinstall\"")
@@ -740,7 +743,7 @@ jobs:
 def run_program(string):
 	if string.strip() == "":
 		error("You must specify arguments!")
-	args = shlex.split(string.lower())
+	args = shlex.split(string)
 
 	if "configure".startswith(args[0]) and ',' not in string and len(args) <= 2:
 		match = "free"
