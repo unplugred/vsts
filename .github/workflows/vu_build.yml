@@ -85,27 +85,27 @@ jobs:
       id: build-au
       if: startsWith(matrix.os, 'mac')
       run: |
-        python3 "${{ env.PLUG }}" release au
+        python3 build.py "${{ env.PLUG }}" release au
 
     - name: build clap
       id: build-clap
       run: |
-        python3 "${{ env.PLUG }}" release clap
+        python3 build.py "${{ env.PLUG }}" release clap
 
     - name: build vst3
       id: build-vst3
       run: |
-        python3 "${{ env.PLUG }}" release vst3
+        python3 build.py "${{ env.PLUG }}" release vst3
 
     - name: build standalone
       id: build-standalone
       run: |
-        python3 "${{ env.PLUG }}" release standalone
+        python3 build.py "${{ env.PLUG }}" release standalone
 
     - name: installer
       id: installer
       run: |
-        python3 "${{ env.PLUG }}" installer
+        python3 build.py "${{ env.PLUG }}" installer
 
     - uses: actions/upload-artifact@v4
       with:
@@ -122,27 +122,27 @@ jobs:
       id: build-au-free
       if: startsWith(matrix.os, 'mac')
       run: |
-        python3 "${{ env.PLUG }}" release au
+        python3 build.py "${{ env.PLUG }}" release au
 
     - name: build clap free
       id: build-clap-free
       run: |
-        python3 "${{ env.PLUG }}" release clap
+        python3 build.py "${{ env.PLUG }}" release clap
 
     - name: build vst3 free
       id: build-vst3-free
       run: |
-        python3 "${{ env.PLUG }}" release vst3
+        python3 build.py "${{ env.PLUG }}" release vst3
 
     - name: build standalone free
       id: build-standalone-free
       run: |
-        python3 "${{ env.PLUG }}" release standalone
+        python3 build.py "${{ env.PLUG }}" release standalone
 
     - name: installer free
       id: installer-free
       run: |
-        python3 "${{ env.PLUG }}" installer
+        python3 build.py "${{ env.PLUG }}" installer
 
     - uses: actions/upload-artifact@v4
       with:
