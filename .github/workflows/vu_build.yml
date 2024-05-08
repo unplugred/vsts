@@ -2,7 +2,6 @@ name: VU
 
 env:
   PLUG: VU
-  LOWER: vu
 
 on:
   push:
@@ -54,7 +53,7 @@ jobs:
       id: prepare
       run: |
         python3 build.py prepare
-        python3 build.py secrets KEYCHAIN_PASSWORD=${{ secrets.KEYCHAIN_PASSWORD }} DEV_ID_APP_CERT=${{ secrets.DEV_ID_APP_CERT }} DEV_ID_APP_PASSWORD=${{ secrets.DEV_ID_APP_PASSWORD }} DEV_ID_INSTALL_CERT=${{ secrets.DEV_ID_INSTALL_CERT }} DEV_ID_INSTALL_PASSWORD=${{ secrets.DEV_ID_INSTALL_PASSWORD }} NOTARIZATION_USERNAME=${{ secrets.NOTARIZATION_USERNAME }} NOTARIZATION_PASSWORD=${{ secrets.NOTARIZATION_PASSWORD }} TEAM_ID=${{ secrets.TEAM_ID }} DEVELOPER_ID_APPLICATION=${{ secrets.DEVELOPER_ID_APPLICATION }} DEVELOPER_ID_INSTALLER=${{ secrets.DEVELOPER_ID_INSTALLER }}
+        python3 build.py secrets KEYCHAIN_PASSWORD="${{ secrets.KEYCHAIN_PASSWORD }}" DEV_ID_APP_CERT="${{ secrets.DEV_ID_APP_CERT }}" DEV_ID_APP_PASSWORD="${{ secrets.DEV_ID_APP_PASSWORD }}" DEV_ID_INSTALL_CERT="${{ secrets.DEV_ID_INSTALL_CERT }}" DEV_ID_INSTALL_PASSWORD="${{ secrets.DEV_ID_INSTALL_PASSWORD }}" NOTARIZATION_USERNAME="${{ secrets.NOTARIZATION_USERNAME }}" NOTARIZATION_PASSWORD="${{ secrets.NOTARIZATION_PASSWORD }}" TEAM_ID="${{ secrets.TEAM_ID }}" DEVELOPER_ID_APPLICATION="${{ secrets.DEVELOPER_ID_APPLICATION }}" DEVELOPER_ID_INSTALLER="${{ secrets.DEVELOPER_ID_INSTALLER }}"
 
     - name: (mac) import certificates
       id: import-certificates
@@ -86,27 +85,27 @@ jobs:
       id: build-au
       if: startsWith(matrix.os, 'mac')
       run: |
-        python3 ${{ env.LOWER }} release au
+        python3 "${{ env.PLUG }}" release au
 
     - name: build clap
       id: build-clap
       run: |
-        python3 ${{ env.LOWER }} release clap
+        python3 "${{ env.PLUG }}" release clap
 
     - name: build vst3
       id: build-vst3
       run: |
-        python3 ${{ env.LOWER }} release vst3
+        python3 "${{ env.PLUG }}" release vst3
 
     - name: build standalone
       id: build-standalone
       run: |
-        python3 ${{ env.LOWER }} release standalone
+        python3 "${{ env.PLUG }}" release standalone
 
     - name: installer
       id: installer
       run: |
-        python3 ${{ env.LOWER }} installer
+        python3 "${{ env.PLUG }}" installer
 
     - uses: actions/upload-artifact@v4
       with:
@@ -123,27 +122,27 @@ jobs:
       id: build-au-free
       if: startsWith(matrix.os, 'mac')
       run: |
-        python3 ${{ env.LOWER }} release au
+        python3 "${{ env.PLUG }}" release au
 
     - name: build clap free
       id: build-clap-free
       run: |
-        python3 ${{ env.LOWER }} release clap
+        python3 "${{ env.PLUG }}" release clap
 
     - name: build vst3 free
       id: build-vst3-free
       run: |
-        python3 ${{ env.LOWER }} release vst3
+        python3 "${{ env.PLUG }}" release vst3
 
     - name: build standalone free
       id: build-standalone-free
       run: |
-        python3 ${{ env.LOWER }} release standalone
+        python3 "${{ env.PLUG }}" release standalone
 
     - name: installer free
       id: installer-free
       run: |
-        python3 ${{ env.LOWER }} installer
+        python3 "${{ env.PLUG }}" installer
 
     - uses: actions/upload-artifact@v4
       with:
