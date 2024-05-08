@@ -1,17 +1,17 @@
-name: SunBurnt
+name: Proto
 
 env:
-  PLUG: SunBurnt
-  LOWER: sunburnt
+  PLUG: Proto
+  LOWER: proto
 
 on:
   push:
     paths:
-      - '**sunburnt**'
+      - '**proto**'
       - 'rebuild_all.txt'
   pull_request:
     paths:
-      - '**sunburnt**'
+      - '**proto**'
       - 'rebuild_all.txt'
     branches:
       - master
@@ -80,7 +80,7 @@ jobs:
     - name: configure
       id: configure
       run: |
-        python3 build.py configure paid
+        python3 build.py configure free
 
     - name: build audio unit
       id: build-au
@@ -106,38 +106,6 @@ jobs:
     - uses: actions/upload-artifact@v4
       with:
         name: ${{ env.PLUG }} ${{ matrix.name }}
-        path: setup/temp
-        compression-level: 9
-
-    - name: configure free
-      id: configure-free
-      run: |
-        python3 build.py configure free
-
-    - name: build audio unit free
-      id: build-au-free
-      if: startsWith(matrix.os, 'mac')
-      run: |
-        python3 ${{ env.LOWER }} release au
-
-    - name: build clap free
-      id: build-clap-free
-      run: |
-        python3 ${{ env.LOWER }} release clap
-
-    - name: build vst3 free
-      id: build-vst3-free
-      run: |
-        python3 ${{ env.LOWER }} release vst3
-
-    - name: installer free
-      id: installer-free
-      run: |
-        python3 ${{ env.LOWER }} installer
-
-    - uses: actions/upload-artifact@v4
-      with:
-        name: ${{ env.PLUG }} Free ${{ matrix.name }}
         path: setup/temp
         compression-level: 9
 
