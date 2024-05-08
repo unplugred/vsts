@@ -100,7 +100,7 @@ jobs:
     - name: build standalone
       id: build-standalone
       run: |
-        python3 build.py "${{ env.PLUG }}" release standalone
+        python3 build.py "${{ env.PLUG }}" release standalone no
 
     - name: installer
       id: installer
@@ -137,7 +137,7 @@ jobs:
     - name: build standalone free
       id: build-standalone-free
       run: |
-        python3 build.py "${{ env.PLUG }}" release standalone
+        python3 build.py "${{ env.PLUG }}" release standalone no
 
     - name: installer free
       id: installer-free
