@@ -536,6 +536,7 @@ def build_installer(plugin, system_i, zip_result=True):
 			copy(join(["plugins",lower,file["path"]]),join(["setup","temp",file["output"]]))
 
 	if zip_result:
+		create_dir(join(["setup","zips"]))
 		zip_files(join(["setup","temp"]),join(["setup","zips",plugin+if_free(" Free")+" "+get_system(system_i)["name"]+".zip"]),9)
 
 def build_everything_bundle(system_i):
@@ -709,7 +710,7 @@ jobs:
       if: startsWith(matrix.os, 'mac')''')
 				file.write('''
       run: |
-        python3 build.py "${{ env.PLUG }}" release '''+target["code"].lower()+'''
+        python3 build.py "${{ env.PLUG }}" release '''+target["code"].lower()+(" no" if target["name"] == "Standalone" else "")+'''
 ''')
 			file.write('''
     - name: installer'''+version_tag[0]+'''
