@@ -361,7 +361,7 @@ def prepare():
 	debug("PREPARING DEPENDENCIES")
 	if systems[system]["code"] == "mac":
 		run_command("sudo xcode-select -s '/Applications/Xcode_15.1.app/Contents/Developer'")
-	elif "linux":
+	elif systems[system]["code"] == "linux":
 		run_command("sudo apt-get update",True)
 		run_command("sudo apt-get install g++ libasound2-dev libjack-jackd2-dev ladspa-sdk libcurl4-openssl-dev libfreetype6-dev libx11-dev libxcomposite-dev libxcursor-dev libxcursor-dev libxext-dev libxinerama-dev libxrandr-dev libxrender-dev libwebkit2gtk-4.0-dev libglu1-mesa-dev mesa-common-dev",True)
 
@@ -621,7 +621,6 @@ def write_actions():
 
 env:
   PLUG: '''+plugin["name"]+'''
-  LOWER: '''+plugin["name"].replace(' ','').lower()+'''
 
 on:
   push:
@@ -666,7 +665,7 @@ jobs:
       id: prepare
       run: |
         python3 build.py prepare
-        python3 build.py secrets KEYCHAIN_PASSWORD=${{ secrets.KEYCHAIN_PASSWORD }} DEV_ID_APP_CERT=${{ secrets.DEV_ID_APP_CERT }} DEV_ID_APP_PASSWORD=${{ secrets.DEV_ID_APP_PASSWORD }} DEV_ID_INSTALL_CERT=${{ secrets.DEV_ID_INSTALL_CERT }} DEV_ID_INSTALL_PASSWORD=${{ secrets.DEV_ID_INSTALL_PASSWORD }} NOTARIZATION_USERNAME=${{ secrets.NOTARIZATION_USERNAME }} NOTARIZATION_PASSWORD=${{ secrets.NOTARIZATION_PASSWORD }} TEAM_ID=${{ secrets.TEAM_ID }} DEVELOPER_ID_APPLICATION=${{ secrets.DEVELOPER_ID_APPLICATION }} DEVELOPER_ID_INSTALLER=${{ secrets.DEVELOPER_ID_INSTALLER }}
+        python3 build.py secrets KEYCHAIN_PASSWORD="${{ secrets.KEYCHAIN_PASSWORD }}" DEV_ID_APP_CERT="${{ secrets.DEV_ID_APP_CERT }}" DEV_ID_APP_PASSWORD="${{ secrets.DEV_ID_APP_PASSWORD }}" DEV_ID_INSTALL_CERT="${{ secrets.DEV_ID_INSTALL_CERT }}" DEV_ID_INSTALL_PASSWORD="${{ secrets.DEV_ID_INSTALL_PASSWORD }}" NOTARIZATION_USERNAME="${{ secrets.NOTARIZATION_USERNAME }}" NOTARIZATION_PASSWORD="${{ secrets.NOTARIZATION_PASSWORD }}" TEAM_ID="${{ secrets.TEAM_ID }}" DEVELOPER_ID_APPLICATION="${{ secrets.DEVELOPER_ID_APPLICATION }}" DEVELOPER_ID_INSTALLER="${{ secrets.DEVELOPER_ID_INSTALLER }}"
 
     - name: (mac) import certificates
       id: import-certificates
@@ -710,13 +709,13 @@ jobs:
       if: startsWith(matrix.os, 'mac')''')
 				file.write('''
       run: |
-        python3 ${{ env.LOWER }} release '''+target["code"].lower()+'''
+        python3 "${{ env.PLUG }}" release '''+target["code"].lower()+'''
 ''')
 			file.write('''
     - name: installer'''+version_tag[0]+'''
       id: installer'''+version_tag[1]+'''
       run: |
-        python3 ${{ env.LOWER }} installer
+        python3 "${{ env.PLUG }}" installer
 
     - uses: actions/upload-artifact@v4
       with:
@@ -735,7 +734,7 @@ jobs:
 def run_program(string):
 	if string.strip() == "":
 		error("You must specify arguments!")
-	args = string.lower().split(' ')
+	args = shlex.split(string.lower())
 
 	if "configure".startswith(args[0]) and ',' not in string and len(args) <= 2:
 		match = "free"
@@ -837,4 +836,4 @@ def run_program(string):
 			build_everything_bundle(system_i)
 
 if __name__ == "__main__":
-	run_program(' '.join(sys.argv[1:]))
+	run_program(' '.join(shlex.quote(s) for s in (sys.argv[1:])))
