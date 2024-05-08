@@ -709,13 +709,13 @@ jobs:
       if: startsWith(matrix.os, 'mac')''')
 				file.write('''
       run: |
-        python3 "${{ env.PLUG }}" release '''+target["code"].lower()+'''
+        python3 build.py "${{ env.PLUG }}" release '''+target["code"].lower()+'''
 ''')
 			file.write('''
     - name: installer'''+version_tag[0]+'''
       id: installer'''+version_tag[1]+'''
       run: |
-        python3 "${{ env.PLUG }}" installer
+        python3 build.py "${{ env.PLUG }}" installer
 
     - uses: actions/upload-artifact@v4
       with:
