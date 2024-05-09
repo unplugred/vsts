@@ -212,10 +212,8 @@ def alert(string):
 
 def error(string, exit_code=1):
 	print('\033[1m\033[91m'+string+'\033[0m')
-	if exit_code == 256:
-		sys.exit(1)
-	else:
-		sys.exit(exit_code)
+	#sys.exit(exit_code)
+	sys.exit(1)
 
 def run_command(cmd,ignore_errors=False):
 	censored_command = cmd
