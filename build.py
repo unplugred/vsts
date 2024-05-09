@@ -309,7 +309,7 @@ def unzip_files(path, output=None):
 		debug("UNZIPPING "+path+" TO "+output)
 	else:
 		debug("UNZIPPING "+path)
-		output = os.path.dirname(output)
+		output = os.path.dirname(path)
 
 	if not os.path.isfile(path) or not path.endswith(".zip"):
 		error("Invalid path: "+path)
