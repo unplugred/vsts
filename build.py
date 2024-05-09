@@ -307,14 +307,15 @@ def zip_files(path, output, zip_level=6):
 					zf.write(join([root,file]),os.path.relpath(join([root,file]),path))
 
 def unzip_files(path, output=None):
-	if output == None:
-		debug("UNZIPPING "+path)
-	else:
+	if output != None:
 		debug("UNZIPPING "+path+" TO "+output)
+	else:
+		debug("UNZIPPING "+path)
+		output = os.path.dirname(output)
 
 	if not os.path.isfile(path) or not path.endswith(".zip"):
 		error("Invalid path: "+path)
-	if output != None and not os.path.isdir(os.path.dirname(output)):
+	if not os.path.isdir(os.path.dirname(output)):
 		error("Invalid path: "+output)
 
 	with ZipFile(path,'r') as zf:
