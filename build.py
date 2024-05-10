@@ -302,7 +302,10 @@ def zip_files(path, output, zip_level=6):
 		else:
 			for root, dirs, files in os.walk(path):
 				for file in files:
-					zf.write(join([root,file]),os.path.relpath(join([root,file]),path))
+					if path.endswith('/') or path.endswith('\\'):
+						zf.write(join([root,file]),os.path.relpath(join([root,file]),path))
+					else:
+						zf.write(join([root,file]),os.path.relpath(join([root,file]),os.path.dirname(path)))
 
 def unzip_files(path, output=None):
 	if output != None:
@@ -473,10 +476,12 @@ def build(plugin, config, target):
 
 def run_plugin(plugin, config):
 	artefact_path = join(["build_"+systems[system]["code"],"plugins",plugin.replace(' ','').lower(),plugin.replace(' ','')+"_artefacts"])
-	if systems[system]["code"] == "linux":
-		run_command("\""+join([artefact_path       ,"Standalone",plugin+systems[system]["executable"]])+"\"")
-	else:
+	if systems[system]["code"] == "mac":
+		run_command("open -W \""+join([artefact_path,config,"Standalone",plugin+systems[system]["executable"]])+"\"")
+	elif systems[system]["code"] == "win":
 		run_command("\""+join([artefact_path,config,"Standalone",plugin+systems[system]["executable"]])+"\"")
+	else:
+		run_command("\""+join([artefact_path,"Standalone",plugin+systems[system]["executable"]])+"\"")
 
 def build_installer(plugin, system_i, zip_result=True):
 	debug("BUILDING INSTALLER FOR "+plugin.upper())
@@ -555,7 +560,7 @@ def build_installer(plugin, system_i, zip_result=True):
 
 	if zip_result:
 		create_dir(join(["setup","zips"]))
-		zip_files(join(["setup","temp"]),join(["setup","zips",plugin+if_free(" Free")+" "+get_system(system_i)["name"]+".zip"]),9)
+		zip_files(join(["setup","temp",""]),join(["setup","zips",plugin+if_free(" Free")+" "+get_system(system_i)["name"]+".zip"]),9)
 
 def build_everything_bundle(system_i):
 	debug("BUILDING EVERYTHING BUNDLE")
@@ -612,7 +617,7 @@ def build_everything_bundle(system_i):
 		run_command("iscc \""+join(["setup","innosetup everything.iss"])+"\"")
 		move(join(["setup","Output","Everything Bundle Installer.exe"]),join(["setup","temp","Everything Bundle Installer.exe"]))
 
-	zip_files(join(["setup","temp"]),join(["setup","zips","Everything Bundle "+get_system(system_i)["name"]+".zip"]),9)
+	zip_files(join(["setup","temp",""]),join(["setup","zips","Everything Bundle "+get_system(system_i)["name"]+".zip"]),9)
 
 
 def build_all():
