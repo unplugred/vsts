@@ -730,14 +730,10 @@ jobs:
       id: build-'''+target["code"].lower()+version_tag[1])
 				if target["name"] == "Audio Unit":
 					file.write('''
-      if: startsWith(matrix.os, 'mac')
+      if: startsWith(matrix.os, 'mac')''')
+				file.write('''
       run: |
-        sudo ''')
-				else:
-					file.write('''
-      run: |
-        ''')
-				file.write('''python3 build.py "${{ env.PLUG }}" release '''+target["code"].lower()+(" no" if target["name"] == "Standalone" else "")+'''
+        sudo python3 build.py "${{ env.PLUG }}" release '''+target["code"].lower()+(" no" if target["name"] == "Standalone" else "")+'''
 ''')
 			file.write('''
     - name: installer'''+version_tag[0]+'''

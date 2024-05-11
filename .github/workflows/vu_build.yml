@@ -90,17 +90,17 @@ jobs:
     - name: build clap
       id: build-clap
       run: |
-        python3 build.py "${{ env.PLUG }}" release clap
+        sudo python3 build.py "${{ env.PLUG }}" release clap
 
     - name: build vst3
       id: build-vst3
       run: |
-        python3 build.py "${{ env.PLUG }}" release vst3
+        sudo python3 build.py "${{ env.PLUG }}" release vst3
 
     - name: build standalone
       id: build-standalone
       run: |
-        python3 build.py "${{ env.PLUG }}" release standalone no
+        sudo python3 build.py "${{ env.PLUG }}" release standalone no
 
     - name: installer
       id: installer
@@ -127,17 +127,17 @@ jobs:
     - name: build clap free
       id: build-clap-free
       run: |
-        python3 build.py "${{ env.PLUG }}" release clap
+        sudo python3 build.py "${{ env.PLUG }}" release clap
 
     - name: build vst3 free
       id: build-vst3-free
       run: |
-        python3 build.py "${{ env.PLUG }}" release vst3
+        sudo python3 build.py "${{ env.PLUG }}" release vst3
 
     - name: build standalone free
       id: build-standalone-free
       run: |
-        python3 build.py "${{ env.PLUG }}" release standalone no
+        sudo python3 build.py "${{ env.PLUG }}" release standalone no
 
     - name: installer free
       id: installer-free
