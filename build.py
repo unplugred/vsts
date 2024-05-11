@@ -425,13 +425,11 @@ def build(plugin, config, target):
 	create_dir(join(["setup",folder,free]))
 	target_path = join(["setup",folder,free,plugin+file_extension])
 
-	run_command("cmake --build \""+folder+"\" --config "+config+" --target "+nospace+"_"+get_target(target)["code"])
-
 	if systems[system]["code"] == "mac":
-		if target == "CLAP":
-			copy(join([folder,"plugins",lower,nospace+"_artefacts",config,"CLAP",plugin+".clap"]),target_path)
-		elif target == "Standalone":
-			copy(join([folder,"plugins",lower,nospace+"_artefacts",config,"Standalone",plugin+".app"]),target_path)
+		create_dir(join([folder,"plugins",lower,nospace+"_artefacts",config,target]))
+		run_command("cmake --build \""+folder+"\" --config "+config+" --target "+nospace+"_"+get_target(target)["code"])
+		if target == "CLAP" or target == "Standalone":
+			copy(join([folder,"plugins",lower,nospace+"_artefacts",config,target,plugin+file_extension]),target_path)
 
 		if saved_data["secrets"] != {}:
 			zip_path = join(["setup",folder,free,lower+("_free_" if saved_data["is_free"][system] and get_plugin(plugin)["paid"] else "_")+get_target(target)["code"].lower()+".zip"])
@@ -448,20 +446,19 @@ def build(plugin, config, target):
 			ls(join(["setup",folder,free]))
 			run_command("xcrun stapler staple -v \""+target_path+"\"")
 			if target == "Audio Unit":
-				copy(target_path,join([get_target(target)["mac_location"],plugin+".component"]))
+				run_command("sudo cp -R -f \""+target_path+"\" \""+join([get_target(target)["mac_location"],plugin+file_extension+"\""]))
 				run_command("killall -9 AudioComponentRegistrar")
 				run_command("auval -a")
 				run_command("auval -strict -v aufx "+get_plugin(plugin)["code"]+" Ured")
 
 	elif systems[system]["code"] == "win":
+		run_command("cmake --build \""+folder+"\" --config "+config+" --target "+nospace+"_"+get_target(target)["code"])
 		if target == "VST3":
 			move(join([target_path,"Contents","x86_64-win",plugin+file_extension]),join(["setup",plugin+file_extension]))
 			remove(target_path)
 			move(join(["setup",plugin+file_extension]),target_path)
-		elif target == "CLAP":
-			copy(join([folder,"plugins",lower,nospace+"_artefacts",config,"CLAP",plugin+file_extension]),target_path)
-		elif target == "Standalone":
-			copy(join([folder,"plugins",lower,nospace+"_artefacts",config,"Standalone",plugin+file_extension]),target_path)
+		elif target == "CLAP" or target == "Standalone":
+			copy(join([folder,"plugins",lower,nospace+"_artefacts",config,target,plugin+file_extension]),target_path)
 		for file in get_plugin(plugin)["additional_files"]:
 			if ("win_"+free) in file["versions"] and file["copy"] and systems[system]["code"] == "win":
 				if not os.path.isdir(join(["setup",folder,"other",plugin])):
@@ -469,10 +466,9 @@ def build(plugin, config, target):
 				copy(join(["plugins",lower,file["path"]]),join(["setup",folder,"other",plugin,file["output"]]))
 
 	else:
-		if target == "CLAP":
-			copy(join([folder,"plugins",lower,nospace+"_artefacts","CLAP",plugin+".clap"]),target_path)
-		elif target == "Standalone":
-			copy(join([folder,"plugins",lower,nospace+"_artefacts","Standalone",plugin]),target_path)
+		run_command("cmake --build \""+folder+"\" --config "+config+" --target "+nospace+"_"+get_target(target)["code"])
+		if target == "CLAP" or target == "Standalone":
+			copy(join([folder,"plugins",lower,nospace+"_artefacts",target,plugin+file_extension]),target_path)
 
 def run_plugin(plugin, config):
 	artefact_path = join(["build_"+systems[system]["code"],"plugins",plugin.replace(' ','').lower(),plugin.replace(' ','')+"_artefacts"])
@@ -733,7 +729,7 @@ jobs:
       if: startsWith(matrix.os, 'mac')''')
 				file.write('''
       run: |
-        sudo python3 build.py "${{ env.PLUG }}" release '''+target["code"].lower()+(" no" if target["name"] == "Standalone" else "")+'''
+        python3 build.py "${{ env.PLUG }}" release '''+target["code"].lower()+(" no" if target["name"] == "Standalone" else "")+'''
 ''')
 			file.write('''
     - name: installer'''+version_tag[0]+'''
