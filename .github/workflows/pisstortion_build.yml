@@ -85,7 +85,7 @@ jobs:
       id: build-au
       if: startsWith(matrix.os, 'mac')
       run: |
-        python3 build.py "${{ env.PLUG }}" release au
+        sudo python3 build.py "${{ env.PLUG }}" release au
 
     - name: build clap
       id: build-clap
@@ -117,7 +117,7 @@ jobs:
       id: build-au-free
       if: startsWith(matrix.os, 'mac')
       run: |
-        python3 build.py "${{ env.PLUG }}" release au
+        sudo python3 build.py "${{ env.PLUG }}" release au
 
     - name: build clap free
       id: build-clap-free
