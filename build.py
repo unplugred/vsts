@@ -502,25 +502,22 @@ def build_installer(plugin, system_i, zip_result=True):
 				other_data = True
 
 	if get_system(system_i)["code"] == "mac":
-		prevpath = os.getcwd()
-		os.chdir(join([prevpath,"setup"])) # TODO: i dont like this
 		identifier = nospace+if_free("-free")
-		run_command("chmod +rx \"./assets/scripts/postinstall\"")
+		run_command("chmod +rx \""+join(["setup","assets","scripts","postinstall"])+"\"")
 		for target in targets:
 			if target["name"] == "Standalone" and not get_plugin(plugin)["standalone"]:
 				continue
-			copy(join([folder,free,plugin+target["extension"]]),join(["temp","Manual install",plugin+target["extension"]]))
-			run_command("pkgbuild --install-location \""+target["mac_location"]+"\" --identifier \"com.unplugred."+identifier+"-"+target["code"].lower()+".pkg\""+(" --scripts \"./assets/scripts\"" if target["name"] == "Audio Unit" else "")+" --version 1.1.1 --root \""+join(["temp","Manual install"])+"\" \""+identifier+"-"+target["code"].lower()+".pkg\"")
-			move(join(["temp","Manual install",plugin+target["extension"]]),join(["temp",plugin+target["extension"]]))
+			copy(join(["setup",folder,free,plugin+target["extension"]]),join(["setup","temp","Manual install",plugin+target["extension"]]))
+			run_command("pkgbuild --install-location \""+target["mac_location"]+"\" --identifier \"com.unplugred."+identifier+"-"+target["code"].lower()+".pkg\""+(" --scripts \""+join(["setup","assets","scripts"])+"\"" if target["name"] == "Audio Unit" else "")+" --version 1.1.1 --root \""+join(["setup","temp","Manual install"])+"\" \""+identifier+"-"+target["code"].lower()+".pkg\"")
+			move(join(["setup","temp","Manual install",plugin+target["extension"]]),join(["setup","temp",plugin+target["extension"]]))
 		product_build(plugin)
-		run_command("productbuild --timestamp --sign \""+saved_data["secrets"]["DEVELOPER_ID_INSTALLER"]+"\" --distribution \""+identifier+".xml\" --resources \"./assets/\" \""+installer+".pkg\"")
+		run_command("productbuild --timestamp --sign \""+saved_data["secrets"]["DEVELOPER_ID_INSTALLER"]+"\" --distribution \""+identifier+".xml\" --resources \""+join(["setup","assets",""])+"\" \""+installer+".pkg\"")
 		run_command("xcrun notarytool submit \""+installer+".pkg\" --apple-id "+saved_data["secrets"]["NOTARIZATION_USERNAME"]+" --password "+saved_data["secrets"]["NOTARIZATION_PASSWORD"]+" --team-id "+saved_data["secrets"]["TEAM_ID"]+" --wait")
 		run_command("xcrun stapler staple \""+installer+".pkg\"")
 		for target in targets:
 			if get_plugin(plugin)["standalone"] or target["name"] != "Standalone":
-				move(join(["temp",plugin+target["extension"]]),join(["temp","Manual install",plugin+target["extension"]]))
-		move(installer+".pkg",join(["temp",installer+".pkg"]))
-		os.chdir(prevpath)
+				move(join(["setup","temp",plugin+target["extension"]]),join(["setup","temp","Manual install",plugin+target["extension"]]))
+		move(join([installer+".pkg"]),join(["setup","temp",installer+".pkg"]))
 
 	elif get_system(system_i)["code"] == "win":
 		cmd = "iscc \""+join(["setup","innosetup.iss"])+"\" \"/DPluginName="+plugin+"\" \"/DVersion="+free+"\""
