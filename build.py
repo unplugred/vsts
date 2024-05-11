@@ -435,16 +435,11 @@ def build(plugin, config, target):
 			zip_path = join(["setup",folder,free,lower+("_free_" if saved_data["is_free"][system] and get_plugin(plugin)["paid"] else "_")+get_target(target)["code"].lower()+".zip"])
 			run_command("codesign --force -s \""+saved_data["secrets"]["DEVELOPER_ID_APPLICATION"]+"\" -v \""+target_path+"\" --deep --strict --options=runtime --timestamp")
 			zip_files(target_path,zip_path)
-			ls(join(["setup",folder,free]))
 			remove(target_path)
-			ls(join(["setup",folder,free]))
 			run_command("xcrun notarytool submit \""+zip_path+"\" --apple-id "+saved_data["secrets"]["NOTARIZATION_USERNAME"]+" --password "+saved_data["secrets"]["NOTARIZATION_PASSWORD"]+" --team-id "+saved_data["secrets"]["TEAM_ID"]+" --wait")
-			ls(join(["setup",folder,free]))
 			unzip_files(zip_path)
-			ls(join(["setup",folder,free]))
 			remove(zip_path)
-			ls(join(["setup",folder,free]))
-			run_command("xcrun stapler staple -v \""+target_path+"\"")
+			run_command("xcrun stapler staple \""+target_path+"\"")
 			if target == "Audio Unit":
 				run_command("sudo cp -R -f \""+target_path+"\" \""+join([get_target(target)["mac_location"],plugin+file_extension+"\""]))
 				run_command("killall -9 AudioComponentRegistrar")
@@ -524,7 +519,7 @@ def build_installer(plugin, system_i, zip_result=True):
 		for target in targets:
 			if get_plugin(plugin)["standalone"] or target["name"] != "Standalone":
 				move(join(["temp",plugin+target["extension"]]),join(["temp","Manual install",plugin+target["extension"]]))
-		move(installer+".pkg",join(["temp",""]))
+		move(installer+".pkg",join(["temp",installer+".pkg"]))
 		os.chdir(prevpath)
 
 	elif get_system(system_i)["code"] == "win":
