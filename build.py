@@ -433,6 +433,8 @@ def build(plugin, config, target):
 		run_command("cmake --build \""+folder+"\" --config "+config+" --target "+nospace+"_"+get_target(target)["code"])
 		if target == "CLAP" or target == "Standalone":
 			copy(join([folder,"plugins",lower,nospace+"_artefacts",config,target,plugin+file_extension]),target_path)
+		if target == "Standalone":
+			run_command("chmod -R 755 \""+target_path+"\"")
 
 		if saved_data["secrets"] != {}:
 			zip_path = join(["setup",folder,free,lower+("_free_" if saved_data["is_free"][system] and get_plugin(plugin)["paid"] else "_")+get_target(target)["code"].lower()+".zip"])
