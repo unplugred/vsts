@@ -433,9 +433,6 @@ def build(plugin, config, target):
 		run_command("cmake --build \""+folder+"\" --config "+config+" --target "+nospace+"_"+get_target(target)["code"])
 		if target == "CLAP" or target == "Standalone":
 			copy(join([folder,"plugins",lower,nospace+"_artefacts",config,target,plugin+file_extension]),target_path)
-		if target == "Standalone":
-			run_command("chmod -R 755 \""+target_path+"\"")
-
 		if saved_data["secrets"] != {}:
 			zip_path = join(["setup",folder,free,lower+("_free_" if saved_data["is_free"][system] and get_plugin(plugin)["paid"] else "_")+get_target(target)["code"].lower()+".zip"])
 			run_command("codesign --force -s \""+saved_data["secrets"]["DEVELOPER_ID_APPLICATION"]+"\" -v \""+target_path+"\" --deep --strict --options=runtime --timestamp")
@@ -450,6 +447,8 @@ def build(plugin, config, target):
 				run_command("killall -9 AudioComponentRegistrar")
 				run_command("auval -a")
 				run_command("auval -strict -v "+get_plugin(plugin)["au_type"]+" "+get_plugin(plugin)["code"]+" Ured")
+			elif target == "Standalone":
+				run_command("chmod -R 755 \""+target_path+"\"")
 
 	elif systems[system]["code"] == "win":
 		run_command("cmake --build \""+folder+"\" --config "+config+" --target "+nospace+"_"+get_target(target)["code"])
