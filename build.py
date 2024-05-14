@@ -162,7 +162,7 @@ valid_secrets = [
 	"DEVELOPER_ID_APPLICATION",
 	"DEVELOPER_ID_INSTALLER",
 ]
-saved_data = { "is_free": [], "secrets": {} }
+saved_data = { "is_free": [], "secrets": {}, "codesign_plugins": True }
 for i in range(len(systems)):
 	saved_data["is_free"].append(False)
 if os.path.isfile("saved_data.json"):
@@ -336,13 +336,11 @@ def product_build(plugin):
 	lower = nospace.lower()
 	version_tag = ""
 	if plugin == "Everything Bundle":
-		is_paid = True
 		standalone = True
 	else:
-		is_paid = get_plugin(plugin)["paid"]
 		standalone = get_plugin(plugin)["standalone"]
-	if is_paid and saved_data["is_free"][system]:
-		version_tag = "-free"
+		if get_plugin(plugin)["paid"] and saved_data["is_free"][system]:
+			version_tag = "-free"
 
 	file = open(lower+version_tag+".xml","w")
 	file.write('''<?xml version="1.0" encoding="utf-8"?>
@@ -433,9 +431,9 @@ def build(plugin, config, target):
 		run_command("cmake --build \""+folder+"\" --config "+config+" --target "+nospace+"_"+get_target(target)["code"])
 		if target == "CLAP" or target == "Standalone":
 			copy(join([folder,"plugins",lower,nospace+"_artefacts",config,target,plugin+file_extension]),target_path)
-		if target == "Standalone":
-			run_command("chmod -R 755 \""+target_path+"\"")
-		if saved_data["secrets"] != {}:
+			if target == "Standalone":
+				run_command("chmod -R 755 \""+target_path+"\"")
+		if saved_data["secrets"] != {} and saved_data["codesign_plugins"]:
 			zip_path = join(["setup",folder,free,lower+("_free_" if saved_data["is_free"][system] and get_plugin(plugin)["paid"] else "_")+get_target(target)["code"].lower()+".zip"])
 			run_command("codesign --force -s \""+saved_data["secrets"]["DEVELOPER_ID_APPLICATION"]+"\" -v \""+target_path+"\" --deep --strict --options=runtime --timestamp")
 			zip_files(target_path,zip_path)
@@ -501,7 +499,7 @@ def build_installer(plugin, system_i, zip_result=True):
 	other_data = False
 	for file in get_plugin(plugin)["additional_files"]:
 		if (get_system(system_i)["code"]+"_"+free) in file["versions"] and file["copy"] and get_system(system_i)["code"] != "linux":
-			copy(join(["plugins",lower,file["path"]]),join(["setup","temp","Manual install",file["output"],""]))
+			copy(join(["plugins",lower,file["path"]]),join(["setup","temp","Manual install",file["output"]]))
 			if get_system(system_i)["code"] == "win":
 				other_data = True
 
@@ -522,6 +520,10 @@ def build_installer(plugin, system_i, zip_result=True):
 			if get_plugin(plugin)["standalone"] or target["name"] != "Standalone":
 				move(join(["setup","temp",plugin+target["extension"]]),join(["setup","temp","Manual install",plugin+target["extension"]]))
 		move(installer+".pkg",join(["setup","temp",installer+".pkg"]))
+		remove(identifier+".xml")
+		for target in targets:
+			if not target["name"] == "Standalone" or get_plugin(plugin)["standalone"]:
+				remove(identifier+"-"+target["code"].lower()+".pkg")
 
 	elif get_system(system_i)["code"] == "win":
 		cmd = "iscc \""+join(["setup","innosetup.iss"])+"\" \"/DPluginName="+plugin+"\" \"/DVersion="+free+"\""
@@ -567,8 +569,12 @@ def build_everything_bundle(system_i):
 		debug("BUILDING INSTALLER FOR EVERYTHING BUNDLE")
 		identifier = "everythingbundle"
 		run_command("chmod +rx \""+join(["setup","assets","scripts","postinstall"])+"\"")
-		for target in targets:
-			for plugin in plugins:
+		for plugin in plugins:
+			remove(join(["setup","temp",plugin["name"]+" Installer.pkg"]))
+			for file in plugin["additional_files"]:
+				if (get_system(system_i)["code"]+"_"+("paid" if plugin["paid"] else "free")) in file["versions"] and not file["copy"]:
+					remove(join(["setup","temp",file["output"]]))
+			for target in targets:
 				if plugin["in_bundle"] and (plugin["standalone"] or target["name"] != "Standalone"):
 					move(join(["setup","temp","Manual install",plugin["name"]+target["extension"]]),join(["setup","temp",plugin["name"]+target["extension"]]))
 		for target in targets:
@@ -583,11 +589,17 @@ def build_everything_bundle(system_i):
 		run_command("productbuild --timestamp --sign \""+saved_data["secrets"]["DEVELOPER_ID_INSTALLER"]+"\" --distribution \""+identifier+".xml\" --resources \""+join(["setup","assets",""])+"\" \"Everything Bundle Installer.pkg\"")
 		run_command("xcrun notarytool submit \"Everything Bundle Installer.pkg\" --apple-id "+saved_data["secrets"]["NOTARIZATION_USERNAME"]+" --password "+saved_data["secrets"]["NOTARIZATION_PASSWORD"]+" --team-id "+saved_data["secrets"]["TEAM_ID"]+" --wait")
 		run_command("xcrun stapler staple \"Everything Bundle Installer.pkg\"")
-		for target in targets:
-			for plugin in plugins:
+		for plugin in plugins:
+			for target in targets:
 				if plugin["in_bundle"] and (plugin["standalone"] or target["name"] != "Standalone"):
 					move(join(["setup","temp",plugin["name"]+target["extension"]]),join(["setup","temp","Manual install",plugin["name"]+target["extension"]]))
+			for file in plugin["additional_files"]:
+				if (get_system(system_i)["code"]+"_"+("paid" if plugin["paid"] else "free")) in file["versions"] and not file["copy"]:
+					copy(join(["plugins",plugin["name"].replace(' ','').lower(),file["path"]]),join(["setup","temp",file["output"]]))
 		move("Everything Bundle Installer.pkg",join(["setup","temp","Everything Bundle Installer.pkg"]))
+		remove(identifier+".xml")
+		for target in targets:
+			remove(identifier+"-"+target["code"].lower()+".pkg")
 
 	elif get_system(system_i)["code"] == "win" and systems[system]["code"] == "win":
 		debug("BUILDING INSTALLER FOR EVERYTHING BUNDLE")
@@ -678,7 +690,10 @@ jobs:
       id: prepare
       run: |
         python3 build.py prepare
-        python3 build.py secrets KEYCHAIN_PASSWORD="${{ secrets.KEYCHAIN_PASSWORD }}" DEV_ID_APP_CERT="${{ secrets.DEV_ID_APP_CERT }}" DEV_ID_APP_PASSWORD="${{ secrets.DEV_ID_APP_PASSWORD }}" DEV_ID_INSTALL_CERT="${{ secrets.DEV_ID_INSTALL_CERT }}" DEV_ID_INSTALL_PASSWORD="${{ secrets.DEV_ID_INSTALL_PASSWORD }}" NOTARIZATION_USERNAME="${{ secrets.NOTARIZATION_USERNAME }}" NOTARIZATION_PASSWORD="${{ secrets.NOTARIZATION_PASSWORD }}" TEAM_ID="${{ secrets.TEAM_ID }}" DEVELOPER_ID_APPLICATION="${{ secrets.DEVELOPER_ID_APPLICATION }}" DEVELOPER_ID_INSTALLER="${{ secrets.DEVELOPER_ID_INSTALLER }}"
+        python3 build.py secrets''')
+		for secret in valid_secrets:
+			file.write(" "+secret+"=\"${{ secrets."+secret+" }}\"")
+		file.write('''
 
     - name: (mac) import certificates
       id: import-certificates
