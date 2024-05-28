@@ -7,7 +7,7 @@ void dc_filter::init(int samplerate, int channels) {
 	if(prevout.size() != channels || previn.size() != channels) {
 		previn.clear();
 		prevout.clear();
-		for (int i = 0; i < channels; i++) {
+		for (int i = 0; i < channels; ++i) {
 			previn.push_back(0.f);
 			prevout.push_back(0.f);
 		}
