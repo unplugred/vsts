@@ -50,10 +50,16 @@ struct modulevalues {
 	float value = 0;
 };
 struct editorpreset {
-	modulevalues modulesvalues[16];
-	float crossover[3] {.25f,.5f,.75f};
-	float gain[4] {.5f,.5f,.5f,.5f};
+	modulevalues modulesvalues[BAND_COUNT*MAX_MOD];
+	float crossover[BAND_COUNT==1?1:BAND_COUNT-1];
+	float gain[BAND_COUNT];
 	float wet = 1;
+	editorpreset() {
+		for(int b = 0; b < BAND_COUNT; ++b) {
+			if(b >= 1) crossover[b-1] = ((float)b)/BAND_COUNT;
+			gain[b] = .5f;
+		}
+	}
 };
 class PrismaAudioProcessorEditor : public plugmachine_gui {
 public:
@@ -111,9 +117,13 @@ private:
 	OpenGLTexture basetex;
 	std::shared_ptr<OpenGLShaderProgram> baseshader;
 
+	int modulecount = DEF_MOD;
+
+	OpenGLTexture selectortex;
+	std::shared_ptr<OpenGLShaderProgram> selectorshader;
+
 	bool isb = false;
 	bool oversampling = false;
-	OpenGLTexture selectortex;
 	std::shared_ptr<OpenGLShaderProgram> decalshader;
 
 	module modules[MODULE_COUNT+1];
@@ -137,24 +147,26 @@ private:
 	int fftdelta = 0;
 	std::shared_ptr<OpenGLShaderProgram> visshader;
 
-	bool buttons[4][3];
-	bool truemute[4] {false,false,false,false};
-	float activelerp[4] {1.f,1.f,1.f,1.f};
-	float bypasslerp[4] {1.f,1.f,1.f,1.f};
-	float activeease[4] {1.f,1.f,1.f,1.f};
-	float bypassease[4] {1.f,1.f,1.f,1.f};
+	bool buttons[BAND_COUNT][3];
+	bool truemute[BAND_COUNT];
+	float activelerp[BAND_COUNT];
+	float bypasslerp[BAND_COUNT];
+	float activeease[4] = {1.f,1.f,1.f,1.f};
+	float bypassease[BAND_COUNT];
 	std::shared_ptr<OpenGLShaderProgram> visbttnshader;
 
-	float selectorlerp[4] = {0,0,0,0};
+	float selectorlerp[BAND_COUNT];
 	float selectorease[4] = {0,0,0,0};
-	bool selectorstate[4] = {false,false,false,false};
+	float selectorscroll[BAND_COUNT];
+	float selectorscrolllerp[BAND_COUNT];
+	bool selectorstate[BAND_COUNT];
 	int selectorid = 0;
 
 	editorpreset state[2];
 	float presettransition = 0;
 	float presettransitionease = 0;
-	float crossoverlerp[3] {.25f,.5f,.75f};
-	float crossovertruevalue[3] {.25f,.5f,.75f};
+	float crossoverlerp[3] { 99.f, 99.f, 99.f };
+	float crossovertruevalue[BAND_COUNT==1?1:BAND_COUNT-1];
 
 	Random random;
 

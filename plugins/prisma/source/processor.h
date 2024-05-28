@@ -2,14 +2,12 @@
 #include "includes.h"
 #include "dc_filter.h"
 
-#define MODULE_COUNT 16
-
 struct pluginmodule {
 	SmoothedValue<float,ValueSmoothingTypes::Linear> value;
 };
 
 struct pluginband {
-	pluginmodule modules[4];
+	pluginmodule modules[MAX_MOD];
 	SmoothedValue<float,ValueSmoothingTypes::Linear> gain;
 	SmoothedValue<float,ValueSmoothingTypes::Linear> bandactive;
 	SmoothedValue<float,ValueSmoothingTypes::Linear> bandbypass;
@@ -21,7 +19,7 @@ struct pluginband {
 };
 
 struct pluginparams {
-	pluginband bands[4];
+	pluginband bands[BAND_COUNT];
 	SmoothedValue<float,ValueSmoothingTypes::Linear> wet;
 	bool oversampling = true;
 	bool isb = false;
@@ -29,19 +27,22 @@ struct pluginparams {
 
 struct pluginpreset {
 	String name = "";
-	float values[4][4] = {
-		{0,0,0,0},
-		{0,0,0,0},
-		{0,0,0,0},
-		{0,0,0,0}};
-	int id[4][4] = {
-		{0,0,0,0},
-		{0,0,0,0},
-		{0,0,0,0},
-		{0,0,0,0}};
-	float crossover[3] {.25f,.5f,.75f};
-	float gain[4] {.5f,.5f,.5f,.5f};
+	int id[BAND_COUNT][MAX_MOD];
+	float values[BAND_COUNT][MAX_MOD];
+	float crossover[BAND_COUNT==1?1:BAND_COUNT-1];
+	float gain[BAND_COUNT];
 	float wet = 1;
+	int modulecount = DEF_MOD;
+	pluginpreset() {
+		for(int b = 0; b < BAND_COUNT; ++b) {
+			for(int m = 0; m < MAX_MOD; ++m) {
+				id[b][m] = 0;
+				values[b][m] = 0;
+			}
+			if(b >= 1) crossover[b-1] = ((float)b)/BAND_COUNT;
+			gain[b] = .5f;
+		}
+	}
 };
 
 class PrismaAudioProcessor : public plugmachine_dsp {
@@ -96,7 +97,7 @@ public:
 	AudioProcessorValueTreeState::ParameterLayout create_parameters();
 	AudioProcessorValueTreeState apvts;
 
-	int version = 1;
+	int version = 2;
 	pluginparams pots;
 
 	enum {
@@ -111,7 +112,7 @@ public:
 	int currentpreset = 0;
 private:
 	pluginpreset state[2];
-	float crossovertruevalue[3] {.25f,.5f,.75f};
+	float crossovertruevalue[BAND_COUNT];
 
 	pluginpreset presets[20];
 	bool preparedtoplay = false;
@@ -126,19 +127,20 @@ private:
 	int samplerate = 44100;
 
 	dc_filter dcfilter;
-	bool removedc[4] { false,false,false,false };
+	bool removedc[BAND_COUNT];
 
-	dsp::LinkwitzRileyFilter<float> crossover[9];
-	std::array<juce::AudioBuffer<float>,4> filterbuffers;
-	std::array<juce::AudioBuffer<float>,4> wetbuffers;
+	int filtercount = 0;
+	std::vector<dsp::LinkwitzRileyFilter<float>> crossover;
+	std::array<juce::AudioBuffer<float>,BAND_COUNT> filterbuffers;
+	std::array<juce::AudioBuffer<float>,BAND_COUNT> wetbuffers;
 
-	std::array<dsp::StateVariableTPTFilter<float>,16> modulefilters;
+	std::array<dsp::StateVariableTPTFilter<float>,BAND_COUNT*MAX_MOD> modulefilters;
 
 	std::vector<float> sampleandhold;
-	float holdtime[16];
+	float holdtime[BAND_COUNT*MAX_MOD];
 
 	std::vector<float> declick;
-	float declickprogress[4] { 1,1,1,1 };
+	float declickprogress[BAND_COUNT];
 
 	float fifo[fftSize];
 	float fftData[fftSize*2];
@@ -191,7 +193,6 @@ static std::function<String(int v, int max)> toid = [](int v, int max) {
 			return (String)"Lowpass";
 		case 16:
 			return (String)"Highpass";
-		/*
 		case 17:
 			return (String)"Peak";
 		case 18:
@@ -202,7 +203,6 @@ static std::function<String(int v, int max)> toid = [](int v, int max) {
 			return (String)"Stereo DC";
 		case 21:
 			return (String)"Ring mod";
-		*/
 	}
 	return String(v);
 };
@@ -230,7 +230,6 @@ static std::function<String(int v, int max)> toid = [](int v, int max) {
 // RIng  MOd/.M
 static std::function<int(const String& s)> fromid = [](const String& s) {
 	String lower = s.toLowerCase();
-	/*
 	if(lower.contains("ri") || lower.contains("mo") || lower.startsWith("m"))
 		return 21;
 	if(lower.contains("s") && lower.contains("d") && !lower.contains("sa") && !lower.contains("di"))
@@ -241,7 +240,6 @@ static std::function<int(const String& s)> fromid = [](const String& s) {
 		return 18;
 	if(lower.contains("pe"))
 		return 17;
-	*/
 	if(lower.contains("hi"))
 		return 16;
 	if(lower.contains("lo") || lower.startsWith("l"))
