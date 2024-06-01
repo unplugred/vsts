@@ -38,7 +38,7 @@ struct subknob {
 struct module {
 	String name = "";
 	std::vector<subknob> subknobs;
-	float colors[12] { 0,0,0, 0,0,0, 0,0,0, -1,-1,-1 };
+	float colors[12] { 1,1,1, 0,0,0, 0,0,0, -1,-1,-1 };
 	float hovercutoff = .4f;
 	float defaultval = 0;
 	int clip = -1;

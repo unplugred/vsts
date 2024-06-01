@@ -135,9 +135,12 @@ private:
 	std::array<juce::AudioBuffer<float>,BAND_COUNT> wetbuffers;
 
 	std::array<dsp::StateVariableTPTFilter<float>,BAND_COUNT*MAX_MOD> modulefilters;
+	std::vector<dsp::IIR::Filter<float>> modulepeaks;
 
 	std::vector<float> sampleandhold;
 	float holdtime[BAND_COUNT*MAX_MOD];
+
+	float ringmod[BAND_COUNT*MAX_MOD];
 
 	std::vector<float> declick;
 	float declickprogress[BAND_COUNT];

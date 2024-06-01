@@ -151,6 +151,11 @@ void PrismaAudioProcessor::reseteverything() {
 	spec.maximumBlockSize = samplesperblock;
 	spec.numChannels = channelnum;
 
+	dsp::ProcessSpec monospec;
+	monospec.sampleRate = samplerate*(pots.oversampling?2:1);
+	monospec.maximumBlockSize = samplesperblock;
+	monospec.numChannels = 1;
+
 	if(BAND_COUNT > 1) {
 		//fft
 		nextFFTBlockReady = false;
@@ -198,22 +203,30 @@ void PrismaAudioProcessor::reseteverything() {
 		}
 	}
 
-	//dc filter
-	dcfilter.init(samplerate*(pots.oversampling?2:1),BAND_COUNT*channelnum);
-
-	//declick
-	declick.resize(channelnum*BAND_COUNT);
-
-	//sample divide
-	sampleandhold.resize(channelnum*BAND_COUNT*MAX_MOD);
 	for(int b = 0; b < BAND_COUNT; ++b) {
 		for(int m = 0; m < MAX_MOD; ++m) {
+			//ring mod
+			ringmod[b*MAX_MOD+m] = 0;
+
+			//sample divide
 			holdtime[b*MAX_MOD+m] = 0;
 
 			//parameter smoothing
 			pots.bands[b].modules[m].value.reset(samplerate*(pots.oversampling?2:1),.001f);
 		}
 	}
+
+	//sample divide
+	sampleandhold.resize(channelnum*BAND_COUNT*MAX_MOD);
+
+	//peak
+	modulepeaks.resize(channelnum*BAND_COUNT*MAX_MOD);
+
+	//dc filter
+	dcfilter.init(samplerate*(pots.oversampling?2:1),BAND_COUNT*channelnum);
+
+	//declick
+	declick.resize(channelnum*BAND_COUNT);
 
 	for(int b = 0; b < BAND_COUNT; ++b) {
 		for(int c = 0; c < channelnum; ++c) {
@@ -230,12 +243,20 @@ void PrismaAudioProcessor::reseteverything() {
 		declickprogress[b] = 0;
 
 		for(int m = 0; m < MAX_MOD; ++m) {
-			//lowpass+highpass modules
+			//lowpass+highpass+peak modules
 			if(state[pots.isb?1:0].id[b][m] == 15 || state[pots.isb?1:0].id[b][m] == 16) {
 				modulefilters[b*MAX_MOD+m].prepare(spec);
 				modulefilters[b*MAX_MOD+m].setType(state[pots.isb?1:0].id[b][m] == 15 ? dsp::StateVariableTPTFilterType::lowpass : dsp::StateVariableTPTFilterType::highpass);
 				modulefilters[b*MAX_MOD+m].setResonance(state[pots.isb?1:0].id[b][m] == 15 ? 1.2 : 1.1);
 				modulefilters[b*MAX_MOD+m].reset();
+			} else if(state[pots.isb?1:0].id[b][m] == 17) {
+				dsp::IIR::Coefficients<float>::Ptr coefficients = dsp::IIR::Coefficients<float>::makePeakFilter(samplerate,calcfilter(state[pots.isb?1:0].values[b][m]),1.5f,Decibels::decibelsToGain(18.f));
+				for(int c = 0; c < channelnum; ++c) {
+					modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].prepare(monospec);
+					//TODO reset peak
+					*modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].coefficients = *coefficients;
+					modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].reset();
+				}
 			}
 		}
 	}
@@ -538,18 +559,76 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 
 				//PEAK
 				} else if(state[pots.isb?1:0].id[b][m] == 17) {
+					for(int s = 0; s < numsamples; ++s) {
+						float prevval = state[pots.isb?1:0].values[b][m];
+						state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
+						if(state[pots.isb?1:0].values[b][m] != prevval) {
+							dsp::IIR::Coefficients<float>::Ptr coefficients = dsp::IIR::Coefficients<float>::makePeakFilter(samplerate,calcfilter(state[pots.isb?1:0].values[b][m]),1.5f,Decibels::decibelsToGain(18.f));
+							for(int c = 0; c < channelnum; ++c)
+								*modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].coefficients = *coefficients;
+							debug((String)"samplerate: "+((String)samplerate));
+							debug((String)"frequency: "+((String)calcfilter(state[pots.isb?1:0].values[b][m])));
+							debug((String)"q: "+((String)1.5));
+							debug((String)"gain: "+((String)Decibels::decibelsToGain(18.f)));
+						}
+						for(int c = 0; c < channelnum; ++c) {
+							if(std::isinf(wetChannelData[b][c][s]) || std::isnan(wetChannelData[b][c][s]))
+								wetChannelData[b][c][s] = 0;
+							wetChannelData[b][c][s] = modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].processSample(wetChannelData[b][c][s]);
+						}
+					}
 
 				//DRY WET
 				} else if(state[pots.isb?1:0].id[b][m] == 18) {
+					for(int s = 0; s < numsamples; ++s) {
+						state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
+						if(state[pots.isb?1:0].values[b][m] > 0) {
+							for(int c = 0; c < channelnum; ++c) {
+								wetChannelData[b][c][s] = wetChannelData[b][c][s]*(1-state[pots.isb?1:0].values[b][m])+dryChannelData[b][c][s]*state[pots.isb?1:0].values[b][m];
+							}
+						}
+					}
 
 				//STEREO RECTIFY
 				} else if(state[pots.isb?1:0].id[b][m] == 19) {
+					if(channelnum > 1) {
+						newremovedc = true;
+						double channeloffset = 0;
+						for(int s = 0; s < numsamples; ++s) {
+							state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
+							if(state[pots.isb?1:0].values[b][m] > 0) {
+								for(int c = 0; c < channelnum; ++c) {
+									channeloffset = (((double)c)/(channelnum-1))-.5;
+									wetChannelData[b][c][s] = wetChannelData[b][c][s]*(state[pots.isb?1:0].values[b][m]*channeloffset*2*(wetChannelData[b][c][s]>0?1:-1)+1);
+								}
+							}
+						}
+					}
 
 				//STEREO DC
 				} else if(state[pots.isb?1:0].id[b][m] == 20) {
+					if(channelnum > 1) {
+						newremovedc = true;
+						double channeloffset = 0;
+						for(int s = 0; s < numsamples; ++s) {
+							state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
+							for(int c = 0; c < channelnum; ++c) {
+								channeloffset = (((double)c)/(channelnum-1))-.5;
+								wetChannelData[b][c][s] += pow((double)state[pots.isb?1:0].values[b][m],5)*channeloffset;
+							}
+						}
+					}
 
 				//RING MOD
 				} else if(state[pots.isb?1:0].id[b][m] == 21) {
+					for(int s = 0; s < numsamples; ++s) {
+						state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
+						ringmod[b*MAX_MOD+m] = fmod(ringmod[b*MAX_MOD+m]+calcfilter(state[pots.isb?1:0].values[b][m])/samplerate,1.f);
+						double mult = cos(ringmod[b*MAX_MOD+m]*MathConstants<double>::twoPi);
+						for(int c = 0; c < channelnum; ++c) {
+							wetChannelData[b][c][s] *= mult;
+						}
+					}
 				}
 			}
 		}
@@ -649,6 +728,13 @@ void PrismaAudioProcessor::setoversampling(bool toggle) {
 	spec.maximumBlockSize = samplesperblock;
 	spec.numChannels = channelnum;
 
+	dsp::ProcessSpec monospec;
+	monospec.sampleRate = s;
+	monospec.maximumBlockSize = samplesperblock;
+	monospec.numChannels = 1;
+
+	for(int i = 0; i < filtercount; ++i) crossover[i].prepare(spec);
+
 	for(int i = 0; i < filtercount; ++i) crossover[i].prepare(spec);
 
 	for(int b = 0; b < BAND_COUNT; ++b) {
@@ -657,6 +743,13 @@ void PrismaAudioProcessor::setoversampling(bool toggle) {
 				modulefilters[b*MAX_MOD+m].prepare(spec);
 				modulefilters[b*MAX_MOD+m].setType(state[pots.isb?1:0].id[b][m] == 15 ? dsp::StateVariableTPTFilterType::lowpass : dsp::StateVariableTPTFilterType::highpass);
 				modulefilters[b*MAX_MOD+m].setResonance(state[pots.isb?1:0].id[b][m] == 15 ? 1.2 : 1.1);
+			} else if(state[pots.isb?1:0].id[b][m] == 17) {
+				dsp::IIR::Coefficients<float>::Ptr coefficients = dsp::IIR::Coefficients<float>::makePeakFilter(samplerate,calcfilter(state[pots.isb?1:0].values[b][m]),1.5f,Decibels::decibelsToGain(18.f));
+				for(int c = 0; c < channelnum; ++c) {
+					modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].prepare(monospec);
+					//TODO reset peak
+					*modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].coefficients = *coefficients;
+				}
 			}
 		}
 	}
@@ -665,7 +758,7 @@ void PrismaAudioProcessor::setoversampling(bool toggle) {
 }
 
 void PrismaAudioProcessor::pushNextSampleIntoFifo(float sample) noexcept {
-	if(BAND_COUNT > 1) return;
+	if(BAND_COUNT <= 1) return;
 	if(fifoIndex >= fftSize) {
 		if(!nextFFTBlockReady.get()) {
 			zeromem(fftData,sizeof(fftData));
@@ -678,7 +771,7 @@ void PrismaAudioProcessor::pushNextSampleIntoFifo(float sample) noexcept {
 	fifo[fifoIndex++] = sample;
 }
 void PrismaAudioProcessor::drawNextFrameOfSpectrum(int fallfactor) {
-	if(BAND_COUNT > 1) return;
+	if(BAND_COUNT <= 1) return;
 	window.multiplyWithWindowingTable(fftData,fftSize);
 	forwardFFT.performFrequencyOnlyForwardTransform(fftData);
 
@@ -976,6 +1069,19 @@ void PrismaAudioProcessor::parameterChanged(const String& parameterID, float new
 						modulefilters[b*MAX_MOD+m].prepare(spec);
 						modulefilters[b*MAX_MOD+m].setType(state[pots.isb?1:0].id[b][m] == 15 ? dsp::StateVariableTPTFilterType::lowpass : dsp::StateVariableTPTFilterType::highpass);
 						modulefilters[b*MAX_MOD+m].setResonance(state[pots.isb?1:0].id[b][m] == 15 ? 1.2 : 1.1);
+					} else if(state[pots.isb?1:0].id[b][m] == 17) {
+						dsp::ProcessSpec monospec;
+						monospec.sampleRate = samplerate*(pots.oversampling?2:1);
+						monospec.maximumBlockSize = samplesperblock;
+						monospec.numChannels = 1;
+						dsp::IIR::Coefficients<float>::Ptr coefficients = dsp::IIR::Coefficients<float>::makePeakFilter(samplerate,calcfilter(state[pots.isb?1:0].values[b][m]),1.5f,Decibels::decibelsToGain(18.f));
+						for(int c = 0; c < channelnum; ++c) {
+							modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].prepare(monospec);
+							//TODO reset peak
+							*modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].coefficients = *coefficients;
+						}
+					} else if(state[pots.isb?1:0].id[b][m] == 21) {
+						ringmod[b*MAX_MOD+m] = 0;
 					}
 				}
 			}
@@ -1081,6 +1187,19 @@ void PrismaAudioProcessor::parameterChanged(const String& parameterID, float new
 				modulefilters[b*MAX_MOD+m].prepare(spec);
 				modulefilters[b*MAX_MOD+m].setType(newValue == 15 ? dsp::StateVariableTPTFilterType::lowpass : dsp::StateVariableTPTFilterType::highpass);
 				modulefilters[b*MAX_MOD+m].setResonance(state[pots.isb?1:0].id[b][m] == 15 ? 1.2 : 1.1);
+			} else if(newValue == 17) {
+				dsp::ProcessSpec monospec;
+				monospec.sampleRate = samplerate*(pots.oversampling?2:1);
+				monospec.maximumBlockSize = samplesperblock;
+				monospec.numChannels = 1;
+				dsp::IIR::Coefficients<float>::Ptr coefficients = dsp::IIR::Coefficients<float>::makePeakFilter(samplerate,calcfilter(state[pots.isb?1:0].values[b][m]),1.5f,Decibels::decibelsToGain(18.f));
+				for(int c = 0; c < channelnum; ++c) {
+					modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].prepare(monospec);
+					//TODO reset peak
+					*modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].coefficients = *coefficients;
+				}
+			} else if(newValue == 21) {
+				ringmod[b*MAX_MOD+m] = 0;
 			}
 		}
 
