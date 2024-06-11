@@ -152,7 +152,7 @@ void RedBassAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer&
 			prmscount++;
 		}
 
-		crntsmpl = fmod(crntsmpl+(calculatefrequency(state.values[0]) / getSampleRate()), 1);
+		crntsmpl = fmod(crntsmpl+(calculatefrequency(state.values[0])/samplerate),1);
 		if(params.monitor >= 1) osc = 0;
 		else osc = sin(crntsmpl*MathConstants<double>::twoPi)*lvl;
 
