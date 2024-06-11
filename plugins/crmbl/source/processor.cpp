@@ -151,9 +151,11 @@ void CRMBLAudioProcessor::reseteverything() {
 
 	//delay buffer
 	int delaybuffernumsamples = samplerate*MAX_DLY+blocksizething+257;
-	delaybuffer.setSize(channelnum,delaybuffernumsamples,true,true,false);
+	delaybuffer.setSize(channelnum,delaybuffernumsamples,false,false,false);
+	delaybuffer.clear();
 	delaybufferindex = delaybufferindex%delaybuffernumsamples;
-	delayprocessbuffer.setSize(channelnum,blocksizething,true,true,false);
+	delayprocessbuffer.setSize(channelnum,blocksizething,false,false,false);
+	delayprocessbuffer.clear();
 	delaypointerarray.resize(channelnum);
 
 	//dc filter
