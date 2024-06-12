@@ -41,13 +41,16 @@ struct module {
 	float colors[12] { 1,1,1, 0,0,0, 0,0,0, -1,-1,-1 };
 	float hovercutoff = .4f;
 	float defaultval = 0;
+	float defaultvaly = 0;
 	int clip = -1;
+	bool xy = false;
 	String description = "";
 };
 struct modulevalues {
 	int id = 0;
 	std::vector<float> lerps;
 	float value = 0;
+	float valuey = 0;
 };
 struct editorpreset {
 	modulevalues modulesvalues[BAND_COUNT*MAX_MOD];
@@ -132,8 +135,10 @@ private:
 
 	int initialdrag = -1;
 	float initialvalue = 0;
+	float initialvaluey = 0;
 	bool finemode = false;
 	float valueoffset = 0;
+	float valueyoffset = 0;
 	Point<int> dragpos = Point<int>(0,0);
 	OpenGLTexture elementstex;
 	std::shared_ptr<OpenGLShaderProgram> elementshader;
@@ -161,6 +166,7 @@ private:
 	float selectorscrolllerp[BAND_COUNT];
 	bool selectorstate[BAND_COUNT];
 	int selectorid = 0;
+	int selectormapping[MODULE_COUNT+1] = {0,1,2,3,4,5,6,7,8,9,10,21,11,13,12,14,18,15,16,17,19,20};
 
 	editorpreset state[2];
 	float presettransition = 0;

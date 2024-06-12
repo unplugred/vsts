@@ -112,6 +112,7 @@ void PrismaAudioProcessor::setCurrentProgram(int index) {
 	for(int b = 0; b < BAND_COUNT; ++b) {
 		for(int m = 0; m < MAX_MOD; ++m) {
 			apvts.getParameter("b"+(String)b+"m"+(String)m+"val")->setValueNotifyingHost(presets[currentpreset].values[b][m]);
+			valuesy_gui[b][m] = presets[currentpreset].valuesy[b][m];
 			apvts.getParameter("b"+(String)b+"m"+(String)m+"id")->setValueNotifyingHost(((float)presets[currentpreset].id[b][m])/MODULE_COUNT);
 		}
 		if(b >= 1) apvts.getParameter("b"+(String)b+"cross")->setValueNotifyingHost(presets[currentpreset].crossover[b-1]);
@@ -213,6 +214,7 @@ void PrismaAudioProcessor::reseteverything() {
 
 			//parameter smoothing
 			pots.bands[b].modules[m].value.reset(samplerate*(pots.oversampling?2:1),.001f);
+			pots.bands[b].modules[m].valuey.reset(samplerate*(pots.oversampling?2:1),.001f);
 		}
 	}
 
@@ -250,10 +252,9 @@ void PrismaAudioProcessor::reseteverything() {
 				modulefilters[b*MAX_MOD+m].setResonance(state[pots.isb?1:0].id[b][m] == 15 ? 1.2 : 1.1);
 				modulefilters[b*MAX_MOD+m].reset();
 			} else if(state[pots.isb?1:0].id[b][m] == 17) {
-				dsp::IIR::Coefficients<float>::Ptr coefficients = dsp::IIR::Coefficients<float>::makePeakFilter(samplerate,calcfilter(state[pots.isb?1:0].values[b][m]),1.5f,Decibels::decibelsToGain(18.f));
+				dsp::IIR::Coefficients<float>::Ptr coefficients = dsp::IIR::Coefficients<float>::makePeakFilter(samplerate,calcfilter(state[pots.isb?1:0].values[b][m]),1.5f,Decibels::decibelsToGain(state[pots.isb?1:0].valuesy[b][m]*30.f));
 				for(int c = 0; c < channelnum; ++c) {
 					modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].prepare(monospec);
-					//TODO reset peak
 					*modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].coefficients = *coefficients;
 					modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].reset();
 				}
@@ -559,17 +560,19 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 
 				//PEAK
 				} else if(state[pots.isb?1:0].id[b][m] == 17) {
+					if(valuesy_gui[b][m].get() != pots.bands[b].modules[m].valuey.getTargetValue()) {
+						presets[currentpreset].valuesy[b][m] = valuesy_gui[b][m].get();
+						pots.bands[b].modules[m].valuey.setTargetValue(presets[currentpreset].valuesy[b][m]);
+					}
 					for(int s = 0; s < numsamples; ++s) {
-						float prevval = state[pots.isb?1:0].values[b][m];
+						float prevvalx = state[pots.isb?1:0].values[b][m];
+						float prevvaly = state[pots.isb?1:0].valuesy[b][m];
 						state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
-						if(state[pots.isb?1:0].values[b][m] != prevval) {
-							dsp::IIR::Coefficients<float>::Ptr coefficients = dsp::IIR::Coefficients<float>::makePeakFilter(samplerate,calcfilter(state[pots.isb?1:0].values[b][m]),1.5f,Decibels::decibelsToGain(18.f));
+						state[pots.isb?1:0].valuesy[b][m] = pots.bands[b].modules[m].valuey.getNextValue();
+						if(state[pots.isb?1:0].values[b][m] != prevvalx || state[pots.isb?1:0].valuesy[b][m] != prevvaly) {
+							dsp::IIR::Coefficients<float>::Ptr coefficients = dsp::IIR::Coefficients<float>::makePeakFilter(samplerate,calcfilter(state[pots.isb?1:0].values[b][m]),1.5f,Decibels::decibelsToGain(state[pots.isb?1:0].valuesy[b][m]*30.f));
 							for(int c = 0; c < channelnum; ++c)
 								*modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].coefficients = *coefficients;
-							debug((String)"samplerate: "+((String)samplerate));
-							debug((String)"frequency: "+((String)calcfilter(state[pots.isb?1:0].values[b][m])));
-							debug((String)"q: "+((String)1.5));
-							debug((String)"gain: "+((String)Decibels::decibelsToGain(18.f)));
 						}
 						for(int c = 0; c < channelnum; ++c) {
 							if(std::isinf(wetChannelData[b][c][s]) || std::isnan(wetChannelData[b][c][s]))
@@ -717,8 +720,10 @@ void PrismaAudioProcessor::setoversampling(bool toggle) {
 	} else setLatencySamples(0);
 
 	for(int b = 0; b < BAND_COUNT; ++b) {
-		for(int m = 0; m < MAX_MOD; ++m)
+		for(int m = 0; m < MAX_MOD; ++m) {
 			pots.bands[b].modules[m].value.reset(s,.001f);
+			pots.bands[b].modules[m].valuey.reset(s,.001f);
+		}
 		pots.bands[b].gain.reset(s,.001f);
 	}
 	pots.wet.reset(s,.001f);
@@ -744,10 +749,9 @@ void PrismaAudioProcessor::setoversampling(bool toggle) {
 				modulefilters[b*MAX_MOD+m].setType(state[pots.isb?1:0].id[b][m] == 15 ? dsp::StateVariableTPTFilterType::lowpass : dsp::StateVariableTPTFilterType::highpass);
 				modulefilters[b*MAX_MOD+m].setResonance(state[pots.isb?1:0].id[b][m] == 15 ? 1.2 : 1.1);
 			} else if(state[pots.isb?1:0].id[b][m] == 17) {
-				dsp::IIR::Coefficients<float>::Ptr coefficients = dsp::IIR::Coefficients<float>::makePeakFilter(samplerate,calcfilter(state[pots.isb?1:0].values[b][m]),1.5f,Decibels::decibelsToGain(18.f));
+				dsp::IIR::Coefficients<float>::Ptr coefficients = dsp::IIR::Coefficients<float>::makePeakFilter(samplerate,calcfilter(state[pots.isb?1:0].values[b][m]),1.5f,Decibels::decibelsToGain(state[pots.isb?1:0].valuesy[b][m]*30.f));
 				for(int c = 0; c < channelnum; ++c) {
 					modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].prepare(monospec);
-					//TODO reset peak
 					*modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].coefficients = *coefficients;
 				}
 			}
@@ -812,6 +816,8 @@ void PrismaAudioProcessor::getStateInformation(MemoryBlock& destData) {
 				else
 					data << newstate.values[b][m] << delimiter;
 				data << newstate.id[b][m] << delimiter;
+				if(newstate.id[b][m] == 17)
+					data << newstate.valuesy[b][m] << delimiter;
 			}
 			if(b >= 1) data << newstate.crossover[b-1] << delimiter;
 			if(pots.isb == (i>.5))
@@ -837,6 +843,8 @@ void PrismaAudioProcessor::getStateInformation(MemoryBlock& destData) {
 			for(int m = 0; m < MAX_MOD; ++m) {
 				data << presets[i].values[b][m] << delimiter;
 				data << presets[i].id[b][m] << delimiter;
+				if(presets[i].id[b][m] == 17)
+					data << presets[i].valuesy[b][m] << delimiter;
 			}
 			if(b >= 1) data << presets[i].crossover[b-1] << delimiter;
 			data << presets[i].gain[b] << delimiter;
@@ -873,6 +881,10 @@ void PrismaAudioProcessor::setStateInformation(const void* data, int sizeInBytes
 					state[i].values[b][m] = std::stof(token);
 					std::getline(ss, token, delimiter);
 					state[i].id[b][m] = std::stoi(token);
+					if(state[i].id[b][m] == 17) {
+						std::getline(ss, token, delimiter);
+						state[i].valuesy[b][m] = std::stof(token);
+					}
 				}
 				if(b >= 1) {
 					std::getline(ss, token, delimiter);
@@ -921,7 +933,11 @@ void PrismaAudioProcessor::setStateInformation(const void* data, int sizeInBytes
 					std::getline(ss, token, delimiter);
 					if(i != currentpreset) presets[i].values[b][m] = std::stof(token);
 					std::getline(ss, token, delimiter);
-					if(i != currentpreset) presets[i].id[b][m] = std::stof(token);
+					if(i != currentpreset) presets[i].id[b][m] = std::stoi(token);
+					if(std::stoi(token) == 17) {
+						std::getline(ss, token, delimiter);
+						if(i != currentpreset) presets[i].valuesy[b][m] = std::stof(token);
+					}
 				}
 				if(b >= 1) {
 					std::getline(ss, token, delimiter);
@@ -954,6 +970,11 @@ void PrismaAudioProcessor::setStateInformation(const void* data, int sizeInBytes
 		for(int m = 0; m < (saveversion>=2?MAX_MOD:4); ++m) {
 			apvts.getParameter("b"+(String)b+"m"+(String)m+"val")->setValueNotifyingHost(state[pots.isb?1:0].values[b][m]);
 			pots.bands[b].modules[m].value.setCurrentAndTargetValue(state[pots.isb?1:0].values[b][m]);
+			if(state[pots.isb?1:0].id[b][m] == 17) {
+				valuesy_gui[b][m] = state[pots.isb?1:0].valuesy[b][m];
+				pots.bands[b].modules[m].valuey.setCurrentAndTargetValue(state[pots.isb?1:0].valuesy[b][m]);
+				presets[currentpreset].valuesy[b][m] = state[pots.isb?1:0].valuesy[b][m];
+			}
 			apvts.getParameter("b"+(String)b+"m"+(String)m+"id")->setValueNotifyingHost(((float)state[pots.isb?1:0].id[b][m])/MODULE_COUNT);
 		}
 		if(b >= 1) {
@@ -976,6 +997,8 @@ const String PrismaAudioProcessor::get_preset(int preset_id, const char delimite
 		for(int m = 0; m < MAX_MOD; ++m) {
 			data << presets[preset_id].values[b][m] << delimiter;
 			data << presets[preset_id].id[b][m] << delimiter;
+			if(presets[preset_id].id[b][m] == 17)
+				data << presets[preset_id].valuesy[b][m] << delimiter;
 		}
 		if(b >= 1) data << presets[preset_id].crossover[b-1] << delimiter;
 		data << presets[preset_id].gain[b] << delimiter;
@@ -1002,6 +1025,10 @@ void PrismaAudioProcessor::set_preset(const String& preset, int preset_id, const
 				presets[preset_id].values[b][m] = std::stof(token);
 				std::getline(ss, token, delimiter);
 				presets[preset_id].id[b][m] = std::stof(token);
+				if(presets[preset_id].id[b][m] == 17) {
+					std::getline(ss, token, delimiter);
+					presets[preset_id].valuesy[b][m] = std::stof(token);
+				}
 			}
 			if(b >= 1) {
 				std::getline(ss, token, delimiter);
@@ -1041,6 +1068,9 @@ void PrismaAudioProcessor::set_preset(const String& preset, int preset_id, const
 	for(int b = 0; b < BAND_COUNT; ++b) {
 		for(int m = 0; m < (saveversion>=2?MAX_MOD:4); ++m) {
 			apvts.getParameter("b"+(String)b+"m"+(String)m+"val")->setValueNotifyingHost(presets[preset_id].values[b][m]);
+			if(presets[preset_id].id[b][m] == 17) {
+				valuesy_gui[b][m] = presets[preset_id].valuesy[b][m];
+			}
 			apvts.getParameter("b"+(String)b+"m"+(String)m+"id")->setValueNotifyingHost(((float)presets[preset_id].id[b][m])/MODULE_COUNT);
 		}
 		if(b >= 1) {
@@ -1074,10 +1104,9 @@ void PrismaAudioProcessor::parameterChanged(const String& parameterID, float new
 						monospec.sampleRate = samplerate*(pots.oversampling?2:1);
 						monospec.maximumBlockSize = samplesperblock;
 						monospec.numChannels = 1;
-						dsp::IIR::Coefficients<float>::Ptr coefficients = dsp::IIR::Coefficients<float>::makePeakFilter(samplerate,calcfilter(state[pots.isb?1:0].values[b][m]),1.5f,Decibels::decibelsToGain(18.f));
+						dsp::IIR::Coefficients<float>::Ptr coefficients = dsp::IIR::Coefficients<float>::makePeakFilter(samplerate,calcfilter(state[pots.isb?1:0].values[b][m]),1.5f,Decibels::decibelsToGain(state[pots.isb?1:0].valuesy[b][m]*30.f));
 						for(int c = 0; c < channelnum; ++c) {
 							modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].prepare(monospec);
-							//TODO reset peak
 							*modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].coefficients = *coefficients;
 						}
 					} else if(state[pots.isb?1:0].id[b][m] == 21) {
@@ -1188,14 +1217,15 @@ void PrismaAudioProcessor::parameterChanged(const String& parameterID, float new
 				modulefilters[b*MAX_MOD+m].setType(newValue == 15 ? dsp::StateVariableTPTFilterType::lowpass : dsp::StateVariableTPTFilterType::highpass);
 				modulefilters[b*MAX_MOD+m].setResonance(state[pots.isb?1:0].id[b][m] == 15 ? 1.2 : 1.1);
 			} else if(newValue == 17) {
+				state[pots.isb?1:0].valuesy[b][m] = valuesy_gui[b][m].get();
+				pots.bands[b].modules[m].valuey.setCurrentAndTargetValue(state[pots.isb?1:0].valuesy[b][m]);
 				dsp::ProcessSpec monospec;
 				monospec.sampleRate = samplerate*(pots.oversampling?2:1);
 				monospec.maximumBlockSize = samplesperblock;
 				monospec.numChannels = 1;
-				dsp::IIR::Coefficients<float>::Ptr coefficients = dsp::IIR::Coefficients<float>::makePeakFilter(samplerate,calcfilter(state[pots.isb?1:0].values[b][m]),1.5f,Decibels::decibelsToGain(18.f));
+				dsp::IIR::Coefficients<float>::Ptr coefficients = dsp::IIR::Coefficients<float>::makePeakFilter(samplerate,calcfilter(state[pots.isb?1:0].values[b][m]),1.5f,Decibels::decibelsToGain(state[pots.isb?1:0].valuesy[b][m]*30.f));
 				for(int c = 0; c < channelnum; ++c) {
 					modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].prepare(monospec);
-					//TODO reset peak
 					*modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].coefficients = *coefficients;
 				}
 			} else if(newValue == 21) {
@@ -1228,6 +1258,7 @@ void PrismaAudioProcessor::switchpreset(bool isbb) {
 	for(int b = 0; b < BAND_COUNT; ++b) {
 		for(int m = 0; m < MAX_MOD; ++m) {
 			prevstate.values[b][m] = pots.bands[b].modules[m].value.getTargetValue();
+			prevstate.valuesy[b][m] = pots.bands[b].modules[m].valuey.getTargetValue();
 		}
 		prevstate.gain[b] = pots.bands[b].gain.getTargetValue();
 	}
@@ -1241,6 +1272,8 @@ void PrismaAudioProcessor::switchpreset(bool isbb) {
 	for(int b = 0; b < BAND_COUNT; ++b) {
 		for(int m = 0; m < MAX_MOD; ++m) {
 			apvts.getParameter("b"+(String)b+"m"+(String)m+"val")->setValueNotifyingHost(newstate.values[b][m]);
+			valuesy_gui[b][m] = newstate.valuesy[b][m];
+			presets[currentpreset].valuesy[b][m] = newstate.valuesy[b][m];
 			apvts.getParameter("b"+(String)b+"m"+(String)m+"id")->setValueNotifyingHost(((float)newstate.id[b][m])/MODULE_COUNT);
 		}
 		if(b >= 1) apvts.getParameter("b"+(String)b+"cross")->setValueNotifyingHost(newstate.crossover[b-1]);

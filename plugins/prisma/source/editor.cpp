@@ -60,7 +60,7 @@ PrismaAudioProcessorEditor::PrismaAudioProcessorEditor(PrismaAudioProcessor& p, 
 	modules[4].colors[8] = .19921875f;
 	modules[4].subknobs.push_back(subknob(5,.8f,.5f));
 	modules[5].name = "Rectify";
-	modules[5].description = "RECTIFY is a distortion that turns the negative phase into positive phase, and as a results adds even harmonics.\nIt is very spicy when added before another type of distortion.";
+	modules[5].description = "RECTIFY is a distortion that turns the negative phase into positive phase, and as a results adds even harmonics.\nSpicy when added before another type of distortion.";
 	modules[5].colors[0] = .25f;
 	modules[5].colors[1] = .5390625f;
 	modules[5].colors[2] = .23046875f;
@@ -76,15 +76,15 @@ PrismaAudioProcessorEditor::PrismaAudioProcessorEditor(PrismaAudioProcessor& p, 
 	modules[5].subknobs.push_back(subknob(6));
 	modules[6].name = "Fold";
 	modules[6].description = "FOLD is an aggressive digital distortion which adds odd harmonics by folding the signal.";
-	modules[6].colors[0] = .96484375f;
-	modules[6].colors[1] = .96484375f;
-	modules[6].colors[2] = .96484375f;
-	modules[6].colors[3] = .98828125f;
-	modules[6].colors[4] = .12109375f;
-	modules[6].colors[5] = .01171875f;
-	modules[6].colors[6] = .625f;
-	modules[6].colors[7] = .63671875f;
-	modules[6].colors[8] = .59375f;
+	modules[6].colors[0] = .90234375f;
+	modules[6].colors[1] = .8515625f;
+	modules[6].colors[2] = .78515625f;
+	modules[6].colors[3] = .8984375f;
+	modules[6].colors[4] = .05078125f;
+	modules[6].colors[5] = .14453125f;
+	modules[6].colors[6] = .390625f;
+	modules[6].colors[7] = .359375f;
+	modules[6].colors[8] = .359375f;
 	modules[6].subknobs.push_back(subknob(7));
 	modules[7].name = "Sine Fold";
 	modules[7].description = "SINE FOLD is a gentler version of fold.";
@@ -225,6 +225,72 @@ PrismaAudioProcessorEditor::PrismaAudioProcessorEditor(PrismaAudioProcessor& p, 
 	modules[16].colors[7] = .5703125f;
 	modules[16].colors[8] = .65625f;
 	modules[16].subknobs.push_back(subknob(22));
+	modules[17].name = "Peak";
+	modules[17].description = "PEAK is a bell shaped parameteric equalizer with a fixed Q of 1.5 and amplification of up to 30dB.\nCan be applied before distortion to shape the tone.";
+	modules[17].colors[0] = .9921875f;
+	modules[17].colors[1] = .98828125f;
+	modules[17].colors[2] = .9609375f;
+	modules[17].colors[3] = .83203125f;
+	modules[17].colors[4] = .20703125f;
+	modules[17].colors[5] = .41796875f;
+	modules[17].colors[6] = .44140625f;
+	modules[17].colors[7] = .578125f;
+	modules[17].colors[8] = .5f;
+	modules[17].xy = true;
+	modules[17].subknobs.push_back(subknob(24,0,0,49,0.4f));
+	modules[18].name = "Dry Wet";
+	modules[18].description = "DRY WET blends between the original and processed signal.";
+	modules[18].colors[0] = .70703125f;
+	modules[18].colors[1] = .81640625f;
+	modules[18].colors[2] = .76953125f;
+	modules[18].colors[3] = .703125f;
+	modules[18].colors[4] = .09765625f;
+	modules[18].colors[5] = .0f;
+	modules[18].colors[6] = .39453125f;
+	modules[18].colors[7] = .546875f;
+	modules[18].colors[8] = .53125f;
+	modules[18].subknobs.push_back(subknob(25));
+	modules[19].name = "Stereo Rectify";
+	modules[19].description = "STEREO RECTIFY is a distortion that flattens the negative phase in the left channel, and flattens the positive phase in the right channel.\nAs a results it adds even harmonics and stereo width.\nSpicy when added before another type of distortion.";
+	modules[19].colors[0] = .86328125f;
+	modules[19].colors[1] = .5390625f;
+	modules[19].colors[2] = .30859375f;
+	modules[19].colors[3] = .9375f;
+	modules[19].colors[4] = .91796875f;
+	modules[19].colors[5] = .87109375f;
+	modules[19].colors[6] = .85546875f;
+	modules[19].colors[7] = .24609375f;
+	modules[19].colors[8] = .125f;
+	modules[19].subknobs.push_back(subknob(26));
+	modules[19].subknobs.push_back(subknob(27,-.8f,.8f));
+	modules[20].name = "Stereo DC";
+	modules[20].description = "STEREO DC adds positive DC offset to the left channel and negative DC offset to the right channel.\nAlone it wont do much, but when applied before a distortion it adds even harmonics and stereo width.\nThe DC offset is removed at the end of the module chain.";
+	modules[20].colors[0] = .328125f;
+	modules[20].colors[1] = .25390625f;
+	modules[20].colors[2] = .26171875f;
+	modules[20].colors[3] = .94921875f;
+	modules[20].colors[4] = .8828125f;
+	modules[20].colors[5] = .8203125f;
+	modules[20].colors[6] = .99609375f;
+	modules[20].colors[7] = .40625f;
+	modules[20].colors[8] = .13671875f;
+	modules[20].subknobs.push_back(subknob(28));
+	modules[21].name = "Ring Mod";
+	modules[21].description = "RING MOD modulates the signal with a sine wave to produce inharmonics.\nKnob controls modulator frequency from 20Hz to 20kHz.\nBest used along with a Dry Wet module.";
+	modules[21].colors[0] = .82421875f;
+	modules[21].colors[1] = .81640625f;
+	modules[21].colors[2] = .828125f;
+	modules[21].colors[3] = .25f;
+	modules[21].colors[4] = .25390625f;
+	modules[21].colors[5] = .3671875f;
+	modules[21].colors[6] = .8984375f;
+	modules[21].colors[7] = .21875f;
+	modules[21].colors[8] = .26171875f;
+	modules[21].defaultval = .5f;
+	modules[21].subknobs.push_back(subknob(19,0,0,27,0.84f));
+	modules[21].subknobs.push_back(subknob(20,0,0,27,0.75f));
+	modules[21].subknobs.push_back(subknob(21,0,0,27,0.4f));
+	modules[21].subknobs.push_back(subknob(1));
 
 	for(int i = 0; i < (MODULE_COUNT+1); ++i)
 		modules[i].description = look_n_feel.add_line_breaks(modules[i].description);
@@ -241,6 +307,7 @@ PrismaAudioProcessorEditor::PrismaAudioProcessorEditor(PrismaAudioProcessor& p, 
 
 		for(int m = 0; m < MAX_MOD; ++m) {
 			state[0].modulesvalues[b*MAX_MOD+m].value = states.values[b][m];
+			state[0].modulesvalues[b*MAX_MOD+m].valuey = states.valuesy[b][m];
 			add_listener("b"+(String)b+"m"+(String)m+"val");
 			state[0].modulesvalues[b*MAX_MOD+m].id = states.id[b][m];
 			add_listener("b"+(String)b+"m"+(String)m+"id");
@@ -279,6 +346,7 @@ PrismaAudioProcessorEditor::PrismaAudioProcessorEditor(PrismaAudioProcessor& p, 
 		for(int e = 0; e < modules[state[0].modulesvalues[m].id].subknobs.size(); ++e) {
 			state[0].modulesvalues[m].lerps.push_back(state[0].modulesvalues[m].value);
 			state[0].modulesvalues[m].lerps.push_back(state[0].modulesvalues[m].value);
+			state[0].modulesvalues[m].lerps.push_back(state[0].modulesvalues[m].valuey);
 		}
 	}
 
@@ -859,10 +927,15 @@ void PrismaAudioProcessorEditor::renderOpenGL() {
 			elementshader->setUniform("modulesize",width/114.f,height/87.f);
 			elementshader->setUniform("moduletexscale",114.f/modulestex.getWidth(),87.f/modulestex.getHeight());
 			for(int e = 0; e < modules[state[i].modulesvalues[m].id].subknobs.size(); ++e) {
-				elementshader->setUniform("rot",(.5f-state[i].modulesvalues[m].lerps[e*2])*6.28318531f*modules[state[i].modulesvalues[m].id].subknobs[e].rotspeed);
-				elementshader->setUniform("pos",
-					(34.f+114.f*b              +sin((state[i].modulesvalues[m].lerps[e*2+1]-.5f)*6.28318531f*modules[state[i].modulesvalues[m].id].subknobs[e].movespeed)*modules[state[i].modulesvalues[m].id].subknobs[e].moveradius)/width,
-					(53.f+78.f*modulecount-78.f*fmod(m,MAX_MOD)+cos((state[i].modulesvalues[m].lerps[e*2+1]-.5f)*6.28318531f*modules[state[i].modulesvalues[m].id].subknobs[e].movespeed)*modules[state[i].modulesvalues[m].id].subknobs[e].moveradius)/height);
+				elementshader->setUniform("rot",(.5f-state[i].modulesvalues[m].lerps[e*3])*6.28318531f*modules[state[i].modulesvalues[m].id].subknobs[e].rotspeed);
+				if(modules[state[i].modulesvalues[m].id].xy)
+					elementshader->setUniform("pos",
+						(34.f+114.f*b                              +(state[i].modulesvalues[m].lerps[e*3+1]-.5f)*modules[state[i].modulesvalues[m].id].subknobs[e].moveradius)/width,
+						(53.f+78.f*modulecount-78.f*fmod(m,MAX_MOD)+(state[i].modulesvalues[m].lerps[e*3+2]-.5f)*modules[state[i].modulesvalues[m].id].subknobs[e].moveradius)/height);
+				else
+					elementshader->setUniform("pos",
+						(34.f+114.f*b                              +sin((state[i].modulesvalues[m].lerps[e*3+1]-.5f)*6.28318531f*modules[state[i].modulesvalues[m].id].subknobs[e].movespeed)*modules[state[i].modulesvalues[m].id].subknobs[e].moveradius)/width,
+						(53.f+78.f*modulecount-78.f*fmod(m,MAX_MOD)+cos((state[i].modulesvalues[m].lerps[e*3+1]-.5f)*6.28318531f*modules[state[i].modulesvalues[m].id].subknobs[e].movespeed)*modules[state[i].modulesvalues[m].id].subknobs[e].moveradius)/height);
 				elementshader->setUniform("id",modules[state[i].modulesvalues[m].id].subknobs[e].id);
 				glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 			}
@@ -1120,13 +1193,18 @@ void PrismaAudioProcessorEditor::timerCallback() {
 			selectorease[b] = selectorlerp[b]<.5f?4*selectorlerp[b]*selectorlerp[b]*selectorlerp[b]:1-powf(-2*selectorlerp[b]+2,3)*.5f;
 			if(!out) recalc_hover(lastx,lasty);
 		}
+
+		for(int m = 0; m < MAX_MOD; ++m)
+			if(modules[state[0].modulesvalues[b*MAX_MOD+m].id].xy)
+				state[0].modulesvalues[b*MAX_MOD+m].valuey = audio_processor.valuesy_gui[b][m].get();
 	}
 
 	for(int i = 0; i < (presettransition>0?2:1); ++i) {
 		for(int m = 0; m < (BAND_COUNT*MAX_MOD); ++m) {
 			for(int e = 0; e < modules[state[i].modulesvalues[m].id].subknobs.size(); ++e) {
-				state[i].modulesvalues[m].lerps[e*2  ] = state[i].modulesvalues[m].lerps[e*2  ]*modules[state[i].modulesvalues[m].id].subknobs[e].lerprot +state[i].modulesvalues[m].value*(1-modules[state[i].modulesvalues[m].id].subknobs[e].lerprot );
-				state[i].modulesvalues[m].lerps[e*2+1] = state[i].modulesvalues[m].lerps[e*2+1]*modules[state[i].modulesvalues[m].id].subknobs[e].lerpmove+state[i].modulesvalues[m].value*(1-modules[state[i].modulesvalues[m].id].subknobs[e].lerpmove);
+				state[i].modulesvalues[m].lerps[e*3  ] = state[i].modulesvalues[m].lerps[e*3  ]*modules[state[i].modulesvalues[m].id].subknobs[e].lerprot +state[i].modulesvalues[m].value *(1-modules[state[i].modulesvalues[m].id].subknobs[e].lerprot );
+				state[i].modulesvalues[m].lerps[e*3+1] = state[i].modulesvalues[m].lerps[e*3+1]*modules[state[i].modulesvalues[m].id].subknobs[e].lerpmove+state[i].modulesvalues[m].value *(1-modules[state[i].modulesvalues[m].id].subknobs[e].lerpmove);
+				state[i].modulesvalues[m].lerps[e*3+2] = state[i].modulesvalues[m].lerps[e*3+2]*modules[state[i].modulesvalues[m].id].subknobs[e].lerpmove+state[i].modulesvalues[m].valuey*(1-modules[state[i].modulesvalues[m].id].subknobs[e].lerpmove);
 			}
 		}
 	}
@@ -1256,10 +1334,11 @@ void PrismaAudioProcessorEditor::parameterChanged(const String& parameterID, flo
 	}
 	if(parameterID.endsWith("id")) {
 		state[0].modulesvalues[b*MAX_MOD+m].id = (int)newValue;
-		state[0].modulesvalues[b*MAX_MOD+m].lerps.resize(modules[(int)newValue].subknobs.size()*2);
+		state[0].modulesvalues[b*MAX_MOD+m].lerps.resize(modules[(int)newValue].subknobs.size()*3);
 		for(int e = 0; e < modules[(int)newValue].subknobs.size(); ++e) {
-			state[0].modulesvalues[b*MAX_MOD+m].lerps[e*2  ] = state[0].modulesvalues[b*MAX_MOD+m].value;
-			state[0].modulesvalues[b*MAX_MOD+m].lerps[e*2+1] = state[0].modulesvalues[b*MAX_MOD+m].value;
+			state[0].modulesvalues[b*MAX_MOD+m].lerps[e*3  ] = state[0].modulesvalues[b*MAX_MOD+m].value;
+			state[0].modulesvalues[b*MAX_MOD+m].lerps[e*3+1] = state[0].modulesvalues[b*MAX_MOD+m].value;
+			state[0].modulesvalues[b*MAX_MOD+m].lerps[e*3+2] = state[0].modulesvalues[b*MAX_MOD+m].valuey;
 		}
 	}
 }
@@ -1305,7 +1384,7 @@ void PrismaAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		String description = "";
 		if(hover >= 0) {
 			if(hoverselector >= 0)
-				description = modules[hover].description;
+				description = modules[selectormapping[hover]].description;
 			else
 				description = modules[state[0].modulesvalues[hover].id].description;
 		} else {
@@ -1363,9 +1442,11 @@ void PrismaAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		eyeclickcooldown = random.nextFloat()*150+50;
 	} else if(hoverknob) {
 		valueoffset = 0;
+		valueyoffset = 0;
 		audio_processor.undo_manager.beginNewTransaction();
 		if(hover >= 0) {
 			initialvalue = state[0].modulesvalues[hover].value;
+			initialvaluey = state[0].modulesvalues[hover].valuey;
 			audio_processor.apvts.getParameter("b"+(String)floor(((float)hover)/MAX_MOD)+"m"+(String)fmod(hover,MAX_MOD)+"val")->beginChangeGesture();
 		} else if((hover >= -4 && hover < -1) || (hover >= -16 && hover <= -14)) {
 			int b = hover>-10?(hover+4):(hover+16);
@@ -1385,16 +1466,24 @@ void PrismaAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 void PrismaAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 	if(initialdrag == -1) return;
 	if(hoverknob) {
-		if(!finemode && (event.mods.isShiftDown() || event.mods.isAltDown())) {
-			finemode = true;
-			initialvalue -= (event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*.0045f;
-		} else if(finemode && !(event.mods.isShiftDown() || event.mods.isAltDown())) {
-			finemode = false;
-			initialvalue += (event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*.0045f;
+		if(finemode != (event.mods.isShiftDown() || event.mods.isAltDown())) {
+			finemode = !finemode;
+			if(modules[state[0].modulesvalues[hover].id].xy) {
+				initialvalue  += event.getDistanceFromDragStartX()*(finemode?.0045f:-.0045f);
+				initialvaluey -= event.getDistanceFromDragStartY()*(finemode?.0045f:-.0045f);
+			} else {
+				initialvalue += (event.getDistanceFromDragStartX()-event.getDistanceFromDragStartY())*(finemode?.0045f:-.0045f);
+			}
 		}
 
-		float value = initialvalue-(event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*(finemode?.0005f:.005f);
+		float value = initialvalue+(event.getDistanceFromDragStartX()-event.getDistanceFromDragStartY())*(finemode?.0005f:.005f);
+		float valuey = 0;
 		if(hover >= 0) {
+			if(modules[state[0].modulesvalues[hover].id].xy) {
+				valuey = initialvaluey-event.getDistanceFromDragStartY()*(finemode?.0005f:.005f);
+				audio_processor.valuesy_gui[(int)floor(((float)hover)/MAX_MOD)][(int)fmod(hover,MAX_MOD)] = fmax(fmin(valuey-valueyoffset,1),0);
+				value = initialvalue+event.getDistanceFromDragStartX()*(finemode?.0005f:.005f);
+			}
 			audio_processor.apvts.getParameter("b"+(String)floor(((float)hover)/MAX_MOD)+"m"+(String)fmod(hover,MAX_MOD)+"val")->setValueNotifyingHost(value-valueoffset);
 		} else if((hover >= -4 && hover < -1) || (hover >= -16 && hover <= -14)) {
 			int b = 0;
@@ -1411,7 +1500,8 @@ void PrismaAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 			audio_processor.apvts.getParameter("wet")->setValueNotifyingHost(value-valueoffset);
 		}
 
-		valueoffset = fmax(fmin(valueoffset,value+.1f),value-1.1f);
+		valueoffset  = fmax(fmin(valueoffset ,value +.1f),value -1.1f);
+		valueyoffset = fmax(fmin(valueyoffset,valuey+.1f),valuey-1.1f);
 	} else if(initialdrag == -13) {
 		int prevhover = hover;
 		recalc_hover(event.x,event.y);
@@ -1455,8 +1545,12 @@ void PrismaAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 		if(hover == prevhover && hoverbutton == prevhoverbutton) {
 			if(hover >= 0) {
 				if(hoverselector >= 0) {
-					if(state[0].modulesvalues[selectorid].id != hover) audio_processor.apvts.getParameter("b"+(String)floor(((float)selectorid)/MAX_MOD)+"m"+(String)fmod(selectorid,MAX_MOD)+"val")->setValueNotifyingHost(modules[hover].defaultval);
-					audio_processor.apvts.getParameter("b"+(String)floor(((float)selectorid)/MAX_MOD)+"m"+(String)fmod(selectorid,MAX_MOD)+"id")->setValueNotifyingHost(((float)hover)/MODULE_COUNT);
+					if(state[0].modulesvalues[selectorid].id != selectormapping[hover]) {
+						audio_processor.apvts.getParameter("b"+(String)floor(((float)selectorid)/MAX_MOD)+"m"+(String)fmod(selectorid,MAX_MOD)+"val")->setValueNotifyingHost(modules[selectormapping[hover]].defaultval);
+						if(modules[selectormapping[hover]].xy)
+							audio_processor.valuesy_gui[(int)floor(((float)selectorid)/MAX_MOD)][(int)fmod(selectorid,MAX_MOD)] = modules[selectormapping[hover]].defaultvaly;
+					}
+					audio_processor.apvts.getParameter("b"+(String)floor(((float)selectorid)/MAX_MOD)+"m"+(String)fmod(selectorid,MAX_MOD)+"id")->setValueNotifyingHost(((float)selectormapping[hover])/MODULE_COUNT);
 					for(int i = 0; i < BAND_COUNT; ++i) selectorstate[i] = false;
 				} else {
 					selectorid = hover;
@@ -1506,6 +1600,8 @@ void PrismaAudioProcessorEditor::mouseDoubleClick(const MouseEvent& event) {
 	if(hover >= 0) {
 		audio_processor.undo_manager.setCurrentTransactionName((String)"Reset " += modules[state[0].modulesvalues[hover].id].name);
 		audio_processor.apvts.getParameter("b"+(String)floor(((float)hover)/MAX_MOD)+"m"+(String)fmod(hover,MAX_MOD)+"val")->setValueNotifyingHost(modules[state[0].modulesvalues[hover].id].defaultval);
+		if(modules[state[0].modulesvalues[hover].id].xy)
+			audio_processor.valuesy_gui[(int)floor(((float)hover)/MAX_MOD)][(int)fmod(hover,MAX_MOD)] = modules[state[0].modulesvalues[hover].id].defaultvaly;
 	} else if((hover >= -4 && hover < -1) || (hover >= -16 && hover <= -14)) {
 		int b = hover>-10?(hover+4):(hover+16);
 		audio_processor.undo_manager.setCurrentTransactionName((String)"Reset crossover " += (String)(b+1));
