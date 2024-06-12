@@ -4,6 +4,7 @@
 
 struct pluginmodule {
 	SmoothedValue<float,ValueSmoothingTypes::Linear> value;
+	SmoothedValue<float,ValueSmoothingTypes::Linear> valuey;
 };
 
 struct pluginband {
@@ -29,6 +30,7 @@ struct pluginpreset {
 	String name = "";
 	int id[BAND_COUNT][MAX_MOD];
 	float values[BAND_COUNT][MAX_MOD];
+	float valuesy[BAND_COUNT][MAX_MOD];
 	float crossover[BAND_COUNT==1?1:BAND_COUNT-1];
 	float gain[BAND_COUNT];
 	float wet = 1;
@@ -38,6 +40,7 @@ struct pluginpreset {
 			for(int m = 0; m < MAX_MOD; ++m) {
 				id[b][m] = 0;
 				values[b][m] = 0;
+				valuesy[b][m] = 0;
 			}
 			if(b >= 1) crossover[b-1] = ((float)b)/BAND_COUNT;
 			gain[b] = .5f;
@@ -110,6 +113,7 @@ public:
 	float scopeData[scopeSize];
 
 	int currentpreset = 0;
+	Atomic<float> valuesy_gui[BAND_COUNT][MAX_MOD];
 private:
 	pluginpreset state[2];
 	float crossovertruevalue[BAND_COUNT];
