@@ -496,7 +496,7 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 					newremovedc = true;
 					for(int s = 0; s < numsamples; ++s) {
 						state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
-						if(state[pots.isb?1:0].values[b][m] != .5) {
+						if(state[pots.isb?1:0].values[b][m] != .5f) {
 							for(int c = 0; c < channelnum; ++c) {
 								wetChannelData[b][c][s] += pow((double)state[pots.isb?1:0].values[b][m]*2-1,5)*.5;
 							}
@@ -508,7 +508,7 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 					if(channelnum > 1) {
 						for(int s = 0; s < numsamples; ++s) {
 							state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
-							if(state[pots.isb?1:0].values[b][m] != .5) {
+							if(state[pots.isb?1:0].values[b][m] != .5f) {
 								double sum = 0;
 								for(int c = 0; c < channelnum; ++c) sum += wetChannelData[b][c][s];
 								sum /= channelnum;
@@ -522,7 +522,7 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 				} else if(state[pots.isb?1:0].id[b][m] == 13) {
 					for(int s = 0; s < numsamples; ++s) {
 						state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
-						if(state[pots.isb?1:0].values[b][m] != .35) {
+						if(state[pots.isb?1:0].values[b][m] != .35f) {
 							for(int c = 0; c < channelnum; ++c) {
 								wetChannelData[b][c][s] *= pow(state[pots.isb?1:0].values[b][m]/.35,2);
 							}
@@ -534,7 +534,7 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 					if(channelnum > 1) {
 						for(int s = 0; s < numsamples; ++s) {
 							state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
-							if(state[pots.isb?1:0].values[b][m] != .5) {
+							if(state[pots.isb?1:0].values[b][m] != .5f) {
 								for(int c = 0; c < channelnum; ++c) {
 									double linearpan = (((double)c)/(channelnum-1))*(state[pots.isb?1:0].values[b][m]*2-1)+(1-state[pots.isb?1:0].values[b][m]);
 									wetChannelData[b][c][s] *= sin(linearpan*1.5707963268)*.7071067812+linearpan;
