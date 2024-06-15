@@ -171,8 +171,15 @@ private:
 	editorpreset state[2];
 	float presettransition = 0;
 	float presettransitionease = 0;
-	float crossoverlerp[3] { 99.f, 99.f, 99.f };
+	float crossoverlerp[3] = { 99.f, 99.f, 99.f };
 	float crossovertruevalue[BAND_COUNT==1?1:BAND_COUNT-1];
+
+	int dragger = 0;
+	int dragged = 0;
+	float dragcoords[6] = {0.f,0.f,0.f,0.f,0.f,0.f}; // x y rot shadow offset
+	float draglerp[4] = {0.f,0.f,0.f,0.f}; // x y rot shadow
+	bool dragstate = false;
+	int darkindex = 0;
 
 	Random random;
 

@@ -100,7 +100,7 @@ PrismaAudioProcessorEditor::PrismaAudioProcessorEditor(PrismaAudioProcessor& p, 
 	modules[7].colors[9] = .5078125f;
 	modules[7].colors[10] = .09375f;
 	modules[7].colors[11] = .23828125f;
-	modules[7].clip = 0;
+	modules[7].clip = 7;
 	modules[7].subknobs.push_back(subknob(8));
 	modules[8].name = "Zero Cross";
 	modules[8].description = "ZERO CROSS is a gentle distoriton which also can act as a gate, creating choppy sounds while adding odd harmonics.\nAlso exists as an independent plugin under the name PNCH.";
@@ -209,7 +209,7 @@ PrismaAudioProcessorEditor::PrismaAudioProcessorEditor(PrismaAudioProcessor& p, 
 	modules[15].colors[9] = .91796875f;
 	modules[15].colors[10] = .24609375f;
 	modules[15].colors[11] = .5234375f;
-	modules[15].clip = 0;
+	modules[15].clip = 7;
 	modules[15].subknobs.push_back(subknob(19,0,0, 8,0));
 	modules[15].subknobs.push_back(subknob(20,0,0,18,0.55f));
 	modules[15].subknobs.push_back(subknob(21,0,0,31,0.7f));
@@ -484,17 +484,26 @@ void main(){
 R"(#version 150 core
 in vec2 aPos;
 uniform int modcount;
-uniform vec2 size;
+uniform vec3 size;
 uniform vec2 pos;
 uniform float selector;
 uniform int id;
 uniform float banner;
+uniform vec2 shadow;
+uniform vec4 rot;
 out vec2 uv;
 out float truex;
-void main(){
-	gl_Position = vec4((aPos*vec2(1-abs(selector),1)-vec2(min(selector,0),0))*size+pos,0,1);
-	gl_Position = vec4(vec2(gl_Position.x,gl_Position.y*(1-banner)+banner)*2-1,0,1);
-	uv = vec2((1-(1-aPos.x)*(1-abs(selector))+min(selector,0)+id)/modcount,aPos.y);
+void main() {
+	vec2 temppos = (aPos*vec2(1-abs(selector),1)-vec2(min(selector,0),0))*size.xy;
+	if(rot.x >= 0) {
+		temppos = vec2(
+			 (temppos.x-rot.x)*cos(rot.z)-(temppos.y-rot.y)*rot.w*sin(rot.z),
+			((temppos.x-rot.x)*sin(rot.z)+(temppos.y-rot.y)*rot.w*cos(rot.z))/rot.w);
+	}
+	if(shadow.x >= 0)
+		temppos.xy += shadow;
+	gl_Position = vec4(vec2(temppos.x+pos.x,(temppos.y+pos.y)*(1-banner)+banner)*2-1,0,1);
+	uv = vec2((1-((1-aPos.x)*(1-abs(selector))-min(selector,0)+size.z)*(1-size.z*2)+id)/modcount,aPos.y);
 	truex = 1-(1-aPos.x)*(1-abs(selector));
 })",
 //MODULE FRAG
@@ -502,6 +511,7 @@ R"(#version 150 core
 in vec2 uv;
 in float truex;
 uniform sampler2D tex;
+uniform int modcount;
 uniform vec3 bg;
 uniform vec3 tx;
 uniform vec3 kn;
@@ -509,16 +519,27 @@ uniform vec3 htclr;
 uniform float hover;
 uniform float grayscale;
 uniform float dpi;
+uniform float dark;
+uniform vec2 shadow;
+uniform float alpha;
 out vec4 fragColor;
 void main(){
-	vec4 col = texture(tex,uv);
-	if(truex < hover) {
-		col.a = col.g;
-		col.g = 0;
-	} else col.a = 0;
-	col = max(min((col-.5)*dpi+.5,1),0);
-	fragColor = vec4(bg*col.r+tx*col.g+kn*col.b+htclr*col.a,1);
-	if(grayscale < 1) fragColor.rgb = fragColor.rgb*grayscale+(fragColor.r+fragColor.g+fragColor.b)*vec3(.3307291667,.3307291667,.31640625)*(1-grayscale);
+	vec4 col = max(min((texture(tex,uv)-.5)*dpi+.5,1),0);
+	if(shadow.x >= 0) {
+		fragColor = vec4(0,0,0,.2578125);
+	} else {
+		if(truex < hover) {
+			col.a = col.g;
+			col.g = 0;
+		} else col.a = 0;
+		fragColor = vec4(bg*col.r+tx*col.g+kn*col.b+htclr*col.a,1);
+		if(grayscale < 1) fragColor.rgb = fragColor.rgb*grayscale+(fragColor.r+fragColor.g+fragColor.b)*vec3(.3307291667,.3307291667,.31640625)*(1-grayscale);
+		if(dark > .001) fragColor.rgb *= vec3(.543,.543,.655)*dark+vec3(1-dark);
+	}
+	if(alpha > .5) {
+		if((uv.y < .012 && abs(truex-.5) > .1) || (uv.y > .988 && abs(truex-.5) < .1)) fragColor.a = 0;
+		else fragColor.a *= max(min((texture(tex,vec2(mod(uv.x,1.0/modcount),uv.y))-.5)*dpi+.5,1),0).b;
+	}
 })");
 
 	selectorshader = add_shader(
@@ -560,11 +581,12 @@ void main(){
 R"(#version 150 core
 in vec2 aPos;
 uniform vec2 size;
-uniform vec2 pos;
+uniform vec4 pos;
 uniform vec2 texscale;
 uniform float selector;
 uniform vec2 modulepos;
-uniform vec2 modulesize;
+uniform vec3 modulesize;
+uniform vec4 modulerot;
 uniform vec2 moduletexscale;
 uniform int moduleid;
 uniform int id;
@@ -574,14 +596,22 @@ out vec2 uv;
 out vec2 moduleclip;
 out vec2 moduleuv;
 void main(){
-	gl_Position = vec4((vec2(
+	vec2 temppos = (vec2(
 		(aPos.x-.5)*cos(rot)-(aPos.y-.5)*sin(rot),
-		(aPos.x-.5)*sin(rot)+(aPos.y-.5)*cos(rot))+.5)*size+pos,0,1);
-	moduleclip = (gl_Position.xy-modulepos)*modulesize;
+		(aPos.x-.5)*sin(rot)+(aPos.y-.5)*cos(rot))+.5)*size+pos.zw;
+
+	moduleclip = (temppos+pos.xy-modulepos)*modulesize.xy;
 	if(moduleid >= 0)
-		moduleuv = vec2((moduleclip.x+moduleid)*moduletexscale.x,1-(1-moduleclip.y)*moduletexscale.y);
+		moduleuv = vec2(((moduleclip.x+modulesize.z)*(1-modulesize.z*2)+moduleid)*moduletexscale.x,1-(1-moduleclip.y)*moduletexscale.y);
 	moduleclip.x -= selector*1.1875*size.x*modulesize.x;
-	gl_Position = vec4(vec2(gl_Position.x-selector*1.1875*size.x,gl_Position.y*(1-banner)+banner)*2-1,0,1);
+
+	if(modulerot.x >= -.9) {
+		temppos = vec2(
+			 (temppos.x-modulerot.x)*cos(modulerot.z)-(temppos.y-modulerot.y)*modulerot.w*sin(modulerot.z),
+			((temppos.x-modulerot.x)*sin(modulerot.z)+(temppos.y-modulerot.y)*modulerot.w*cos(modulerot.z))/modulerot.w);
+	}
+	gl_Position = vec4(vec2(temppos.x+pos.x-selector*1.1875*size.x,(temppos.y+pos.y)*(1-banner)+banner)*2-1,0,1);
+
 	uv = vec2((aPos.x+floor(id/6.0))*texscale.x,1-(1-aPos.y+mod(id,6))*texscale.y);
 })",
 //ELEMENT FRAG
@@ -597,15 +627,17 @@ uniform vec3 kn;
 uniform int moduleid;
 uniform float grayscale;
 uniform float dpi;
+uniform float dark;
 out vec4 fragColor;
 void main(){
-	if(moduleclip.x < 0 || moduleclip.x > 1) fragColor = vec4(0);
+	if(moduleclip.x < 0 || moduleclip.x > 1 || moduleclip.y < 0 || moduleclip.y > 1) fragColor = vec4(0);
 	else {
 		vec4 col = max(min((texture(tex,uv)-.5)*dpi+.5,1),0);
 		fragColor = vec4(bg*col.r+tx*col.g+kn*col.b,col.a);
-		if(moduleid >= 0) fragColor *= texture(moduletex,moduleuv).b;
+		if(moduleid >= 0) fragColor *= max(min((texture(moduletex,moduleuv).b-.5)*dpi+.5,1),0);
+		if(grayscale < 1) fragColor.rgb = fragColor.rgb*grayscale+(fragColor.r+fragColor.g+fragColor.b)*vec3(.3307291667,.3307291667,.31640625)*(1-grayscale);
+		if(dark > .001) fragColor.rgb *= vec3(.543,.543,.655)*dark+vec3(1-dark);
 	}
-	if(grayscale < 1) fragColor.rgb = fragColor.rgb*grayscale+(fragColor.r+fragColor.g+fragColor.b)*vec3(.3307291667,.3307291667,.31640625)*(1-grayscale);
 })");
 
 	lidshader = add_shader(
@@ -748,7 +780,7 @@ void main(){
 
 	add_texture(&basetex, BinaryData::base_png, BinaryData::base_pngSize);
 	add_texture(&selectortex, BinaryData::selector_png, BinaryData::selector_pngSize, GL_LINEAR, GL_LINEAR, GL_REPEAT, GL_MIRROR_CLAMP_TO_EDGE);
-	add_texture(&modulestex, BinaryData::modules_png, BinaryData::modules_pngSize);
+	add_texture(&modulestex, BinaryData::modules_png, BinaryData::modules_pngSize, GL_LINEAR, GL_LINEAR, GL_REPEAT, GL_REPEAT);
 	add_texture(&elementstex, BinaryData::elements_png, BinaryData::elements_pngSize);
 
 	draw_init();
@@ -821,33 +853,51 @@ void PrismaAudioProcessorEditor::renderOpenGL() {
 	modulestex.bind();
 	moduleshader->setUniform("tex",0);
 	moduleshader->setUniform("modcount",MODULE_COUNT+1);
-	moduleshader->setUniform("size",114.f/width,87.f/height);
+	moduleshader->setUniform("size",114.f/width,89.f/height,1.f/116.f);
 	moduleshader->setUniform("banner",banner_offset);
 	moduleshader->setUniform("dpi",scaled_dpi);
+	moduleshader->setUniform("dark",0.f);
+	moduleshader->setUniform("shadow",-1.f,-1.f);
+	moduleshader->setUniform("alpha",0.f);
+	moduleshader->setUniform("rot",-1.f,-1.f,-1.f,-1.f);
 	for(int i = 0; i < isdouble; ++i) {
 		for(int m = 0; m < (BAND_COUNT*MAX_MOD); ++m) {
+			int id = state[i].modulesvalues[m].id;
 			int b = (int)floor(((float)m)/MAX_MOD);
 			if(fmod(m,MAX_MOD) >= modulecount || selectorease[b] >= 1) continue;
-			moduleshader->setUniform("id",state[i].modulesvalues[m].id);
-			moduleshader->setUniform("pos",(11.f+114.f*b)/width,(56.f+78.f*modulecount-78.f*fmod(m,MAX_MOD))/height);
-			moduleshader->setUniform("hover",(!hoverknob&&hover==m&&hoverselector<0)?modules[state[i].modulesvalues[m].id].hovercutoff:0.f);
+			if(i == 0 && draglerp[3] >= .0001f) {
+				if(m == dragged)
+					continue;
+				if(m == dragger)
+					id = state[i].modulesvalues[dragged].id;
+				if(m == darkindex)
+					moduleshader->setUniform("dark",dragstate?1.f:draglerp[3]);
+			}
+			moduleshader->setUniform("pos",(11.f+114.f*b)/width,(55.f+78.f*modulecount-78.f*fmod(m,MAX_MOD))/height);
+			moduleshader->setUniform("hover",(!hoverknob&&hover==m&&hoverselector<0)?modules[id].hovercutoff:0.f);
 			if(fmod(m,MAX_MOD) == 0) moduleshader->setUniform("selector",selectorease[b]-presettransitionease+i);
-			if(state[i].modulesvalues[m].id == 0) {
+
+			moduleshader->setUniform("id",id);
+			if(id == 0) {
 				moduleshader->setUniform("bg",bypasscolors[b][0][0],bypasscolors[b][0][1],bypasscolors[b][0][2]);
 				moduleshader->setUniform("tx",bypasscolors[b][1][0],bypasscolors[b][1][1],bypasscolors[b][1][2]);
 				moduleshader->setUniform("grayscale",1.f);
 			} else {
-				moduleshader->setUniform("bg",modules[state[i].modulesvalues[m].id].colors[0],modules[state[i].modulesvalues[m].id].colors[1],modules[state[i].modulesvalues[m].id].colors[2]);
-				moduleshader->setUniform("tx",modules[state[i].modulesvalues[m].id].colors[3],modules[state[i].modulesvalues[m].id].colors[4],modules[state[i].modulesvalues[m].id].colors[5]);
+				moduleshader->setUniform("bg",modules[id].colors[0],modules[id].colors[1],modules[id].colors[2]);
+				moduleshader->setUniform("tx",modules[id].colors[3],modules[id].colors[4],modules[id].colors[5]);
 				moduleshader->setUniform("grayscale",bypassease[b]);
 			}
-			if(modules[state[i].modulesvalues[m].id].clip >= 0) moduleshader->setUniform("kn",0,0,0);
-			else moduleshader->setUniform("kn",modules[state[i].modulesvalues[m].id].colors[6],modules[state[i].modulesvalues[m].id].colors[7],modules[state[i].modulesvalues[m].id].colors[8]);
-			if(modules[state[i].modulesvalues[m].id].colors[9] >= 0)
-				moduleshader->setUniform("htclr",modules[state[i].modulesvalues[m].id].colors[9],modules[state[i].modulesvalues[m].id].colors[10],modules[state[i].modulesvalues[m].id].colors[11]);
+			if(modules[id].clip >= 0)
+				moduleshader->setUniform("kn",0,0,0);
 			else
-				moduleshader->setUniform("htclr",modules[state[i].modulesvalues[m].id].colors[6],modules[state[i].modulesvalues[m].id].colors[7],modules[state[i].modulesvalues[m].id].colors[8]);
+				moduleshader->setUniform("kn"   ,modules[id].colors[6],modules[id].colors[ 7],modules[id].colors[ 8]);
+			if(modules[id].colors[9] >= 0)
+				moduleshader->setUniform("htclr",modules[id].colors[9],modules[id].colors[10],modules[id].colors[11]);
+			else
+				moduleshader->setUniform("htclr",modules[id].colors[6],modules[id].colors[ 7],modules[id].colors[ 8]);
 			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+			if(i == 0 && draglerp[3] >= .0001f && m == darkindex)
+				moduleshader->setUniform("dark",0.f);
 		}
 	}
 
@@ -910,35 +960,55 @@ void PrismaAudioProcessorEditor::renderOpenGL() {
 	elementshader->setUniform("size",96.f/width,96.f/height);
 	elementshader->setUniform("dpi",(float)fmax(scaled_dpi*.5f,1));
 	elementshader->setUniform("banner",banner_offset);
+	elementshader->setUniform("modulesize",width/114.f,height/89.f,1.f/116.f);
+	elementshader->setUniform("moduletexscale",116.f/modulestex.getWidth(),89.f/modulestex.getHeight());
+	elementshader->setUniform("dark",0.f);
+	elementshader->setUniform("modulerot",-1.f,-1.f,-1.f,-1.f);
 	for(int i = 0; i < isdouble; ++i) {
 		for(int m = 0; m < (BAND_COUNT*MAX_MOD); ++m) {
-			if(fmod(m,MAX_MOD) >= modulecount) continue;
+			int index = m;
 			int b = (int)floor(((float)m)/MAX_MOD);
+			if(fmod(m,MAX_MOD) >= modulecount || selectorease[b] >= 1) continue;
+			if(i == 0 && draglerp[3] >= .0001f) {
+				if(m == dragged)
+					continue;
+				if(m == dragger)
+					index = dragged;
+				if(m == darkindex)
+					elementshader->setUniform("dark",dragstate?1.f:draglerp[3]);
+			}
+			float posx = 10.f+114.f*b;
+			float posy = 55.f+78.f*modulecount-78.f*fmod(m,MAX_MOD);
 			if(fmod(m,MAX_MOD) == 0) {
 				elementshader->setUniform("selector",selectorease[b]-presettransitionease+i);
 				elementshader->setUniform("grayscale",bypassease[b]);
 			}
-			if(state[i].modulesvalues[m].id == 0 || selectorease[b] >= 1) continue;
-			elementshader->setUniform("bg",modules[state[i].modulesvalues[m].id].colors[0],modules[state[i].modulesvalues[m].id].colors[1],modules[state[i].modulesvalues[m].id].colors[2]);
-			elementshader->setUniform("tx",modules[state[i].modulesvalues[m].id].colors[3],modules[state[i].modulesvalues[m].id].colors[4],modules[state[i].modulesvalues[m].id].colors[5]);
-			elementshader->setUniform("kn",modules[state[i].modulesvalues[m].id].colors[6],modules[state[i].modulesvalues[m].id].colors[7],modules[state[i].modulesvalues[m].id].colors[8]);
-			elementshader->setUniform("moduleid",modules[state[i].modulesvalues[m].id].clip);
-			elementshader->setUniform("modulepos",(11.f+114.f*b)/width,(56.f+78.f*modulecount-78.f*fmod(m,MAX_MOD))/height);
-			elementshader->setUniform("modulesize",width/114.f,height/87.f);
-			elementshader->setUniform("moduletexscale",114.f/modulestex.getWidth(),87.f/modulestex.getHeight());
-			for(int e = 0; e < modules[state[i].modulesvalues[m].id].subknobs.size(); ++e) {
-				elementshader->setUniform("rot",(.5f-state[i].modulesvalues[m].lerps[e*3])*6.28318531f*modules[state[i].modulesvalues[m].id].subknobs[e].rotspeed);
-				if(modules[state[i].modulesvalues[m].id].xy)
-					elementshader->setUniform("pos",
-						(34.f+114.f*b                              +(state[i].modulesvalues[m].lerps[e*3+1]-.5f)*modules[state[i].modulesvalues[m].id].subknobs[e].moveradius)/width,
-						(53.f+78.f*modulecount-78.f*fmod(m,MAX_MOD)+(state[i].modulesvalues[m].lerps[e*3+2]-.5f)*modules[state[i].modulesvalues[m].id].subknobs[e].moveradius)/height);
+			if(state[i].modulesvalues[index].id == 0 || selectorease[b] >= 1) {
+				if(i == 0 && draglerp[3] >= .0001f && m == darkindex)
+					elementshader->setUniform("dark",0.f);
+				continue;
+			}
+
+			elementshader->setUniform("bg",modules[state[i].modulesvalues[index].id].colors[0],modules[state[i].modulesvalues[index].id].colors[1],modules[state[i].modulesvalues[index].id].colors[2]);
+			elementshader->setUniform("tx",modules[state[i].modulesvalues[index].id].colors[3],modules[state[i].modulesvalues[index].id].colors[4],modules[state[i].modulesvalues[index].id].colors[5]);
+			elementshader->setUniform("kn",modules[state[i].modulesvalues[index].id].colors[6],modules[state[i].modulesvalues[index].id].colors[7],modules[state[i].modulesvalues[index].id].colors[8]);
+			elementshader->setUniform("moduleid",modules[state[i].modulesvalues[index].id].clip);
+			elementshader->setUniform("modulepos",(posx+1)/width,posy/height);
+			for(int e = 0; e < modules[state[i].modulesvalues[index].id].subknobs.size(); ++e) {
+				elementshader->setUniform("rot",(.5f-state[i].modulesvalues[index].lerps[e*3])*6.28318531f*modules[state[i].modulesvalues[index].id].subknobs[e].rotspeed);
+				if(modules[state[i].modulesvalues[index].id].xy)
+					elementshader->setUniform("pos",(posx+24.f)/width,(posy- 2.f)/height,
+						((state[i].modulesvalues[index].lerps[e*3+1]-.5f)*modules[state[i].modulesvalues[index].id].subknobs[e].moveradius)/width,
+						((state[i].modulesvalues[index].lerps[e*3+2]-.5f)*modules[state[i].modulesvalues[index].id].subknobs[e].moveradius)/height);
 				else
-					elementshader->setUniform("pos",
-						(34.f+114.f*b                              +sin((state[i].modulesvalues[m].lerps[e*3+1]-.5f)*6.28318531f*modules[state[i].modulesvalues[m].id].subknobs[e].movespeed)*modules[state[i].modulesvalues[m].id].subknobs[e].moveradius)/width,
-						(53.f+78.f*modulecount-78.f*fmod(m,MAX_MOD)+cos((state[i].modulesvalues[m].lerps[e*3+1]-.5f)*6.28318531f*modules[state[i].modulesvalues[m].id].subknobs[e].movespeed)*modules[state[i].modulesvalues[m].id].subknobs[e].moveradius)/height);
-				elementshader->setUniform("id",modules[state[i].modulesvalues[m].id].subknobs[e].id);
+					elementshader->setUniform("pos",(posx+24.f)/width,(posy- 2.f)/height,
+						(sin((state[i].modulesvalues[index].lerps[e*3+1]-.5f)*6.28318531f*modules[state[i].modulesvalues[index].id].subknobs[e].movespeed)*modules[state[i].modulesvalues[index].id].subknobs[e].moveradius)/width,
+						(cos((state[i].modulesvalues[index].lerps[e*3+1]-.5f)*6.28318531f*modules[state[i].modulesvalues[index].id].subknobs[e].movespeed)*modules[state[i].modulesvalues[index].id].subknobs[e].moveradius)/height);
+				elementshader->setUniform("id",modules[state[i].modulesvalues[index].id].subknobs[e].id);
 				glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 			}
+			if(i == 0 && draglerp[3] >= .0001f && m == darkindex)
+				elementshader->setUniform("dark",0.f);
 		}
 	}
 	context.extensions.glDisableVertexAttribArray(coord);
@@ -1139,6 +1209,93 @@ void PrismaAudioProcessorEditor::renderOpenGL() {
 		}
 	}
 
+	// DRAG AND DROP
+	if(draglerp[3] >= .0001f) {
+		if(!dragstate && draglerp[3] < .0001)
+			glBlendFunc(GL_ONE,GL_ONE);
+		else
+			glBlendFunc(GL_ONE,GL_ONE_MINUS_SRC_ALPHA);
+		moduleshader->use();
+		coord = context.extensions.glGetAttribLocation(moduleshader->getProgramID(),"aPos");
+		context.extensions.glEnableVertexAttribArray(coord);
+		context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+		context.extensions.glActiveTexture(GL_TEXTURE0);
+		modulestex.bind();
+		moduleshader->setUniform("tex",0);
+
+		int index = dragger;
+		int id = state[0].modulesvalues[index].id;
+		int b = (int)floor(((float)dragger)/MAX_MOD);
+
+		moduleshader->setUniform("size",116.f/width,89.f/height,0.f);
+		moduleshader->setUniform("pos",draglerp[0]/width,draglerp[1]/height);
+		moduleshader->setUniform("selector",0.f);
+		if(id == 0) {
+			moduleshader->setUniform("bg",bypasscolors[b][0][0],bypasscolors[b][0][1],bypasscolors[b][0][2]);
+			moduleshader->setUniform("tx",bypasscolors[b][1][0],bypasscolors[b][1][1],bypasscolors[b][1][2]);
+			moduleshader->setUniform("grayscale",1.f);
+		} else {
+			moduleshader->setUniform("bg",modules[id].colors[0],modules[id].colors[1],modules[id].colors[2]);
+			moduleshader->setUniform("tx",modules[id].colors[3],modules[id].colors[4],modules[id].colors[5]);
+			moduleshader->setUniform("grayscale",bypassease[b]);
+		}
+		if(modules[id].clip >= 0)
+			moduleshader->setUniform("kn",0,0,0);
+		else
+			moduleshader->setUniform("kn"   ,modules[id].colors[6],modules[id].colors[ 7],modules[id].colors[ 8]);
+		if(modules[id].colors[9] >= 0)
+			moduleshader->setUniform("htclr",modules[id].colors[9],modules[id].colors[10],modules[id].colors[11]);
+		else
+			moduleshader->setUniform("htclr",modules[id].colors[6],modules[id].colors[ 7],modules[id].colors[ 8]);
+		moduleshader->setUniform("alpha",draglerp[3]>.0001f?1.f:0.f);
+		moduleshader->setUniform("hover",0.f);
+		moduleshader->setUniform("rot",dragcoords[4]/width,dragcoords[5]/height,draglerp[2],((float)height)/width);
+		moduleshader->setUniform("id",id);
+		if(draglerp[3] > .0001) {
+			moduleshader->setUniform("shadow",3*draglerp[3]/width,-3*draglerp[3]/height);
+			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+		}
+		moduleshader->setUniform("shadow",-1.f,-1.f);
+		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+
+		if(!dragstate && draglerp[3] < .0001)
+			glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+		elementshader->use();
+		coord = context.extensions.glGetAttribLocation(elementshader->getProgramID(),"aPos");
+		context.extensions.glEnableVertexAttribArray(coord);
+		context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+		context.extensions.glActiveTexture(GL_TEXTURE0);
+		elementstex.bind();
+		elementshader->setUniform("tex",0);
+		context.extensions.glActiveTexture(GL_TEXTURE1);
+		modulestex.bind();
+		elementshader->setUniform("moduletex",1);
+		elementshader->setUniform("modulesize",width/116.f,height/89.f,0.f);
+		elementshader->setUniform("moduletexscale",116.f/modulestex.getWidth(),89.f/modulestex.getHeight());
+		elementshader->setUniform("selector",0.f);
+		elementshader->setUniform("grayscale",bypassease[b]);
+		elementshader->setUniform("bg",modules[state[0].modulesvalues[index].id].colors[0],modules[state[0].modulesvalues[index].id].colors[1],modules[state[0].modulesvalues[index].id].colors[2]);
+		elementshader->setUniform("tx",modules[state[0].modulesvalues[index].id].colors[3],modules[state[0].modulesvalues[index].id].colors[4],modules[state[0].modulesvalues[index].id].colors[5]);
+		elementshader->setUniform("kn",modules[state[0].modulesvalues[index].id].colors[6],modules[state[0].modulesvalues[index].id].colors[7],modules[state[0].modulesvalues[index].id].colors[8]);
+		elementshader->setUniform("moduleid",modules[state[0].modulesvalues[index].id].clip);
+		elementshader->setUniform("modulepos",(draglerp[0]-24.f)/width,(draglerp[1]+2.f)/height);
+		elementshader->setUniform("modulerot",(dragcoords[4]-24.f)/width,(dragcoords[5]+2.f)/height,draglerp[2],((float)height)/width);
+		for(int e = 0; e < modules[state[0].modulesvalues[index].id].subknobs.size(); ++e) {
+			elementshader->setUniform("rot",(.5f-state[0].modulesvalues[index].lerps[e*3])*6.28318531f*modules[state[0].modulesvalues[index].id].subknobs[e].rotspeed);
+			if(modules[state[0].modulesvalues[index].id].xy)
+				elementshader->setUniform("pos",draglerp[0]/width,draglerp[1]/height,
+					((state[0].modulesvalues[index].lerps[e*3+1]-.5f)*modules[state[0].modulesvalues[index].id].subknobs[e].moveradius)/width,
+					((state[0].modulesvalues[index].lerps[e*3+2]-.5f)*modules[state[0].modulesvalues[index].id].subknobs[e].moveradius)/height);
+			else
+				elementshader->setUniform("pos",draglerp[0]/width,draglerp[1]/height,
+					(sin((state[0].modulesvalues[index].lerps[e*3+1]-.5f)*6.28318531f*modules[state[0].modulesvalues[index].id].subknobs[e].movespeed)*modules[state[0].modulesvalues[index].id].subknobs[e].moveradius)/width,
+					(cos((state[0].modulesvalues[index].lerps[e*3+1]-.5f)*6.28318531f*modules[state[0].modulesvalues[index].id].subknobs[e].movespeed)*modules[state[0].modulesvalues[index].id].subknobs[e].moveradius)/height);
+			elementshader->setUniform("id",modules[state[0].modulesvalues[index].id].subknobs[e].id);
+			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+		}
+		context.extensions.glDisableVertexAttribArray(coord);
+	}
+
 	draw_end();
 }
 void PrismaAudioProcessorEditor::openGLContextClosing() {
@@ -1266,6 +1423,13 @@ void PrismaAudioProcessorEditor::timerCallback() {
 			if(i > 0) vispoly[(i+332)*6+3] = fmax(vispoly[(i+332)*6+3],vispoly[(i+332)*6-3]);
 		}
 	}
+
+	for(int i = 0; i < 4; ++i)
+		draglerp[i] = draglerp[i]*.6f+dragcoords[i]*.4f;
+	if(dragstate)
+		dragcoords[2] = (1.570796f-fabs(atan2(draglerp[0]-dragcoords[0],draglerp[1]-dragcoords[1])))*fmin(.05f*pow(pow(draglerp[0]-dragcoords[0],2)+pow(draglerp[1]-dragcoords[1],2),.25f),1);
+	else
+		dragcoords[2] = 0;
 
 	update();
 }
@@ -1461,6 +1625,17 @@ void PrismaAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		}
 		dragpos = event.getScreenPosition();
 		event.source.enableUnboundedMouseMovement(true);
+	} else if(hover >= 0 && hoverselector < 0) {
+		dragcoords[0] = 10.f+114.f*floor(((float)hover)/MAX_MOD);
+		dragcoords[1] = 55.f+78.f*modulecount-78.f*fmod(hover,MAX_MOD);
+		dragcoords[2] = 0;
+		dragcoords[3] = 0;
+		dragcoords[4] = ((float)event.x)/ui_scales[ui_scale_index]-dragcoords[0];
+		dragcoords[5] = (height-((float)event.y)/ui_scales[ui_scale_index])-dragcoords[1];
+		dragcoords[0] += dragcoords[4];
+		dragcoords[1] += dragcoords[5];
+		for(int i = 0; i < 4; ++i)
+			draglerp[i] = dragcoords[i];
 	}
 }
 void PrismaAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
@@ -1502,6 +1677,24 @@ void PrismaAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 
 		valueoffset  = fmax(fmin(valueoffset ,value +.1f),value -1.1f);
 		valueyoffset = fmax(fmin(valueyoffset,valuey+.1f),valuey-1.1f);
+	} else if(initialdrag >= 0) {
+		if(!dragstate && hoverselector < 0 && (event.getDistanceFromDragStartX()*event.getDistanceFromDragStartX()+event.getDistanceFromDragStartY()*event.getDistanceFromDragStartY()) > 100) {
+			dragstate = true;
+			dragcoords[3] = 1;
+			dragger = initialdrag;
+			darkindex = dragger;
+			for(int i = 0; i < BAND_COUNT; ++i) selectorstate[i] = false;
+		}
+		if(dragstate) {
+			dragcoords[0] = ((float)event.x)/ui_scales[ui_scale_index];
+			dragcoords[1] = (height-((float)event.y)/ui_scales[ui_scale_index]);
+			recalc_hover(event.x,event.y);
+			dragged = (hover >= 0 && hoverselector < 0) ? hover : initialdrag;
+			hovereye = false;
+			hoverknob = false;
+			hoverselector = -1;
+			hoverbutton = -1;
+		}
 	} else if(initialdrag == -13) {
 		int prevhover = hover;
 		recalc_hover(event.x,event.y);
@@ -1538,6 +1731,28 @@ void PrismaAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 		audio_processor.undo_manager.beginNewTransaction();
 		event.source.enableUnboundedMouseMovement(false);
 		Desktop::setMousePosition(dragpos);
+	} else if(dragstate) {
+		if(dragger != dragged) {
+			float draggedval = state[0].modulesvalues[dragged].value;
+			float draggedvaly = state[0].modulesvalues[dragged].valuey;
+			int draggedid = state[0].modulesvalues[dragged].id;
+
+			audio_processor.apvts.getParameter("b"+(String)floor(((float)dragged)/MAX_MOD)+"m"+(String)fmod(dragged,MAX_MOD)+"val")->setValueNotifyingHost(state[0].modulesvalues[dragger].value);
+			if(modules[state[0].modulesvalues[dragger].id].xy)
+				audio_processor.valuesy_gui[(int)floor(((float)dragged)/MAX_MOD)][(int)fmod(dragged,MAX_MOD)] = state[0].modulesvalues[dragger].valuey;
+			audio_processor.apvts.getParameter("b"+(String)floor(((float)dragged)/MAX_MOD)+"m"+(String)fmod(dragged,MAX_MOD)+"id")->setValueNotifyingHost(((float)state[0].modulesvalues[dragger].id)/MODULE_COUNT);
+
+			audio_processor.apvts.getParameter("b"+(String)floor(((float)dragger)/MAX_MOD)+"m"+(String)fmod(dragger,MAX_MOD)+"val")->setValueNotifyingHost(draggedval);
+			if(modules[draggedid].xy)
+				audio_processor.valuesy_gui[(int)floor(((float)dragger)/MAX_MOD)][(int)fmod(dragger,MAX_MOD)] = draggedvaly;
+			audio_processor.apvts.getParameter("b"+(String)floor(((float)dragger)/MAX_MOD)+"m"+(String)fmod(dragger,MAX_MOD)+"id")->setValueNotifyingHost(((float)draggedid)/MODULE_COUNT);
+		}
+		dragcoords[0] = 10.f+114.f*floor(((float)dragged)/MAX_MOD)+dragcoords[4];
+		dragcoords[1] = 55.f+78.f*modulecount-78.f*fmod(dragged,MAX_MOD)+dragcoords[5];
+		dragcoords[3] = 0;
+		dragger = dragged;
+		dragstate = false;
+		recalc_hover(event.x,event.y);
 	} else {
 		int prevhover = hover;
 		int prevhoverbutton = hoverbutton;
