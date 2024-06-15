@@ -1068,9 +1068,8 @@ void PrismaAudioProcessor::set_preset(const String& preset, int preset_id, const
 	for(int b = 0; b < BAND_COUNT; ++b) {
 		for(int m = 0; m < (saveversion>=2?MAX_MOD:4); ++m) {
 			apvts.getParameter("b"+(String)b+"m"+(String)m+"val")->setValueNotifyingHost(presets[preset_id].values[b][m]);
-			if(presets[preset_id].id[b][m] == 17) {
+			if(presets[preset_id].id[b][m] == 17)
 				valuesy_gui[b][m] = presets[preset_id].valuesy[b][m];
-			}
 			apvts.getParameter("b"+(String)b+"m"+(String)m+"id")->setValueNotifyingHost(((float)presets[preset_id].id[b][m])/MODULE_COUNT);
 		}
 		if(b >= 1) {
@@ -1218,6 +1217,7 @@ void PrismaAudioProcessor::parameterChanged(const String& parameterID, float new
 				modulefilters[b*MAX_MOD+m].setResonance(state[pots.isb?1:0].id[b][m] == 15 ? 1.2 : 1.1);
 			} else if(newValue == 17) {
 				state[pots.isb?1:0].valuesy[b][m] = valuesy_gui[b][m].get();
+				presets[currentpreset].valuesy[b][m] = state[pots.isb?1:0].valuesy[b][m];
 				pots.bands[b].modules[m].valuey.setCurrentAndTargetValue(state[pots.isb?1:0].valuesy[b][m]);
 				dsp::ProcessSpec monospec;
 				monospec.sampleRate = samplerate*(pots.oversampling?2:1);

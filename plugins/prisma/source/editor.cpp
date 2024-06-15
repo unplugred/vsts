@@ -1499,6 +1499,8 @@ void PrismaAudioProcessorEditor::parameterChanged(const String& parameterID, flo
 	if(parameterID.endsWith("id")) {
 		state[0].modulesvalues[b*MAX_MOD+m].id = (int)newValue;
 		state[0].modulesvalues[b*MAX_MOD+m].lerps.resize(modules[(int)newValue].subknobs.size()*3);
+		if(modules[(int)newValue].xy)
+			state[0].modulesvalues[b*MAX_MOD+m].valuey = audio_processor.valuesy_gui[b][m].get();
 		for(int e = 0; e < modules[(int)newValue].subknobs.size(); ++e) {
 			state[0].modulesvalues[b*MAX_MOD+m].lerps[e*3  ] = state[0].modulesvalues[b*MAX_MOD+m].value;
 			state[0].modulesvalues[b*MAX_MOD+m].lerps[e*3+1] = state[0].modulesvalues[b*MAX_MOD+m].value;
