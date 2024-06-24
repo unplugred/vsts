@@ -92,7 +92,13 @@ PrismaAudioProcessor::~PrismaAudioProcessor() {
 	close();
 }
 
-const String PrismaAudioProcessor::getName() const { return "Prisma"; }
+const String PrismaAudioProcessor::getName() const {
+#ifdef PRISMON
+	return "Prismon";
+#else
+	return "Prisma";
+#endif
+}
 bool PrismaAudioProcessor::acceptsMidi() const { return false; }
 bool PrismaAudioProcessor::producesMidi() const { return false; }
 bool PrismaAudioProcessor::isMidiEffect() const { return false; }
@@ -831,10 +837,12 @@ void PrismaAudioProcessor::getStateInformation(MemoryBlock& destData) {
 			data << newstate.wet << delimiter;
 		data << newstate.modulecount << delimiter;
 	}
-	for(int b = 0; b < BAND_COUNT; ++b) {
-		data << (pots.bands[b].mute?1:0) << delimiter;
-		data << (pots.bands[b].solo?1:0) << delimiter;
-		data << (pots.bands[b].bypass?1:0) << delimiter;
+	if(BAND_COUNT > 1) {
+		for(int b = 0; b < BAND_COUNT; ++b) {
+			data << (pots.bands[b].mute?1:0) << delimiter;
+			data << (pots.bands[b].solo?1:0) << delimiter;
+			data << (pots.bands[b].bypass?1:0) << delimiter;
+		}
 	}
 	data << (pots.oversampling?1:0) << delimiter;
 
@@ -902,26 +910,28 @@ void PrismaAudioProcessor::setStateInformation(const void* data, int sizeInBytes
 			}
 		}
 
-		for(int b = 0; b < BAND_COUNT; ++b) {
-			std::getline(ss, token, delimiter);
-			pots.bands[b].mute = std::stof(token) > .5;
-			apvts.getParameter("b"+(String)b+"mute")->setValueNotifyingHost(std::stof(token));
+		if(BAND_COUNT > 1) {
+			for(int b = 0; b < BAND_COUNT; ++b) {
+				std::getline(ss, token, delimiter);
+				pots.bands[b].mute = std::stof(token) > .5;
+				apvts.getParameter("b"+(String)b+"mute")->setValueNotifyingHost(std::stof(token));
 
-			std::getline(ss, token, delimiter);
-			pots.bands[b].solo = std::stof(token) > .5;
-			apvts.getParameter("b"+(String)b+"solo")->setValueNotifyingHost(std::stof(token));
+				std::getline(ss, token, delimiter);
+				pots.bands[b].solo = std::stof(token) > .5;
+				apvts.getParameter("b"+(String)b+"solo")->setValueNotifyingHost(std::stof(token));
 
-			std::getline(ss, token, delimiter);
-			float val = std::stof(token);
-			pots.bands[b].bandbypass.setCurrentAndTargetValue(val);
-			pots.bands[b].bypasssmooth = val;
-			pots.bands[b].bypass = val > .5;
-			apvts.getParameter("b"+(String)b+"bypass")->setValueNotifyingHost(val);
-		}
-		recalcactivebands();
-		for(int b = 0; b < BAND_COUNT; ++b) {
-			pots.bands[b].activesmooth = pots.bands[b].bandactive.getTargetValue();
-			pots.bands[b].bandactive.setCurrentAndTargetValue(pots.bands[b].activesmooth);
+				std::getline(ss, token, delimiter);
+				float val = std::stof(token);
+				pots.bands[b].bandbypass.setCurrentAndTargetValue(val);
+				pots.bands[b].bypasssmooth = val;
+				pots.bands[b].bypass = val > .5;
+				apvts.getParameter("b"+(String)b+"bypass")->setValueNotifyingHost(val);
+			}
+			recalcactivebands();
+			for(int b = 0; b < BAND_COUNT; ++b) {
+				pots.bands[b].activesmooth = pots.bands[b].bandactive.getTargetValue();
+				pots.bands[b].bandactive.setCurrentAndTargetValue(pots.bands[b].activesmooth);
+			}
 		}
 
 		std::getline(ss, token, delimiter);

@@ -104,7 +104,12 @@ plugins = [{
 	"code": "Crmb"
 },{
 	"name": "Prisma",
-	"code": "Prsm"
+	"code": "Prsm",
+	"bundle": "Prisma"
+},{
+	"name": "Prismon",
+	"code": "Prmn",
+	"bundle": "Prisma"
 },{
 	"name": "SunBurnt",
 	"code": "Snbt"
@@ -427,10 +432,10 @@ def build(plugin, config, target):
 	target_path = join(["setup",folder,free,plugin+file_extension])
 
 	if systems[system]["code"] == "mac":
-		create_dir(join([folder,"plugins",lower,nospace+"_artefacts",config,target]))
+		create_dir(join([folder,"plugins",("" if "bundle" not in get_plugin(plugin) else (get_plugin(plugin)["bundle"].replace(' ','').lower()+"/"))+lower,nospace+"_artefacts",config,target]))
 		run_command("cmake --build \""+folder+"\" --config "+config+" --target "+nospace+"_"+get_target(target)["code"])
 		if target == "CLAP" or target == "Standalone":
-			copy(join([folder,"plugins",lower,nospace+"_artefacts",config,target,plugin+file_extension]),target_path)
+			copy(join([folder,"plugins",("" if "bundle" not in get_plugin(plugin) else (get_plugin(plugin)["bundle"].replace(' ','').lower()+"/"))+lower,nospace+"_artefacts",config,target,plugin+file_extension]),target_path)
 			if target == "Standalone":
 				run_command("chmod -R 755 \""+target_path+"\"")
 		if saved_data["secrets"] != {} and saved_data["codesign_plugins"]:
@@ -455,7 +460,7 @@ def build(plugin, config, target):
 			remove(target_path)
 			move(join(["setup",plugin+file_extension]),target_path)
 		elif target == "CLAP" or target == "Standalone":
-			copy(join([folder,"plugins",lower,nospace+"_artefacts",config,target,plugin+file_extension]),target_path)
+			copy(join([folder,"plugins",("" if "bundle" not in get_plugin(plugin) else (get_plugin(plugin)["bundle"].replace(' ','').lower()+"/"))+lower,nospace+"_artefacts",config,target,plugin+file_extension]),target_path)
 		for file in get_plugin(plugin)["additional_files"]:
 			if ("win_"+free) in file["versions"] and file["copy"] and systems[system]["code"] == "win":
 				if not os.path.isdir(join(["setup",folder,"other",plugin])):
@@ -465,10 +470,10 @@ def build(plugin, config, target):
 	else:
 		run_command("cmake --build \""+folder+"\" --config "+config+" --target "+nospace+"_"+get_target(target)["code"])
 		if target == "CLAP" or target == "Standalone":
-			copy(join([folder,"plugins",lower,nospace+"_artefacts",target,plugin+file_extension]),target_path)
+			copy(join([folder,"plugins",("" if "bundle" not in get_plugin(plugin) else (get_plugin(plugin)["bundle"].replace(' ','').lower()+"/"))+lower,nospace+"_artefacts",target,plugin+file_extension]),target_path)
 
 def run_plugin(plugin, config):
-	artefact_path = join(["build_"+systems[system]["code"],"plugins",plugin.replace(' ','').lower(),plugin.replace(' ','')+"_artefacts"])
+	artefact_path = join(["build_"+systems[system]["code"],"plugins",("" if "bundle" not in get_plugin(plugin) else (get_plugin(plugin)["bundle"].replace(' ','').lower()+"/"))+plugin.replace(' ','').lower(),plugin.replace(' ','')+"_artefacts"])
 	if systems[system]["code"] == "mac":
 		run_command("open -W \""+join([artefact_path,config,"Standalone",plugin+systems[system]["executable"]])+"\"")
 	elif systems[system]["code"] == "win":

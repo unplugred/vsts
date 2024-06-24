@@ -120,6 +120,11 @@ private:
 	OpenGLTexture basetex;
 	std::shared_ptr<OpenGLShaderProgram> baseshader;
 
+#ifdef PRISMON
+	OpenGLTexture logomontex;
+	std::shared_ptr<OpenGLShaderProgram> logomonshader;
+#endif
+
 	int modulecount = DEF_MOD;
 
 	OpenGLTexture selectortex;
