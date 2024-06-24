@@ -5,7 +5,7 @@ juce_add_plugin("${BaseTargetName}"
 	PRODUCT_NAME "Plastic Funeral"
 	COMPANY_NAME "unplugred"
 	COMPANY_WEBSITE "https://vst.unplug.red"
-	COMPANY_EMAIL "arihanan@proton.me"
+	COMPANY_EMAIL "melody@unplug.red"
 	FORMATS Standalone VST3 AU
 	IS_SYNTH FALSE
 	NEEDS_MIDI_INPUT FALSE
