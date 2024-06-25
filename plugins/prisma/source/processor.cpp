@@ -258,7 +258,7 @@ void PrismaAudioProcessor::reseteverything() {
 				modulefilters[b*MAX_MOD+m].setResonance(state[pots.isb?1:0].id[b][m] == 15 ? 1.2 : 1.1);
 				modulefilters[b*MAX_MOD+m].reset();
 			} else if(state[pots.isb?1:0].id[b][m] == 17) {
-				dsp::IIR::Coefficients<float>::Ptr coefficients = dsp::IIR::Coefficients<float>::makePeakFilter(samplerate,calcfilter(state[pots.isb?1:0].values[b][m]),1.5f,Decibels::decibelsToGain(state[pots.isb?1:0].valuesy[b][m]*30.f));
+				dsp::IIR::Coefficients<float>::Ptr coefficients = dsp::IIR::Coefficients<float>::makePeakFilter(samplerate*(pots.oversampling?2:1),calcfilter(state[pots.isb?1:0].values[b][m]),1.5f,Decibels::decibelsToGain(state[pots.isb?1:0].valuesy[b][m]*30.f));
 				for(int c = 0; c < channelnum; ++c) {
 					modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].prepare(monospec);
 					*modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].coefficients = *coefficients;
@@ -576,7 +576,7 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 						state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
 						state[pots.isb?1:0].valuesy[b][m] = pots.bands[b].modules[m].valuey.getNextValue();
 						if(state[pots.isb?1:0].values[b][m] != prevvalx || state[pots.isb?1:0].valuesy[b][m] != prevvaly) {
-							dsp::IIR::Coefficients<float>::Ptr coefficients = dsp::IIR::Coefficients<float>::makePeakFilter(samplerate,calcfilter(state[pots.isb?1:0].values[b][m]),1.5f,Decibels::decibelsToGain(state[pots.isb?1:0].valuesy[b][m]*30.f));
+							dsp::IIR::Coefficients<float>::Ptr coefficients = dsp::IIR::Coefficients<float>::makePeakFilter(samplerate*(pots.oversampling?2:1),calcfilter(state[pots.isb?1:0].values[b][m]),1.5f,Decibels::decibelsToGain(state[pots.isb?1:0].valuesy[b][m]*30.f));
 							for(int c = 0; c < channelnum; ++c)
 								*modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].coefficients = *coefficients;
 						}
@@ -632,7 +632,7 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 				} else if(state[pots.isb?1:0].id[b][m] == 21) {
 					for(int s = 0; s < numsamples; ++s) {
 						state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
-						ringmod[b*MAX_MOD+m] = fmod(ringmod[b*MAX_MOD+m]+calcfilter(state[pots.isb?1:0].values[b][m])/samplerate,1.f);
+						ringmod[b*MAX_MOD+m] = fmod(ringmod[b*MAX_MOD+m]+calcfilter(state[pots.isb?1:0].values[b][m])/(samplerate*(pots.oversampling?2:1)),1.f);
 						double mult = cos(ringmod[b*MAX_MOD+m]*MathConstants<double>::twoPi);
 						for(int c = 0; c < channelnum; ++c) {
 							wetChannelData[b][c][s] *= mult;
@@ -755,7 +755,7 @@ void PrismaAudioProcessor::setoversampling(bool toggle) {
 				modulefilters[b*MAX_MOD+m].setType(state[pots.isb?1:0].id[b][m] == 15 ? dsp::StateVariableTPTFilterType::lowpass : dsp::StateVariableTPTFilterType::highpass);
 				modulefilters[b*MAX_MOD+m].setResonance(state[pots.isb?1:0].id[b][m] == 15 ? 1.2 : 1.1);
 			} else if(state[pots.isb?1:0].id[b][m] == 17) {
-				dsp::IIR::Coefficients<float>::Ptr coefficients = dsp::IIR::Coefficients<float>::makePeakFilter(samplerate,calcfilter(state[pots.isb?1:0].values[b][m]),1.5f,Decibels::decibelsToGain(state[pots.isb?1:0].valuesy[b][m]*30.f));
+				dsp::IIR::Coefficients<float>::Ptr coefficients = dsp::IIR::Coefficients<float>::makePeakFilter(samplerate*(pots.oversampling?2:1),calcfilter(state[pots.isb?1:0].values[b][m]),1.5f,Decibels::decibelsToGain(state[pots.isb?1:0].valuesy[b][m]*30.f));
 				for(int c = 0; c < channelnum; ++c) {
 					modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].prepare(monospec);
 					*modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].coefficients = *coefficients;
@@ -1113,7 +1113,7 @@ void PrismaAudioProcessor::parameterChanged(const String& parameterID, float new
 						monospec.sampleRate = samplerate*(pots.oversampling?2:1);
 						monospec.maximumBlockSize = samplesperblock;
 						monospec.numChannels = 1;
-						dsp::IIR::Coefficients<float>::Ptr coefficients = dsp::IIR::Coefficients<float>::makePeakFilter(samplerate,calcfilter(state[pots.isb?1:0].values[b][m]),1.5f,Decibels::decibelsToGain(state[pots.isb?1:0].valuesy[b][m]*30.f));
+						dsp::IIR::Coefficients<float>::Ptr coefficients = dsp::IIR::Coefficients<float>::makePeakFilter(samplerate*(pots.oversampling?2:1),calcfilter(state[pots.isb?1:0].values[b][m]),1.5f,Decibels::decibelsToGain(state[pots.isb?1:0].valuesy[b][m]*30.f));
 						for(int c = 0; c < channelnum; ++c) {
 							modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].prepare(monospec);
 							*modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].coefficients = *coefficients;
@@ -1233,7 +1233,7 @@ void PrismaAudioProcessor::parameterChanged(const String& parameterID, float new
 				monospec.sampleRate = samplerate*(pots.oversampling?2:1);
 				monospec.maximumBlockSize = samplesperblock;
 				monospec.numChannels = 1;
-				dsp::IIR::Coefficients<float>::Ptr coefficients = dsp::IIR::Coefficients<float>::makePeakFilter(samplerate,calcfilter(state[pots.isb?1:0].values[b][m]),1.5f,Decibels::decibelsToGain(state[pots.isb?1:0].valuesy[b][m]*30.f));
+				dsp::IIR::Coefficients<float>::Ptr coefficients = dsp::IIR::Coefficients<float>::makePeakFilter(samplerate*(pots.oversampling?2:1),calcfilter(state[pots.isb?1:0].values[b][m]),1.5f,Decibels::decibelsToGain(state[pots.isb?1:0].valuesy[b][m]*30.f));
 				for(int c = 0; c < channelnum; ++c) {
 					modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].prepare(monospec);
 					*modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].coefficients = *coefficients;
