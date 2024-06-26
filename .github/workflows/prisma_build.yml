@@ -7,10 +7,12 @@ on:
   push:
     paths:
       - '**prisma**'
+      - '**prismon**'
       - 'rebuild_all.txt'
   pull_request:
     paths:
       - '**prisma**'
+      - '**prismon**'
       - 'rebuild_all.txt'
     branches:
       - master
@@ -81,21 +83,37 @@ jobs:
       run: |
         python3 build.py configure paid
 
-    - name: build audio unit
-      id: build-au
+    - name: build prisma audio unit
+      id: build-prisma-au
       if: startsWith(matrix.os, 'mac')
       run: |
-        python3 build.py "${{ env.PLUG }}" release au
+        python3 build.py "Prisma" release au
 
-    - name: build clap
-      id: build-clap
+    - name: build prisma clap
+      id: build-prisma-clap
       run: |
-        python3 build.py "${{ env.PLUG }}" release clap
+        python3 build.py "Prisma" release clap
 
-    - name: build vst3
-      id: build-vst3
+    - name: build prisma vst3
+      id: build-prisma-vst3
       run: |
-        python3 build.py "${{ env.PLUG }}" release vst3
+        python3 build.py "Prisma" release vst3
+
+    - name: build prismon audio unit
+      id: build-prismon-au
+      if: startsWith(matrix.os, 'mac')
+      run: |
+        python3 build.py "Prismon" release au
+
+    - name: build prismon clap
+      id: build-prismon-clap
+      run: |
+        python3 build.py "Prismon" release clap
+
+    - name: build prismon vst3
+      id: build-prismon-vst3
+      run: |
+        python3 build.py "Prismon" release vst3
 
     - name: installer
       id: installer
@@ -113,21 +131,37 @@ jobs:
       run: |
         python3 build.py configure free
 
-    - name: build audio unit free
-      id: build-au-free
+    - name: build prisma audio unit free
+      id: build-prisma-au-free
       if: startsWith(matrix.os, 'mac')
       run: |
-        python3 build.py "${{ env.PLUG }}" release au
+        python3 build.py "Prisma" release au
 
-    - name: build clap free
-      id: build-clap-free
+    - name: build prisma clap free
+      id: build-prisma-clap-free
       run: |
-        python3 build.py "${{ env.PLUG }}" release clap
+        python3 build.py "Prisma" release clap
 
-    - name: build vst3 free
-      id: build-vst3-free
+    - name: build prisma vst3 free
+      id: build-prisma-vst3-free
       run: |
-        python3 build.py "${{ env.PLUG }}" release vst3
+        python3 build.py "Prisma" release vst3
+
+    - name: build prismon audio unit free
+      id: build-prismon-au-free
+      if: startsWith(matrix.os, 'mac')
+      run: |
+        python3 build.py "Prismon" release au
+
+    - name: build prismon clap free
+      id: build-prismon-clap-free
+      run: |
+        python3 build.py "Prismon" release clap
+
+    - name: build prismon vst3 free
+      id: build-prismon-vst3-free
+      run: |
+        python3 build.py "Prismon" release vst3
 
     - name: installer free
       id: installer-free
