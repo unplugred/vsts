@@ -343,7 +343,13 @@ def product_build(plugin):
 	if plugin == "Everything Bundle":
 		standalone = True
 	else:
-		standalone = get_plugin(plugin)["standalone"]
+		standalone = False
+		if "bundle" in get_plugin(plugin):
+			for bundle_plugin in plugins:
+				if "bundle" in bundle_plugin and bundle_plugin["bundle"] == get_plugin(plugin)["bundle"] and bundle_plugin["standalone"]:
+					standalone = True
+		else:
+			standalone = get_plugin(plugin)["standalone"]
 		if get_plugin(plugin)["paid"] and saved_data["is_free"][system]:
 			version_tag = "-free"
 
@@ -494,6 +500,14 @@ def build_installer(plugin, system_i, zip_result=True):
 	if get_system(system_i)["code"] == "mac" or get_system(system_i)["code"] == "win":
 		create_dir(join(["setup","temp","Manual install"]))
 
+	bundle_out = []
+	if "bundle" in get_plugin(plugin):
+		for bundle_plugin in plugins:
+			if bundle_plugin["name"] == plugin or "bundle" not in bundle_plugin:
+				continue
+			if bundle_plugin["bundle"] == get_plugin(plugin)["bundle"]:
+				bundle_out.append(bundle_plugin["name"])
+
 	def if_free(str):
 		if get_plugin(plugin)["paid"] and saved_data["is_free"][system]:
 			return str
@@ -511,23 +525,34 @@ def build_installer(plugin, system_i, zip_result=True):
 	if get_system(system_i)["code"] == "mac":
 		identifier = nospace+if_free("-free")
 		run_command("chmod +rx \""+join(["setup","assets","scripts","postinstall"])+"\"")
+		standalone = False
 		for target in targets:
-			if target["name"] == "Standalone" and not get_plugin(plugin)["standalone"]:
+			for bundle_plugin in (bundle_out+[plugin]):
+				if target["name"] == "Standalone":
+					if not get_plugin(bundle_plugin)["standalone"]:
+						continue
+					else:
+						standalone = True
+				copy(join(["setup",folder,free,bundle_plugin+target["extension"]]),join(["setup","temp","Manual install",bundle_plugin+target["extension"]]))
+			if target["name"] == "Standalone" and not standalone:
 				continue
-			copy(join(["setup",folder,free,plugin+target["extension"]]),join(["setup","temp","Manual install",plugin+target["extension"]]))
 			run_command("pkgbuild --install-location \""+target["mac_location"]+"\" --identifier \"com.unplugred."+identifier+"-"+target["code"].lower()+".pkg\""+((" --scripts \""+join(["setup","assets","scripts"])+"\"") if target["name"] == "Audio Unit" else "")+" --version 1.1.1 --root \""+join(["setup","temp","Manual install"])+"\" \""+identifier+"-"+target["code"].lower()+".pkg\"")
-			move(join(["setup","temp","Manual install",plugin+target["extension"]]),join(["setup","temp",plugin+target["extension"]]))
+			for bundle_plugin in (bundle_out+[plugin]):
+				if target["name"] == "Standalone" and not get_plugin(bundle_plugin)["standalone"]:
+					continue
+				move(join(["setup","temp","Manual install",bundle_plugin+target["extension"]]),join(["setup","temp",bundle_plugin+target["extension"]]))
 		product_build(plugin)
 		run_command("productbuild --timestamp --sign \""+saved_data["secrets"]["DEVELOPER_ID_INSTALLER"]+"\" --distribution \""+identifier+".xml\" --resources \""+join(["setup","assets",""])+"\" \""+installer+".pkg\"")
 		run_command("xcrun notarytool submit \""+installer+".pkg\" --apple-id "+saved_data["secrets"]["NOTARIZATION_USERNAME"]+" --password "+saved_data["secrets"]["NOTARIZATION_PASSWORD"]+" --team-id "+saved_data["secrets"]["TEAM_ID"]+" --wait")
 		run_command("xcrun stapler staple \""+installer+".pkg\"")
 		for target in targets:
-			if get_plugin(plugin)["standalone"] or target["name"] != "Standalone":
-				move(join(["setup","temp",plugin+target["extension"]]),join(["setup","temp","Manual install",plugin+target["extension"]]))
+			for bundle_plugin in (bundle_out+[plugin]):
+				if get_plugin(bundle_plugin)["standalone"] or target["name"] != "Standalone":
+					move(join(["setup","temp",bundle_plugin+target["extension"]]),join(["setup","temp","Manual install",bundle_plugin+target["extension"]]))
 		move(installer+".pkg",join(["setup","temp",installer+".pkg"]))
 		remove(identifier+".xml")
 		for target in targets:
-			if not target["name"] == "Standalone" or get_plugin(plugin)["standalone"]:
+			if not target["name"] == "Standalone" or standalone:
 				remove(identifier+"-"+target["code"].lower()+".pkg")
 
 	elif get_system(system_i)["code"] == "win":
@@ -538,20 +563,24 @@ def build_installer(plugin, system_i, zip_result=True):
 			cmd += " \"/DStandalone\""
 		if other_data:
 			cmd += " \"/DOtherData\""
+		if bundle_out != []:
+			cmd += " \"/DBundle="+'_'.join(bundle_out)+"\""
 		run_command(cmd)
 		for target in targets:
 			if target["name"] == "Audio Unit":
 				continue
-			if get_plugin(plugin)["standalone"] or target["name"] != "Standalone":
-				copy(join(["setup",folder,free,plugin+target["extension"]]),join(["setup","temp","Manual install",plugin+target["extension"]]))
+			for bundle_plugin in (bundle_out+[plugin]):
+				if get_plugin(bundle_plugin)["standalone"] or target["name"] != "Standalone":
+					copy(join(["setup",folder,free,bundle_plugin+target["extension"]]),join(["setup","temp","Manual install",bundle_plugin+target["extension"]]))
 		move(join(["setup","Output",installer+".exe"]),join(["setup","temp",installer+".exe"]))
 
 	else:
 		for target in targets:
 			if target["name"] == "Audio Unit":
 				continue
-			if get_plugin(plugin)["standalone"] or target["name"] != "Standalone":
-				copy(join(["setup",folder,free,plugin+target["extension"]]),join(["setup","temp",plugin+target["extension"]]))
+			for bundle_plugin in (bundle_out+[plugin]):
+				if get_plugin(bundle_plugin)["standalone"] or target["name"] != "Standalone":
+					copy(join(["setup",folder,free,bundle_plugin+target["extension"]]),join(["setup","temp",bundle_plugin+target["extension"]]))
 
 	for file in get_plugin(plugin)["additional_files"]:
 		if (get_system(system_i)["code"]+"_"+free) in file["versions"] and not (file["copy"] and get_system(system_i)["code"] != "linux"):
@@ -643,9 +672,23 @@ def build_all():
 	build_everything_bundle(system)
 
 def write_actions():
+	bundles_done = []
 	for plugin in plugins:
+		if "bundle" in plugin:
+			if plugin["bundle"] in bundles_done:
+				continue
+			else:
+				bundles_done.append(plugin["bundle"])
+
 		path = join([".github","workflows",plugin["name"].replace(' ','').lower()+"_build.yml"])
 		debug("WRITING GITHUB ACTIONS WORKFLOW TO "+path)
+		to_build = []
+		if "bundle" not in plugin:
+			to_build.append(plugin)
+		else:
+			for bundle_plugin in plugins:
+				if "bundle" in bundle_plugin and bundle_plugin["bundle"] == plugin["bundle"]:
+					to_build.append(bundle_plugin)
 		file = open(path,"w")
 		file.write("name: "+plugin["name"]+'''
 
@@ -654,12 +697,18 @@ env:
 
 on:
   push:
-    paths:
-      - '**'''+plugin["name"].replace(' ','').lower()+'''**'
+    paths:''')
+		for bundle_plugin in to_build:
+			file.write('''
+      - '**'''+bundle_plugin["name"].replace(' ','').lower()+"**'")
+		file.write('''
       - 'rebuild_all.txt'
   pull_request:
-    paths:
-      - '**'''+plugin["name"].replace(' ','').lower()+'''**'
+    paths:''')
+		for bundle_plugin in to_build:
+			file.write('''
+      - '**'''+bundle_plugin["name"].replace(' ','').lower()+"**'")
+		file.write('''
       - 'rebuild_all.txt'
     branches:
       - master
@@ -731,18 +780,19 @@ jobs:
       run: |
         python3 build.py configure '''+version+'''
 ''')
-			for target in targets:
-				if target["name"] == "Standalone" and not plugin["standalone"]:
-					continue
-				file.write('''
-    - name: build '''+target["name"].lower()+version_tag[0]+'''
-      id: build-'''+target["code"].lower()+version_tag[1])
-				if target["name"] == "Audio Unit":
+			for bundle_plugin in to_build:
+				for target in targets:
+					if target["name"] == "Standalone" and not bundle_plugin["standalone"]:
+						continue
 					file.write('''
+    - name: build '''+((bundle_plugin["name"].lower()+" ") if "bundle" in plugin else "")+target["name"].lower()+version_tag[0]+'''
+      id: build-'''+((bundle_plugin["name"].lower()+"-") if "bundle" in plugin else "")+target["code"].lower()+version_tag[1])
+					if target["name"] == "Audio Unit":
+						file.write('''
       if: startsWith(matrix.os, 'mac')''')
-				file.write('''
+					file.write('''
       run: |
-        python3 build.py "${{ env.PLUG }}" release '''+target["code"].lower()+(" no" if target["name"] == "Standalone" else "")+'''
+        python3 build.py "'''+(bundle_plugin["name"] if "bundle" in plugin else "${{ env.PLUG }}")+'''" release '''+target["code"].lower()+(" no" if target["name"] == "Standalone" else "")+'''
 ''')
 			file.write('''
     - name: installer'''+version_tag[0]+'''

@@ -40,6 +40,15 @@ Source: "build_win\{#Version}\{#PluginName}.clap"; DestDir: {code:GetDir|0}; Com
 #ifdef Standalone
 Source: "build_win\{#Version}\{#PluginName}.exe"; DestDir: {code:GetDir|1}; Components: Standalone; Flags: ignoreversion
 #endif
+
+#ifdef Bundle
+Source: "build_win\{#Version}\{#Bundle}.vst3"; DestDir: "{commoncf64}\VST3\UnplugRed\"; Components: VST3; Flags: ignoreversion
+Source: "build_win\{#Version}\{#Bundle}.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
+#ifdef Standalone
+Source: "build_win\{#Version}\{#Bundle}.exe"; DestDir: {code:GetDir|1}; Components: Standalone; Flags: ignoreversion
+#endif
+#endif
+
 #ifdef OtherData
 Source: "build_win\other\{#PluginName}\*"; DestDir: "{commoncf64}\VST3\UnplugRed\"; Components: VST3; Flags: recursesubdirs onlyifdoesntexist
 Source: "build_win\other\{#PluginName}\*"; DestDir: "{code:GetDir|0}"; Components: CLAP; Flags: recursesubdirs onlyifdoesntexist
