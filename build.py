@@ -596,7 +596,7 @@ def build_everything_bundle(system_i):
 	remove(join(["setup","temp"]))
 	create_dir(join(["setup","temp"]))
 	for plugin in plugins:
-		if plugin["in_bundle"]:
+		if plugin["in_bundle"] and ("bundle" not in plugin or plugin["bundle"] == plugin["name"]):
 			unzip_files(join(["setup","zips",plugin["name"]+" "+get_system(system_i)["name"]+".zip"]),join(["setup","temp"]))
 
 	if get_system(system_i)["code"] == "mac" and systems[system]["code"] == "mac":
@@ -640,6 +640,8 @@ def build_everything_bundle(system_i):
 		for plugin in plugins:
 			if not plugin["in_bundle"]:
 				continue
+			create_dir(join(["setup","build_win","paid"]))
+			create_dir(join(["setup","build_win","free"]))
 			for target in targets:
 				if target["name"] != "Audio Unit" and (plugin["standalone"] or target["name"] != "Standalone"):
 					copy(join(["setup","temp","Manual install",plugin["name"]+target["extension"]]),join(["setup","build_win","paid" if plugin["paid"] else "free",plugin["name"]+target["extension"]]))
