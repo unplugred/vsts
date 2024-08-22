@@ -293,7 +293,7 @@ void ClickBoxAudioProcessorEditor::renderOpenGL() {
 	slidershader->setUniform("col",.23828125f,.23828125f,.23828125f);
 	slidershader->setUniform("margin",0.f);
 	slidershader->setUniform("hover",0.f);
-	slidershader->setUniform("scale",ui_scales[ui_scale_index]);
+	slidershader->setUniform("scale",scaled_dpi);
 	coord = context.extensions.glGetAttribLocation(slidershader->getProgramID(),"aPos");
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
@@ -324,7 +324,7 @@ void ClickBoxAudioProcessorEditor::renderOpenGL() {
 		creditsshader->setUniform("texscale",.5546875f);
 		creditsshader->setUniform("htpos",websiteht);
 		creditsshader->setUniform("lineoffset",shadertime*.5f);
-		creditsshader->setUniform("scale",ui_scales[ui_scale_index]);
+		creditsshader->setUniform("scale",scaled_dpi);
 		creditsshader->setUniform("rot",
 			sin(shadertime*.37f)*3,
 			cos(shadertime*.37f)*3,
