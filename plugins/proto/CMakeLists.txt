@@ -14,7 +14,7 @@ juce_add_plugin("${BaseTargetName}"
 	DESCRIPTION "A prototyping plugin for internal use."
 	PLUGIN_MANUFACTURER_CODE Ured
 	PLUGIN_CODE Prtt
-	VST3_CATEGORY Tools
+	VST3_CATEGORIES Tools
 	VST2_CATEGORY kPlugCategEffect
 	AU_MAIN_TYPE kAudioUnitType_Effect
 	COPY_PLUGIN_AFTER_BUILD TRUE

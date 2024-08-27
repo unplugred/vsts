@@ -15,7 +15,7 @@ juce_add_plugin("${BaseTargetName}"
 	DESCRIPTION "Low-end enchancer excellent for kicks."
 	PLUGIN_MANUFACTURER_CODE Ured
 	PLUGIN_CODE Rdbs
-	VST3_CATEGORY Fx
+	VST3_CATEGORIES Fx
 	VST2_CATEGORY kPlugCategEffect
 	AU_MAIN_TYPE kAudioUnitType_Effect
 	COPY_PLUGIN_AFTER_BUILD TRUE

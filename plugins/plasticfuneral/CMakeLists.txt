@@ -15,7 +15,7 @@ juce_add_plugin("${BaseTargetName}"
 	DESCRIPTION "Distortion that sounds like a laser beam."
 	PLUGIN_MANUFACTURER_CODE Ured
 	PLUGIN_CODE Vctz
-	VST3_CATEGORY Distortion
+	VST3_CATEGORIES Distortion
 	VST2_CATEGORY kPlugCategEffect
 	AU_MAIN_TYPE kAudioUnitType_Effect
 	COPY_PLUGIN_AFTER_BUILD TRUE
