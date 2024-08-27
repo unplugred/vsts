@@ -14,7 +14,7 @@ juce_add_plugin("${BaseTargetName}"
 	DESCRIPTION "Modular distortion plugin."
 	PLUGIN_MANUFACTURER_CODE Ured
 	PLUGIN_CODE Prmn
-	VST3_CATEGORY Distortion
+	VST3_CATEGORIES Distortion
 	VST2_CATEGORY kPlugCategEffect
 	AU_MAIN_TYPE kAudioUnitType_Effect
 	COPY_PLUGIN_AFTER_BUILD TRUE

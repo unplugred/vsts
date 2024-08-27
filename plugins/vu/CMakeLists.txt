@@ -14,7 +14,7 @@ juce_add_plugin("${BaseTargetName}"
 	DESCRIPTION "VU meter for your VU metering needs."
 	PLUGIN_MANUFACTURER_CODE Ured
 	PLUGIN_CODE V6sd
-	VST3_CATEGORY Analyzer
+	VST3_CATEGORIES Analyzer
 	VST2_CATEGORY kPlugCategAnalysis
 	AU_MAIN_TYPE kAudioUnitType_Effect
 	COPY_PLUGIN_AFTER_BUILD TRUE

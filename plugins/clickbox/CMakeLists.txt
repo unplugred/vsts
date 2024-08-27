@@ -14,7 +14,7 @@ juce_add_plugin("${BaseTargetName}"
 	DESCRIPTION "Randomized click generator."
 	PLUGIN_MANUFACTURER_CODE Ured
 	PLUGIN_CODE Poc9
-	VST3_CATEGORY Generator
+	VST3_CATEGORIES Generator
 	VST2_CATEGORY kPlugCategEffect
 	AU_MAIN_TYPE kAudioUnitType_Effect
 	COPY_PLUGIN_AFTER_BUILD TRUE

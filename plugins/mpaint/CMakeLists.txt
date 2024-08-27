@@ -14,7 +14,7 @@ juce_add_plugin("${BaseTargetName}"
 	DESCRIPTION "A sampler from a popular video game."
 	PLUGIN_MANUFACTURER_CODE Ured
 	PLUGIN_CODE Mpnt
-	VST3_CATEGORY Sampler
+	VST3_CATEGORIES Sampler
 	VST2_CATEGORY kPlugCategSynth
 	AU_MAIN_TYPE kAudioUnitType_MusicDevice
 	COPY_PLUGIN_AFTER_BUILD TRUE
