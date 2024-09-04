@@ -33,7 +33,7 @@ jobs:
           }
         - {
             name: "Linux",
-            os: ubuntu-20.04,
+            os: ubuntu-22.04,
             folder: "build_linux"
           }
     runs-on: ${{ matrix.os }}
