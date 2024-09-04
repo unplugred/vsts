@@ -113,6 +113,10 @@ plugins = [{
 },{
 	"name": "SunBurnt",
 	"code": "Snbt"
+},{
+	"name": "Diet Audio",
+	"code": "Diet",
+	"in_bundle": False
 }]
 for i in range(len(plugins)):
 	if "standalone" not in plugins[i]:
