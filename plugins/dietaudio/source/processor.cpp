@@ -335,9 +335,9 @@ AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new DietAudioAudioPr
 
 AudioProcessorValueTreeState::ParameterLayout DietAudioAudioProcessor::create_parameters() {
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"thresh"		,1},"Threshold"		,juce::NormalisableRange<float>(0.0f	,1.0f	),0.0f	,"",AudioProcessorParameter::genericParameter	,tothreshold	,fromthreshold	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"release"		,1},"Release"		,juce::NormalisableRange<float>(0.0f	,1.0f	),0.0f	,"",AudioProcessorParameter::genericParameter	,torelease		,fromrelease	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"transients"	,1},"Transients"	,juce::NormalisableRange<float>(0.0f	,1.0f	),1.0f	,"",AudioProcessorParameter::genericParameter	,todb			,fromdb			));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"rest"		,1},"The rest"		,juce::NormalisableRange<float>(0.0f	,1.0f	),0.0f	,"",AudioProcessorParameter::genericParameter	,todb			,fromdb			));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"thresh"		,1},"Threshold"		,juce::NormalisableRange<float>(0.0f	,1.0f	),0.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(tothreshold	).withValueFromStringFunction(fromthreshold	)));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"release"		,1},"Release"		,juce::NormalisableRange<float>(0.0f	,1.0f	),0.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(torelease		).withValueFromStringFunction(fromrelease	)));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"transients"	,1},"Transients"	,juce::NormalisableRange<float>(0.0f	,1.0f	),1.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(todb			).withValueFromStringFunction(fromdb		)));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"rest"		,1},"The rest"		,juce::NormalisableRange<float>(0.0f	,1.0f	),0.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(todb			).withValueFromStringFunction(fromdb		)));
 	return { parameters.begin(), parameters.end() };
 }
