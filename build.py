@@ -31,7 +31,7 @@ systems = [{
 },{
 	"name": "Linux",
 	"code": "linux",
-	"image": "ubuntu-20.04",
+	"image": "ubuntu-22.04",
 	"compiler": "Unix Makefiles",
 	"executable": ""
 }]
@@ -395,7 +395,7 @@ def prepare():
 		run_command("sudo xcode-select -s '/Applications/Xcode_15.1.app/Contents/Developer'")
 	elif systems[system]["code"] == "linux":
 		run_command("sudo apt-get update",True)
-		run_command("sudo apt-get install g++-11 gcc-11 libasound2-dev libjack-jackd2-dev ladspa-sdk libcurl4-openssl-dev libfreetype6-dev libx11-dev libxcomposite-dev libxcursor-dev libxcursor-dev libxext-dev libxinerama-dev libxrandr-dev libxrender-dev libwebkit2gtk-4.0-dev libglu1-mesa-dev mesa-common-dev",True)
+		run_command("sudo apt-get install -y g++-11 gcc-11 libasound2-dev libjack-jackd2-dev ladspa-sdk libcurl4-openssl-dev libfreetype6-dev libx11-dev libxcomposite-dev libxcursor-dev libxcursor-dev libxext-dev libxinerama-dev libxrandr-dev libxrender-dev libwebkit2gtk-4.0-dev libglu1-mesa-dev mesa-common-dev",True)
 		run_command("sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100 --slave /usr/bin/g++ g++ /usr/bin/g++-11 --slave /usr/bin/gcov gcov /usr/bin/gcov-11",True)
 
 def update_secrets(secrets):
