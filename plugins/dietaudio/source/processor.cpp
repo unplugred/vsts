@@ -315,9 +315,6 @@ void DietAudioAudioProcessor::parameterChanged(const String& parameterID, float 
 
 			if(parameterID == "release")
 				envelopefollower.setrelease(calculaterelease(newValue));
-			debug(envelopefollower.release);
-			debug(envelopefollower.releasems);
-			debug(envelopefollower.samplerate);
 		}
 		if(lerpstage < .001 || lerpchanged[i]) presets[currentpreset].values[i] = newValue;
 		return;
