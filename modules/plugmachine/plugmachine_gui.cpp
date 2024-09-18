@@ -68,8 +68,8 @@ void plugmachine_gui::init(plugmachine_look_n_feel* _look_n_feel) {
 	scaled_dpi = audio_processor.ui_scale;
 	ui_scales.push_back(scaled_dpi);
 #ifdef BANNER
-	setSize(width*scaled_dpi,(height+(do_banner?(21/target_dpi):0))*scaled_dpi);
-	banner_offset = do_banner?(21.f/target_dpi*scaled_dpi/getHeight()):0;
+	setSize(width*scaled_dpi,floor((height+(do_banner?(21.f/target_dpi):0))*scaled_dpi));
+	banner_offset = do_banner?floor(21.f/target_dpi*scaled_dpi)/getHeight():0;
 #else
 	setSize(width*scaled_dpi,height*scaled_dpi);
 	banner_offset = 0;
@@ -139,7 +139,7 @@ void plugmachine_gui::draw_begin() {
 			double pw = width;
 			double ph = height;
 #ifdef BANNER
-			if(do_banner) ph += 21/target_dpi;
+			if(do_banner) ph += floor(21.f/target_dpi);
 #endif
 			ui_scales.clear();
 			while((s/dpi)*pw < w && (s/dpi)*ph < h) {
@@ -198,11 +198,11 @@ void plugmachine_gui::draw_end() {
 		banner_shader->setUniform("dpi",(float)fmax(scaled_dpi,1.f));
 #ifdef BETA
 		banner_shader->setUniform("texscale",494.f/banner_tex.getWidth(),21.f/banner_tex.getHeight());
-		banner_shader->setUniform("size",getWidth()/(494.f/target_dpi*ui_scales[ui_scale_index]),21.f/target_dpi*ui_scales[ui_scale_index]/getHeight());
+		banner_shader->setUniform("size",getWidth()/(494.f/target_dpi*ui_scales[ui_scale_index]),floor(21.f/target_dpi*ui_scales[ui_scale_index])/getHeight());
 		banner_shader->setUniform("free",0.f);
 #else
 		banner_shader->setUniform("texscale",426.f/banner_tex.getWidth(),21.f/banner_tex.getHeight());
-		banner_shader->setUniform("size",getWidth()/(426.f/target_dpi*ui_scales[ui_scale_index]),21.f/target_dpi*ui_scales[ui_scale_index]/getHeight());
+		banner_shader->setUniform("size",getWidth()/(426.f/target_dpi*ui_scales[ui_scale_index]),floor(21.f/target_dpi*ui_scales[ui_scale_index])/getHeight());
 		banner_shader->setUniform("free",1.f);
 #endif
 		banner_shader->setUniform("pos",banner_x);
@@ -231,9 +231,9 @@ void plugmachine_gui::update() {
 	if(reset_size) {
 		reset_size = false;
 #ifdef BANNER
-		setSize(width*ui_scales[ui_scale_index],(height+(do_banner?(21/target_dpi):0))*ui_scales[ui_scale_index]);
+		setSize(width*ui_scales[ui_scale_index],floor((height+(do_banner?(21.f/target_dpi):0))*ui_scales[ui_scale_index]));
 		if(do_banner)
-			banner_offset = 21.f/target_dpi*ui_scales[ui_scale_index]/getHeight();
+			banner_offset = floor(21.f/target_dpi*ui_scales[ui_scale_index])/getHeight();
 #else
 		setSize(width*ui_scales[ui_scale_index],height*ui_scales[ui_scale_index]);
 #endif
@@ -263,7 +263,7 @@ void plugmachine_gui::set_size(int _width, int _height) {
 	if(width == _width && height == _height) {
 		int w = width*ui_scales[ui_scale_index];
 #ifdef BANNER
-		int h = (height+(do_banner?(21/target_dpi):0))*ui_scales[ui_scale_index];
+		int h = floor((height+(do_banner?(21.f/target_dpi):0))*ui_scales[ui_scale_index]);
 #else
 		int h = height*ui_scales[ui_scale_index];
 #endif
