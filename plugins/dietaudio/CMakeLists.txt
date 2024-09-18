@@ -35,7 +35,8 @@ clap_juce_extensions_plugin(TARGET "${BaseTargetName}"
 target_sources("${BaseTargetName}" PRIVATE
 	source/envelopefollower.cpp
 	source/editor.cpp
-	source/processor.cpp)
+	source/processor.cpp
+	source/perlin.cpp)
 
 target_compile_definitions("${BaseTargetName}" PUBLIC
 	JUCE_DISPLAY_SPLASH_SCREEN=0
@@ -53,8 +54,7 @@ target_compile_definitions("${BaseTargetName}" PUBLIC
 	JUCE_USE_CAMERA=0)
 
 juce_add_binary_data("${BaseTargetName}BinaryData" HEADER_NAME BinaryData.h NAMESPACE BinaryData SOURCES
-	resources/base.png
-	resources/credits.png)
+	resources/text.png)
 set_target_properties("${BaseTargetName}BinaryData" PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 
 target_link_libraries("${BaseTargetName}" PRIVATE

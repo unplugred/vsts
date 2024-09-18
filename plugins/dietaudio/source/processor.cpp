@@ -15,9 +15,9 @@ DietAudioAudioProcessor::DietAudioAudioProcessor() :
 	}
 
 	params.pots[0] = potentiometer("Threshold"	,"thresh"		,0	,presets[0].values[0]	);
-	params.pots[1] = potentiometer("Release"	,"release"		,0	,presets[0].values[2]	);
-	params.pots[2] = potentiometer("Transients"	,"transients"	,0	,presets[0].values[3]	);
-	params.pots[3] = potentiometer("The rest"	,"rest"			,0	,presets[0].values[4]	);
+	params.pots[1] = potentiometer("Release"	,"release"		,0	,presets[0].values[1]	);
+	params.pots[2] = potentiometer("Transients"	,"transients"	,0	,presets[0].values[2]	);
+	params.pots[3] = potentiometer("The rest"	,"rest"			,0	,presets[0].values[3]	);
 
 	for(int i = 0; i < paramcount; ++i) {
 		state.values[i] = params.pots[i].inflate(apvts.getParameter(params.pots[i].id)->getValue());

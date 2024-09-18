@@ -134,10 +134,7 @@ private:
 };
 
 static std::function<String(float v, int max)> tothreshold = [](float v, int max) {
-	float val = Decibels::gainToDecibels(fmax(.000001f,pow(v,2)*10000))-58.4;
-	if(val <= -96)
-		return (String)"Off";
-	return String(val,2)+"dB";
+	return String(fmax(-96,Decibels::gainToDecibels(fmax(.000001f,pow(v,2)*10000))-58.4),2)+"dB";
 };
 static std::function<float(const String& s)> fromthreshold = [](const String& s) {
 	if(s.containsIgnoreCase("f"))
