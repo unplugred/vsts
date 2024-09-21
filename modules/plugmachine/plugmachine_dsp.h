@@ -21,7 +21,7 @@ public:
 	AudioProcessorValueTreeState* apvts_ref;
 	void add_listener(String name);
 
-	double ui_scale = 1;
+	double ui_scale = -1;
 	ApplicationProperties props;
 	void set_ui_scale(double new_ui_scale);
 
