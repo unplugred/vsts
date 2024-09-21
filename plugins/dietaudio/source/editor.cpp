@@ -279,7 +279,7 @@ float DietAudioAudioProcessorEditor::getvis(float x, float y) {
 	float scale1 = .15f;
 	float scale2 = .15f;
 	float screwamount = 5.f;
-	return (clouds.noise(x*.2f+clouds.noise(-x*scale2,-y*scale2,time2)*screwamount,y*.2f+clouds.noise(-y*scale2,-x*scale2,time2)*screwamount,time1)-(knobs[0].value-.5f)*2.5f)*1+.5;
+	return (clouds.noise(x*.2f+clouds.noise(-x*scale2,-y*scale2,time2)*screwamount,y*.2f+clouds.noise(-y*scale2,-x*scale2,time2)*screwamount,time1)+(knobs[0].value-.5f)*2.5f)*1+.5;
 }
 void DietAudioAudioProcessorEditor::paint(Graphics& g) { }
 

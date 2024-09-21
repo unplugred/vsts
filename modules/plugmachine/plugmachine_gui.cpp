@@ -65,6 +65,8 @@ void plugmachine_gui::init(plugmachine_look_n_feel* _look_n_feel) {
 	if(_look_n_feel != nullptr)
 		look_n_feel = _look_n_feel;
 
+	if(audio_processor.ui_scale == -1)
+		audio_processor.set_ui_scale(target_dpi);
 	scaled_dpi = audio_processor.ui_scale;
 	ui_scales.push_back(scaled_dpi);
 #ifdef BANNER
