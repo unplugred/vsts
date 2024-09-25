@@ -155,8 +155,8 @@ void DietAudioAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffe
 				memcpy(&postbuffer[channelnum*fftbuffersize],&prebuffer[0],sizeof(float)*channelnum*fftbuffersize);
 			} else {
 				for(int channel = 0; channel < channelnum; ++channel) {
-					memcpy(&postbuffer[channel*fftbuffersize          ],&prebuffer[fftsize/2],sizeof(float)*fftsize/2);
-					memcpy(&postbuffer[channel*fftbuffersize+fftsize/2],&prebuffer[        0],sizeof(float)*fftsize/2);
+					memcpy(&postbuffer[channel*fftbuffersize          ],&prebuffer[channel*fftbuffersize+fftsize/2],sizeof(float)*fftsize/2);
+					memcpy(&postbuffer[channel*fftbuffersize+fftsize/2],&prebuffer[channel*fftbuffersize          ],sizeof(float)*fftsize/2);
 				}
 			}
 
