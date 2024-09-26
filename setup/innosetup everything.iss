@@ -43,6 +43,7 @@ Source: "build_win\paid\CRMBL.vst3"; DestDir: "{commoncf64}\VST3\Unplugred\"; Co
 Source: "build_win\paid\Prisma.vst3"; DestDir: "{commoncf64}\VST3\UnplugRed\"; Components: VST3; Flags: ignoreversion
 Source: "build_win\paid\Prismon.vst3"; DestDir: "{commoncf64}\VST3\UnplugRed\"; Components: VST3; Flags: ignoreversion
 Source: "build_win\paid\SunBurnt.vst3"; DestDir: "{commoncf64}\VST3\UnplugRed\"; Components: VST3; Flags: ignoreversion
+Source: "build_win\paid\Diet Audio.vst3"; DestDir: "{commoncf64}\VST3\UnplugRed\"; Components: VST3; Flags: ignoreversion
 Source: "build_win\paid\Plastic Funeral.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
 Source: "build_win\paid\VU.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
 Source: "build_win\free\ClickBox.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
@@ -55,6 +56,7 @@ Source: "build_win\paid\CRMBL.clap"; DestDir: {code:GetDir|0}; Components: CLAP;
 Source: "build_win\paid\Prisma.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
 Source: "build_win\paid\Prismon.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
 Source: "build_win\paid\SunBurnt.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
+Source: "build_win\paid\Diet Audio.clap"; DestDir: {code:GetDir|0}; Components: CLAP; Flags: ignoreversion
 Source: "build_win\paid\VU.exe"; DestDir: {code:GetDir|1}; Components: Standalone; Flags: ignoreversion
 Source: "build_win\free\MPaint.exe"; DestDir: {code:GetDir|1}; Components: Standalone; Flags: ignoreversion
 Source: "build_win\other\MPaint\*"; DestDir: "{code:GetDir|1}"; Components: Standalone; Flags: recursesubdirs onlyifdoesntexist
