@@ -1,7 +1,7 @@
 #include "processor.h"
 #include "editor.h"
 
-SunBurntAudioProcessorEditor::SunBurntAudioProcessorEditor(SunBurntAudioProcessor& p, int paramcount, pluginpreset state, pluginparams params) : audio_processor(p), plugmachine_gui(p, 368, 334, 1.5f)
+SunBurntAudioProcessorEditor::SunBurntAudioProcessorEditor(SunBurntAudioProcessor& p, int paramcount, pluginpreset state, pluginparams params) : audio_processor(p), AudioProcessorEditor(&p), plugmachine_gui(*this, p, 368, 334, 1.5f)
 {
 	jpmode = params.jpmode;
 	prevjpmode = jpmode;

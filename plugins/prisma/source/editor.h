@@ -64,7 +64,7 @@ struct editorpreset {
 		}
 	}
 };
-class PrismaAudioProcessorEditor : public plugmachine_gui {
+class PrismaAudioProcessorEditor : public AudioProcessorEditor, public plugmachine_gui {
 public:
 	PrismaAudioProcessorEditor(PrismaAudioProcessor&, pluginpreset states, pluginparams pots);
 	~PrismaAudioProcessorEditor() override;

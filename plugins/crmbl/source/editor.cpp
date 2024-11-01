@@ -1,7 +1,7 @@
 #include "processor.h"
 #include "editor.h"
 
-CRMBLAudioProcessorEditor::CRMBLAudioProcessorEditor(CRMBLAudioProcessor& p, int paramcount, pluginpreset state, pluginparams params) : audio_processor(p), plugmachine_gui(p, 507, 465) {
+CRMBLAudioProcessorEditor::CRMBLAudioProcessorEditor(CRMBLAudioProcessor& p, int paramcount, pluginpreset state, pluginparams params) : audio_processor(p), AudioProcessorEditor(&p), plugmachine_gui(*this, p, 507, 465) {
 	//special labels: time, mod, feedback
 	//CLOCK
 	knobs[0].description = "Computer time";
@@ -129,6 +129,7 @@ CRMBLAudioProcessorEditor::CRMBLAudioProcessorEditor(CRMBLAudioProcessor& p, int
 	rmsdamp.reset(0,.9,-1,30,1);
 	for(int i = 0; i < 32; i++) damparray[i] = 0;
 
+	setResizable(false,false);
 	init(&look_n_feel);
 }
 CRMBLAudioProcessorEditor::~CRMBLAudioProcessorEditor() {

@@ -1,7 +1,7 @@
 #include "processor.h"
 #include "editor.h"
 
-RedBassAudioProcessorEditor::RedBassAudioProcessorEditor(RedBassAudioProcessor& p, int paramcount, pluginpreset state, pluginparams params) : audio_processor(p), plugmachine_gui(p, 322, 408, 1.f, .5f) {
+RedBassAudioProcessorEditor::RedBassAudioProcessorEditor(RedBassAudioProcessor& p, int paramcount, pluginpreset state, pluginparams params) : audio_processor(p), AudioProcessorEditor(&p), plugmachine_gui(*this, p, 322, 408, 1.f, .5f) {
 	for(int x = 0; x < 2; x++) {
 		for(int y = 0; y < 4; y++) {
 			int i = x+y*2;

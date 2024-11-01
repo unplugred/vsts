@@ -110,7 +110,7 @@ void main(){
 		kerning = {{{54,55,-2},{54,57,-3},{53,55,-2},{50,55,-2},{51,55,-2},{109,55,-2},{109,57,-3},{115,55,-2},{115,57,-2}},{{54,55,-2},{54,57,-3},{53,55,-2},{50,55,-2},{51,55,-2},{109,55,-2},{109,57,-3},{115,55,-2},{115,57,-2}}}; //NOT YET IMPLEMENTED; looks good already so idk if ill add this
 	}
 };
-class SunBurntAudioProcessorEditor : public plugmachine_gui {
+class SunBurntAudioProcessorEditor : public AudioProcessorEditor, public plugmachine_gui {
 public:
 	SunBurntAudioProcessorEditor(SunBurntAudioProcessor&, int paramcount, pluginpreset state, pluginparams params);
 	~SunBurntAudioProcessorEditor() override;

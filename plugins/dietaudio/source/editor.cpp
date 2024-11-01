@@ -1,7 +1,7 @@
 #include "processor.h"
 #include "editor.h"
 
-DietAudioAudioProcessorEditor::DietAudioAudioProcessorEditor(DietAudioAudioProcessor& p, int paramcount, pluginpreset state, pluginparams params) : audio_processor(p), plugmachine_gui(p, 24*LETTER_W, 24*LETTER_H, 2.f, 1.f) {
+DietAudioAudioProcessorEditor::DietAudioAudioProcessorEditor(DietAudioAudioProcessor& p, int paramcount, pluginpreset state, pluginparams params) : audio_processor(p), AudioProcessorEditor(&p), plugmachine_gui(*this, p, 24*LETTER_W, 24*LETTER_H, 2.f, 1.f) {
 	for(int i = 0; i < paramcount; ++i) {
 		knobs[i].id = params.pots[i].id;
 		knobs[i].name = params.pots[i].name;

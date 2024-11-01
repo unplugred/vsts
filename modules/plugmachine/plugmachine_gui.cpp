@@ -49,7 +49,7 @@ String plugmachine_look_n_feel::add_line_breaks(String input, int width) {
 	return out;
 }
 
-plugmachine_gui::plugmachine_gui(plugmachine_dsp& p, int _width, int _height, float _target_dpi, float _scale_step, bool _do_banner, bool _do_scale) : AudioProcessorEditor(&p), audio_processor(p) {
+plugmachine_gui::plugmachine_gui(Component& c, plugmachine_dsp& p, int _width, int _height, float _target_dpi, float _scale_step, bool _do_banner, bool _do_scale) : audio_processor(p), component(c) {
 	width = _width;
 	height = _height;
 	target_dpi = _target_dpi;
@@ -62,26 +62,27 @@ plugmachine_gui::plugmachine_gui(plugmachine_dsp& p, int _width, int _height, fl
 plugmachine_gui::~plugmachine_gui() {
 }
 void plugmachine_gui::init(plugmachine_look_n_feel* _look_n_feel) {
-	if(_look_n_feel != nullptr)
-		look_n_feel = _look_n_feel;
+	look_n_feel = _look_n_feel;
 
 	if(audio_processor.ui_scale == -1)
 		audio_processor.set_ui_scale(target_dpi);
 	scaled_dpi = audio_processor.ui_scale;
 	ui_scales.push_back(scaled_dpi);
+	if(width != 0 && height != 0) {
 #ifdef BANNER
-	setSize(width*scaled_dpi,floor((height+(do_banner?(21.f/target_dpi):0))*scaled_dpi));
-	banner_offset = do_banner?floor(21.f/target_dpi*scaled_dpi)/getHeight():0;
+		component.setSize(width*scaled_dpi,floor((height+(do_banner?(21.f/target_dpi):0))*scaled_dpi));
+		banner_offset = do_banner?floor(21.f/target_dpi*scaled_dpi)/component.getHeight():0;
+	}
 #else
-	setSize(width*scaled_dpi,height*scaled_dpi);
+		component.setSize(width*scaled_dpi,height*scaled_dpi);
+	}
 	banner_offset = 0;
 #endif
-	setResizable(false, false);
-	setOpaque(true);
+	component.setOpaque(true);
 
 	context.setOpenGLVersionRequired(OpenGLContext::OpenGLVersion::openGL3_2);
 	context.setRenderer(this);
-	context.attachTo(*this);
+	context.attachTo(component);
 	startTimerHz(30);
 }
 void plugmachine_gui::close() {
@@ -159,16 +160,17 @@ void plugmachine_gui::draw_begin() {
 		reset_size = true;
 	}
 
-	float prev_scaled_dpi = scaled_dpi;
 	if(do_scale)
 		scaled_dpi = ui_scales[ui_scale_index]*dpi;
 	else
 		scaled_dpi = dpi;
 
-	if(scaled_dpi != prev_scaled_dpi || !frame_buffers_initiated) {
+	if(scaled_dpi != prev_scaled_dpi || !frame_buffers_initiated || frame_buffers_resize) {
+		frame_buffers_resize = false;
 		for(int i = 0; i < frame_buffers.size(); ++i) {
 			if(frame_buffers_initiated) {
-				if(!frame_buffers[i].scaled_x && !frame_buffers[i].scaled_y) continue;
+				if(!frame_buffers[i].scaled_x && !frame_buffers[i].scaled_y && !frame_buffers[i].to_resize) continue;
+				frame_buffers[i].to_resize = false;
 				frame_buffers[i].buffer->release();
 			}
 
@@ -185,6 +187,7 @@ void plugmachine_gui::draw_begin() {
 		frame_buffers_initiated = true;
 	}
 
+	prev_scaled_dpi = scaled_dpi;
 }
 void plugmachine_gui::draw_end() {
 
@@ -200,11 +203,11 @@ void plugmachine_gui::draw_end() {
 		banner_shader->setUniform("dpi",(float)fmax(scaled_dpi,1.f));
 #ifdef BETA
 		banner_shader->setUniform("texscale",494.f/banner_tex.getWidth(),21.f/banner_tex.getHeight());
-		banner_shader->setUniform("size",getWidth()/(494.f/target_dpi*ui_scales[ui_scale_index]),floor(21.f/target_dpi*ui_scales[ui_scale_index])/getHeight());
+		banner_shader->setUniform("size",component.getWidth()/(494.f/target_dpi*ui_scales[ui_scale_index]),floor(21.f/target_dpi*ui_scales[ui_scale_index])/component.getHeight());
 		banner_shader->setUniform("free",0.f);
 #else
 		banner_shader->setUniform("texscale",426.f/banner_tex.getWidth(),21.f/banner_tex.getHeight());
-		banner_shader->setUniform("size",getWidth()/(426.f/target_dpi*ui_scales[ui_scale_index]),floor(21.f/target_dpi*ui_scales[ui_scale_index])/getHeight());
+		banner_shader->setUniform("size",component.getWidth()/(426.f/target_dpi*ui_scales[ui_scale_index]),floor(21.f/target_dpi*ui_scales[ui_scale_index])/component.getHeight());
 		banner_shader->setUniform("free",1.f);
 #endif
 		banner_shader->setUniform("pos",banner_x);
@@ -214,7 +217,7 @@ void plugmachine_gui::draw_end() {
 #endif
 
 	std::lock_guard<std::mutex> guard(audio_processor.debug_mutex);
-	debug_font.draw_string(1,1,1,1,0,0,0,0.5,audio_processor.debug_text,0,.01,.99,0,1);
+	debug_font.draw_string(1,1,1,1,0,0,0,.5,audio_processor.debug_text,0,.01,.99,0,1);
 }
 void plugmachine_gui::draw_close() {
 	for(int i = 0; i < textures.size(); ++i)
@@ -232,26 +235,28 @@ void plugmachine_gui::draw_close() {
 void plugmachine_gui::update() {
 	if(reset_size) {
 		reset_size = false;
+		if(width != 0 && height != 0) {
 #ifdef BANNER
-		setSize(width*ui_scales[ui_scale_index],floor((height+(do_banner?(21.f/target_dpi):0))*ui_scales[ui_scale_index]));
-		if(do_banner)
-			banner_offset = floor(21.f/target_dpi*ui_scales[ui_scale_index])/getHeight();
+			component.setSize(width*ui_scales[ui_scale_index],floor((height+(do_banner?(21.f/target_dpi):0))*ui_scales[ui_scale_index]));
+			if(do_banner)
+				banner_offset = floor(21.f/target_dpi*ui_scales[ui_scale_index])/component.getHeight();
 #else
-		setSize(width*ui_scales[ui_scale_index],height*ui_scales[ui_scale_index]);
+			component.setSize(width*ui_scales[ui_scale_index],height*ui_scales[ui_scale_index]);
 #endif
+		}
 
 		for(int i = 0; i < fonts.size(); ++i) {
 			if(fonts[i]->is_scaled) {
-				fonts[i]->width = ((float)getWidth())/ui_scales[ui_scale_index];
-				fonts[i]->height = ((float)getHeight())/ui_scales[ui_scale_index];
+				fonts[i]->width = ((float)component.getWidth())/ui_scales[ui_scale_index];
+				fonts[i]->height = ((float)component.getHeight())/ui_scales[ui_scale_index];
 				fonts[i]->dpi = dpi*ui_scales[ui_scale_index];
 			} else {
-				fonts[i]->width = getWidth();
-				fonts[i]->height = getHeight();
+				fonts[i]->width = component.getWidth();
+				fonts[i]->height = component.getHeight();
 			}
 			fonts[i]->banner_offset = banner_offset;
 		}
-		look_n_feel->scale = ui_scales[ui_scale_index];
+		if(look_n_feel != nullptr) look_n_feel->scale = ui_scales[ui_scale_index];
 	}
 
 #ifdef BANNER
@@ -269,8 +274,8 @@ void plugmachine_gui::set_size(int _width, int _height) {
 #else
 		int h = height*ui_scales[ui_scale_index];
 #endif
-		if(w != getWidth() || h != getHeight())
-			setSize(w,h);
+		if(w != component.getWidth() || h != component.getHeight())
+			component.setSize(w,h);
 		return;
 	}
 	width = _width;
@@ -319,11 +324,21 @@ void plugmachine_gui::add_frame_buffer(OpenGLFrameBuffer* frame_buffer, int widt
 	buffer.wrap_t = wrap_t;
 	frame_buffers.push_back(buffer);
 }
+void plugmachine_gui::set_frame_buffer_size(OpenGLFrameBuffer* frame_buffer, int w, int h) {
+	for(int i = 0; i < frame_buffers.size(); ++i) {
+		if(frame_buffers[i].buffer == frame_buffer) {
+			frame_buffers[i].width = w;
+			frame_buffers[i].height = h;
+			frame_buffers[i].to_resize = true;
+			frame_buffers_resize = true;
+		}
+	}
+}
 void plugmachine_gui::add_font(cool_font* font) {
 	if(font->is_scaled)
 		font->draw_init(&context,banner_offset,368,334,dpi);
 	else
-		font->draw_init(&context,banner_offset,getWidth(),getHeight());
+		font->draw_init(&context,banner_offset,component.getWidth(),component.getHeight());
 	fonts.push_back(font);
 }
 

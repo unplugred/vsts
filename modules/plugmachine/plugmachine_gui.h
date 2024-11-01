@@ -35,9 +35,9 @@ public:
 	float scale = 1.f;
 };
 
-class plugmachine_gui : public AudioProcessorEditor, public OpenGLRenderer, public AudioProcessorValueTreeState::Listener, public Timer {
+class plugmachine_gui : public OpenGLRenderer, public AudioProcessorValueTreeState::Listener, public Timer {
 public:
-	void init(plugmachine_look_n_feel* _look_n_feel);
+	void init(plugmachine_look_n_feel* _look_n_feel = nullptr);
 	void close();
 	void draw_init();
 	void draw_begin();
@@ -53,7 +53,7 @@ public:
 	bool do_banner = true;
 	bool do_scale = true;
 
-	plugmachine_gui(plugmachine_dsp& p, int _width, int _height, float _target_dpi = 1.f, float _scale_step = .25f, bool _do_banner = true, bool _do_scale = true);
+	plugmachine_gui(Component& c, plugmachine_dsp& p, int _width, int _height, float _target_dpi = 1.f, float _scale_step = .25f, bool _do_banner = true, bool _do_scale = true);
 	~plugmachine_gui() override;
 
 	void add_listener(String name);
@@ -67,6 +67,8 @@ public:
 	void remove_frame_buffer(OpenGLFrameBuffer* frame_buffer);
 	void remove_shader(std::shared_ptr<OpenGLShaderProgram> shader);
 	void remove_font(cool_font* font);
+
+	void set_frame_buffer_size(OpenGLFrameBuffer* frame_buffer, int w, int h);
 
 	cool_debug_font debug_font = cool_debug_font();
 	void debug(String str, bool timestamp = true);
@@ -85,6 +87,7 @@ public:
 
 	float dpi = -10;
 	long unsigned int ui_scale_index = 0;
+	float prev_scaled_dpi = -10;
 	float scaled_dpi = -10;
 	float target_dpi = 1.f;
 	std::vector<float> ui_scales;
@@ -104,10 +107,11 @@ private:
 		int mag_filter = GL_LINEAR;
 		int wrap_s = GL_CLAMP_TO_EDGE;
 		int wrap_t = GL_CLAMP_TO_EDGE;
-
+		bool to_resize = false;
 	};
 
 	bool frame_buffers_initiated = false;
+	bool frame_buffers_resize = false;
 
 	plugmachine_look_n_feel* look_n_feel;
 
@@ -118,6 +122,7 @@ private:
 	std::vector<cool_font*> fonts;
 
 	plugmachine_dsp& audio_processor;
+	Component& component;
 
 #ifdef BANNER
 	float banner_x = 0;

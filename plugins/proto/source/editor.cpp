@@ -1,7 +1,7 @@
 #include "processor.h"
 #include "editor.h"
 
-ProtoAudioProcessorEditor::ProtoAudioProcessorEditor(ProtoAudioProcessor& p, int paramcount, pluginpreset state, pluginparams params) : audio_processor(p), plugmachine_gui(p, 30+106*2, 162+100*3) {
+ProtoAudioProcessorEditor::ProtoAudioProcessorEditor(ProtoAudioProcessor& p, int paramcount, pluginpreset state, pluginparams params) : audio_processor(p), AudioProcessorEditor(&p), plugmachine_gui(*this, p, 30+106*2, 162+100*3) {
 	for(int x = 0; x < 2; x++) {
 		for(int y = 0; y < 3; y++) {
 			int i = x+y*2;
@@ -24,6 +24,7 @@ ProtoAudioProcessorEditor::ProtoAudioProcessorEditor(ProtoAudioProcessor& p, int
 
 	calcvis();
 
+	setResizable(false,false);
 	init(&look_n_feel);
 }
 ProtoAudioProcessorEditor::~ProtoAudioProcessorEditor() {
@@ -424,6 +425,7 @@ void ProtoAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 		}
 
 		float value = initialvalue-(event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*(finemode?.0005f:.005f);
+		debug(value);
 		audio_processor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(value-valueoffset);
 
 		valueoffset = fmax(fmin(valueoffset,value+.1f),value-1.1f);
@@ -437,7 +439,7 @@ void ProtoAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 	if(dpi < 0) return;
 	if(hover > -1) {
 		audio_processor.undo_manager.setCurrentTransactionName(
-			(String)((knobs[hover].value - initialvalue) >= 0 ? "Increased " : "Decreased ") += knobs[hover].name);
+			(String)((knobs[hover].value-initialvalue)>=0?"Increased ":"Decreased ") += knobs[hover].name);
 		audio_processor.apvts.getParameter(knobs[hover].id)->endChangeGesture();
 		audio_processor.undo_manager.beginNewTransaction();
 		event.source.enableUnboundedMouseMovement(false);

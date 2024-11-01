@@ -51,7 +51,7 @@ struct mousepos {
 	bool automated = false;
 	int col = 0;
 };
-class ClickBoxAudioProcessorEditor : public plugmachine_gui {
+class ClickBoxAudioProcessorEditor : public AudioProcessorEditor, public plugmachine_gui {
 public:
 	ClickBoxAudioProcessorEditor(ClickBoxAudioProcessor&, int paramcount, pluginpreset state, pluginparams params);
 	~ClickBoxAudioProcessorEditor() override;
