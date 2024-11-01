@@ -1,7 +1,7 @@
 #include "processor.h"
 #include "editor.h"
 
-ClickBoxAudioProcessorEditor::ClickBoxAudioProcessorEditor(ClickBoxAudioProcessor& p, int paramcount, pluginpreset state, pluginparams params) : audio_processor(p), plugmachine_gui(p, 256, 256, 1.f, .5f, false) {
+ClickBoxAudioProcessorEditor::ClickBoxAudioProcessorEditor(ClickBoxAudioProcessor& p, int paramcount, pluginpreset state, pluginparams params) : audio_processor(p), AudioProcessorEditor(&p), plugmachine_gui(*this, p, 256, 256, 1.f, .5f, false) {
 	sliders[0].hy = 116;
 	sliders[0].hh = 146;
 	sliders[0].y = .4453125f;
@@ -62,6 +62,7 @@ ClickBoxAudioProcessorEditor::ClickBoxAudioProcessorEditor(ClickBoxAudioProcesso
 
 	for(int i = 0; i < 8; i++) randoms[i] = random.nextFloat();
 
+	setResizable(false,false);
 	init(&look_n_feel);
 }
 ClickBoxAudioProcessorEditor::~ClickBoxAudioProcessorEditor() {

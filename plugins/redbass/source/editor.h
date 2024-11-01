@@ -34,7 +34,7 @@ struct knob {
 		return val*(maximumvalue-minimumvalue)+minimumvalue;
 	}
 };
-class RedBassAudioProcessorEditor : public plugmachine_gui {
+class RedBassAudioProcessorEditor : public AudioProcessorEditor, public plugmachine_gui {
 public:
 	RedBassAudioProcessorEditor(RedBassAudioProcessor&, int paramcount, pluginpreset state, pluginparams params);
 	~RedBassAudioProcessorEditor() override;

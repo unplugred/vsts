@@ -1,7 +1,7 @@
 #include "processor.h"
 #include "editor.h"
 
-PFAudioProcessorEditor::PFAudioProcessorEditor(PFAudioProcessor& p, int paramcount, pluginpreset state, pluginparams params) : audio_processor(p), plugmachine_gui(p, 242, 462) {
+PFAudioProcessorEditor::PFAudioProcessorEditor(PFAudioProcessor& p, int paramcount, pluginpreset state, pluginparams params) : audio_processor(p), AudioProcessorEditor(&p), plugmachine_gui(*this, p, 242, 462) {
 	for(int x = 0; x < 2; x++) {
 		for(int y = 0; y < 3; y++) {
 			int i = x+y*2;

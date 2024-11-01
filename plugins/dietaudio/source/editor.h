@@ -35,7 +35,7 @@ struct knob {
 		return val*(maximumvalue-minimumvalue)+minimumvalue;
 	}
 };
-class DietAudioAudioProcessorEditor : public plugmachine_gui {
+class DietAudioAudioProcessorEditor : public AudioProcessorEditor, public plugmachine_gui {
 public:
 	DietAudioAudioProcessorEditor(DietAudioAudioProcessor&, int paramcount, pluginpreset state, pluginparams params);
 	~DietAudioAudioProcessorEditor() override;

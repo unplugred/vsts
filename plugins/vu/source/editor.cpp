@@ -1,7 +1,7 @@
 #include "processor.h"
 #include "editor.h"
 
-VUAudioProcessorEditor::VUAudioProcessorEditor(VUAudioProcessor& p, int paramcount, pluginpreset state, potentiometer pots[]) : audio_processor(p), plugmachine_gui(p, 0, 0, 1.f, 1.f, true, false) {
+VUAudioProcessorEditor::VUAudioProcessorEditor(VUAudioProcessor& p, int paramcount, pluginpreset state, potentiometer pots[]) : audio_processor(p), AudioProcessorEditor(&p), plugmachine_gui(*this, p, 0, 0, 1.f, 1.f, true, false) {
 	for(int i = 0; i < knobcount; i++) {
 		knobs[i].id = pots[i].id;
 		knobs[i].name = pots[i].name;
@@ -15,16 +15,15 @@ VUAudioProcessorEditor::VUAudioProcessorEditor(VUAudioProcessor& p, int paramcou
 	multiplier = 1.f/Decibels::decibelsToGain(knobs[0].value);
 	stereodamp = knobs[2].value;
 
-	init(&look_n_feel);
+	init();
 
-	int h = audio_processor.height.get();
-	float w = h*(32.f*(stereodamp+1)/19.f);
+	set_size(round(audio_processor.height.get()*(32.f*(stereodamp+1)/19.f)),audio_processor.height.get());
 #ifdef BANNER
-	getConstrainer()->setFixedAspectRatio(32.f*(stereodamp+1)/19.f-21.f/w);
+	banner_offset = 21.f/getHeight();
+	getConstrainer()->setFixedAspectRatio(32.f*(stereodamp+1)/19.f-21.f/width);
 #else
 	getConstrainer()->setFixedAspectRatio(32.f*(stereodamp+1)/19.f);
 #endif
-	set_size(round(w),h);
 	setResizable(true,true);
 	setResizeLimits(200,200,1920,1080);
 

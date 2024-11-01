@@ -1,7 +1,7 @@
 #include "processor.h"
 #include "editor.h"
 
-MPaintAudioProcessorEditor::MPaintAudioProcessorEditor(MPaintAudioProcessor& p, unsigned char soundd) : audio_processor(p), plugmachine_gui(p, 234, 20, 2.f, 1.f, false) {
+MPaintAudioProcessorEditor::MPaintAudioProcessorEditor(MPaintAudioProcessor& p, unsigned char soundd) : audio_processor(p), AudioProcessorEditor(&p), plugmachine_gui(*this, p, 234, 20, 2.f, 1.f, false) {
 	add_listener("sound");
 	sound = soundd;
 	error = audio_processor.error.get();

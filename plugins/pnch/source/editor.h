@@ -16,7 +16,7 @@ public:
 	Colour c2 = Colour::fromFloatRGBA(0.f,0.f,0.f,1.f);
 	String font = "n";
 };
-class PNCHAudioProcessorEditor : public plugmachine_gui {
+class PNCHAudioProcessorEditor : public AudioProcessorEditor, public plugmachine_gui {
 public:
 	PNCHAudioProcessorEditor(PNCHAudioProcessor&, float amount);
 	~PNCHAudioProcessorEditor() override;

@@ -1,7 +1,7 @@
 #include "processor.h"
 #include "editor.h"
 
-PrismaAudioProcessorEditor::PrismaAudioProcessorEditor(PrismaAudioProcessor& p, pluginpreset states, pluginparams pots) : audio_processor(p), plugmachine_gui(p, BAND_COUNT>1?478:152, (BAND_COUNT>1?249:222)+78*states.modulecount) {
+PrismaAudioProcessorEditor::PrismaAudioProcessorEditor(PrismaAudioProcessor& p, pluginpreset states, pluginparams pots) : audio_processor(p), AudioProcessorEditor(&p), plugmachine_gui(*this, p, BAND_COUNT>1?478:152, (BAND_COUNT>1?249:222)+78*states.modulecount) {
 	modules[0].name = "None";
 	modules[0].description = "";
 	modules[0].colors[6] = .0f;

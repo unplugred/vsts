@@ -19,7 +19,7 @@ struct knob {
 	}
 };
 
-class VUAudioProcessorEditor : public plugmachine_gui {
+class VUAudioProcessorEditor : public AudioProcessorEditor, public plugmachine_gui {
 public:
 	VUAudioProcessorEditor(VUAudioProcessor&, int paramcount, pluginpreset state, potentiometer pots[]);
 	~VUAudioProcessorEditor() override;
@@ -85,8 +85,6 @@ private:
 	OpenGLTexture vutex;
 	OpenGLTexture mptex;
 	OpenGLTexture lgtex;
-
-	plugmachine_look_n_feel look_n_feel;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(VUAudioProcessorEditor)
 };

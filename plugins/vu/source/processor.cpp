@@ -85,7 +85,7 @@ void VUAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& midi
 	}
 
 	if(JUCEApplication::isStandaloneApp()) buffer.clear();
-	else for(auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
+	else for(int i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
 		buffer.clear(i, 0, buffer.getNumSamples());
 
 	buffercount = buffercount.get()+1;

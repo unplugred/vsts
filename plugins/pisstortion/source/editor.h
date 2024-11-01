@@ -48,7 +48,7 @@ struct bubble {
 	float yspeed = 0;
 	float xoffset = 0;
 };
-class PisstortionAudioProcessorEditor : public plugmachine_gui {
+class PisstortionAudioProcessorEditor : public AudioProcessorEditor, public plugmachine_gui {
 public:
 	PisstortionAudioProcessorEditor(PisstortionAudioProcessor&, int paramcount, pluginpreset state, pluginparams params);
 	~PisstortionAudioProcessorEditor() override;

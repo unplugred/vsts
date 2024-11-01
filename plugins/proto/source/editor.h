@@ -35,7 +35,7 @@ struct knob {
 		return val*(maximumvalue-minimumvalue)+minimumvalue;
 	}
 };
-class ProtoAudioProcessorEditor : public plugmachine_gui {
+class ProtoAudioProcessorEditor : public AudioProcessorEditor, public plugmachine_gui {
 public:
 	ProtoAudioProcessorEditor(ProtoAudioProcessor&, int paramcount, pluginpreset state, pluginparams params);
 	~ProtoAudioProcessorEditor() override;

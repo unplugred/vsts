@@ -1,7 +1,7 @@
 #include "processor.h"
 #include "editor.h"
 
-PNCHAudioProcessorEditor::PNCHAudioProcessorEditor(PNCHAudioProcessor& p, float amountt) : audio_processor(p), plugmachine_gui(p, 128, 148, 1.f, 1.f) {
+PNCHAudioProcessorEditor::PNCHAudioProcessorEditor(PNCHAudioProcessor& p, float amountt) : audio_processor(p), AudioProcessorEditor(&p), plugmachine_gui(*this, p, 128, 148, 1.f, 1.f) {
 	amount = amountt;
 	add_listener("amount");
 

@@ -17,7 +17,7 @@ public:
 	Colour ht = Colour::fromFloatRGBA(.99216f,.69412f,.98824f,1.f);
 	String font = "n";
 };
-class MPaintAudioProcessorEditor : public plugmachine_gui {
+class MPaintAudioProcessorEditor : public AudioProcessorEditor, public plugmachine_gui {
 public:
 	MPaintAudioProcessorEditor(MPaintAudioProcessor&, unsigned char soundd);
 	~MPaintAudioProcessorEditor() override;
