@@ -116,6 +116,10 @@ plugins = [{
 },{
 	"name": "Diet Audio",
 	"code": "Diet"
+},{
+	"name": "Scope",
+	"code": "Scop",
+	"standalone": True
 }]
 for i in range(len(plugins)):
 	if "standalone" not in plugins[i]:
