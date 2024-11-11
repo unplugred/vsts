@@ -71,13 +71,13 @@ void ScopeAudioProcessorEditor::newOpenGLContextCreated() {
 //CLEAR VERT
 R"(#version 150 core
 in vec2 coords;
-void main(){
+void main() {
 	gl_Position = vec4(coords*2-1,0,1);
 })",
 //CLEAR FRAG
 R"(#version 150 core
 out vec4 fragColor;
-void main(){
+void main() {
 	fragColor = vec4(0,0,0,.7);
 })");
 	lineshader = add_shader(
@@ -86,16 +86,20 @@ R"(#version 150 core
 in vec3 coords;
 uniform float banner;
 out float luminocity;
-void main(){
+out float linex;
+void main() {
 	gl_Position = vec4(vec2(coords.x,coords.y*(1-banner)-banner),0,1);
-	luminocity = coords.z;
+	luminocity = abs(coords.z);
+	linex = coords.z>0?1:-1;
 })",
 //LINE FRAG
 R"(#version 150 core
 in float luminocity;
+in float linex;
+uniform float scaling;
 out vec4 fragColor;
-void main(){
-	fragColor = vec4(vec3(luminocity*.2f),1);
+void main() {
+	fragColor = vec4(vec3(min(1,luminocity)*.2f*min(1,(1-abs(linex))*scaling*luminocity)),1);
 })");
 	downscaleshader = add_shader(
 //DOWNSCALE VERT
@@ -103,7 +107,7 @@ R"(#version 150 core
 in vec2 coords;
 uniform float banner;
 out vec2 uv;
-void main(){
+void main() {
 	gl_Position = vec4(vec2(coords.x,coords.y*(1-banner))*2-1,0,1);
 	uv = coords;
 })",
@@ -113,7 +117,7 @@ in vec2 uv;
 uniform sampler2D rendertex;
 uniform float scale;
 out vec4 fragColor;
-void main(){
+void main() {
 	fragColor = vec4(vec3(texture(rendertex,uv*scale).r),0.5);
 })");
 	baseshader = add_shader(
@@ -122,7 +126,7 @@ R"(#version 150 core
 in vec2 coords;
 uniform float banner;
 out vec2 uv;
-void main(){
+void main() {
 	gl_Position = vec4(vec2(coords.x,coords.y*(1-banner)+banner)*2-1,0,1);
 	uv = coords;
 })",
@@ -148,16 +152,17 @@ vec3 hueshift(vec3 color, float shift) {
 }
 void main() {
 	float render = texture(rendertex,uv).r*gweight[0];
+	vec2 uvadd = vec2(.25,.333)*)"+(String)(LINEWIDTH*.7f)+R"(;
 	for(int i = 1; i < 4; i++) {
-		render += texture(rendertex,uv+vec2(i* .003,i* .004)).r*gweight[i];
-		render += texture(rendertex,uv+vec2(i*-.003,i* .004)).r*gweight[i];
-		render += texture(rendertex,uv+vec2(i* .003,i*-.004)).r*gweight[i];
-		render += texture(rendertex,uv+vec2(i*-.003,i*-.004)).r*gweight[i];
+		render += texture(rendertex,uv+i*uvadd           ).r*gweight[i];
+		render += texture(rendertex,uv+i*uvadd*vec2(-1,1)).r*gweight[i];
+		render += texture(rendertex,uv+i*uvadd*vec2(1,-1)).r*gweight[i];
+		render += texture(rendertex,uv+i*uvadd*       -1 ).r*gweight[i];
 	}
-	render = sin(render*1.5707963268)*1;
+	render = sin(render*1.5707963268);
 	float value = max(bgcol.r,max(bgcol.g,bgcol.b));
 	float bloom = texture(downscaletex,uv).r;
-	bloom = bloom*bloom*(value+1)*1;
+	bloom = bloom*bloom*(value+1)*.2;
 	vec3 ui = texture(basetex,uv).rgb;
 	//ui.b *= value;
 	//ui.g = 1-((1-ui.g)*grid);
@@ -197,18 +202,20 @@ void ScopeAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glDisableVertexAttribArray(coord);
 
 	// LINE
-	glLineWidth(width/150.f); //TODO *dpi???
+	glBlendFunc(GL_ONE, GL_ONE);
 	lineshader->use();
 	lineshader->setUniform("banner",banner_offset);
+	lineshader->setUniform("scaling",(float)(width*dpi*LINEWIDTH*.15f));
 	coord = context.extensions.glGetAttribLocation(lineshader->getProgramID(),"coords");
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,3,GL_FLOAT,GL_FALSE,0,0);
 	for(int i = 0; i < channelnum; ++i) {
-		context.extensions.glBufferData(GL_ARRAY_BUFFER,sizeof(float)*linew*3,&line[i*2400],GL_DYNAMIC_DRAW);
-		glDrawArrays(GL_LINE_STRIP,0,linew);
+		context.extensions.glBufferData(GL_ARRAY_BUFFER,sizeof(float)*linew*6,&line[i*4800],GL_DYNAMIC_DRAW);
+		glDrawArrays(GL_TRIANGLE_STRIP,0,linew*2);
 	}
 	context.extensions.glDisableVertexAttribArray(coord);
 	context.extensions.glBufferData(GL_ARRAY_BUFFER,sizeof(float)*8,square,GL_DYNAMIC_DRAW);
+	glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
 
 	framebuffer.releaseAsRenderingTarget();
 	downscalebuffer.makeCurrentRenderingTarget();
@@ -265,40 +272,77 @@ void ScopeAudioProcessorEditor::calcvis() {
 	if(knobs[0].value > .5) oscichannelnum = fmin(oscichannelnum,2);
 	if(channelnum != (knobs[0].value<.5?oscichannelnum:1)) {
 		channelnum = knobs[0].value<.5?oscichannelnum:1;
-		line.resize(channelnum*2400);
+		line.resize(channelnum*4800);
 		osci.resize(oscichannelnum*800);
 	}
 	for(int sample = 0; sample < 800; ++sample) {
 		int index = fmod(audio_processor.syncindex.get()+sample,audio_processor.oscisize);
 		for(int channel = 0; channel < oscichannelnum; ++channel)
 			osci[channel*800+sample] = audio_processor.osci[channel*audio_processor.oscisize+index];
+		oscimode[sample] = audio_processor.oscimode[index];
 	}
 
 	// LINE CALCULOUS
-	float width = 0;
-	int readpos = 0;
+	float pixel = 2.f/(linew-1);
+	float time = knobs[0].value<.5?(pow(knobs[1].value,5)*240+.05f):(pow(knobs[2].value,4)*16+.05f);
 	float amp = Decibels::decibelsToGain(ampdamp.nextvalue(knobs[3].value)*34);
-	if(knobs[0].value < .5) { // SCOPE
-		float time = pow(knobs[1].value,5)*240+.05f;
-		linew = (time<1?time:(fmod(time,1)+1))*400;
-		width = 2.f/(linew-1);
-		for(int i = 0; i < linew; ++i) {
-			readpos = i+(800-linew);
-			for(int c = 0; c < channelnum; ++c) {
-				line[c*2400+i*3  ] = i*width-1;
-				line[c*2400+i*3+1] = amp*osci[readpos+c*800];
-				line[c*2400+i*3+2] = 1;
-			}
+	linew = (time<1?time:(fmod(time,1)+1))*400;
+	float luminocity = 1;
+
+	for(int c = 0; c < channelnum; ++c) {
+		int readpos = 800-linew;
+		float nextx = -1;
+		float nexty = 0;
+		if(knobs[0].value < .5) { // SCOPE
+			nextx = -1;
+			nexty = amp*osci[readpos+c*800];
+		} else { // PANORAMA
+			nextx = amp*osci[readpos]*.75f;
+			nexty = amp*osci[readpos+(oscichannelnum>1?800:0)]*-1;
 		}
-	} else { // PANORAMA
-		float time = pow(knobs[2].value,4)*16+.05f;
-		bool is_stereo = audio_processor.channelnum > 1;
-		linew = (time<1?time:(fmod(time,1)+1))*400;
+		float x = nextx;
+		float y = nexty;
+		float prevx = nextx;
+		float prevy = nexty;
+		float angle1 = 0;
+		float angle2 = 0;
 		for(int i = 0; i < linew; ++i) {
-			readpos = i+(800-linew);
-			line[i*3  ] = amp*osci[readpos]*.75f;
-			line[i*3+1] = amp*osci[readpos+(is_stereo?800:0)]*-1;
-			line[i*3+2] = (1-(1-(float)i/linew)*time*.06f);
+			int readpos = i+1+(800-linew);
+			prevx = x;
+			prevy = y;
+			x = nextx;
+			y = nexty;
+			if((i+1) < linew) {
+				if(knobs[0].value < .5) { // SCOPE
+					nextx = (i+1)*pixel-1;
+					nexty = amp*osci[readpos+c*800];
+				} else { // PANORAMA
+					nextx = amp*osci[readpos]*.75f;
+					nexty = amp*osci[readpos+(oscichannelnum>1?800:0)]*-1;
+				}
+			}
+			if(knobs[0].value > .5) luminocity = 1-pow(1-((float)i)/linew,4);
+
+			angle1 = std::atan2(y-prevy,x-prevx);
+			if((i+1) < linew) angle2 = std::atan2(y-nexty,x-nextx);
+			while((angle1-angle2) < -1.5707963268) angle1 += 3.1415926535*2;
+			while((angle1-angle2) >  1.5707963268) angle1 -= 3.1415926535*2;
+			float angle = (angle1+angle2)*.5;
+
+			if(oscimode[readpos-1]) {
+				line[c*4800+i*6  ] = x;
+				line[c*4800+i*6+3] = x;
+				line[c*4800+i*6+1] = y+LINEWIDTH*.75f;
+				line[c*4800+i*6+4] = -line[c*4800+i*6+1];
+				line[c*4800+i*6+2] = luminocity+y/(LINEWIDTH*.75f);
+			} else {
+				line[c*4800+i*6  ] = x+cos(angle)*LINEWIDTH;
+				line[c*4800+i*6+3] = x-cos(angle)*LINEWIDTH;
+				line[c*4800+i*6+1] = y+sin(angle)*LINEWIDTH*.75f;
+				line[c*4800+i*6+4] = y-sin(angle)*LINEWIDTH*.75f;
+				line[c*4800+i*6+2] = luminocity;
+			}
+			line[c*4800+i*6+5] = -line[c*4800+i*6+2];
 		}
 	}
 }

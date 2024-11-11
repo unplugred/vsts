@@ -101,6 +101,7 @@ public:
 	const int paramcount = 10;
 
 	std::vector<float> osci;
+	std::vector<bool> oscimode;
 	int oscisize = 0;
 	Atomic<int> syncindex = 0;
 
