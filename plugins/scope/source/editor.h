@@ -4,6 +4,8 @@
 #include "processor.h"
 using namespace gl;
 
+#define LINEWIDTH 0.01
+
 struct knob {
 	float value = .5f;
 	int hoverstate = 0;
@@ -44,6 +46,7 @@ public:
 	functions::dampendvalue ampdamp;
 	std::vector<float> line;
 	std::vector<float> osci;
+	bool oscimode[800];
 	int channelnum = 0;
 	int linew = 0;
 

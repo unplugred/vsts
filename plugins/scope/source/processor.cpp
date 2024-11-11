@@ -77,7 +77,9 @@ void ScopeAudioProcessor::reseteverything() {
 
 	oscisize = samplerate/30+800;
 	osci.resize(channelnum*oscisize);
+	oscimode.resize(oscisize);
 	for(int i = 0; i < (channelnum*oscisize); ++i) osci[i] = 0;
+	for(int i = 0; i < oscisize; ++i) oscimode[i] = 0;
 
 	for(int i = 0; i < paramcount; i++) if(params.pots[i].smoothtime > 0)
 		params.pots[i].smooth.reset(samplerate*(params.oversampling?2:1), params.pots[i].smoothtime);
@@ -141,12 +143,15 @@ void ScopeAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& m
 		++oscskip;
 		if(oscskip >= floor(time)) {
 			oscskip = 0;
-			if(state.values[0] < .5 && time > 50)
+			if(state.values[0] < .5 && time > 50) {
+				oscimode[oscindex] = true;
 				for(int channel = 0; channel < channelnum; ++channel)
-					osci[channel*oscisize+oscindex] = sqrt((1.f/fmax(1,floor(time)))*osci[channel*oscisize+oscindex])*(fmod(oscindex,2)*2-1);
-			else
+					osci[channel*oscisize+oscindex] = sqrt((1.f/fmax(1,floor(time)))*osci[channel*oscisize+oscindex]);
+			} else {
+				oscimode[oscindex] = false;
 				for(int channel = 0; channel < channelnum; ++channel)
 					osci[channel*oscisize+oscindex] *= (1.f/fmax(1,floor(time)));
+			}
 
 			oscindex++;
 			if(oscindex >= oscisize) oscindex = 0;
