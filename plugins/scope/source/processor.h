@@ -1,6 +1,8 @@
 #pragma once
 #include "includes.h"
-#include "functions.h"
+
+#define SYNCSNUM 20
+#define CROSSESNUM 100
 
 struct potentiometer {
 public:
@@ -109,15 +111,18 @@ public:
 	int oscindex = 0;
 
 	float prevsample = 0;
-	int crosses[100];
+	int crosses[CROSSESNUM];
+	bool crosseschecked[CROSSESNUM];
 	int crossesindex = 0;
 	int prevsync = 0;
-	int syncs[100];
+	int prevsynctime = 0;
+	int prevbiggest = 0;
+	int syncs[SYNCSNUM];
 	int syncsindex = 0;
-	int syncssorted[20];
-	double cyclelength = 1;
-	double syncpoint = 0;
-	functions::dampendvalue damping;
+	int syncssorted[SYNCSNUM];
+	float cyclelength = 1;
+	float syncpoint = 0;
+	float syncvalue = -1;
 
 	Atomic<int> sleep = 0;
 	Atomic<int> height = 400;
