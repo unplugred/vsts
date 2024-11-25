@@ -76,19 +76,22 @@ void main() {
 })",
 //CLEAR FRAG
 R"(#version 150 core
+uniform float opacity;
 out vec4 fragColor;
 void main() {
-	fragColor = vec4(0,0,0,.7);
+	fragColor = vec4(0,0,0,opacity);
 })");
 	lineshader = add_shader(
 //LINE VERT
 R"(#version 150 core
 in vec3 coords;
 uniform float banner;
+uniform float bufferscale;
 out float luminocity;
 out float linex;
 void main() {
-	gl_Position = vec4(vec2(coords.x,coords.y*(1-banner)-banner),0,1);
+	vec2 pos = (coords.xy*.5+.5)*bufferscale*2-1;
+	gl_Position = vec4(vec2(pos.x,pos.y*(1-banner)-banner),0,1);
 	luminocity = abs(coords.z);
 	linex = coords.z>0?1:-1;
 })",
@@ -97,28 +100,10 @@ R"(#version 150 core
 in float luminocity;
 in float linex;
 uniform float scaling;
+uniform float opacity;
 out vec4 fragColor;
 void main() {
-	fragColor = vec4(vec3(min(1,luminocity)*.2f*min(1,(1-abs(linex))*scaling*luminocity)),1);
-})");
-	downscaleshader = add_shader(
-//DOWNSCALE VERT
-R"(#version 150 core
-in vec2 coords;
-uniform float banner;
-out vec2 uv;
-void main() {
-	gl_Position = vec4(vec2(coords.x,coords.y*(1-banner))*2-1,0,1);
-	uv = coords;
-})",
-//DOWNSCALE FRAG
-R"(#version 150 core
-in vec2 uv;
-uniform sampler2D rendertex;
-uniform float scale;
-out vec4 fragColor;
-void main() {
-	fragColor = vec4(vec3(texture(rendertex,uv*scale).r),0.5);
+	fragColor = vec4(vec3(min(1,(1-abs(linex))*scaling*luminocity)),min(1,luminocity)*opacity);
 })");
 	baseshader = add_shader(
 //BASE VERT
@@ -151,18 +136,23 @@ vec3 hueshift(vec3 color, float shift) {
 	return color;
 }
 void main() {
-	float render = texture(rendertex,uv).r*gweight[0];
-	vec2 uvadd = vec2(.25,.333)*)"+(String)(LINEWIDTH*.7f)+R"(;
+	float render = texture(   rendertex,uv).r*gweight[0];
+	float bloom  = texture(downscaletex,uv).r*gweight[0];
+	vec2 uvadd    = vec2(.25,.333)*)"+(String)(     LINEWIDTH*.7f)+R"(;
+	vec2 bloomadd = vec2(.25,.333)*)"+(String)(BLOOMLINEWIDTH*.7f)+R"(;
 	for(int i = 1; i < 4; i++) {
-		render += texture(rendertex,uv+i*uvadd           ).r*gweight[i];
-		render += texture(rendertex,uv+i*uvadd*vec2(-1,1)).r*gweight[i];
-		render += texture(rendertex,uv+i*uvadd*vec2(1,-1)).r*gweight[i];
-		render += texture(rendertex,uv+i*uvadd*       -1 ).r*gweight[i];
+		render += texture(   rendertex,uv+i*   uvadd           ).r*gweight[i];
+		render += texture(   rendertex,uv+i*   uvadd*vec2(-1,1)).r*gweight[i];
+		render += texture(   rendertex,uv+i*   uvadd*vec2(1,-1)).r*gweight[i];
+		render += texture(   rendertex,uv+i*   uvadd*       -1 ).r*gweight[i];
+		bloom  += texture(downscaletex,uv+i*bloomadd           ).r*gweight[i];
+		bloom  += texture(downscaletex,uv+i*bloomadd*vec2(-1,1)).r*gweight[i];
+		bloom  += texture(downscaletex,uv+i*bloomadd*vec2(1,-1)).r*gweight[i];
+		bloom  += texture(downscaletex,uv+i*bloomadd*       -1 ).r*gweight[i];
 	}
 	render = sin(render*1.5707963268);
 	float value = max(bgcol.r,max(bgcol.g,bgcol.b));
-	float bloom = texture(downscaletex,uv).r;
-	bloom = bloom*bloom*(value+1)*.2;
+	bloom = bloom*bloom*bloom*.3*(value+1);
 	vec3 ui = texture(basetex,uv).rgb;
 	//ui.b *= value;
 	//ui.g = 1-((1-ui.g)*grid);
@@ -176,7 +166,7 @@ void main() {
 	add_texture(&noisetex,BinaryData::noise_png,BinaryData::noise_pngSize,GL_NEAREST,GL_NEAREST,GL_REPEAT,GL_REPEAT);
 
 	add_frame_buffer(&framebuffer,width,height);
-	add_frame_buffer(&downscalebuffer,20,15,false,false);
+	add_frame_buffer(&downscalebuffer,200/DOWNSCALEFACTOR,150/DOWNSCALEFACTOR,false,false);
 
 	draw_init();
 }
@@ -195,6 +185,7 @@ void ScopeAudioProcessorEditor::renderOpenGL() {
 
 	// BG CLEAR
 	clearshader->use();
+	clearshader->setUniform("opacity",.7f);
 	auto coord = context.extensions.glGetAttribLocation(clearshader->getProgramID(),"coords");
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
@@ -202,14 +193,16 @@ void ScopeAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glDisableVertexAttribArray(coord);
 
 	// LINE
-	glBlendFunc(GL_ONE, GL_ONE);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 	lineshader->use();
 	lineshader->setUniform("banner",banner_offset);
 	lineshader->setUniform("scaling",(float)(width*dpi*LINEWIDTH*.15f));
+	lineshader->setUniform("opacity",.2f);
+	lineshader->setUniform("bufferscale",1.f);
 	coord = context.extensions.glGetAttribLocation(lineshader->getProgramID(),"coords");
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,3,GL_FLOAT,GL_FALSE,0,0);
-	for(int i = 0; i < (knobs[0].value<.5?audio_processor.channelnum:1); ++i) {
+	for(int i = 0; i < channelnum; ++i) {
 		context.extensions.glBufferData(GL_ARRAY_BUFFER,sizeof(float)*linew*6,&line[i*4800],GL_DYNAMIC_DRAW);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,linew*2);
 	}
@@ -220,18 +213,30 @@ void ScopeAudioProcessorEditor::renderOpenGL() {
 	framebuffer.releaseAsRenderingTarget();
 	downscalebuffer.makeCurrentRenderingTarget();
 
-	// BLOOM
-	downscaleshader->use();
-	coord = context.extensions.glGetAttribLocation(downscaleshader->getProgramID(),"coords");
+	// BLOOM CLEAR
+	clearshader->use();
+	clearshader->setUniform("opacity",.3f);
+	coord = context.extensions.glGetAttribLocation(clearshader->getProgramID(),"coords");
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
-	context.extensions.glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D,framebuffer.getTextureID());
-	downscaleshader->setUniform("rendertex",0);
-	downscaleshader->setUniform("banner",banner_offset);
-	downscaleshader->setUniform("scale",width/20.f);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	context.extensions.glDisableVertexAttribArray(coord);
+
+	// BLOOM LINE
+	lineshader->use();
+	lineshader->setUniform("banner",banner_offset);
+	lineshader->setUniform("scaling",1.f);
+	lineshader->setUniform("opacity",.04f);
+	lineshader->setUniform("bufferscale",(200/DOWNSCALEFACTOR)/((float)width));
+	coord = context.extensions.glGetAttribLocation(lineshader->getProgramID(),"coords");
+	context.extensions.glEnableVertexAttribArray(coord);
+	context.extensions.glVertexAttribPointer(coord,3,GL_FLOAT,GL_FALSE,0,0);
+	for(int i = 0; i < channelnum; ++i) {
+		context.extensions.glBufferData(GL_ARRAY_BUFFER,sizeof(float)*linew*6,&bloomline[i*4800],GL_DYNAMIC_DRAW);
+		glDrawArrays(GL_TRIANGLE_STRIP,0,linew*2);
+	}
+	context.extensions.glDisableVertexAttribArray(coord);
+	context.extensions.glBufferData(GL_ARRAY_BUFFER,sizeof(float)*8,square,GL_DYNAMIC_DRAW);
 
 	downscalebuffer.releaseAsRenderingTarget();
 
@@ -271,6 +276,7 @@ void ScopeAudioProcessorEditor::calcvis() {
 	if(channelnum != (knobs[0].value<.5?audio_processor.channelnum:1)) {
 		channelnum = knobs[0].value<.5?audio_processor.channelnum:1;
 		line.resize(channelnum*4800);
+		bloomline.resize(channelnum*4800);
 	}
 
 	// LINE CALCULOUS
@@ -326,14 +332,23 @@ void ScopeAudioProcessorEditor::calcvis() {
 				line[c*4800+i*6+1] = y+LINEWIDTH*.75f;
 				line[c*4800+i*6+4] = -line[c*4800+i*6+1];
 				line[c*4800+i*6+2] = luminocity+y/(LINEWIDTH*.75f);
+				bloomline[c*4800+i*6+2] = line[c*4800+i*6+2]*.08f;
+				bloomline[c*4800+i*6+5] = line[c*4800+i*6+5]*.08f;
 			} else {
 				line[c*4800+i*6  ] = x+cos(angle)*LINEWIDTH;
 				line[c*4800+i*6+3] = x-cos(angle)*LINEWIDTH;
 				line[c*4800+i*6+1] = y+sin(angle)*LINEWIDTH*.75f;
 				line[c*4800+i*6+4] = y-sin(angle)*LINEWIDTH*.75f;
 				line[c*4800+i*6+2] = luminocity;
+				bloomline[c*4800+i*6+2] = line[c*4800+i*6+2];
+				bloomline[c*4800+i*6+5] = line[c*4800+i*6+5];
 			}
 			line[c*4800+i*6+5] = -line[c*4800+i*6+2];
+
+			bloomline[c*4800+i*6  ] = line[c*4800+i*6  ]+cos(angle)*BLOOMLINEWIDTH;
+			bloomline[c*4800+i*6+3] = line[c*4800+i*6+3]-cos(angle)*BLOOMLINEWIDTH;
+			bloomline[c*4800+i*6+1] = line[c*4800+i*6+1]+sin(angle)*BLOOMLINEWIDTH*.75f;
+			bloomline[c*4800+i*6+4] = line[c*4800+i*6+4]-sin(angle)*BLOOMLINEWIDTH*.75f;
 		}
 	}
 

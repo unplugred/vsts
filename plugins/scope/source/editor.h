@@ -5,6 +5,8 @@
 using namespace gl;
 
 #define LINEWIDTH 0.01
+#define BLOOMLINEWIDTH 0.15
+#define DOWNSCALEFACTOR 5
 
 struct knob {
 	float value = .5f;
@@ -45,6 +47,7 @@ public:
 
 	functions::dampendvalue ampdamp;
 	std::vector<float> line;
+	std::vector<float> bloomline;
 	int channelnum = 0;
 	int linew = 0;
 
@@ -59,10 +62,8 @@ private:
 	std::shared_ptr<OpenGLShaderProgram> clearshader;
 
 	OpenGLFrameBuffer framebuffer;
-	std::shared_ptr<OpenGLShaderProgram> lineshader;
-
 	OpenGLFrameBuffer downscalebuffer;
-	std::shared_ptr<OpenGLShaderProgram> downscaleshader;
+	std::shared_ptr<OpenGLShaderProgram> lineshader;
 
 	OpenGLTexture noisetex;
 	OpenGLTexture basetex;
