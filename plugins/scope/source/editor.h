@@ -45,8 +45,6 @@ public:
 
 	functions::dampendvalue ampdamp;
 	std::vector<float> line;
-	std::vector<float> osci;
-	bool oscimode[800];
 	int channelnum = 0;
 	int linew = 0;
 

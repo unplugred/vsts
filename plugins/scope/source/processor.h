@@ -1,9 +1,6 @@
 #pragma once
 #include "includes.h"
 
-#define SYNCSNUM 20
-#define CROSSESNUM 100
-
 struct potentiometer {
 public:
 	enum ptype {
@@ -104,25 +101,14 @@ public:
 
 	std::vector<float> osci;
 	std::vector<bool> oscimode;
+	std::vector<int> osciscore;
+	std::vector<float> line;
+	bool linemode[800];
 	int oscisize = 0;
-	Atomic<int> syncindex = 0;
+	Atomic<bool> frameready = false;
 
 	float oscskip = 0;
 	int oscindex = 0;
-
-	float prevsample = 0;
-	int crosses[CROSSESNUM];
-	bool crosseschecked[CROSSESNUM];
-	int crossesindex = 0;
-	int prevsync = 0;
-	int prevsynctime = 0;
-	int prevbiggest = 0;
-	int syncs[SYNCSNUM];
-	int syncsindex = 0;
-	int syncssorted[SYNCSNUM];
-	float cyclelength = 1;
-	float syncpoint = 0;
-	float syncvalue = -1;
 
 	Atomic<int> sleep = 0;
 	Atomic<int> height = 400;

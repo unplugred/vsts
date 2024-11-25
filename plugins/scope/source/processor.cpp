@@ -75,11 +75,15 @@ void ScopeAudioProcessor::changechannelnum(int newchannelnum) {
 void ScopeAudioProcessor::reseteverything() {
 	if(channelnum <= 0 || samplesperblock <= 0) return;
 
-	oscisize = (samplerate/30)*2+800;
+	oscisize = samplerate/30+800;
 	osci.resize(channelnum*oscisize);
 	oscimode.resize(oscisize);
+	osciscore.resize(oscisize);
+	line.resize(channelnum*800);
 	for(int i = 0; i < (channelnum*oscisize); ++i) osci[i] = 0;
 	for(int i = 0; i < oscisize; ++i) oscimode[i] = 0;
+	for(int i = 0; i < oscisize; ++i) osciscore[i] = -1;
+	for(int i = 0; i < (channelnum*800); ++i) line[i] = 0;
 
 	for(int i = 0; i < paramcount; i++) if(params.pots[i].smoothtime > 0)
 		params.pots[i].smooth.reset(samplerate*(params.oversampling?2:1), params.pots[i].smoothtime);
@@ -109,20 +113,6 @@ void ScopeAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& m
 	int numsamples = buffer.getNumSamples();
 	const float* const* channelData = buffer.getArrayOfReadPointers();
 	for(int sample = 0; sample < numsamples; ++sample) {
-
-		//sync
-		if(state.values[0] < .5 && state.values[5] > .5) {
-			float monosample = 0;
-			for(int channel = 0; channel < channelnum; ++channel)
-				monosample += channelData[channel][sample];
-
-			if(prevsample <= 0 && monosample >= 0 && crosses[crossesindex] != oscindex) {
-				if(++crossesindex >= CROSSESNUM) crossesindex = 0;
-				crosses[crossesindex] = oscindex;
-				crosseschecked[crossesindex] = false;
-			}
-			prevsample = monosample;
-		}
 
 		//capture frame
 		if(oscskip == 0)
@@ -158,122 +148,50 @@ void ScopeAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& m
 			//sync part 2
 			if(state.values[0] > .5 || state.values[5] < .5) {
 				// no sync
-				syncindex = fmod(oscindex-801+oscisize,oscisize);
+				osciscore[oscindex] = -1;
 			} else {
-				// -- THE MIGHTY OVER-ENGINEERED SYNC ALGORYTHM --
-
-				// delete crosses that are older than a frame
-				int frameago = oscindex-((samplerate/30)/fmax(1,floor(time))+800)+oscisize;
-				for(int i = 0; i < CROSSESNUM; ++i)
-					if(
-							(crosses[i] >=  oscindex           && crosses[i] <= (frameago+801         )) ||
-							(crosses[i] >= (oscindex-oscisize) && crosses[i] <= (frameago+801-oscisize)))
-						crosses[i] = -1;
-
-				// find the two sync points which are furthest apart
-				int biggestdiff = -1;
-				int biggestindex = -1;
-				for(int i = 0; i < CROSSESNUM; ++i) {
-					if(crosses[i] == -1 || crosses[(i+1)%CROSSESNUM] == -1 || i == crossesindex) continue;
-					int diff = fmod(crosses[(i+1)%CROSSESNUM]-crosses[i]+oscisize,oscisize);
-					if(diff > biggestdiff) {
-						biggestdiff = diff;
-						biggestindex = (i+1)%CROSSESNUM;
-					}
+				// sync algorithm
+				osciscore[fmod(oscindex-((samplerate/30)/fmax(1,floor(time)))+oscisize,oscisize)] = -1;
+				osciscore[oscindex] = 0;
+				for(int sample = 0; sample < 800; ++sample) {
+					int index = fmod(oscindex-801+sample+oscisize,oscisize);
+					for(int channel = 0; channel < channelnum; ++channel)
+						if((osci[channel*oscisize+index] > 0) == (line[channel*800+sample] > 0))
+							++osciscore[oscindex];
 				}
-
-				// if the furthest sync points are different than the ones used previously
-				if(biggestindex != -1 && crosses[biggestindex] != prevbiggest && fmod(crosses[biggestindex]-prevbiggest+oscisize,oscisize) > 1) {
-					prevbiggest = crosses[biggestindex];
-
-					// find similar crosses
-					for(int i = 0; i < CROSSESNUM; ++i) {
-						if(crosses[i] == -1 || crosses[(i+1)%CROSSESNUM] == -1 || i == crossesindex || crosseschecked[i]) continue;
-						int diff = fmod(crosses[(i+1)%CROSSESNUM]-crosses[i]+oscisize,oscisize);
-						if(fabs(diff-biggestdiff) <= biggestdiff*.02f) {
-							int synctime = fmod(crosses[i]-prevsync+oscisize,oscisize);
-							if(synctime > 1) {
-								// store the distance between the two sync points in a buffer if its stable
-								if(abs(prevsynctime-synctime) < 4) {
-									if(++syncsindex >= SYNCSNUM) syncsindex = 0;
-									syncs[syncsindex] = synctime;
-								}
-
-								prevsync = crosses[i];
-								prevsynctime = synctime;
-							}
-						}
-						crosseschecked[i] = true;
-					}
-
-					// find the median of the distances in the buffer
-					std::copy(syncs,syncs+SYNCSNUM,syncssorted);
-					std::sort(syncssorted,syncssorted+SYNCSNUM);
-					int median = syncssorted[SYNCSNUM/2];
-
-					// make an average of the distances that are close to the median
-					double average = 0;
-					int averagecount = 0;
-					for(int i = 0; i < SYNCSNUM; ++i) {
-						if(fabs(median-syncssorted[i]) <= 4) {
-							average += syncssorted[i];
-							++averagecount;
-						}
-					}
-					average = fmax(average/averagecount,1);
-
-					// and thats our estimated cycle length!
-					cyclelength = average;
-				}
-
-				// anti drift algorithm
-				if(syncpoint > oscindex) syncpoint -= oscisize;
-				float nextvalue = 0;
-				while((syncpoint+nextvalue) <= (oscindex-5)) {
-					syncpoint += nextvalue;
-
-					nextvalue = cyclelength;
-					float closestdist = 10000;
-					for(int i = 0; i < 4; ++i) {
-						for(int f = 0; f < 2; ++f) {
-							float cyclevalue = cyclelength+i*(f*2-1);
-							if(cyclevalue <= 0) continue;
-							int cyclepoint = (int)round(syncpoint+cyclevalue);
-							if(cyclepoint >= oscindex) continue;
-							if(cyclepoint < 0) cyclepoint += oscisize;
-
-							float val = 0;
-							for(int c = 0; c < channelnum; ++c)
-								val += osci[c*oscisize+cyclepoint];
-							val /= channelnum;
-
-							if(fabs(val-syncvalue) < closestdist) {
-								nextvalue = cyclevalue;
-								closestdist = fabs(val-syncvalue);
-							}
-						}
-					}
-					if(closestdist == 10000) break;
-					if(closestdist > fmax(.00001f,fabs(syncvalue*.1f))) {
-						int cyclepoint = (int)round(syncpoint+cyclelength);
-						if(cyclepoint <= (oscindex-5)) {
-							nextvalue = cyclelength;
-							if(cyclepoint < 0) cyclepoint += oscisize;
-							syncvalue = 0;
-							for(int c = 0; c < channelnum; ++c)
-								syncvalue += osci[c*oscisize+cyclepoint];
-							syncvalue /= channelnum;
-						}
-					}
-				}
-				if(syncpoint < 0) syncpoint += oscisize;
-
-				// WE SYNCED AT LAST!!! praise the sun
-				syncindex = fmod((int)round(syncpoint)-801+oscisize,oscisize);
 			}
 		}
 	}
 
+	// update the next frame
+	if(!frameready.get()) {
+		int syncindex = 0;
+		if(state.values[0] > .5 || state.values[5] < .5) {
+			syncindex = fmod(oscindex-801+oscisize,oscisize);
+		} else {
+			int maxscore = -100;
+			int maxindex = -100;
+			for(int i = 0; i < oscisize; ++i) {
+				if(osciscore[i] >= maxscore) {
+					maxscore = osciscore[i];
+					maxindex = i;
+				}
+			}
+			if(maxscore >= 0)
+				syncindex = fmod(maxindex-801+oscisize,oscisize);
+			else
+				syncindex = fmod(oscindex-801+oscisize,oscisize);
+		}
+		for(int sample = 0; sample < 800; ++sample) {
+			int index = fmod(syncindex+sample,oscisize);
+			for(int channel = 0; channel < channelnum; ++channel)
+				line[channel*800+sample] = osci[channel*oscisize+index];
+			linemode[sample] = oscimode[index];
+		}
+		frameready = true;
+	}
+
+	// mute output audio on standalone mode
 	if(JUCEApplication::isStandaloneApp()) buffer.clear();
 	else for(int i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
 		buffer.clear(i, 0, buffer.getNumSamples());
@@ -407,8 +325,14 @@ void ScopeAudioProcessor::parameterChanged(const String& parameterID, float newV
 		if(params.pots[i].smoothtime > 0) params.pots[i].smooth.setTargetValue(newValue);
 		else state.values[i] = newValue;
 		presets[currentpreset].values[i] = newValue;
-		if(parameterID == "sync" && newValue > .5)
-			for(int i = 0; i < CROSSESNUM; ++i) crosses[i] = -1;
+		if((parameterID == "xy" && newValue < .5) || (parameterID == "sync" && newValue > .5))
+			for(int i = 0; i < oscisize; ++i) osciscore[i] = -1;
+		else if(parameterID == "time" && state.values[0] < .5 && state.values[5] > .5) {
+			int startsync = oscindex-oscisize;
+			int endsync = (oscindex-((samplerate/30)/fmax(1,floor(pow(state.values[1],5)*240+.05f))));
+			for(int i = startsync; i <= endsync; ++i)
+				osciscore[fmod(i+oscisize,oscisize)] = -1;
+		}
 		return;
 	}
 }
