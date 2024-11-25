@@ -209,7 +209,7 @@ void ScopeAudioProcessorEditor::renderOpenGL() {
 	coord = context.extensions.glGetAttribLocation(lineshader->getProgramID(),"coords");
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,3,GL_FLOAT,GL_FALSE,0,0);
-	for(int i = 0; i < channelnum; ++i) {
+	for(int i = 0; i < (knobs[0].value<.5?audio_processor.channelnum:1); ++i) {
 		context.extensions.glBufferData(GL_ARRAY_BUFFER,sizeof(float)*linew*6,&line[i*4800],GL_DYNAMIC_DRAW);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,linew*2);
 	}
@@ -266,20 +266,11 @@ void ScopeAudioProcessorEditor::openGLContextClosing() {
 	draw_close();
 }
 void ScopeAudioProcessorEditor::calcvis() {
-	if(audio_processor.channelnum <= 0  || knobs[4].value > .5) return;
+	if(!audio_processor.frameready.get()) return;
 
-	int oscichannelnum = audio_processor.channelnum;
-	if(knobs[0].value > .5) oscichannelnum = fmin(oscichannelnum,2);
-	if(channelnum != (knobs[0].value<.5?oscichannelnum:1)) {
-		channelnum = knobs[0].value<.5?oscichannelnum:1;
+	if(channelnum != (knobs[0].value<.5?audio_processor.channelnum:1)) {
+		channelnum = knobs[0].value<.5?audio_processor.channelnum:1;
 		line.resize(channelnum*4800);
-		osci.resize(oscichannelnum*800);
-	}
-	for(int sample = 0; sample < 800; ++sample) {
-		int index = fmod(audio_processor.syncindex.get()+sample,audio_processor.oscisize);
-		for(int channel = 0; channel < oscichannelnum; ++channel)
-			osci[channel*800+sample] = audio_processor.osci[channel*audio_processor.oscisize+index];
-		oscimode[sample] = audio_processor.oscimode[index];
 	}
 
 	// LINE CALCULOUS
@@ -295,10 +286,10 @@ void ScopeAudioProcessorEditor::calcvis() {
 		float nexty = 0;
 		if(knobs[0].value < .5) { // SCOPE
 			nextx = -1;
-			nexty = amp*osci[readpos+c*800];
+			nexty = amp*audio_processor.line[readpos+c*800];
 		} else { // PANORAMA
-			nextx = amp*osci[readpos]*.75f;
-			nexty = amp*osci[readpos+(oscichannelnum>1?800:0)]*-1;
+			nextx = amp*audio_processor.line[readpos]*.75f;
+			nexty = amp*audio_processor.line[readpos+(audio_processor.channelnum>1?800:0)]*-1;
 		}
 		float x = nextx;
 		float y = nexty;
@@ -315,10 +306,10 @@ void ScopeAudioProcessorEditor::calcvis() {
 			if((i+1) < linew) {
 				if(knobs[0].value < .5) { // SCOPE
 					nextx = (i+1)*pixel-1;
-					nexty = amp*osci[readpos+c*800];
+					nexty = amp*audio_processor.line[readpos+c*800];
 				} else { // PANORAMA
-					nextx = amp*osci[readpos]*.75f;
-					nexty = amp*osci[readpos+(oscichannelnum>1?800:0)]*-1;
+					nextx = amp*audio_processor.line[readpos]*.75f;
+					nexty = amp*audio_processor.line[readpos+(audio_processor.channelnum>1?800:0)]*-1;
 				}
 			}
 			if(knobs[0].value > .5) luminocity = 1-pow(1-((float)i)/linew,4);
@@ -329,7 +320,7 @@ void ScopeAudioProcessorEditor::calcvis() {
 			while((angle1-angle2) >  1.5707963268) angle1 -= 3.1415926535*2;
 			float angle = (angle1+angle2)*.5;
 
-			if(oscimode[readpos-1]) {
+			if(audio_processor.linemode[readpos-1]) {
 				line[c*4800+i*6  ] = x;
 				line[c*4800+i*6+3] = x;
 				line[c*4800+i*6+1] = y+LINEWIDTH*.75f;
@@ -345,6 +336,8 @@ void ScopeAudioProcessorEditor::calcvis() {
 			line[c*4800+i*6+5] = -line[c*4800+i*6+2];
 		}
 	}
+
+	audio_processor.frameready = false;
 }
 void ScopeAudioProcessorEditor::paint(Graphics& g) { }
 
