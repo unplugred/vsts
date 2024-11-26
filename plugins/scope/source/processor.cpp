@@ -7,7 +7,7 @@ ScopeAudioProcessor::ScopeAudioProcessor() :
 
 	init();
 
-	presets[0] = pluginpreset("Default"	,0.0f	,0.4f	,0.4f	,0.0f	,0.0f	,1.0f	,1.0f	,0.54f	,1.0f	,0.7f);
+	presets[0] = pluginpreset("Default"	,0.0f	,0.4f	,0.4f	,0.0f	,0.0f	,1.0f	,1.0f	,0.54f	,0.9f	,0.65f);
 	for(int i = 0; i < getNumPrograms(); i++) {
 		presets[i] = presets[0];
 		presets[i].name = "Program "+(String)(i);
@@ -349,7 +349,7 @@ AudioProcessorValueTreeState::ParameterLayout ScopeAudioProcessor::create_parame
 	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"sync"		,1},"Sync"												 ,true	));
 	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"grid"		,1},"Grid"												 ,true	));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"hue"			,1},"Hue"		,NormalisableRange<float>( 0.0f	,1.0f	),0.54f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"saturation"	,1},"Saturation",NormalisableRange<float>( 0.0f	,1.0f	),1.0f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"value"		,1},"Value"		,NormalisableRange<float>( 0.0f	,1.0f	),0.7f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"saturation"	,1},"Saturation",NormalisableRange<float>( 0.0f	,1.0f	),0.9f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"value"		,1},"Value"		,NormalisableRange<float>( 0.0f	,1.0f	),0.65f	));
 	return { parameters.begin(), parameters.end() };
 }

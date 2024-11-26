@@ -17,12 +17,14 @@ ScopeAudioProcessorEditor::ScopeAudioProcessorEditor(ScopeAudioProcessor& p, int
 	}
 	knobs[1].visible = knobs[0].value < .5f;
 	knobs[2].visible = knobs[0].value > .5f;
-	bgcol = Colour::fromHSV(knobs[7].value,knobs[8].value,knobs[9].value,1);
+	knobs[5].visible = knobs[0].value < .5f;
+	bgcol = Colour::fromHSV(knobs[7].value,knobs[8].value,1,1);
 	ampdamp	.reset(knobs[3].value		,.08,-1,30);
 	griddamp.reset(knobs[6].value		,.08,-1,30);
 	rdamp	.reset(bgcol.getFloatRed()	,.15,-1,30);
 	gdamp	.reset(bgcol.getFloatGreen(),.15,-1,30);
 	bdamp	.reset(bgcol.getFloatBlue()	,.15,-1,30);
+	vdamp	.reset(knobs[9].value		,.15,-1,30);
 
 	calcvis();
 
@@ -125,6 +127,7 @@ uniform sampler2D downscaletex;
 uniform vec2 noiseoffset;
 uniform vec2 res;
 uniform vec3 bgcol;
+uniform float val;
 uniform float grid;
 uniform float gweight[4] = float[](0.1964825501511404, 0.2969069646728344, 0.09447039785044732,0.010381362401148057);
 out vec4 fragColor;
@@ -151,15 +154,11 @@ void main() {
 		bloom  += texture(downscaletex,uv+i*bloomadd*       -1 ).r*gweight[i];
 	}
 	render = sin(render*1.5707963268);
-	float value = max(bgcol.r,max(bgcol.g,bgcol.b));
-	bloom = bloom*bloom*bloom*.3*(value+1);
+	bloom = bloom*bloom*bloom*.3*(val+1);
+
 	vec3 ui = texture(basetex,uv).rgb;
-	//ui.b *= value;
-	//ui.g = 1-((1-ui.g)*grid);
-	//vec3 noise = (1-texture(noisetex,uv*res+noiseoffset).rgb)*.09*(value*.75+.25);
-	//vec3 color = hueshift(bgcol,((render+bloom)*ui.r+ui.b+ui.r-1)*-.05);
-	//fragColor = vec4(((render+color)*ui.g+bloom-noise)*ui.r+ui.b,1);
-	fragColor = vec4(((render+hueshift(bgcol,((render+bloom)*ui.r+ui.b+ui.r-1)*-.05))*(1-((1-ui.g)*grid))+bloom-(1-texture(noisetex,uv*res+noiseoffset).rgb)*.09*(value*.75+.25))*ui.r+ui.b*value,1);
+	vec3 bgcolshift = hueshift(bgcol,(render*ui.r+ui.b+ui.r-1)*-.05);
+	fragColor = vec4((bgcolshift*val*(1-((1-ui.g)*grid))+pow(vec3(render*(1-((1-ui.g)*grid))+bloom),(3-bgcolshift*2)*(1-val)+val)-(1-texture(noisetex,uv*res+noiseoffset).rgb)*.09*(val*.75+.25))*ui.r+ui.b*val,1);
 })");
 
 	add_texture(&basetex,BinaryData::base_png,BinaryData::base_pngSize,GL_LINEAR,GL_LINEAR,GL_REPEAT,GL_REPEAT);
@@ -262,6 +261,7 @@ void ScopeAudioProcessorEditor::renderOpenGL() {
 	baseshader->setUniform("noiseoffset",random.nextFloat(),random.nextFloat());
 	baseshader->setUniform("grid",(float)griddamp.nextvalue(knobs[6].value));
 	baseshader->setUniform("bgcol",rdamp.nextvalue(bgcol.getFloatRed()),gdamp.nextvalue(bgcol.getFloatGreen()),bdamp.nextvalue(bgcol.getFloatBlue()));
+	baseshader->setUniform("val",(float)vdamp.nextvalue(knobs[9].value));
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	context.extensions.glDisableVertexAttribArray(coord);
 
@@ -383,8 +383,9 @@ void ScopeAudioProcessorEditor::parameterChanged(const String& parameterID, floa
 		if(parameterID == "xy") {
 			knobs[1].visible = knobs[0].value < .5f;
 			knobs[2].visible = knobs[0].value > .5f;
+			knobs[5].visible = knobs[0].value < .5f;
 		} else if(parameterID == "hue" || parameterID == "saturation" || parameterID == "value") {
-			bgcol = Colour::fromHSV(knobs[7].value,knobs[8].value,knobs[9].value,1);
+			bgcol = Colour::fromHSV(knobs[7].value,knobs[8].value,1,1);
 		}
 		return;
 	}
