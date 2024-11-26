@@ -71,7 +71,8 @@ private:
 	functions::dampendvalue rdamp;
 	functions::dampendvalue gdamp;
 	functions::dampendvalue bdamp;
-	Colour bgcol = Colour::fromHSV(0.5f,.85f,.6f,1.f);
+	functions::dampendvalue vdamp;
+	Colour bgcol = Colour::fromHSV(0.54f,.9f,1.f,1.f);
 	std::shared_ptr<OpenGLShaderProgram> baseshader;
 
 	bool positionwindow = false;
