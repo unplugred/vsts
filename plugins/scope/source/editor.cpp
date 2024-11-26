@@ -57,11 +57,13 @@ void ScopeAudioProcessorEditor::resized() {
 	height = getHeight()-21;
 	banner_offset = 21.f/getHeight();
 	float w = height/.75f;
-	getConstrainer()->setFixedAspectRatio(1.f/.75f-21.f/w);
+	if(!isfullscreen)
+		getConstrainer()->setFixedAspectRatio(1.f/.75f-21.f/w);
 #else
 	height = getHeight();
 #endif
-	audio_processor.height = height;
+	if(!isfullscreen)
+		audio_processor.height = height;
 	debug_font.width = getWidth();
 	debug_font.height = getHeight();
 	debug_font.banner_offset = banner_offset;
@@ -88,7 +90,7 @@ void main() {
 R"(#version 150 core
 in vec3 coords;
 uniform float banner;
-uniform float bufferscale;
+uniform vec2 bufferscale;
 out float luminocity;
 out float linex;
 void main() {
@@ -112,14 +114,18 @@ void main() {
 R"(#version 150 core
 in vec2 coords;
 uniform float banner;
+uniform float ratio;
 out vec2 uv;
+out vec2 griduv;
 void main() {
 	gl_Position = vec4(vec2(coords.x,coords.y*(1-banner)+banner)*2-1,0,1);
 	uv = coords;
+	griduv = vec2(coords.x*ratio+(1-ratio)*.5,coords.y);
 })",
 //BASE FRAG
 R"(#version 150 core
 in vec2 uv;
+in vec2 griduv;
 uniform sampler2D basetex;
 uniform sampler2D noisetex;
 uniform sampler2D rendertex;
@@ -156,7 +162,7 @@ void main() {
 	render = sin(render*1.5707963268);
 	bloom = bloom*bloom*bloom*.3*(val+1);
 
-	vec3 ui = texture(basetex,uv).rgb;
+	vec3 ui = vec3(texture(basetex,uv).rb,texture(basetex,max(min(griduv,1),0)).g).rbg;
 	vec3 bgcolshift = hueshift(bgcol,(render*ui.r+ui.b+ui.r-1)*-.05);
 	fragColor = vec4((bgcolshift*val*(1-((1-ui.g)*grid))+pow(vec3(render*(1-((1-ui.g)*grid))+bloom),(3-bgcolshift*2)*(1-val)+val)-(1-texture(noisetex,uv*res+noiseoffset).rgb)*.09*(val*.75+.25))*ui.r+ui.b*val,1);
 })");
@@ -197,7 +203,7 @@ void ScopeAudioProcessorEditor::renderOpenGL() {
 	lineshader->setUniform("banner",banner_offset);
 	lineshader->setUniform("scaling",(float)(width*dpi*LINEWIDTH*.15f));
 	lineshader->setUniform("opacity",.2f);
-	lineshader->setUniform("bufferscale",1.f);
+	lineshader->setUniform("bufferscale",1.f,1.f);
 	coord = context.extensions.glGetAttribLocation(lineshader->getProgramID(),"coords");
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,3,GL_FLOAT,GL_FALSE,0,0);
@@ -226,7 +232,7 @@ void ScopeAudioProcessorEditor::renderOpenGL() {
 	lineshader->setUniform("banner",banner_offset);
 	lineshader->setUniform("scaling",1.f);
 	lineshader->setUniform("opacity",.04f);
-	lineshader->setUniform("bufferscale",(200/DOWNSCALEFACTOR)/((float)width));
+	lineshader->setUniform("bufferscale",(200/DOWNSCALEFACTOR)/((float)width),(150/DOWNSCALEFACTOR)/((float)height));
 	coord = context.extensions.glGetAttribLocation(lineshader->getProgramID(),"coords");
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,3,GL_FLOAT,GL_FALSE,0,0);
@@ -262,6 +268,10 @@ void ScopeAudioProcessorEditor::renderOpenGL() {
 	baseshader->setUniform("grid",(float)griddamp.nextvalue(knobs[6].value));
 	baseshader->setUniform("bgcol",rdamp.nextvalue(bgcol.getFloatRed()),gdamp.nextvalue(bgcol.getFloatGreen()),bdamp.nextvalue(bgcol.getFloatBlue()));
 	baseshader->setUniform("val",(float)vdamp.nextvalue(knobs[9].value));
+	if(isfullscreen)
+		baseshader->setUniform("ratio",(width*.75f)/height);
+	else
+		baseshader->setUniform("ratio",1.f);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	context.extensions.glDisableVertexAttribArray(coord);
 
@@ -391,7 +401,22 @@ void ScopeAudioProcessorEditor::parameterChanged(const String& parameterID, floa
 	}
 }
 void ScopeAudioProcessorEditor::mouseDown(const MouseEvent& event) {
-	openwindow();
+	if(event.mods.isRightButtonDown() && !event.mods.isLeftButtonDown()) {
+		isfullscreen = !isfullscreen;
+		if(isfullscreen) {
+			getConstrainer()->setFixedAspectRatio(0);
+			Desktop::getInstance().setKioskModeComponent(getTopLevelComponent(), false);
+		} else {
+#ifdef BANNER
+			getConstrainer()->setFixedAspectRatio(1.f/.75f-21.f/(audio_processor.height.get()/.75f));
+#else
+			getConstrainer()->setFixedAspectRatio(1.f/.75f);
+#endif
+			Desktop::getInstance().setKioskModeComponent(nullptr);
+		}
+	} else {
+		openwindow();
+	}
 }
 void ScopeAudioProcessorEditor::openwindow() {
 	if(audio_processor.settingswindow == nullptr) {

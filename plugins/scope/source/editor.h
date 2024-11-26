@@ -52,6 +52,7 @@ public:
 	int linew = 0;
 
 	bool dontscale = true;
+	bool isfullscreen = false;
 
 	knob knobs[10];
 	int knobcount = 0;
