@@ -13,6 +13,7 @@ struct knob {
 	int hoverstate = 0;
 	String id;
 	String name;
+	String svalue = "";
 	float minimumvalue = 0.f;
 	float maximumvalue = 1.f;
 	float defaultvalue = 0.f;
