@@ -161,6 +161,7 @@ void ScopeAudioProcessorSettings::renderOpenGL() {
 		font.shader->setUniform("hover",hover==i?1.f:0.f);
 		String value = "";
 		if(knobs[i].isbool) value = knobs[i].value>.5?"On":"Off";
+		else if(knobs[i].svalue != "") value = knobs[i].svalue;
 		else value = (String)(round(knobs[i].value*100)/100.f);
 		font.draw_string(1,1,1,1,1,1,1,0," "+knobs[i].name+": "+value,0,((float)PADDING+MARGIN)/getWidth(),(knoby+.5f)*(font.line_height+PADDING*2+MARGIN*2)/getHeight(),0,.5f);
 		++knoby;

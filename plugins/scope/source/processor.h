@@ -122,13 +122,59 @@ public:
 	int currentpreset = 0;
 
 	int channelnum = 0;
+	int samplerate = 44100;
 private:
 	int samplesperblock = 0;
-	int samplerate = 44100;
 
 	pluginpreset presets[20];
 	bool preparedtoplay = false;
 	bool saved = false;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ScopeAudioProcessor)
+};
+static std::function<String(bool v, int max)> tobool = [](bool v, int max) {
+	return (String)(v?"On":"Off");
+};
+static std::function<bool(const String& s)> frombool = [](const String& s) {
+	if(s.containsIgnoreCase("n")) return true;
+	if(s.containsIgnoreCase("f")) return false;
+	if(s.containsIgnoreCase("1")) return true;
+	if(s.containsIgnoreCase("0")) return false;
+	return true;
+};
+static std::function<String(float v, int max)> totime = [](float v, int max) {
+	float val = (pow(v,5)*240+.05f)/48000.f*400000;
+	if(val < 10) val = round(val*100)/100.f;
+	else if(val < 100) val = round(val*10)/10.f;
+	else val = round(val);
+	return (String)val+"ms";
+};
+static std::function<float(const String& s)> fromtime = [](const String& s) {
+	float val = s.getFloatValue();
+	if(val <= 1)
+		return jlimit(0.f,1.f,val);
+	return jlimit(0.f,1.f,powf((val/400000.f*48000-.05f)/240.f,.2f));
+};
+static std::function<String(float v, int max)> totimexy = [](float v, int max) {
+	float val = (pow(v,4)*16+.05f)/48000.f*400000;
+	if(val < 10) val = round(val*100)/100.f;
+	else if(val < 100) val = round(val*10)/10.f;
+	else val = round(val);
+	return (String)val+"ms";
+};
+static std::function<float(const String& s)> fromtimexy = [](const String& s) {
+	float val = s.getFloatValue();
+	if(val <= 1)
+		return jlimit(0.f,1.f,val);
+	return jlimit(0.f,1.f,powf((val/400000.f*48000-.05f)/16.f,.25f));
+};
+static std::function<String(float v, int max)> toscale = [](float v, int max) {
+	return (String)(round(v*400)*.1f)+"dB";
+};
+static std::function<float(const String& s)> fromscale = [](const String& s) {
+	float val = s.getFloatValue();
+	if(val <= 1)
+		return jlimit(0.f,1.f,val);
+	else
+		return jlimit(0.f,1.f,val/40.f);
 };

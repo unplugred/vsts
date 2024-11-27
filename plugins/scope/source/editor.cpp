@@ -18,6 +18,19 @@ ScopeAudioProcessorEditor::ScopeAudioProcessorEditor(ScopeAudioProcessor& p, int
 	knobs[1].visible = knobs[0].value < .5f;
 	knobs[2].visible = knobs[0].value > .5f;
 	knobs[5].visible = knobs[0].value < .5f;
+	knobs[3].svalue = (String)(round(knobs[3].value*400)*.1f)+"dB";
+
+	float val = (pow(knobs[1].value,5)*240+.05f)/48000.f*400000;
+	if(val < 10) val = round(val*100)/100.f;
+	else if(val < 100) val = round(val*10)/10.f;
+	else val = round(val);
+	knobs[1].svalue = (String)val+"ms";
+	      val = (pow(knobs[2].value,4)* 16+.05f)/48000.f*400000;
+	if(val < 10) val = round(val*100)/100.f;
+	else if(val < 100) val = round(val*10)/10.f;
+	else val = round(val);
+	knobs[2].svalue = (String)val+"ms";
+
 	bgcol = Colour::fromHSV(knobs[7].value,knobs[8].value,1,1);
 	ampdamp	.reset(knobs[3].value		,.08,-1,30);
 	griddamp.reset(knobs[6].value		,.08,-1,30);
@@ -291,8 +304,8 @@ void ScopeAudioProcessorEditor::calcvis() {
 
 	// LINE CALCULOUS
 	float pixel = 2.f/(linew-1);
-	float time = knobs[0].value<.5?(pow(knobs[1].value,5)*240+.05f):(pow(knobs[2].value,4)*16+.05f);
-	float amp = Decibels::decibelsToGain(ampdamp.nextvalue(knobs[3].value)*34);
+	float time = (knobs[0].value<.5?(pow(knobs[1].value,5)*240+.05f):(pow(knobs[2].value,4)*16+.05f))/48000.f*audio_processor.samplerate;
+	float amp = Decibels::decibelsToGain(ampdamp.nextvalue(knobs[3].value)*40);
 	linew = (time<1?time:(fmod(time,1)+1))*400;
 	float luminocity = 1;
 
@@ -394,6 +407,14 @@ void ScopeAudioProcessorEditor::parameterChanged(const String& parameterID, floa
 			knobs[1].visible = knobs[0].value < .5f;
 			knobs[2].visible = knobs[0].value > .5f;
 			knobs[5].visible = knobs[0].value < .5f;
+		} else if(parameterID == "time" || parameterID == "timexy") {
+			float val = (knobs[0].value<.5?(pow(knobs[1].value,5)*240+.05f):(pow(knobs[2].value,4)*16+.05f))/48000.f*400000;
+			if(val < 10) val = round(val*100)/100.f;
+			else if(val < 100) val = round(val*10)/10.f;
+			else val = round(val);
+			knobs[i].svalue = (String)val+"ms";
+		} else if(parameterID == "scale") {
+			knobs[3].svalue = (String)(round(knobs[3].value*400)*.1f)+"dB";
 		} else if(parameterID == "hue" || parameterID == "saturation" || parameterID == "value") {
 			bgcol = Colour::fromHSV(knobs[7].value,knobs[8].value,1,1);
 		}

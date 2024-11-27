@@ -106,9 +106,9 @@ void ScopeAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& m
 
 	float time = 0;
 	if(state.values[0] < .5)
-		time = pow(state.values[1],5)*240+.05f;
+		time = (pow(state.values[1],5)*240+.05f)/48000.f*samplerate;
 	else
-		time = pow(state.values[2],4)*16+.05f;
+		time = (pow(state.values[2],4)* 16+.05f)/48000.f*samplerate;
 
 	int numsamples = buffer.getNumSamples();
 	const float* const* channelData = buffer.getArrayOfReadPointers();
@@ -120,7 +120,7 @@ void ScopeAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& m
 				osci[channel*oscisize+oscindex] = 0;
 
 		//zoom out mode
-		if(state.values[0] < .5 && time > 50)
+		if(state.values[0] < .5 && state.values[1] > .73f)
 			for(int channel = 0; channel < channelnum; ++channel)
 				osci[channel*oscisize+oscindex] += pow(channelData[channel][sample],2);
 		//zoom in mode
@@ -132,7 +132,7 @@ void ScopeAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& m
 		++oscskip;
 		if(oscskip >= floor(time)) {
 			oscskip = 0;
-			if(state.values[0] < .5 && time > 50) {
+			if(state.values[0] < .5 && state.values[1] > .73f) {
 				oscimode[oscindex] = true;
 				for(int channel = 0; channel < channelnum; ++channel)
 					osci[channel*oscisize+oscindex] = sqrt((1.f/fmax(1,floor(time)))*osci[channel*oscisize+oscindex]);
@@ -329,7 +329,7 @@ void ScopeAudioProcessor::parameterChanged(const String& parameterID, float newV
 			for(int i = 0; i < oscisize; ++i) osciscore[i] = -1;
 		else if(parameterID == "time" && state.values[0] < .5 && state.values[5] > .5) {
 			int startsync = oscindex-oscisize;
-			int endsync = (oscindex-((samplerate/30)/fmax(1,floor(pow(state.values[1],5)*240+.05f))));
+			int endsync = (oscindex-((samplerate/30)/fmax(1,floor((pow(state.values[1],5)*240+.05f)/48000.f*samplerate))));
 			for(int i = startsync; i <= endsync; ++i)
 				osciscore[fmod(i+oscisize,oscisize)] = -1;
 		}
@@ -341,13 +341,13 @@ AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new ScopeAudioProces
 
 AudioProcessorValueTreeState::ParameterLayout ScopeAudioProcessor::create_parameters() {
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
-	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"xy"			,1},"XY"												 ,false	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"time"		,1},"Time"		,NormalisableRange<float>( 0.0f	,1.0f	),0.4f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"timexy"		,1},"Time XY"	,NormalisableRange<float>( 0.0f	,1.0f	),0.4f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"scale"		,1},"Scale"		,NormalisableRange<float>( 0.f	,1.0f	),0.0f	));
-	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"hold"		,1},"Hold"												 ,false	));
-	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"sync"		,1},"Sync"												 ,true	));
-	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"grid"		,1},"Grid"												 ,true	));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"xy"			,1},"XY"												 ,false	,AudioParameterBoolAttributes().withStringFromValueFunction(tobool		).withValueFromStringFunction(frombool		)));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"time"		,1},"Time"		,NormalisableRange<float>( 0.0f	,1.0f	),0.4f	,AudioParameterFloatAttributes().withStringFromValueFunction(totime		).withValueFromStringFunction(fromtime		)));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"timexy"		,1},"Time XY"	,NormalisableRange<float>( 0.0f	,1.0f	),0.4f	,AudioParameterFloatAttributes().withStringFromValueFunction(totimexy	).withValueFromStringFunction(fromtimexy	)));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"scale"		,1},"Scale"		,NormalisableRange<float>( 0.f	,1.0f	),0.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(toscale	).withValueFromStringFunction(fromscale		)));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"hold"		,1},"Hold"												 ,false	,AudioParameterBoolAttributes().withStringFromValueFunction(tobool		).withValueFromStringFunction(frombool		)));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"sync"		,1},"Sync"												 ,true	,AudioParameterBoolAttributes().withStringFromValueFunction(tobool		).withValueFromStringFunction(frombool		)));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"grid"		,1},"Grid"												 ,true	,AudioParameterBoolAttributes().withStringFromValueFunction(tobool		).withValueFromStringFunction(frombool		)));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"hue"			,1},"Hue"		,NormalisableRange<float>( 0.0f	,1.0f	),0.54f	));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"saturation"	,1},"Saturation",NormalisableRange<float>( 0.0f	,1.0f	),0.9f	));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"value"		,1},"Value"		,NormalisableRange<float>( 0.0f	,1.0f	),0.65f	));
