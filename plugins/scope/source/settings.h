@@ -95,9 +95,7 @@ private:
 
 	int hover = -1;
 	int initialdrag = 0;
-	int held = 0;
 	float initialvalue = 0;
-	int needtoupdate = 2;
 	bool finemode = false;
 	float valueoffset = 0;
 	Point<int> dragpos = Point<int>(0,0);
