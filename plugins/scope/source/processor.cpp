@@ -7,12 +7,6 @@ ScopeAudioProcessor::ScopeAudioProcessor() :
 
 	init();
 
-	presets[0] = pluginpreset("Default"	,0.0f	,0.4f	,0.4f	,0.0f	,0.0f	,1.0f	,1.0f	,0.54f	,0.9f	,0.65f);
-	for(int i = 0; i < getNumPrograms(); i++) {
-		presets[i] = presets[0];
-		presets[i].name = "Program "+(String)(i);
-	}
-
 	params.pots[0] = potentiometer("XY"			,"xy"			,0	,presets[0].values[0]	,0	,1	,potentiometer::ptype::booltype);
 	params.pots[1] = potentiometer("Time"		,"time"			,0	,presets[0].values[1]	,0	,1	,potentiometer::ptype::floattype);
 	params.pots[2] = potentiometer("Time"		,"timexy"		,0	,presets[0].values[2]	,0	,1	,potentiometer::ptype::floattype);
@@ -24,11 +18,24 @@ ScopeAudioProcessor::ScopeAudioProcessor() :
 	params.pots[8] = potentiometer("Saturation"	,"saturation"	,0	,presets[0].values[8]	,0	,1	,potentiometer::ptype::floattype);
 	params.pots[9] = potentiometer("Value"		,"value"		,0	,presets[0].values[9]	,0	,1	,potentiometer::ptype::floattype);
 
+	presets[0] = pluginpreset("Default");
+	PropertiesFile* user_settings = props.getUserSettings();
 	for(int i = 0; i < paramcount; ++i) {
-		state.values[i] = params.pots[i].inflate(apvts.getParameter(params.pots[i].id)->getValue());
+		if(user_settings->containsKey(params.pots[i].id)) {
+			params.pots[i].defaultvalue = props.getUserSettings()->getDoubleValue(params.pots[i].id);
+			state.values[i] = params.pots[i].defaultvalue;
+		} else {
+			state.values[i] = params.pots[i].inflate(apvts.getParameter(params.pots[i].id)->getValue());
+		}
+
 		presets[currentpreset].values[i] = state.values[i];
 		if(params.pots[i].smoothtime > 0) params.pots[i].smooth.setCurrentAndTargetValue(state.values[i]);
 		add_listener(params.pots[i].id);
+	}
+
+	for(int i = 0; i < getNumPrograms(); i++) {
+		presets[i] = presets[0];
+		presets[i].name = "Program "+(String)(i);
 	}
 }
 

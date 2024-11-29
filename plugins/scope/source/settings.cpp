@@ -2,7 +2,7 @@
 #include "editor.h"
 #include "settings.h"
 
-ScopeAudioProcessorSettings::ScopeAudioProcessorSettings(ScopeAudioProcessor& p, int paramcount, knob* k) : audio_processor(p), knobs(k), DocumentWindow("Scope Settings", Colours::black, DocumentWindow::closeButton), plugmachine_gui(*this, p, 200, (16+PADDING*2+MARGIN*2)*paramcount+30, 1, 1, false, false) {
+ScopeAudioProcessorSettings::ScopeAudioProcessorSettings(ScopeAudioProcessor& p, int paramcount, knob* k) : audio_processor(p), knobs(k), DocumentWindow("Scope Settings", Colours::black, DocumentWindow::closeButton), plugmachine_gui(*this, p, 200, (16+PADDING*2+MARGIN*2)*(paramcount+1)+30, 1, 1, false, false) {
 
 	knobcount = paramcount;
 	for(int i = 0; i < knobcount; i++)
@@ -148,6 +148,9 @@ void ScopeAudioProcessorSettings::renderOpenGL() {
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 		++knoby;
 	}
+	knobshader->setUniform("knobpos",((float)MARGIN)/getWidth(),1-((knoby+1.f)*(font.line_height+PADDING*2+MARGIN*2)-MARGIN)/getHeight());
+	knobshader->setUniform("fill",initialdrag==-3&&hover==-3?1.f:0.f);
+	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	context.extensions.glDisableVertexAttribArray(coord);
 
 	font.width = getWidth();
@@ -166,6 +169,9 @@ void ScopeAudioProcessorSettings::renderOpenGL() {
 		font.draw_string(1,1,1,1,1,1,1,0," "+knobs[i].name+": "+value,0,((float)PADDING+MARGIN)/getWidth(),(knoby+.5f)*(font.line_height+PADDING*2+MARGIN*2)/getHeight(),0,.5f);
 		++knoby;
 	}
+	font.shader->setUniform("fill",initialdrag==-3&&hover==-3?1.f:0.f);
+	font.shader->setUniform("hover",hover==-3?1.f:0.f);
+	font.draw_string(1,1,1,1,1,1,1,0,"Save as default",0,.5f,(knoby+.5f)*(font.line_height+PADDING*2+MARGIN*2)/getHeight(),.5f,.5f);
 
 	creditsshader->use();
 	context.extensions.glActiveTexture(GL_TEXTURE0);
@@ -179,8 +185,6 @@ void ScopeAudioProcessorSettings::renderOpenGL() {
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	context.extensions.glDisableVertexAttribArray(coord);
 
-	needtoupdate--;
-
 	debug_font.width = getWidth();
 	debug_font.height = getHeight();
 	draw_end();
@@ -191,30 +195,15 @@ void ScopeAudioProcessorSettings::openGLContextClosing() {
 void ScopeAudioProcessorSettings::paint(Graphics& g) { }
 
 void ScopeAudioProcessorSettings::timerCallback() {
-	for(int i = 0; i < knobcount; i++) {
-		if(knobs[i].hoverstate < -1) {
-			needtoupdate = 2;
-			knobs[i].hoverstate++;
-		}
-	}
-	if(held > 0) held--;
-
-	if(websiteht > -1) {
-		websiteht -= .0815;
-		needtoupdate = 2;
-	}
-
+	if(websiteht > -1) websiteht -= .0815;
 	time = fmod(time+.001f,1);
-
 	if(time > .03f) positioned = true;
-
 	update();
 }
 
 void ScopeAudioProcessorSettings::parameterChanged(const String& parameterID, float newValue) {
 	for(int i = 0; i < knobcount; i++) if(knobs[i].id == parameterID) {
 		knobs[i].value = knobs[i].normalize(newValue);
-		if(knobs[i].visible) needtoupdate = 2;
 		return;
 	}
 }
@@ -222,17 +211,12 @@ void ScopeAudioProcessorSettings::mouseMove(const MouseEvent& event) {
 	int prevhover = hover;
 	hover = recalc_hover(event.x,event.y);
 	if(hover == -2 && prevhover != -2 && websiteht <= -1) websiteht = .65f;
-	if(prevhover != hover && held == 0) {
-		if(hover > -1) knobs[hover].hoverstate = -4;
-		if(prevhover > -1) knobs[prevhover].hoverstate = -2;
-	}
 }
 void ScopeAudioProcessorSettings::mouseExit(const MouseEvent& event) {
 	hover = -1;
 }
 void ScopeAudioProcessorSettings::mouseDown(const MouseEvent& event) {
 	if(dpi < 0) return;
-	held = -1;
 	initialdrag = hover;
 	if(hover > -1) {
 		initialvalue = knobs[initialdrag].value;
@@ -272,6 +256,9 @@ void ScopeAudioProcessorSettings::mouseDrag(const MouseEvent& event) {
 		int prevhover = hover;
 		hover = recalc_hover(event.x,event.y)==-2?-2:-1;
 		if(hover == -2 && prevhover != -2 && websiteht < -1) websiteht = .65f;
+	} else if(initialdrag == -3) {
+		hover = recalc_hover(event.x,event.y);
+		hover = initialdrag==hover?initialdrag:-1;
 	}
 }
 void ScopeAudioProcessorSettings::mouseUp(const MouseEvent& event) {
@@ -287,16 +274,20 @@ void ScopeAudioProcessorSettings::mouseUp(const MouseEvent& event) {
 			event.source.enableUnboundedMouseMovement(false);
 			Desktop::setMousePosition(dragpos);
 		}
+	} else if(initialdrag == -3 && hover == -3) {
+		for(int i = 0; i < knobcount; i++) {
+			knobs[i].defaultvalue = knobs[i].value;
+			audio_processor.props.getUserSettings()->setValue(knobs[i].id,knobs[i].inflate(knobs[i].value));
+			audio_processor.params.pots[i].defaultvalue = knobs[i].inflate(knobs[i].value);
+		}
 	} else {
-		int prevhover = hover;
 		hover = recalc_hover(event.x,event.y);
 		if(hover == -2) {
-			if(prevhover == -2) URL("https://vst.unplug.red/").launchInDefaultBrowser();
+			if(initialdrag == -2) URL("https://vst.unplug.red/").launchInDefaultBrowser();
 			else if(websiteht < -1) websiteht = .65f;
 		}
-		else if(hover > -1) knobs[hover].hoverstate = -4;
 	}
-	held = 1;
+	initialdrag = -1;
 }
 void ScopeAudioProcessorSettings::mouseDoubleClick(const MouseEvent& event) {
 	if(hover <= -1) return;
@@ -318,6 +309,7 @@ int ScopeAudioProcessorSettings::recalc_hover(float x, float y) {
 		if(y < ((knoby+1)*(font.line_height+PADDING*2+MARGIN*2)-MARGIN)) return i;
 		++knoby;
 	}
+	if(y < ((knoby+1)*(font.line_height+PADDING*2+MARGIN*2)-MARGIN)) return -3;
 	if(x >= (getWidth()*.5-74) && x <= (getWidth()*.5+73) && y >= (getHeight()-48) && y <= (getHeight()-4))
 		return -2;
 	return -1;
