@@ -51,7 +51,7 @@ ScopeAudioProcessorEditor::ScopeAudioProcessorEditor(ScopeAudioProcessor& p, int
 	getConstrainer()->setFixedAspectRatio(1.f/.75f);
 #endif
 	setResizable(true,false);
-	setResizeLimits(200,150,2000,1500);
+	setResizeLimits(200,150,20000,20000);
 
 	dontscale = false;
 }
@@ -176,7 +176,7 @@ void main() {
 	bloom = bloom*bloom*bloom*.3*(val+1);
 
 	vec3 ui = vec3(texture(basetex,uv).rb,texture(basetex,max(min(griduv,1),0)).g).rbg;
-	vec3 bgcolshift = hueshift(bgcol,(render*ui.r+ui.b+ui.r-1)*-.05);
+	vec3 bgcolshift = hueshift(bgcol,((render+bloom)*ui.r+ui.b+ui.r-1)*-.05);
 	fragColor = vec4((bgcolshift*val*(1-((1-ui.g)*grid))+pow(vec3(render*(1-((1-ui.g)*grid))+bloom),(3-bgcolshift*2)*(1-val)+val)-(1-texture(noisetex,uv*res+noiseoffset).rgb)*.09*(val*.75+.25))*ui.r+ui.b*val,1);
 })");
 
@@ -276,15 +276,12 @@ void ScopeAudioProcessorEditor::renderOpenGL() {
 	glBindTexture(GL_TEXTURE_2D,downscalebuffer.getTextureID());
 	baseshader->setUniform("downscaletex",3);
 	baseshader->setUniform("banner",banner_offset);
-	baseshader->setUniform("res",(width*dpi)/512.f,(height*dpi)/512.f); //TODO *dpi????
+	baseshader->setUniform("res",(width*dpi)/512.f,(height*dpi)/512.f);
 	baseshader->setUniform("noiseoffset",random.nextFloat(),random.nextFloat());
 	baseshader->setUniform("grid",(float)griddamp.nextvalue(knobs[6].value));
 	baseshader->setUniform("bgcol",rdamp.nextvalue(bgcol.getFloatRed()),gdamp.nextvalue(bgcol.getFloatGreen()),bdamp.nextvalue(bgcol.getFloatBlue()));
 	baseshader->setUniform("val",(float)vdamp.nextvalue(knobs[9].value));
-	if(isfullscreen)
-		baseshader->setUniform("ratio",(width*.75f)/height);
-	else
-		baseshader->setUniform("ratio",1.f);
+	baseshader->setUniform("ratio",(width*.75f)/height);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	context.extensions.glDisableVertexAttribArray(coord);
 
@@ -295,6 +292,10 @@ void ScopeAudioProcessorEditor::openGLContextClosing() {
 }
 void ScopeAudioProcessorEditor::calcvis() {
 	if(!audio_processor.frameready.get()) return;
+	if(audio_processor.channelnum <= 0) {
+		channelnum = 0;
+		return;
+	}
 
 	if(channelnum != (knobs[0].value<.5?audio_processor.channelnum:1)) {
 		channelnum = knobs[0].value<.5?audio_processor.channelnum:1;
@@ -393,10 +394,8 @@ void ScopeAudioProcessorEditor::timerCallback() {
 		positionwindow = false;
 	}
 
-	if(firstframe && audio_processor.settingsopen.get()) {
-		openwindow();
-		firstframe = false;
-	}
+	if(firstframe && audio_processor.settingsopen.get()) openwindow();
+	firstframe = false;
 	audio_processor.settingsopen = audio_processor.settingswindow != nullptr;
 }
 
@@ -423,25 +422,28 @@ void ScopeAudioProcessorEditor::parameterChanged(const String& parameterID, floa
 }
 void ScopeAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 	if(event.mods.isRightButtonDown() && !event.mods.isLeftButtonDown()) {
-		isfullscreen = !isfullscreen;
+		if(!JUCEApplication::isStandaloneApp()) return;
 		if(isfullscreen) {
-			getConstrainer()->setFixedAspectRatio(0);
-			Desktop::getInstance().setKioskModeComponent(getTopLevelComponent(), false);
-		} else {
 #ifdef BANNER
 			getConstrainer()->setFixedAspectRatio(1.f/.75f-21.f/(audio_processor.height.get()/.75f));
 #else
 			getConstrainer()->setFixedAspectRatio(1.f/.75f);
 #endif
 			Desktop::getInstance().setKioskModeComponent(nullptr);
+			isfullscreen = false;
+		} else {
+			isfullscreen = true;
+			getConstrainer()->setFixedAspectRatio(0);
+			Desktop::getInstance().setKioskModeComponent(getTopLevelComponent(),false);
 		}
-	} else {
-		openwindow();
-	}
+	} else openwindow();
 }
 void ScopeAudioProcessorEditor::openwindow() {
 	if(audio_processor.settingswindow == nullptr) {
 		audio_processor.settingswindow = new ScopeAudioProcessorSettings(audio_processor,knobcount,knobs);
 		positionwindow = true;
-	} else audio_processor.settingswindow->toFront(true);
+	} else {
+		delete audio_processor.settingswindow;
+		audio_processor.settingswindow = nullptr;
+	}
 }

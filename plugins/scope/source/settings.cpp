@@ -14,6 +14,7 @@ ScopeAudioProcessorSettings::ScopeAudioProcessorSettings(ScopeAudioProcessor& p,
 	init();
 	setUsingNativeTitleBar(true);
 	setVisible(true);
+	setAlwaysOnTop(true);
 }
 ScopeAudioProcessorSettings::~ScopeAudioProcessorSettings() {
 	audio_processor.settingswindow = nullptr;
