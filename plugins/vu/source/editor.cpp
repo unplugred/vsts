@@ -16,7 +16,7 @@ VUAudioProcessorEditor::VUAudioProcessorEditor(VUAudioProcessor& p, int paramcou
 	knobs[0].svalue = String(knobs[0].value)+"dB";
 
 	multiplier = 1.f/Decibels::decibelsToGain(knobs[0].value);
-	stereodamp = knobs[2].value;
+	stereodamp = knobs[3].value;
 
 	init();
 
@@ -203,8 +203,8 @@ void VUAudioProcessorEditor::timerCallback() {
 		rightpeak = false;
 	} else bypassdetection++;
 
-	leftvu = functions::smoothdamp(leftvu,fmin(leftrms*multiplier,1),&leftvelocity,knobs[1].value*.05f,-1,.03333f);
-	if(knobs[2].value>.5) rightvu = functions::smoothdamp(rightvu,fmin(rightrms*multiplier,1),&rightvelocity,knobs[1].value*.05f,-1,.03333f);
+	leftvu = functions::smoothdamp(leftvu,fmin(leftrms*multiplier,1),&leftvelocity,knobs[(leftrms*multiplier)>leftvu?1:2].value*.05f,-1,.03333f);
+	if(knobs[3].value>.5) rightvu = functions::smoothdamp(rightvu,fmin(rightrms*multiplier,1),&rightvelocity,knobs[(rightrms*multiplier)>rightvu?1:2].value*.05f,-1,.03333f);
 	leftpeaklerp = functions::smoothdamp(leftpeaklerp,leftpeak?1:0,&leftpeakvelocity,0.027f,-1,.03333f);
 	rightpeaklerp = functions::smoothdamp(rightpeaklerp,rightpeak?1:0,&leftpeakvelocity,0.027f,-1,.03333f);
 
@@ -218,7 +218,7 @@ void VUAudioProcessorEditor::timerCallback() {
 	}
 
 	float prevstereodamp = stereodamp;
-	stereodamp = functions::smoothdamp(stereodamp,knobs[2].value,&stereovelocity,0.3,-1,.03333f);
+	stereodamp = functions::smoothdamp(stereodamp,knobs[3].value,&stereovelocity,0.3,-1,.03333f);
 	if(prevstereodamp > .0001 && prevstereodamp < .9999) {
 		int h = audio_processor.height.get();
 		float w = h*32.f*(stereodamp+1)/19.f;

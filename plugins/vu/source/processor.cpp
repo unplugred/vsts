@@ -7,11 +7,12 @@ VUAudioProcessor::VUAudioProcessor() :
 
 	init();
 
-	pots[0] = potentiometer("Nominal"	,"nominal"	,presets[0].values[0]	,-24	,-6	,potentiometer::ptype::inttype);
-	pots[1] = potentiometer("Damping"	,"damping"	,presets[0].values[1]	,1		,9	,potentiometer::ptype::inttype);
-	pots[2] = potentiometer("Stereo"	,"stereo"	,presets[0].values[2]	,0		,1	,potentiometer::ptype::booltype);
+	pots[0] = potentiometer("Nominal"		,"nominal"	,presets[0].values[0]	,-24	,-6	,potentiometer::ptype::inttype);
+	pots[1] = potentiometer("Rise speed"	,"damping"	,presets[0].values[1]	,1		,10	,potentiometer::ptype::inttype);
+	pots[2] = potentiometer("Decay speed"	,"decay"	,presets[0].values[2]	,1		,10	,potentiometer::ptype::inttype);
+	pots[3] = potentiometer("Stereo"		,"stereo"	,presets[0].values[3]	,0		,1	,potentiometer::ptype::booltype);
 
-	presets[0] = pluginpreset("Default",-18,5,0);
+	presets[0] = pluginpreset("Default",-18,3,5,0);
 	PropertiesFile* user_settings = props.getUserSettings();
 	for(int i = 0; i < paramcount; ++i) {
 		if(user_settings->containsKey(pots[i].id)) {
@@ -104,7 +105,7 @@ void VUAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& midi
 		rightvu = output;
 		leftpeak = newleftpeak;
 		rightpeak = newleftpeak;
-	} else if(presets[currentpreset].values[2]>.5) {
+	} else if(presets[currentpreset].values[3]>.5) {
 		leftvu = leftvu.get()+leftrms*leftrms;
 		rightvu = rightvu.get()+rightrms*rightrms;
 		leftpeak = newleftpeak;
@@ -171,14 +172,22 @@ void VUAudioProcessor::setStateInformation(const void* data, int sizeInBytes) {
 				std::getline(ss, token, delimiter);
 				presets[i].name = token;
 				for(int v = 0; v < paramcount; v++) {
+					if(saveversion < 3 && v == 2) {
+						presets[i].values[2] = presets[i].values[1];
+						continue;
+					}
 					std::getline(ss, token, delimiter);
 					presets[i].values[v] = std::stof(token);
 				}
 			}
 		} else {
-			for(int i = 0; i < 3; i++) {
+			for(int v = 0; v < paramcount; v++) {
+				if(v == 2) {
+					presets[currentpreset].values[2] = presets[currentpreset].values[1];
+					continue;
+				}
 				std::getline(ss, token, delimiter);
-				presets[currentpreset].values[i] = std::stof(token);
+				presets[currentpreset].values[v] = std::stof(token);
 			}
 
 			std::getline(ss,token,delimiter);
@@ -209,8 +218,9 @@ AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new VUAudioProcessor
 
 AudioProcessorValueTreeState::ParameterLayout VUAudioProcessor::create_parameters() {
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
-	parameters.push_back(std::make_unique<AudioParameterInt	>(ParameterID{"nominal"	,1},"Nominal"	,-24,-6	,-18	,"",todb		,fromdb		));
-	parameters.push_back(std::make_unique<AudioParameterInt	>(ParameterID{"damping"	,1},"Damping"	,1	,9	,5									));
-	parameters.push_back(std::make_unique<AudioParameterBool>(ParameterID{"stereo"	,1},"Stereo"			,false	,"",tostereo	,fromstereo	));
+	parameters.push_back(std::make_unique<AudioParameterInt	>(ParameterID{"nominal"	,1},"Nominal"		,-24,-6	,-18	,"",todb		,fromdb		));
+	parameters.push_back(std::make_unique<AudioParameterInt	>(ParameterID{"damping"	,1},"Rise speed"	,1	,10	,3									));
+	parameters.push_back(std::make_unique<AudioParameterInt	>(ParameterID{"decay"	,1},"Decay speed"	,1	,10	,5									));
+	parameters.push_back(std::make_unique<AudioParameterBool>(ParameterID{"stereo"	,1},"Stereo"				,false	,"",tostereo	,fromstereo	));
 	return { parameters.begin(), parameters.end() };
 }

@@ -62,8 +62,8 @@ public:
 	int bypassdetection = 0;
 	bool dontscale = true;
 
-	knob knobs[3];
-	int knobcount = 3;
+	knob knobs[4];
+	int knobcount = 4;
 private:
 	VUAudioProcessor& audio_processor;
 
