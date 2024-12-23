@@ -33,12 +33,13 @@ public:
 
 struct pluginpreset {
 	String name = "";
-	float values[3];
-	pluginpreset(String pname = "", float val1 = 0.f, float val2 = 0.f, float val3 = 0.f) {
+	float values[4];
+	pluginpreset(String pname = "", float val1 = -18.f, float val2 = 3.f, float val3 = 5.f, float val4 = 0.f) {
 		name = pname;
 		values[0] = val1;
 		values[1] = val2;
 		values[2] = val3;
+		values[3] = val4;
 	}
 };
 
@@ -91,9 +92,9 @@ public:
 	int version = 3;
 
 	pluginpreset presets[20];
-	potentiometer pots[3];
+	potentiometer pots[4];
 	int currentpreset = 0;
-	const int paramcount = 3;
+	const int paramcount = 4;
 private:
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(VUAudioProcessor)
