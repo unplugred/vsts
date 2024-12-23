@@ -7,17 +7,25 @@ VUAudioProcessor::VUAudioProcessor() :
 
 	init();
 
-	for(int i = 0; i < getNumPrograms(); i++) {
-		presets[i] = pluginpreset("Program "+(String)(i+1),-18,5,0);
-	}
-
 	pots[0] = potentiometer("Nominal"	,"nominal"	,presets[0].values[0]	,-24	,-6	,potentiometer::ptype::inttype);
 	pots[1] = potentiometer("Damping"	,"damping"	,presets[0].values[1]	,1		,9	,potentiometer::ptype::inttype);
 	pots[2] = potentiometer("Stereo"	,"stereo"	,presets[0].values[2]	,0		,1	,potentiometer::ptype::booltype);
 
-	for(int i = 0; i < paramcount; i++) {
-		presets[currentpreset].values[i] = pots[i].inflate(apvts.getParameter(pots[i].id)->getValue());
+	presets[0] = pluginpreset("Default",-18,5,0);
+	PropertiesFile* user_settings = props.getUserSettings();
+	for(int i = 0; i < paramcount; ++i) {
+		if(user_settings->containsKey(pots[i].id)) {
+			pots[i].defaultvalue = props.getUserSettings()->getDoubleValue(pots[i].id);
+			presets[0].values[i] = pots[i].defaultvalue;
+		} else {
+			presets[0].values[i] = pots[i].inflate(apvts.getParameter(pots[i].id)->getValue());
+		}
 		add_listener(pots[i].id);
+	}
+
+	for(int i = 1; i < getNumPrograms(); i++) {
+		presets[i] = presets[0];
+		presets[i].name = "Program "+(String)(i);
 	}
 }
 VUAudioProcessor::~VUAudioProcessor() {
@@ -118,6 +126,9 @@ void VUAudioProcessor::getStateInformation(MemoryBlock& destData) {
 	std::ostringstream data;
 	data << version << delimiter
 		<< height.get() << delimiter
+		<< settingsx.get() << delimiter
+		<< settingsy.get() << delimiter
+		<< (settingsopen.get()?1:0) << delimiter
 		<< currentpreset << delimiter;
 
 	for(int i = 0; i < getNumPrograms(); i++) {
@@ -141,6 +152,17 @@ void VUAudioProcessor::setStateInformation(const void* data, int sizeInBytes) {
 		if(saveversion >= 2) {
 			std::getline(ss,token,delimiter);
 			height = std::stoi(token);
+
+			if(saveversion >= 3) {
+				std::getline(ss, token, delimiter);
+				settingsx = std::stoi(token);
+
+				std::getline(ss, token, delimiter);
+				settingsy = std::stoi(token);
+
+				std::getline(ss, token, delimiter);
+				settingsopen = std::stoi(token)>.5;
+			}
 
 			std::getline(ss,token,delimiter);
 			currentpreset = std::stoi(token);

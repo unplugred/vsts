@@ -81,10 +81,14 @@ public:
 	Atomic<int> buffercount = 0;
 
 	Atomic<int> height = 300;
+	Atomic<int> settingsx = -999;
+	Atomic<int> settingsy = -999;
+	Atomic<bool> settingsopen = false;
+	DocumentWindow* settingswindow = nullptr;
 
 	AudioProcessorValueTreeState apvts;
 	AudioProcessorValueTreeState::ParameterLayout create_parameters();
-	int version = 2;
+	int version = 3;
 
 	pluginpreset presets[20];
 	potentiometer pots[3];
