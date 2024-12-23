@@ -31,6 +31,7 @@ clap_juce_extensions_plugin(TARGET "${BaseTargetName}"
 	CLAP_USE_JUCE_PARAMETER_RANGES ALL)
 
 target_sources("${BaseTargetName}" PRIVATE
+	source/settings.cpp
 	source/functions.cpp
 	source/editor.cpp
 	source/processor.cpp)
@@ -51,9 +52,9 @@ target_compile_definitions("${BaseTargetName}" PUBLIC
 	JUCE_USE_CAMERA=0)
 
 juce_add_binary_data("${BaseTargetName}BinaryData" HEADER_NAME BinaryData.h NAMESPACE BinaryData SOURCES
-	resources/genuine_soundware.png
-	resources/map.png
-	resources/txtmap.png)
+	resources/tile.png
+	resources/credits.png
+	resources/map.png)
 set_target_properties("${BaseTargetName}BinaryData" PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 
 target_link_libraries("${BaseTargetName}" PRIVATE

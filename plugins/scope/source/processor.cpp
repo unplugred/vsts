@@ -33,7 +33,7 @@ ScopeAudioProcessor::ScopeAudioProcessor() :
 		add_listener(params.pots[i].id);
 	}
 
-	for(int i = 0; i < getNumPrograms(); i++) {
+	for(int i = 1; i < getNumPrograms(); i++) {
 		presets[i] = presets[0];
 		presets[i].name = "Program "+(String)(i);
 	}

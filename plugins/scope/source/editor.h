@@ -10,7 +10,6 @@ using namespace gl;
 
 struct knob {
 	float value = .5f;
-	int hoverstate = 0;
 	String id;
 	String name;
 	String svalue = "";
