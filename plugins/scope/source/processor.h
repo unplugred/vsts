@@ -91,7 +91,7 @@ public:
 	const String get_preset(int preset_id, const char delimiter = ',') override;
 	void set_preset(const String& preset, int preset_id, const char delimiter = ',', bool print_errors = false) override;
 
-	virtual void parameterChanged(const String& parameterID, float newValue);
+	virtual void parameterChanged(const String& parameterID, float newValue) override;
 
 	AudioProcessorValueTreeState::ParameterLayout create_parameters();
 	AudioProcessorValueTreeState apvts;
@@ -99,16 +99,12 @@ public:
 	int version = 1;
 	const int paramcount = 10;
 
+	Atomic<bool> active = false;
 	std::vector<float> osci;
 	std::vector<bool> oscimode;
-	std::vector<int> osciscore;
-	std::vector<float> line;
-	bool linemode[800];
+	Atomic<int> oscindex = 0;
 	int oscisize = 0;
-	Atomic<bool> frameready = false;
-
 	float oscskip = 0;
-	int oscindex = 0;
 
 	Atomic<int> sleep = 0;
 	Atomic<int> height = 400;

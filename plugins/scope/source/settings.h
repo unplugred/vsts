@@ -72,7 +72,7 @@ public:
 
 	void timerCallback() override;
 
-	virtual void parameterChanged(const String& parameterID, float newValue);
+	virtual void parameterChanged(const String& parameterID, float newValue) override;
 	void mouseMove(const MouseEvent& event) override;
 	void mouseExit(const MouseEvent& event) override;
 	void mouseDown(const MouseEvent& event) override;

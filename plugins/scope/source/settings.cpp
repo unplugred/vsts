@@ -203,10 +203,6 @@ void ScopeAudioProcessorSettings::timerCallback() {
 }
 
 void ScopeAudioProcessorSettings::parameterChanged(const String& parameterID, float newValue) {
-	for(int i = 0; i < knobcount; i++) if(knobs[i].id == parameterID) {
-		knobs[i].value = knobs[i].normalize(newValue);
-		return;
-	}
 }
 void ScopeAudioProcessorSettings::mouseMove(const MouseEvent& event) {
 	int prevhover = hover;
