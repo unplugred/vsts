@@ -82,15 +82,11 @@ void ScopeAudioProcessor::changechannelnum(int newchannelnum) {
 void ScopeAudioProcessor::reseteverything() {
 	if(channelnum <= 0 || samplesperblock <= 0) return;
 
-	oscisize = samplerate/30+800;
+	oscisize = (samplerate/30)*2+800;
 	osci.resize(channelnum*oscisize);
 	oscimode.resize(oscisize);
-	osciscore.resize(oscisize);
-	line.resize(channelnum*800);
 	for(int i = 0; i < (channelnum*oscisize); ++i) osci[i] = 0;
 	for(int i = 0; i < oscisize; ++i) oscimode[i] = 0;
-	for(int i = 0; i < oscisize; ++i) osciscore[i] = -1;
-	for(int i = 0; i < (channelnum*800); ++i) line[i] = 0;
 
 	for(int i = 0; i < paramcount; i++) if(params.pots[i].smoothtime > 0)
 		params.pots[i].smooth.reset(samplerate*(params.oversampling?2:1), params.pots[i].smoothtime);
@@ -119,83 +115,43 @@ void ScopeAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& m
 
 	int numsamples = buffer.getNumSamples();
 	const float* const* channelData = buffer.getArrayOfReadPointers();
+	int currentoscindex = oscindex.get();
 	for(int sample = 0; sample < numsamples; ++sample) {
 
 		//capture frame
 		if(oscskip == 0)
 			for(int channel = 0; channel < channelnum; ++channel)
-				osci[channel*oscisize+oscindex] = 0;
+				osci[channel*oscisize+currentoscindex] = 0;
 
 		//zoom out mode
 		if(state.values[0] < .5 && state.values[1] > .73f)
 			for(int channel = 0; channel < channelnum; ++channel)
-				osci[channel*oscisize+oscindex] += pow(channelData[channel][sample],2);
+				osci[channel*oscisize+currentoscindex] += pow(channelData[channel][sample],2);
 		//zoom in mode
 		else
 			for(int channel = 0; channel < channelnum; ++channel)
-				osci[channel*oscisize+oscindex] += channelData[channel][sample];
+				osci[channel*oscisize+currentoscindex] += channelData[channel][sample];
 
 		//advance frame
 		++oscskip;
 		if(oscskip >= floor(time)) {
 			oscskip = 0;
 			if(state.values[0] < .5 && state.values[1] > .73f) {
-				oscimode[oscindex] = true;
+				oscimode[currentoscindex] = true;
 				for(int channel = 0; channel < channelnum; ++channel)
-					osci[channel*oscisize+oscindex] = sqrt((1.f/fmax(1,floor(time)))*osci[channel*oscisize+oscindex]);
+					osci[channel*oscisize+currentoscindex] = sqrt((1.f/fmax(1,floor(time)))*osci[channel*oscisize+currentoscindex]);
 			} else {
-				oscimode[oscindex] = false;
+				oscimode[currentoscindex] = false;
 				for(int channel = 0; channel < channelnum; ++channel)
-					osci[channel*oscisize+oscindex] *= (1.f/fmax(1,floor(time)));
+					osci[channel*oscisize+currentoscindex] *= (1.f/fmax(1,floor(time)));
 			}
 
-			oscindex++;
-			if(oscindex >= oscisize) oscindex = 0;
+			currentoscindex++;
+			if(currentoscindex >= oscisize) currentoscindex = 0;
+			oscindex = currentoscindex;
 
-			//sync part 2
-			if(state.values[0] > .5 || state.values[5] < .5) {
-				// no sync
-				osciscore[oscindex] = -1;
-			} else {
-				// sync algorithm
-				osciscore[fmod(oscindex-((samplerate/30)/fmax(1,floor(time)))+oscisize,oscisize)] = -1;
-				osciscore[oscindex] = 0;
-				for(int sample = 0; sample < 800; ++sample) {
-					int index = fmod(oscindex-801+sample+oscisize,oscisize);
-					for(int channel = 0; channel < channelnum; ++channel)
-						if((osci[channel*oscisize+index] > 0) == (line[channel*800+sample] > 0))
-							++osciscore[oscindex];
-				}
-			}
+			active = true;
 		}
-	}
-
-	// update the next frame
-	if(!frameready.get()) {
-		int syncindex = 0;
-		if(state.values[0] > .5 || state.values[5] < .5) {
-			syncindex = fmod(oscindex-801+oscisize,oscisize);
-		} else {
-			int maxscore = -100;
-			int maxindex = -100;
-			for(int i = 0; i < oscisize; ++i) {
-				if(osciscore[i] >= maxscore) {
-					maxscore = osciscore[i];
-					maxindex = i;
-				}
-			}
-			if(maxscore >= 0)
-				syncindex = fmod(maxindex-801+oscisize,oscisize);
-			else
-				syncindex = fmod(oscindex-801+oscisize,oscisize);
-		}
-		for(int sample = 0; sample < 800; ++sample) {
-			int index = fmod(syncindex+sample,oscisize);
-			for(int channel = 0; channel < channelnum; ++channel)
-				line[channel*800+sample] = osci[channel*oscisize+index];
-			linemode[sample] = oscimode[index];
-		}
-		frameready = true;
 	}
 
 	// mute output audio on standalone mode
@@ -332,14 +288,6 @@ void ScopeAudioProcessor::parameterChanged(const String& parameterID, float newV
 		if(params.pots[i].smoothtime > 0) params.pots[i].smooth.setTargetValue(newValue);
 		else state.values[i] = newValue;
 		presets[currentpreset].values[i] = newValue;
-		if((parameterID == "xy" && newValue < .5) || (parameterID == "sync" && newValue > .5))
-			for(int i = 0; i < oscisize; ++i) osciscore[i] = -1;
-		else if(parameterID == "time" && state.values[0] < .5 && state.values[5] > .5) {
-			int startsync = oscindex-oscisize;
-			int endsync = (oscindex-((samplerate/30)/fmax(1,floor((pow(state.values[1],5)*240+.05f)/48000.f*samplerate))));
-			for(int i = startsync; i <= endsync; ++i)
-				osciscore[fmod(i+oscisize,oscisize)] = -1;
-		}
 		return;
 	}
 }

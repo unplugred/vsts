@@ -40,7 +40,7 @@ public:
 
 	void timerCallback() override;
 
-	virtual void parameterChanged(const String& parameterID, float newValue);
+	virtual void parameterChanged(const String& parameterID, float newValue) override;
 	void mouseDown(const MouseEvent& event) override;
 
 	void openwindow();
@@ -48,6 +48,9 @@ public:
 	functions::dampendvalue ampdamp;
 	std::vector<float> line;
 	std::vector<float> bloomline;
+	std::vector<float> linedata;
+	bool linemode[800];
+	int linechannelnum = 0;
 	int channelnum = 0;
 	int linew = 0;
 
