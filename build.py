@@ -120,6 +120,10 @@ plugins = [{
 	"name": "Scope",
 	"code": "Scop",
 	"standalone": True
+},{
+	"name": "Triple D",
+	"code": "Trpd",
+	"in_bundle": False
 }]
 for i in range(len(plugins)):
 	if "standalone" not in plugins[i]:
