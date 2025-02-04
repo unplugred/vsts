@@ -18,6 +18,7 @@ TripleDAudioProcessorEditor::TripleDAudioProcessorEditor(TripleDAudioProcessor& 
 			add_listener(knobs[i].id);
 		}
 	}
+	//poke
 
 	calcvis();
 
