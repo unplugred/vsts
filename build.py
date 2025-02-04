@@ -233,7 +233,7 @@ def error(string, exit_code=1):
 def run_command(cmd,ignore_errors=False):
 	censored_command = cmd
 	for secret in saved_data["secrets"].values():
-		cmd.replace(secret,"***")
+		censored_command = censored_command.replace(secret,"***")
 	debug("RUNNING COMMAND: "+censored_command)
 
 	if systems[system]["code"] == "win":
@@ -861,10 +861,10 @@ def run_program(string):
 		sub_args = args[i].split(',')
 		for n in range(len(sub_args)):
 			if i == 2 and "installer".startswith(sub_args[n]):
-					if installer:
-						error("Argument Installer used more than once!")
-					installer = True
-					continue
+				if installer:
+					error("Argument Installer used more than once!")
+				installer = True
+				continue
 			match = fuzzy_match(sub_args[n],codes[arguments[i]])
 			if match == None:
 				if i == 0 and ',' not in args[i]:

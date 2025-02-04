@@ -602,7 +602,8 @@ void CRMBLAudioProcessor::parameterChanged(const String& parameterID, float newV
 		return;
 	}
 	if(parameterID == "randomize" && newValue>.5) {
-		return randomize();
+		randomize();
+		return;
 	}
 	if(parameterID == "pingpostfeedback" && channelnum > 1) {
 		for(int i = 0; i < channelnum; i++) reversecounter[i] = state.values[4] > 0 ? reversecounter[0] : reversecounter[channelnum-1];
