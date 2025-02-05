@@ -14,7 +14,7 @@ juce_add_plugin("${BaseTargetName}"
 	EDITOR_WANTS_KEYBOARD_FOCUS FALSE
 	DESCRIPTION "Three delays feedbacking each other into the atmosphere."
 	PLUGIN_MANUFACTURER_CODE Ured
-	PLUGIN_CODE Trpd
+	PLUGIN_CODE Mgct
 	VST3_CATEGORIES Tools
 	VST2_CATEGORY kPlugCategEffect
 	AU_MAIN_TYPE kAudioUnitType_Effect
