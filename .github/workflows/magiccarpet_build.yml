@@ -1,16 +1,16 @@
-name: Triple D
+name: Magic Carpet
 
 env:
-  PLUG: Triple D
+  PLUG: Magic Carpet
 
 on:
   push:
     paths:
-      - '**tripled**'
+      - '**magiccarpet**'
       - 'rebuild_all.txt'
   pull_request:
     paths:
-      - '**tripled**'
+      - '**magiccarpet**'
       - 'rebuild_all.txt'
     branches:
       - master
