@@ -7,7 +7,7 @@ MagicCarpetAudioProcessor::MagicCarpetAudioProcessor() :
 
 	init();
 
-	presets[0] = pluginpreset("Default",0.6f,0.9f,0.f,0.265f,0.235f);
+	presets[0] = pluginpreset("Default",0.6f,0.9f,0.f,0.27f,0.235f);
 	presets[0].values[5] = 0.187f;
 	presets[0].values[6] = 0.556f;
 	presets[0].values[7] = 0.447f;
@@ -323,7 +323,7 @@ AudioProcessorValueTreeState::ParameterLayout MagicCarpetAudioProcessor::create_
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"wet"			,1},"Dry/wet"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.6f	,AudioParameterFloatAttributes().withStringFromValueFunction(tonormalized	).withValueFromStringFunction(fromnormalized)));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"feedback"	,1},"Feedback"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.9f	,AudioParameterFloatAttributes().withStringFromValueFunction(tonormalized	).withValueFromStringFunction(fromnormalized)));
 	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"noise"		,1},"Noise mode"													 ,false	,AudioParameterBoolAttributes()	.withStringFromValueFunction(tobool			).withValueFromStringFunction(frombool		)));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"modamp"		,1},"Mod amount"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.265f	,AudioParameterFloatAttributes().withStringFromValueFunction(tonormalized	).withValueFromStringFunction(fromnormalized)));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"modamp"		,1},"Mod amount"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.27f	,AudioParameterFloatAttributes().withStringFromValueFunction(tonormalized	).withValueFromStringFunction(fromnormalized)));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"modfreq"		,1},"Mod frequency"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.235f	,AudioParameterFloatAttributes().withStringFromValueFunction(tospeed		).withValueFromStringFunction(fromspeed		)));
 	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"randomize"	,1},"Randomize"														 ,false	,AudioParameterBoolAttributes()	.withStringFromValueFunction(tobool			).withValueFromStringFunction(frombool		)));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"delay1"		,1},"Delay 1"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.187f,AudioParameterFloatAttributes().withStringFromValueFunction(tolength		).withValueFromStringFunction(fromlength	)));
