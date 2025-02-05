@@ -1,25 +1,28 @@
 #include "processor.h"
 #include "editor.h"
 
-TripleDAudioProcessor::TripleDAudioProcessor() :
+MagicCarpetAudioProcessor::MagicCarpetAudioProcessor() :
 	apvts(*this, &undo_manager, "Parameters", create_parameters()),
 	plugmachine_dsp(BusesProperties().withInput("Input",AudioChannelSet::stereo(),true).withOutput("Output",AudioChannelSet::stereo(),true), &apvts) {
 
 	init();
 
-	presets[0] = pluginpreset("Default",0.6f,0.66f);
-	presets[0].values[2] = 0.187f;
-	presets[0].values[3] = 0.556f;
-	presets[0].values[4] = 0.447f;
-	for(int i = 8; i < getNumPrograms(); i++) {
+	presets[0] = pluginpreset("Default",0.6f,0.9f,0.f,0.265f,0.235f);
+	presets[0].values[5] = 0.187f;
+	presets[0].values[6] = 0.556f;
+	presets[0].values[7] = 0.447f;
+	for(int i = 1; i < getNumPrograms(); i++) {
 		presets[i] = presets[0];
 		presets[i].name = "Program " + (String)(i-7);
 	}
 
-	params.pots[0] = potentiometer("Dry/Wet"	,"wet"		,.002f	,presets[0].values[0]	);
-	params.pots[1] = potentiometer("Feedback"	,"feedback"	,.002f	,presets[0].values[1]	);
+	params.pots[0] = potentiometer("Dry/Wet"		,"wet"		,.002f	,presets[0].values[0]	);
+	params.pots[1] = potentiometer("Feedback"		,"feedback"	,.002f	,presets[0].values[1]	);
+	params.pots[2] = potentiometer("Noise Mode"		,"noise"	,0		,presets[0].values[2]	);
+	params.pots[3] = potentiometer("Mod Amount"		,"modamp"	,.001f	,presets[0].values[3]	);
+	params.pots[4] = potentiometer("Mod Frequency"	,"modfreq"	,0		,presets[0].values[4]	);
 	for(int d = 0; d < DLINES; ++d)
-		params.pots[2+d] = potentiometer("Delay "+((String)(d+1)),"delay"+((String)(d+1)),.001f,presets[0].values[2+d]);
+		params.pots[5+d] = potentiometer("Delay "+((String)(d+1)),"delay"+((String)(d+1)),.001f,presets[0].values[5+d]);
 
 	for(int i = 0; i < paramcount; i++) {
 		state.values[i] = params.pots[i].inflate(apvts.getParameter(params.pots[i].id)->getValue());
@@ -30,19 +33,19 @@ TripleDAudioProcessor::TripleDAudioProcessor() :
 	add_listener("randomize");
 }
 
-TripleDAudioProcessor::~TripleDAudioProcessor(){
+MagicCarpetAudioProcessor::~MagicCarpetAudioProcessor(){
 	close();
 }
 
-const String TripleDAudioProcessor::getName() const { return "Triple D"; }
-bool TripleDAudioProcessor::acceptsMidi() const { return false; }
-bool TripleDAudioProcessor::producesMidi() const { return false; }
-bool TripleDAudioProcessor::isMidiEffect() const { return false; }
-double TripleDAudioProcessor::getTailLengthSeconds() const { return 0.0; }
+const String MagicCarpetAudioProcessor::getName() const { return "Magic Carpet"; }
+bool MagicCarpetAudioProcessor::acceptsMidi() const { return false; }
+bool MagicCarpetAudioProcessor::producesMidi() const { return false; }
+bool MagicCarpetAudioProcessor::isMidiEffect() const { return false; }
+double MagicCarpetAudioProcessor::getTailLengthSeconds() const { return 0.0; }
 
-int TripleDAudioProcessor::getNumPrograms() { return 20; }
-int TripleDAudioProcessor::getCurrentProgram() { return currentpreset; }
-void TripleDAudioProcessor::setCurrentProgram(int index) {
+int MagicCarpetAudioProcessor::getNumPrograms() { return 20; }
+int MagicCarpetAudioProcessor::getCurrentProgram() { return currentpreset; }
+void MagicCarpetAudioProcessor::setCurrentProgram(int index) {
 	if(currentpreset == index) return;
 
 	undo_manager.beginNewTransaction((String)"Changed preset to " += presets[index].name);
@@ -58,7 +61,7 @@ void TripleDAudioProcessor::setCurrentProgram(int index) {
 		startTimerHz(30);
 	} else lerpstage = 1;
 }
-void TripleDAudioProcessor::timerCallback() {
+void MagicCarpetAudioProcessor::timerCallback() {
 	lerpstage *= .64f;
 	if(lerpstage < .001) {
 		for(int i = 0; i < paramcount; i++) if(!lerpchanged[i])
@@ -73,26 +76,26 @@ void TripleDAudioProcessor::timerCallback() {
 		apvts.getParameter(params.pots[i].id)->setValueNotifyingHost(lerptable[i]);
 	}
 }
-const String TripleDAudioProcessor::getProgramName(int index) {
+const String MagicCarpetAudioProcessor::getProgramName(int index) {
 	return { presets[index].name };
 }
-void TripleDAudioProcessor::changeProgramName(int index, const String& newName) {
+void MagicCarpetAudioProcessor::changeProgramName(int index, const String& newName) {
 	presets[index].name = newName;
 }
 
-void TripleDAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
+void MagicCarpetAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
 	samplesperblock = samplesPerBlock;
 	samplerate = sampleRate;
 
 	reseteverything();
 }
-void TripleDAudioProcessor::changechannelnum(int newchannelnum) {
+void MagicCarpetAudioProcessor::changechannelnum(int newchannelnum) {
 	channelnum = newchannelnum;
 	if(newchannelnum <= 0) return;
 
 	reseteverything();
 }
-void TripleDAudioProcessor::reseteverything() {
+void MagicCarpetAudioProcessor::reseteverything() {
 	if(channelnum <= 0 || samplesperblock <= 0) return;
 
 	for(int i = 0; i < paramcount; i++) if(params.pots[i].smoothtime > 0)
@@ -103,22 +106,24 @@ void TripleDAudioProcessor::reseteverything() {
 	delaybuffer.clear();
 	readpos = readpos%delaybuffersize;
 	delayamt.reset(0,1.,-1,samplerate,DLINES);
+	damplimiter.reset(1,.1,-1,samplerate,channelnum);
+	dampamp.reset(0,.5,-1,samplerate,1);
 	resetdampenings = true;
 	dcfilter.init(samplerate,channelnum);
 	for(int i = 0; i < channelnum; i++) dcfilter.reset(i);
 
 	preparedtoplay = true;
 }
-void TripleDAudioProcessor::releaseResources() { }
+void MagicCarpetAudioProcessor::releaseResources() { }
 
-bool TripleDAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const {
+bool MagicCarpetAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const {
 	if(layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
 		return false;
 
 	return (layouts.getMainInputChannels() > 0);
 }
 
-void TripleDAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMessages) {
+void MagicCarpetAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMessages) {
 	ScopedNoDenormals noDenormals;
 
 	if(buffer.getNumChannels() == 0 || buffer.getNumSamples() == 0) return;
@@ -138,25 +143,47 @@ void TripleDAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer&
 	for(int sample = 0; sample < numsamples; ++sample) {
 		for(int i = 0; i < paramcount; i++) if(params.pots[i].smoothtime > 0)
 			state.values[i] = params.pots[i].smooth.getNextValue();
-		float feedbackval = 1-powf(1-state.values[1],.3f);
 
-		for(size_t d = 0; d < DLINES; ++d) {
-			if(resetdampenings && sample == 0) delayamt.v_current[d] = state.values[2+d];
-			dindex[d] = ((readpos-1)-samplerate*(delayamt.nextvalue(state.values[2+d],d)*(MAX_DLY-MIN_DLY)+MIN_DLY))+delaybuffersize*2;
+		float feedbackval = 1-powf(1-state.values[1],.3f);
+		if(state.values[2] < .5) feedbackval /= DLINES;
+
+		if(resetdampenings && sample == 0) dampamp.v_current[0] = state.values[3];
+		float dampmodamp = pow(dampamp.nextvalue(state.values[3]),4)*.72;
+		float frqpow = state.values[4]*1.4+.15;
+		float osc = 0;
+		crntsmpl = fmod(crntsmpl+((frqpow*frqpow)/samplerate),1);
+
+		for(int d = 0; d < DLINES; ++d) {
+			if(dampmodamp > 0 && state.values[2] < .5) osc = (sin((crntsmpl+((float)d)/DLINES)*MathConstants<float>::twoPi)*.5+.5)*dampmodamp;
+			if(resetdampenings && sample == 0) delayamt.v_current[d] = state.values[5+d];
+			dindex[d] = ((readpos-1)-samplerate*((delayamt.nextvalue(state.values[5+d],d)*(1-dampmodamp)+osc)*(MAX_DLY-MIN_DLY)+MIN_DLY))+delaybuffersize*2;
 		}
 
 		for(int channel = 0; channel < channelnum; ++channel) {
 			float feedbackout = 0;
 			float pannedout = 0;
-			for(size_t d = 0; d < DLINES; ++d) {
+			for(int d = 0; d < DLINES; ++d) {
+				float delout = interpolatesamples(delaydata[channel],dindex[d],delaybuffersize);
+				feedbackout += delout*((d%2)==0?-1:1);
+
 				float pan = ((float)d)/(DLINES-1);
 				pan = (((float)channel)/(channelnum-1))*(pan*2-1)+(1-pan);
-				float delout = interpolatesamples(delaydata[channel],dindex[d],delaybuffersize);
-				feedbackout += delout;
 				pannedout += delout*pan;
 			}
 
-			delaydata[channel][readpos] = fmax(-1.f,fmin(1.f,dcfilter.process((feedbackval*feedbackout)+channeldata[channel][sample],channel)));
+			feedbackout = dcfilter.process((feedbackval*feedbackout)+channeldata[channel][sample],channel);
+			float thresh = 1;
+			if(state.values[2] < .5) {
+				thresh = fmin(Decibels::decibelsToGain(-1)/fmax(fabs(feedbackout),.000001),1);
+				if(thresh < damplimiter.v_current[channel])
+					damplimiter.v_smoothtime = .01;
+				else
+					damplimiter.v_smoothtime = .1;
+			} else {
+				damplimiter.v_smoothtime = .1;
+			}
+			delaydata[channel][readpos] = fmax(-1.f,fmin(1.f,feedbackout*damplimiter.nextvalue(thresh,channel)));
+
 			channeldata[channel][sample] = state.values[0]*pannedout+(1-state.values[0])*channeldata[channel][sample];
 
 			if(prmscount < samplerate*2) {
@@ -171,16 +198,16 @@ void TripleDAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer&
 	rmsadd = prmsadd;
 	rmscount = prmscount;
 }
-float TripleDAudioProcessor::interpolatesamples(float* buffer, float position, int buffersize) {
+float MagicCarpetAudioProcessor::interpolatesamples(float* buffer, float position, int buffersize) {
 	return buffer[((int)floor(position))%buffersize]*(1-fmod(position,1.f))+buffer[((int)ceil(position))%buffersize]*fmod(position,1.f);
 }
 
-bool TripleDAudioProcessor::hasEditor() const { return true; }
-AudioProcessorEditor* TripleDAudioProcessor::createEditor() {
-	return new TripleDAudioProcessorEditor(*this,paramcount,presets[currentpreset],params);
+bool MagicCarpetAudioProcessor::hasEditor() const { return true; }
+AudioProcessorEditor* MagicCarpetAudioProcessor::createEditor() {
+	return new MagicCarpetAudioProcessorEditor(*this,paramcount,presets[currentpreset],params);
 }
 
-void TripleDAudioProcessor::getStateInformation(MemoryBlock& destData) {
+void MagicCarpetAudioProcessor::getStateInformation(MemoryBlock& destData) {
 	const char delimiter = '\n';
 	std::ostringstream data;
 
@@ -195,7 +222,7 @@ void TripleDAudioProcessor::getStateInformation(MemoryBlock& destData) {
 	MemoryOutputStream stream(destData, false);
 	stream.writeString(data.str());
 }
-void TripleDAudioProcessor::setStateInformation(const void* data, int sizeInBytes) {
+void MagicCarpetAudioProcessor::setStateInformation(const void* data, int sizeInBytes) {
 	const char delimiter = '\n';
 	try {
 		std::stringstream ss(String::createStringFromData(data, sizeInBytes).toRawUTF8());
@@ -224,7 +251,7 @@ void TripleDAudioProcessor::setStateInformation(const void* data, int sizeInByte
 		debug((String)"Error loading saved data");
 	}
 }
-const String TripleDAudioProcessor::get_preset(int preset_id, const char delimiter) {
+const String MagicCarpetAudioProcessor::get_preset(int preset_id, const char delimiter) {
 	std::ostringstream data;
 
 	data << version << delimiter;
@@ -233,7 +260,7 @@ const String TripleDAudioProcessor::get_preset(int preset_id, const char delimit
 
 	return data.str();
 }
-void TripleDAudioProcessor::set_preset(const String& preset, int preset_id, const char delimiter, bool print_errors) {
+void MagicCarpetAudioProcessor::set_preset(const String& preset, int preset_id, const char delimiter, bool print_errors) {
 	String error = "";
 	String revert = get_preset(preset_id);
 	try {
@@ -271,7 +298,7 @@ void TripleDAudioProcessor::set_preset(const String& preset, int preset_id, cons
 	}
 }
 
-void TripleDAudioProcessor::parameterChanged(const String& parameterID, float newValue) {
+void MagicCarpetAudioProcessor::parameterChanged(const String& parameterID, float newValue) {
 	if(parameterID == "randomize" && newValue>.5) {
 		randomize();
 		return;
@@ -283,21 +310,24 @@ void TripleDAudioProcessor::parameterChanged(const String& parameterID, float ne
 		return;
 	}
 }
-void TripleDAudioProcessor::randomize() {
+void MagicCarpetAudioProcessor::randomize() {
 	if(!preparedtoplay) return;
 	for(int d = 0; d < DLINES; ++d)
 		apvts.getParameter("delay"+((String)(d+1)))->setValueNotifyingHost(random.nextFloat());
 }
 
-AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new TripleDAudioProcessor(); }
+AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new MagicCarpetAudioProcessor(); }
 
-AudioProcessorValueTreeState::ParameterLayout TripleDAudioProcessor::create_parameters() {
+AudioProcessorValueTreeState::ParameterLayout MagicCarpetAudioProcessor::create_parameters() {
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"wet"			,1},"Dry/Wet"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.6f	,AudioParameterFloatAttributes().withStringFromValueFunction(tonormalized	).withValueFromStringFunction(fromnormalized)));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"feedback"	,1},"Feedback"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.66f	,AudioParameterFloatAttributes().withStringFromValueFunction(tonormalized	).withValueFromStringFunction(fromnormalized)));
-	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"randomize"	,1},"Randomize"													 ,false	,AudioParameterBoolAttributes()	.withStringFromValueFunction(tobool			).withValueFromStringFunction(frombool		)));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"delay1"		,1},"Delay 1"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.187f,AudioParameterFloatAttributes().withStringFromValueFunction(tolength		).withValueFromStringFunction(fromlength	)));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"delay2"		,1},"Delay 2"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.556f,AudioParameterFloatAttributes().withStringFromValueFunction(tolength		).withValueFromStringFunction(fromlength	)));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"delay3"		,1},"Delay 3"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.447f,AudioParameterFloatAttributes().withStringFromValueFunction(tolength		).withValueFromStringFunction(fromlength	)));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"wet"			,1},"Dry/wet"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.6f	,AudioParameterFloatAttributes().withStringFromValueFunction(tonormalized	).withValueFromStringFunction(fromnormalized)));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"feedback"	,1},"Feedback"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.9f	,AudioParameterFloatAttributes().withStringFromValueFunction(tonormalized	).withValueFromStringFunction(fromnormalized)));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"noise"		,1},"Noise mode"													 ,false	,AudioParameterBoolAttributes()	.withStringFromValueFunction(tobool			).withValueFromStringFunction(frombool		)));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"modamp"		,1},"Mod amount"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.265f	,AudioParameterFloatAttributes().withStringFromValueFunction(tonormalized	).withValueFromStringFunction(fromnormalized)));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"modfreq"		,1},"Mod frequency"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.235f	,AudioParameterFloatAttributes().withStringFromValueFunction(tospeed		).withValueFromStringFunction(fromspeed		)));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"randomize"	,1},"Randomize"														 ,false	,AudioParameterBoolAttributes()	.withStringFromValueFunction(tobool			).withValueFromStringFunction(frombool		)));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"delay1"		,1},"Delay 1"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.187f,AudioParameterFloatAttributes().withStringFromValueFunction(tolength		).withValueFromStringFunction(fromlength	)));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"delay2"		,1},"Delay 2"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.556f,AudioParameterFloatAttributes().withStringFromValueFunction(tolength		).withValueFromStringFunction(fromlength	)));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"delay3"		,1},"Delay 3"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.447f,AudioParameterFloatAttributes().withStringFromValueFunction(tolength		).withValueFromStringFunction(fromlength	)));
 	return { parameters.begin(), parameters.end() };
 }

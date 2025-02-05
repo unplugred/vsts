@@ -40,23 +40,26 @@ public:
 	}
 };
 struct pluginparams {
-	potentiometer pots[2+DLINES];
+	potentiometer pots[5+DLINES];
 };
 
 struct pluginpreset {
 	String name = "";
-	float values[2+DLINES];
-	pluginpreset(String pname = "", float val1 = 0.6f, float val2 = 0.66f) {
+	float values[5+DLINES];
+	pluginpreset(String pname = "", float val1 = 0.6f, float val2 = 0.9f, float val3 = 0.f, float val4 = 0.265f, float val5 = 0.5f) {
 		name = pname;
 		values[0] = val1;
 		values[1] = val2;
+		values[2] = val3;
+		values[3] = val4;
+		values[4] = val5;
 	}
 };
 
-class TripleDAudioProcessor : public plugmachine_dsp, private Timer {
+class MagicCarpetAudioProcessor : public plugmachine_dsp, private Timer {
 public:
-	TripleDAudioProcessor();
-	~TripleDAudioProcessor() override;
+	MagicCarpetAudioProcessor();
+	~MagicCarpetAudioProcessor() override;
 
 	void prepareToPlay(double sampleRate, int samplesPerBlock) override;
 	void changechannelnum(int newchannelnum);
@@ -99,34 +102,37 @@ public:
 	Atomic<int> rmscount = 0;
 
 	int version = 0;
-	const int paramcount = 2+DLINES;
+	const int paramcount = 5+DLINES;
 
 	pluginpreset state;
 	pluginparams params;
-	bool lerpchanged[2+DLINES];
+	bool lerpchanged[5+DLINES];
 	int currentpreset = 0;
 
 private:
 	pluginpreset presets[20];
 	void timerCallback() override;
-	float lerptable[2+DLINES];
+	float lerptable[5+DLINES];
 	float lerpstage = 0;
 	bool preparedtoplay = false;
+	Random random;
 
 	int channelnum = 0;
 	int samplesperblock = 0;
 	int samplerate = 44100;
 
+	dc_filter dcfilter;
+	functions::dampendvalue damplimiter;
 	functions::dampendvalue delayamt;
+	functions::dampendvalue dampamp;
+	bool resetdampenings = false;
+	AudioBuffer<float> delaybuffer;
 	float dindex[DLINES];
 	int readpos = 0;
-	AudioBuffer<float> delaybuffer;
 	int delaybuffersize = 0;
-	dc_filter dcfilter;
-	bool resetdampenings = false;
-	Random random;
+	float crntsmpl = 0;
 
-	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TripleDAudioProcessor)
+	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MagicCarpetAudioProcessor)
 };
 
 static std::function<String(float v, int max)> tolength = [](float v, int max) {
@@ -155,4 +161,13 @@ static std::function<bool(const String& s)> frombool = [](const String& s) {
 	if(s.containsIgnoreCase("1")) return true;
 	if(s.containsIgnoreCase("0")) return false;
 	return true;
+};
+static std::function<String(float v, int max)> tospeed = [](float v, int max) {
+	return String(pow(v*1.4+.15f,2),1)+"hz";
+};
+static std::function<float(const String& s)> fromspeed = [](const String& s) {
+	float val = s.getFloatValue();
+	if(!s.containsIgnoreCase("hz") && val <= 1)
+		return jlimit(0.f,1.f,val);
+	return jlimit(0.f,1.f,((float)sqrt(val)-.15f)*1.4f);
 };

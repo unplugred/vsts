@@ -1,35 +1,35 @@
 #include "processor.h"
 #include "editor.h"
 
-TripleDAudioProcessorEditor::TripleDAudioProcessorEditor(TripleDAudioProcessor& p, int paramcount, pluginpreset state, pluginparams params) : audio_processor(p), AudioProcessorEditor(&p), plugmachine_gui(*this, p, 30+106*2, 162+100*3) {
-	for(int x = 0; x < 2; x++) {
-		for(int y = 0; y < 3; y++) {
-			int i = x+y*2;
-			if(i >= paramcount) break;
-			knobs[i].x = x*106+68;
-			knobs[i].y = y*100+144;
-			knobs[i].id = params.pots[i].id;
-			knobs[i].name = params.pots[i].name;
-			knobs[i].value = params.pots[i].normalize(state.values[i]);
-			knobs[i].minimumvalue = params.pots[i].minimumvalue;
-			knobs[i].maximumvalue = params.pots[i].maximumvalue;
-			knobs[i].defaultvalue = params.pots[i].normalize(params.pots[i].defaultvalue);
-			knobcount++;
-			add_listener(knobs[i].id);
-		}
+MagicCarpetAudioProcessorEditor::MagicCarpetAudioProcessorEditor(MagicCarpetAudioProcessor& p, int paramcount, pluginpreset state, pluginparams params) : audio_processor(p), AudioProcessorEditor(&p), plugmachine_gui(*this, p, 30+106*2, 162+100*3) {
+	int i = 0;
+	for(int x = 0; x < paramcount; x++) {
+		if(x >= 2 && x < 5) continue;
+		knobs[i].x = (i%2)*106+68;
+		knobs[i].y = (i/2)*100+144;
+		knobs[i].id = params.pots[x].id;
+		knobs[i].name = params.pots[x].name;
+		knobs[i].value = params.pots[x].normalize(state.values[x]);
+		knobs[i].minimumvalue = params.pots[x].minimumvalue;
+		knobs[i].maximumvalue = params.pots[x].maximumvalue;
+		knobs[i].defaultvalue = params.pots[x].normalize(params.pots[x].defaultvalue);
+		add_listener(knobs[i].id);
+		++knobcount;
+		++i;
 	}
-	//poke
+	noise = state.values[2] > .5;
+	add_listener("noise");
 
 	calcvis();
 
 	setResizable(false,false);
 	init(&look_n_feel);
 }
-TripleDAudioProcessorEditor::~TripleDAudioProcessorEditor() {
+MagicCarpetAudioProcessorEditor::~MagicCarpetAudioProcessorEditor() {
 	close();
 }
 
-void TripleDAudioProcessorEditor::newOpenGLContextCreated() {
+void MagicCarpetAudioProcessorEditor::newOpenGLContextCreated() {
 	baseshader = add_shader(
 //BASE VERT
 R"(#version 150 core
@@ -140,7 +140,7 @@ void main(){
 
 	draw_init();
 }
-void TripleDAudioProcessorEditor::renderOpenGL() {
+void MagicCarpetAudioProcessorEditor::renderOpenGL() {
 	draw_begin();
 
 	//glEnable(GL_TEXTURE_2D);
@@ -234,10 +234,10 @@ void TripleDAudioProcessorEditor::renderOpenGL() {
 
 	draw_end();
 }
-void TripleDAudioProcessorEditor::openGLContextClosing() {
+void MagicCarpetAudioProcessorEditor::openGLContextClosing() {
 	draw_close();
 }
-void TripleDAudioProcessorEditor::calcvis() {
+void MagicCarpetAudioProcessorEditor::calcvis() {
 	is_stereo = knobs[4].value > 0 && knobs[3].value < 1 && knobs[5].value > 0;
 	pluginpreset pp;
 	for(int i = 0; i < knobcount; i++)
@@ -249,9 +249,9 @@ void TripleDAudioProcessorEditor::calcvis() {
 		}
 	}
 }
-void TripleDAudioProcessorEditor::paint(Graphics& g) { }
+void MagicCarpetAudioProcessorEditor::paint(Graphics& g) { }
 
-void TripleDAudioProcessorEditor::timerCallback() {
+void MagicCarpetAudioProcessorEditor::timerCallback() {
 	for(int i = 0; i < knobcount; i++) {
 		if(knobs[i].hoverstate < -1) {
 			needtoupdate = 2;
@@ -283,7 +283,8 @@ void TripleDAudioProcessorEditor::timerCallback() {
 	update();
 }
 
-void TripleDAudioProcessorEditor::parameterChanged(const String& parameterID, float newValue) {
+void MagicCarpetAudioProcessorEditor::parameterChanged(const String& parameterID, float newValue) {
+	if(parameterID == "noise") noise = newValue > .5;
 	for(int i = 0; i < knobcount; i++) if(knobs[i].id == parameterID) {
 		knobs[i].value = knobs[i].normalize(newValue);
 		calcvis();
@@ -291,7 +292,7 @@ void TripleDAudioProcessorEditor::parameterChanged(const String& parameterID, fl
 		return;
 	}
 }
-void TripleDAudioProcessorEditor::mouseMove(const MouseEvent& event) {
+void MagicCarpetAudioProcessorEditor::mouseMove(const MouseEvent& event) {
 	int prevhover = hover;
 	hover = recalc_hover(event.x,event.y);
 	if(hover == -3 && prevhover != -3 && websiteht <= -1) websiteht = .65f;
@@ -301,10 +302,10 @@ void TripleDAudioProcessorEditor::mouseMove(const MouseEvent& event) {
 		if(prevhover > -1) knobs[prevhover].hoverstate = -3;
 	}
 }
-void TripleDAudioProcessorEditor::mouseExit(const MouseEvent& event) {
+void MagicCarpetAudioProcessorEditor::mouseExit(const MouseEvent& event) {
 	hover = -1;
 }
-void TripleDAudioProcessorEditor::mouseDown(const MouseEvent& event) {
+void MagicCarpetAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 	if(dpi < 0) return;
 	if(event.mods.isRightButtonDown()) {
 		hover = recalc_hover(event.x,event.y);
@@ -320,6 +321,9 @@ void TripleDAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		rightclickmenu->addItem(2,"'Paste preset",audio_processor.is_valid_preset_string(SystemClipboard::getTextFromClipboard()));
 		rightclickmenu->addSeparator();
 		rightclickmenu->addSubMenu("'Scale",*scalemenu);
+		rightclickmenu->addSeparator();
+		rightclickmenu->addItem(3,"'Randomize");
+		rightclickmenu->addItem(4,((String)"'Noise mode: O")+(noise?"N":"FF"));
 		rightclickmenu->showMenuAsync(PopupMenu::Options(),[this](int result){
 			if(result <= 0) return;
 			else if(result >= 20) {
@@ -328,6 +332,10 @@ void TripleDAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 				SystemClipboard::copyTextToClipboard(audio_processor.get_preset(audio_processor.currentpreset));
 			} else if(result == 2) { //paste preset
 				audio_processor.set_preset(SystemClipboard::getTextFromClipboard(), audio_processor.currentpreset);
+			} else if(result == 3) { //randomize
+				audio_processor.randomize();
+			} else if(result == 4) { //toggle noise
+				audio_processor.apvts.getParameter("noise")->setValueNotifyingHost(noise?0.f:1.f);
 			}
 		});
 		return;
@@ -345,7 +353,7 @@ void TripleDAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		event.source.enableUnboundedMouseMovement(true);
 	}
 }
-void TripleDAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
+void MagicCarpetAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 	if(hover == -1) return;
 	if(initialdrag > -1) {
 		if(!finemode && (event.mods.isShiftDown() || event.mods.isAltDown())) {
@@ -366,7 +374,7 @@ void TripleDAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 		if(hover == -3 && prevhover != -3 && websiteht < -1) websiteht = .65f;
 	}
 }
-void TripleDAudioProcessorEditor::mouseUp(const MouseEvent& event) {
+void MagicCarpetAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 	if(dpi < 0) return;
 	if(hover > -1) {
 		audio_processor.undo_manager.setCurrentTransactionName(
@@ -386,18 +394,18 @@ void TripleDAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 	}
 	held = 1;
 }
-void TripleDAudioProcessorEditor::mouseDoubleClick(const MouseEvent& event) {
+void MagicCarpetAudioProcessorEditor::mouseDoubleClick(const MouseEvent& event) {
 	if(hover <= -1) return;
 	audio_processor.undo_manager.setCurrentTransactionName((String)"Reset " += knobs[hover].name);
 	audio_processor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(knobs[hover].defaultvalue);
 	audio_processor.undo_manager.beginNewTransaction();
 }
-void TripleDAudioProcessorEditor::mouseWheelMove(const MouseEvent& event, const MouseWheelDetails& wheel) {
+void MagicCarpetAudioProcessorEditor::mouseWheelMove(const MouseEvent& event, const MouseWheelDetails& wheel) {
 	if(hover <= -1) return;
 	audio_processor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(
 		knobs[hover].value+wheel.deltaY*((event.mods.isShiftDown() || event.mods.isAltDown())?.03f:.2f));
 }
-int TripleDAudioProcessorEditor::recalc_hover(float x, float y) {
+int MagicCarpetAudioProcessorEditor::recalc_hover(float x, float y) {
 	if(dpi < 0) return -1;
 	x /= ui_scales[ui_scale_index];
 	y /= ui_scales[ui_scale_index];
