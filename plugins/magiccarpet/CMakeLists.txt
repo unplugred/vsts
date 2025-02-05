@@ -1,8 +1,8 @@
-project(TripleD VERSION 1.0.0)
-set(BaseTargetName TripleD)
+project(MagicCarpet VERSION 1.0.0)
+set(BaseTargetName MagicCarpet)
 
 juce_add_plugin("${BaseTargetName}"
-	PRODUCT_NAME "Triple D"
+	PRODUCT_NAME "Magic Carpet"
 	COMPANY_NAME "unplugred"
 	COMPANY_WEBSITE "https://vst.unplug.red"
 	COMPANY_EMAIL "melody@unplug.red"
@@ -12,7 +12,7 @@ juce_add_plugin("${BaseTargetName}"
 	NEEDS_MIDI_OUTPUT FALSE
 	IS_MIDI_EFFECT FALSE
 	EDITOR_WANTS_KEYBOARD_FOCUS FALSE
-	DESCRIPTION "A prototyping plugin for internal use."
+	DESCRIPTION "Three delays feedbacking each other into the atmosphere."
 	PLUGIN_MANUFACTURER_CODE Ured
 	PLUGIN_CODE Trpd
 	VST3_CATEGORIES Tools

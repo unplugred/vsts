@@ -121,8 +121,8 @@ plugins = [{
 	"code": "Scop",
 	"standalone": True
 },{
-	"name": "Triple D",
-	"code": "Trpd",
+	"name": "Magic Carpet",
+	"code": "Mgct",
 	"in_bundle": False
 }]
 for i in range(len(plugins)):

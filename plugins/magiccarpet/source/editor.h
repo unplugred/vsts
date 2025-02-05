@@ -35,10 +35,10 @@ struct knob {
 		return val*(maximumvalue-minimumvalue)+minimumvalue;
 	}
 };
-class TripleDAudioProcessorEditor : public AudioProcessorEditor, public plugmachine_gui {
+class MagicCarpetAudioProcessorEditor : public AudioProcessorEditor, public plugmachine_gui {
 public:
-	TripleDAudioProcessorEditor(TripleDAudioProcessor&, int paramcount, pluginpreset state, pluginparams params);
-	~TripleDAudioProcessorEditor() override;
+	MagicCarpetAudioProcessorEditor(MagicCarpetAudioProcessor&, int paramcount, pluginpreset state, pluginparams params);
+	~MagicCarpetAudioProcessorEditor() override;
 
 	void newOpenGLContextCreated() override;
 	void renderOpenGL() override;
@@ -63,7 +63,7 @@ public:
 	float visline[2][452];
 	bool is_stereo = false;
 private:
-	TripleDAudioProcessor& audio_processor;
+	MagicCarpetAudioProcessor& audio_processor;
 
 	OpenGLTexture basetex;
 	std::shared_ptr<OpenGLShaderProgram> baseshader;
@@ -90,7 +90,9 @@ private:
 	float rms = 0;
 	float time = 0;
 
+	bool noise = false;
+
 	LookNFeel look_n_feel;
 
-	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TripleDAudioProcessorEditor)
+	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MagicCarpetAudioProcessorEditor)
 };
