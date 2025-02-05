@@ -46,7 +46,7 @@ struct pluginparams {
 struct pluginpreset {
 	String name = "";
 	float values[5+DLINES];
-	pluginpreset(String pname = "", float val1 = 0.6f, float val2 = 0.9f, float val3 = 0.f, float val4 = 0.265f, float val5 = 0.5f) {
+	pluginpreset(String pname = "", float val1 = 0.6f, float val2 = 0.9f, float val3 = 0.f, float val4 = 0.27f, float val5 = 0.235f) {
 		name = pname;
 		values[0] = val1;
 		values[1] = val2;
