@@ -46,6 +46,7 @@ struct pluginparams {
 struct pluginpreset {
 	String name = "";
 	float values[5+DLINES];
+	int64 seed = 0;
 	pluginpreset(String pname = "", float val1 = 0.6f, float val2 = 0.9f, float val3 = 0.f, float val4 = 0.27f, float val5 = 0.235f) {
 		name = pname;
 		values[0] = val1;
@@ -108,6 +109,8 @@ public:
 	pluginparams params;
 	bool lerpchanged[5+DLINES];
 	int currentpreset = 0;
+
+	float randomui[20];
 
 private:
 	pluginpreset presets[20];

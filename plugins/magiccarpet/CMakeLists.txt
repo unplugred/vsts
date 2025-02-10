@@ -54,30 +54,15 @@ target_compile_definitions("${BaseTargetName}" PUBLIC
 	JUCE_USE_CAMERA=0)
 
 juce_add_binary_data("${BaseTargetName}BinaryData" HEADER_NAME BinaryData.h NAMESPACE BinaryData SOURCES
-	resources/base.png
-	resources/credits.png
-	resources/oversampling.png)
+	resources/text.png
+	resources/noise.png
+	resources/logo.png
+	resources/carpet.png)
 set_target_properties("${BaseTargetName}BinaryData" PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 
 target_link_libraries("${BaseTargetName}" PRIVATE
 	plugmachine
-	#juce::juce_audio_basics
-	#juce::juce_audio_devices
-	#juce::juce_audio_formats
-	#juce::juce_audio_plugin_client
-	#juce::juce_audio_processors
-	#juce::juce_audio_utils
-	#juce::juce_core
-	#juce::juce_data_structures
-	juce::juce_dsp
-	#juce::juce_events
-	#juce::juce_graphics
-	#juce::juce_gui_basics
-	#juce::juce_gui_extra
-	#juce::juce_opengl
-	#juce::juce_video
 	"${BaseTargetName}BinaryData"
 	PUBLIC
-	#juce::juce_recommended_warning_flags
 	juce::juce_recommended_lto_flags
 	juce::juce_recommended_config_flags)

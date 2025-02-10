@@ -11,10 +11,16 @@ MagicCarpetAudioProcessor::MagicCarpetAudioProcessor() :
 	presets[0].values[5] = 0.187f;
 	presets[0].values[6] = 0.556f;
 	presets[0].values[7] = 0.447f;
+	presets[0].seed = Time::currentTimeMillis();
+	state.seed = presets[0].seed;
 	for(int i = 1; i < getNumPrograms(); i++) {
 		presets[i] = presets[0];
 		presets[i].name = "Program " + (String)(i-7);
+		presets[i].seed += i;
 	}
+
+	Random seed_random(state.seed);
+	for(int i = 0; i < 20; ++i) randomui[i] = seed_random.nextFloat();
 
 	params.pots[0] = potentiometer("Dry/Wet"		,"wet"		,.002f	,presets[0].values[0]	);
 	params.pots[1] = potentiometer("Feedback"		,"feedback"	,.002f	,presets[0].values[1]	);
@@ -55,6 +61,13 @@ void MagicCarpetAudioProcessor::setCurrentProgram(int index) {
 		lerpchanged[i] = false;
 	}
 	currentpreset = index;
+
+	if(presets[currentpreset].seed == 0)
+		presets[currentpreset].seed = Time::currentTimeMillis();
+	state.seed = presets[currentpreset].seed;
+	Random seed_random(state.seed);
+	randomui[0] = fmod(floor(randomui[0]*3)+1+seed_random.nextFloat()*2,3)/3.f;
+	for(int i = 1; i < 20; ++i) randomui[i] = seed_random.nextFloat();
 
 	if(lerpstage <= 0) {
 		lerpstage = 1;
@@ -254,7 +267,8 @@ void MagicCarpetAudioProcessor::setStateInformation(const void* data, int sizeIn
 const String MagicCarpetAudioProcessor::get_preset(int preset_id, const char delimiter) {
 	std::ostringstream data;
 
-	data << version << delimiter;
+	data << version << delimiter
+		<< presets[preset_id].seed << delimiter;
 	for(int v = 0; v < paramcount; v++)
 		data << presets[preset_id].values[v] << delimiter;
 
@@ -269,6 +283,9 @@ void MagicCarpetAudioProcessor::set_preset(const String& preset, int preset_id, 
 
 		std::getline(ss, token, delimiter);
 		int save_version = std::stoi(token);
+
+		std::getline(ss, token, delimiter);
+		presets[preset_id].seed = std::stoll(token);
 
 		for(int v = 0; v < paramcount; v++) {
 			std::getline(ss, token, delimiter);
@@ -296,6 +313,10 @@ void MagicCarpetAudioProcessor::set_preset(const String& preset, int preset_id, 
 	for(int i = 0; i < paramcount; i++) {
 		apvts.getParameter(params.pots[i].id)->setValueNotifyingHost(params.pots[i].normalize(presets[currentpreset].values[i]));
 	}
+	state.seed = presets[currentpreset].seed;
+	Random seed_random(state.seed);
+	randomui[0] = fmod(floor(randomui[0]*3)+1+seed_random.nextFloat()*2,3)/3.f;
+	for(int i = 1; i < 20; ++i) randomui[i] = seed_random.nextFloat();
 }
 
 void MagicCarpetAudioProcessor::parameterChanged(const String& parameterID, float newValue) {
@@ -314,6 +335,12 @@ void MagicCarpetAudioProcessor::randomize() {
 	if(!preparedtoplay) return;
 	for(int d = 0; d < DLINES; ++d)
 		apvts.getParameter("delay"+((String)(d+1)))->setValueNotifyingHost(random.nextFloat());
+
+	presets[currentpreset].seed = Time::currentTimeMillis();
+	state.seed = presets[currentpreset].seed;
+	Random seed_random(state.seed);
+	randomui[0] = fmod(floor(randomui[0]*3)+1+seed_random.nextFloat()*2,3)/3.f;
+	for(int i = 1; i < 20; ++i) randomui[i] = seed_random.nextFloat();
 }
 
 AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new MagicCarpetAudioProcessor(); }
