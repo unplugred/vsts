@@ -312,7 +312,7 @@ void MagicCarpetAudioProcessorEditor::renderOpenGL() {
 		roundedsquareshader->setUniform("scale",166.f*2.f/width,53.f*2.f/height);
 		roundedsquareshader->setUniform("res",166.f,53.f);
 		roundedsquareshader->setUniform("banner",banner_offset);
-		roundedsquareshader->setUniform("dpi",(float)fmax(1.f,scaled_dpi*.6f));
+		roundedsquareshader->setUniform("dpi",scaled_dpi*.6f);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 		context.extensions.glDisableVertexAttribArray(coord);
 
@@ -330,7 +330,7 @@ void MagicCarpetAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	knobshader->setUniform("knobscale",60.f*2.f/width,60.f*2.f/height);
 	knobshader->setUniform("banner",banner_offset);
-	knobshader->setUniform("dpi",(float)fmax(1.f,scaled_dpi*.6f));
+	knobshader->setUniform("dpi",scaled_dpi*.6f);
 	for(int i = 0; i < knobcount; i++) {
 		knobshader->setUniform("knobpos",((float)knobs[i].x*2-60.f)/width-1,1-((float)knobs[i].y*2+60.f)/height);
 		knobshader->setUniform("knobrot",(knobs[i].lerpedvalue-.5f)*5.5f);
