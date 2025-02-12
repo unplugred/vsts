@@ -169,7 +169,7 @@ void MagicCarpetAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuf
 		for(int d = 0; d < DLINES; ++d) {
 			if(dampmodamp > 0 && state.values[2] < .5) osc = (sin((crntsmpl+((float)d)/DLINES)*MathConstants<float>::twoPi)*.5+.5)*dampmodamp;
 			if(resetdampenings && sample == 0) delayamt.v_current[d] = state.values[5+d];
-			dindex[d] = ((readpos-1)-samplerate*((delayamt.nextvalue(state.values[5+d],d)*(1-dampmodamp)+osc)*(MAX_DLY-MIN_DLY)+MIN_DLY))+delaybuffersize*2;
+			dindex[d] = ((readpos-1)-samplerate*(pow(delayamt.nextvalue(state.values[5+d],d)*(1-dampmodamp)+osc,2)*(MAX_DLY-MIN_DLY)+MIN_DLY))+delaybuffersize*2;
 		}
 
 		for(int channel = 0; channel < channelnum; ++channel) {
