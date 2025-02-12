@@ -8,9 +8,9 @@ MagicCarpetAudioProcessor::MagicCarpetAudioProcessor() :
 	init();
 
 	presets[0] = pluginpreset("Default",0.6f,0.9f,0.f,0.27f,0.235f);
-	presets[0].values[5] = 0.187f;
-	presets[0].values[6] = 0.556f;
-	presets[0].values[7] = 0.447f;
+	presets[0].values[5] = 0.432f;
+	presets[0].values[6] = 0.746f;
+	presets[0].values[7] = 0.669f;
 	presets[0].seed = Time::currentTimeMillis();
 	state.seed = presets[0].seed;
 	for(int i = 1; i < getNumPrograms(); i++) {
@@ -169,7 +169,7 @@ void MagicCarpetAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuf
 		for(int d = 0; d < DLINES; ++d) {
 			if(dampmodamp > 0 && state.values[2] < .5) osc = (sin((crntsmpl+((float)d)/DLINES)*MathConstants<float>::twoPi)*.5+.5)*dampmodamp;
 			if(resetdampenings && sample == 0) delayamt.v_current[d] = state.values[5+d];
-			dindex[d] = ((readpos-1)-samplerate*(pow(delayamt.nextvalue(state.values[5+d],d)*(1-dampmodamp)+osc,2)*(MAX_DLY-MIN_DLY)+MIN_DLY))+delaybuffersize*2;
+			dindex[d] = ((readpos-1)-samplerate*((pow(delayamt.nextvalue(state.values[5+d],d),2)*(1-dampmodamp)+osc)*(MAX_DLY-MIN_DLY)+MIN_DLY))+delaybuffersize*2;
 		}
 
 		for(int channel = 0; channel < channelnum; ++channel) {
@@ -353,8 +353,8 @@ AudioProcessorValueTreeState::ParameterLayout MagicCarpetAudioProcessor::create_
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"modamp"		,1},"Mod amount"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.27f	,AudioParameterFloatAttributes().withStringFromValueFunction(tonormalized	).withValueFromStringFunction(fromnormalized)));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"modfreq"		,1},"Mod frequency"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.235f	,AudioParameterFloatAttributes().withStringFromValueFunction(tospeed		).withValueFromStringFunction(fromspeed		)));
 	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"randomize"	,1},"Randomize"														 ,false	,AudioParameterBoolAttributes()	.withStringFromValueFunction(tobool			).withValueFromStringFunction(frombool		)));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"delay1"		,1},"Delay 1"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.187f,AudioParameterFloatAttributes().withStringFromValueFunction(tolength		).withValueFromStringFunction(fromlength	)));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"delay2"		,1},"Delay 2"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.556f,AudioParameterFloatAttributes().withStringFromValueFunction(tolength		).withValueFromStringFunction(fromlength	)));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"delay3"		,1},"Delay 3"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.447f,AudioParameterFloatAttributes().withStringFromValueFunction(tolength		).withValueFromStringFunction(fromlength	)));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"delay1"		,1},"Delay 1"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.432f,AudioParameterFloatAttributes().withStringFromValueFunction(tolength		).withValueFromStringFunction(fromlength	)));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"delay2"		,1},"Delay 2"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.746f,AudioParameterFloatAttributes().withStringFromValueFunction(tolength		).withValueFromStringFunction(fromlength	)));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"delay3"		,1},"Delay 3"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.669f,AudioParameterFloatAttributes().withStringFromValueFunction(tolength		).withValueFromStringFunction(fromlength	)));
 	return { parameters.begin(), parameters.end() };
 }
