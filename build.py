@@ -660,6 +660,9 @@ def build_everything_bundle(system_i):
 		identifier = "everythingbundle"
 		product_build("Everything Bundle")
 		for plugin in plugins:
+			if plugin["in_bundle"] and plugin["standalone"]:
+				run_command("chmod -R 755 \""+join(["setup","temp","Manual install",plugin["name"]+get_target("Standalone")["extension"],"Contents","MacOS",plugin["name"]])+"\"")
+				run_command("chmod -R 755 \""+join(["setup","temp","Manual install",plugin["name"]+get_target("Standalone")["extension"]])+"\"")
 			remove(join(["setup","temp",plugin["name"]+" Installer.pkg"]))
 			for file in plugin["additional_files"]:
 				if (get_system(system_i)["code"]+"_"+("paid" if plugin["paid"] else "free")) in file["versions"] and not file["copy"]:
