@@ -395,6 +395,33 @@ def product_build(plugin):
 ''')
 	file.close()
 
+	if standalone:
+		debug("GENERATING COMPONENT.PLIST")
+		file = open("component.plist","w")
+		file.write('''<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+	<array>''')
+		for aplugin in (plugins if plugin == "Everything Bundle" else [get_plugin(plugin)]):
+			if aplugin["in_bundle"] and aplugin["standalone"]:
+				file.write('''
+		<dict>
+			<key>BundleHasStrictIdentifier</key>
+			<true/>
+			<key>BundleIsRelocatable</key>
+			<false/>
+			<key>BundleIsVersionChecked</key>
+			<false/>
+			<key>BundleOverwriteAction</key>
+			<string>upgrade</string>
+			<key>RootRelativeBundlePath</key>
+			<string>'''+aplugin["name"]+'''.app</string>
+		</dict>''')
+		file.write('''
+	</array>
+</plist>
+''')
+		file.close()
 
 def prepare():
 	debug("PREPARING DEPENDENCIES")
@@ -455,6 +482,7 @@ def build(plugin, config, target):
 		if target == "CLAP" or target == "Standalone":
 			copy(join([folder,"plugins",("" if "bundle" not in get_plugin(plugin) else (get_plugin(plugin)["bundle"].replace(' ','').lower()+"/"))+lower,nospace+"_artefacts",config,target,plugin+file_extension]),target_path)
 			if target == "Standalone":
+				run_command("chmod -R 755 \""+join([target_path,"Contents","MacOS",plugin])+"\"")
 				run_command("chmod -R 755 \""+target_path+"\"")
 		if saved_data["secrets"] != {} and saved_data["codesign_plugins"]:
 			zip_path = join(["setup",folder,free,lower+("_free_" if saved_data["is_free"][system] and get_plugin(plugin)["paid"] else "_")+get_target(target)["code"].lower()+".zip"])
@@ -467,9 +495,12 @@ def build(plugin, config, target):
 			run_command("xcrun stapler staple \""+target_path+"\"")
 			if target == "Audio Unit":
 				run_command("sudo cp -R -f \""+target_path+"\" \""+join([get_target(target)["mac_location"],plugin+file_extension+"\""]))
-				run_command("killall -9 AudioComponentRegistrar")
+				run_command("killall -9 AudioComponentRegistrar",True)
 				run_command("auval -a")
 				run_command("auval -strict -v "+get_plugin(plugin)["au_type"]+" "+get_plugin(plugin)["code"]+" Ured")
+			elif target == "Standalone":
+				run_command("chmod -R 755 \""+join([target_path,"Contents","MacOS",plugin])+"\"")
+				run_command("chmod -R 755 \""+target_path+"\"")
 
 	elif systems[system]["code"] == "win":
 		run_command("cmake --build \""+folder+"\" --config "+config+" --target "+nospace+"_"+get_target(target)["code"])
@@ -537,6 +568,7 @@ def build_installer(plugin, system_i, zip_result=True):
 	if get_system(system_i)["code"] == "mac":
 		identifier = nospace+if_free("-free")
 		standalone = False
+		product_build(plugin)
 		for target in targets:
 			for bundle_plugin in (bundle_out+[plugin]):
 				if target["name"] == "Standalone":
@@ -547,22 +579,13 @@ def build_installer(plugin, system_i, zip_result=True):
 				copy(join(["setup",folder,free,bundle_plugin+target["extension"]]),join(["setup","temp","Manual install",bundle_plugin+target["extension"]]))
 			if target["name"] == "Standalone" and not standalone:
 				continue
-			#TODO test this
-			if target["name"] == "Audio Unit" or target["name"] == "Standalone":
-				create_dir(join(["setup","assets","scripts"+target["code"].lower()]))
-				file = open(join(["setup","assets","scripts"+target["code"].lower(),"postinstall"]),"w")
-				if target["name"] == "Audio Unit":
-					file.write("#!/bin/sh\n\nkillall -9 AudioComponentRegistrar\nexit 0")
-				elif target["name"] == "Standalone":
-					file.write("#!/bin/sh\n\nchown -R $(whoami) /Applications/"+plugin+".app\nsudo chmod u+x /Applications/"+plugin+".app/Contents/MacOS/"+plugin+"\nexit 0")
-				file.close()
-				run_command("chmod +rx \""+join(["setup","assets","scripts"+target["code"].lower(),"postinstall"])+"\"")
-			run_command("pkgbuild --install-location \""+target["mac_location"]+"\" --identifier \"com.unplugred."+identifier+"-"+target["code"].lower()+".pkg\""+((" --scripts \""+join(["setup","assets","scripts"+target["code"].lower()])+"\"") if target["name"] == "Audio Unit" else "")+" --version 1.1.1 --root \""+join(["setup","temp","Manual install"])+"\" \""+identifier+"-"+target["code"].lower()+".pkg\"")
+			if target["name"] == "Audio Unit":
+				run_command("chmod +rx \""+join(["setup","assets","scripts","postinstall"])+"\"")
+			run_command("pkgbuild --install-location \""+target["mac_location"]+"\" --identifier \"com.unplugred."+identifier+"-"+target["code"].lower()+".pkg\""+((" --scripts \""+join(["setup","assets","scripts"])+"\"") if target["name"] == "Audio Unit" else "")+" --version 1.1.1 --root \""+join(["setup","temp","Manual install"])+"\""+(" --component-plist \"component.plist\"" if target["name"] == "Standalone" else "")+" \""+identifier+"-"+target["code"].lower()+".pkg\"")
 			for bundle_plugin in (bundle_out+[plugin]):
 				if target["name"] == "Standalone" and not get_plugin(bundle_plugin)["standalone"]:
 					continue
 				move(join(["setup","temp","Manual install",bundle_plugin+target["extension"]]),join(["setup","temp",bundle_plugin+target["extension"]]))
-		product_build(plugin)
 		run_command("productbuild --timestamp --sign \""+saved_data["secrets"]["DEVELOPER_ID_INSTALLER"]+"\" --distribution \""+identifier+".xml\" --resources \""+join(["setup","assets",""])+"\" \""+installer+".pkg\"")
 		run_command("xcrun notarytool submit \""+installer+".pkg\" --apple-id "+saved_data["secrets"]["NOTARIZATION_USERNAME"]+" --password "+saved_data["secrets"]["NOTARIZATION_PASSWORD"]+" --team-id "+saved_data["secrets"]["TEAM_ID"]+" --wait")
 		run_command("xcrun stapler staple \""+installer+".pkg\"")
@@ -574,11 +597,17 @@ def build_installer(plugin, system_i, zip_result=True):
 		remove(identifier+".xml")
 		for target in targets:
 			if not target["name"] == "Standalone" or standalone:
-				if target["name"] == "Audio Unit" or target["name"] == "Standalone":
-					remove(join(["setup","assets","scripts"+target["code"].lower()]))
+				if target["name"] == "Standalone":
+					remove("component.plist")
 				remove(identifier+"-"+target["code"].lower()+".pkg")
 
 	elif get_system(system_i)["code"] == "win":
+		imagemissing = not os.path.exists(join(["setup","assets","image",plugin+".bmp"]))
+		smallimagemissing = not os.path.exists(join(["setup","assets","smallimage",plugin+".bmp"]))
+		if imagemissing:
+			copy(join(["setup","assets","image","Proto.bmp"]),join(["setup","assets","image",plugin+".bmp"]))
+		if smallimagemissing:
+			copy(join(["setup","assets","smallimage","Proto.bmp"]),join(["setup","assets","smallimage",plugin+".bmp"]))
 		cmd = "iscc \""+join(["setup","innosetup.iss"])+"\" \"/DPluginName="+plugin+"\" \"/DVersion="+free+"\""
 		if not get_plugin(plugin)["paid"]:
 			cmd += " \"/DNoPaid\""
@@ -589,6 +618,10 @@ def build_installer(plugin, system_i, zip_result=True):
 		if bundle_out != []:
 			cmd += " \"/DBundle="+'_'.join(bundle_out)+"\""
 		run_command(cmd)
+		if imagemissing:
+			remove(join(["setup","assets","image",plugin+".bmp"]))
+		if smallimagemissing:
+			remove(join(["setup","assets","smallimage",plugin+".bmp"]))
 		for target in targets:
 			if target["name"] == "Audio Unit":
 				continue
@@ -625,6 +658,7 @@ def build_everything_bundle(system_i):
 	if get_system(system_i)["code"] == "mac" and systems[system]["code"] == "mac":
 		debug("BUILDING INSTALLER FOR EVERYTHING BUNDLE")
 		identifier = "everythingbundle"
+		product_build("Everything Bundle")
 		for plugin in plugins:
 			remove(join(["setup","temp",plugin["name"]+" Installer.pkg"]))
 			for file in plugin["additional_files"]:
@@ -637,21 +671,12 @@ def build_everything_bundle(system_i):
 			for plugin in plugins:
 				if plugin["in_bundle"] and (plugin["standalone"] or target["name"] != "Standalone"):
 					move(join(["setup","temp",plugin["name"]+target["extension"]]),join(["setup","temp","Manual install",plugin["name"]+target["extension"]]))
-			#TODO test this
-			if target["name"] == "Audio Unit" or target["name"] == "Standalone":
-				create_dir(join(["setup","assets","scripts"+target["code"].lower()]))
-				file = open(join(["setup","assets","scripts"+target["code"].lower(),"postinstall"]),"w")
-				if target["name"] == "Audio Unit":
-					file.write("#!/bin/sh\n\nkillall -9 AudioComponentRegistrar\nexit 0")
-				elif target["name"] == "Standalone":
-					file.write("#!/bin/sh\n\nchown -R $(whoami) /Applications/"+plugin+".app\nsudo chmod u+x /Applications/"+plugin+".app/Contents/MacOS/"+plugin+"\nexit 0")
-				file.close()
-				run_command("chmod +rx \""+join(["setup","assets","scripts"+target["code"].lower(),"postinstall"])+"\"")
-			run_command("pkgbuild --install-location \""+target["mac_location"]+"\" --identifier \"com.unplugred."+identifier+"-"+target["code"].lower()+".pkg\""+((" --scripts \""+join(["setup","assets","scripts"+target["code"]])+"\"") if target["name"] == "Audio Unit" else "")+" --version 1.1.1 --root \""+join(["setup","temp","Manual install"])+"\" \""+identifier+"-"+target["code"].lower()+".pkg\"")
+			if target["name"] == "Audio Unit":
+				run_command("chmod +rx \""+join(["setup","assets","scripts","postinstall"])+"\"")
+			run_command("pkgbuild --install-location \""+target["mac_location"]+"\" --identifier \"com.unplugred."+identifier+"-"+target["code"].lower()+".pkg\""+((" --scripts \""+join(["setup","assets","scripts"])+"\"") if target["name"] == "Audio Unit" else "")+" --version 1.1.1 --root \""+join(["setup","temp","Manual install"])+"\""+(" --component-plist \"component.plist\"" if target["name"] == "Standalone" else "")+" \""+identifier+"-"+target["code"].lower()+".pkg\"")
 			for plugin in plugins:
 				if plugin["in_bundle"] and (plugin["standalone"] or target["name"] != "Standalone"):
 					move(join(["setup","temp","Manual install",plugin["name"]+target["extension"]]),join(["setup","temp",plugin["name"]+target["extension"]]))
-		product_build("Everything Bundle")
 		run_command("productbuild --timestamp --sign \""+saved_data["secrets"]["DEVELOPER_ID_INSTALLER"]+"\" --distribution \""+identifier+".xml\" --resources \""+join(["setup","assets",""])+"\" \"Everything Bundle Installer.pkg\"")
 		run_command("xcrun notarytool submit \"Everything Bundle Installer.pkg\" --apple-id "+saved_data["secrets"]["NOTARIZATION_USERNAME"]+" --password "+saved_data["secrets"]["NOTARIZATION_PASSWORD"]+" --team-id "+saved_data["secrets"]["TEAM_ID"]+" --wait")
 		run_command("xcrun stapler staple \"Everything Bundle Installer.pkg\"")
@@ -665,8 +690,8 @@ def build_everything_bundle(system_i):
 		move("Everything Bundle Installer.pkg",join(["setup","temp","Everything Bundle Installer.pkg"]))
 		remove(identifier+".xml")
 		for target in targets:
-			if target["name"] == "Audio Unit" or target["name"] == "Standalone":
-				remove(join(["setup","assets","scripts"+target["code"].lower()]))
+			if target["name"] == "Standalone":
+				remove("component.plist")
 			remove(identifier+"-"+target["code"].lower()+".pkg")
 
 	elif get_system(system_i)["code"] == "win" and systems[system]["code"] == "win":
