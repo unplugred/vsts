@@ -11,6 +11,7 @@ MagicCarpetAudioProcessorEditor::MagicCarpetAudioProcessorEditor(MagicCarpetAudi
 		knobs[i].name = params.pots[x].name;
 		knobs[i].value = params.pots[x].normalize(state.values[x]);
 		knobs[i].lerpedvalue = knobs[i].value;
+		knobs[i].slowlerpedvalue = knobs[i].value;
 		knobs[i].minimumvalue = params.pots[x].minimumvalue;
 		knobs[i].maximumvalue = params.pots[x].maximumvalue;
 		knobs[i].defaultvalue = params.pots[x].normalize(params.pots[x].defaultvalue);
@@ -41,6 +42,14 @@ MagicCarpetAudioProcessorEditor::MagicCarpetAudioProcessorEditor(MagicCarpetAudi
 				indicatortimer[i-2] = (pow(knobs[i].value,2)*(MAX_DLY-MIN_DLY)+MIN_DLY)*30*random.nextFloat();
 		}
 		knobs[i].lerpedindicator = knobs[i].indicator;
+	}
+	for(int i = 0; i < 800; ++i) {
+		lineindex = (lineindex+1)%800;
+		timey += .2f*(1-knobs[2].slowlerpedvalue)+.02f;
+		timex += .05f*knobs[3].slowlerpedvalue+.005f;
+		float amp = (sin(timey)*1.5*(1-knobs[4].slowlerpedvalue)+knobs[4].slowlerpedvalue)*.8;
+		linedata[lineindex*2] = sin(timex)*amp;
+		linedata[lineindex*2+1] = cos(timex)*amp;
 	}
 
 	calcvis();
@@ -165,19 +174,28 @@ void main() {
 	fragColor = vec4(vec3((.04-min(col.x,min(col.y,col.z)))*35*dpi*.5),1);
 })");
 
-	visshader = add_shader(
-//VIS VERT
+	lineshader = add_shader(
+//LINE VERT
 R"(#version 150 core
-in vec2 aPos;
+in vec3 coords;
 uniform float banner;
-void main(){
-	gl_Position = vec4(aPos.x,aPos.y*(1-banner),0,1);
+uniform float ratio;
+out float luminocity;
+out float linex;
+void main() {
+	vec2 pos = vec2(coords.x,(coords.y*.5+.5)*ratio*2-1);
+	gl_Position = vec4(vec2(pos.x,pos.y*(1-banner)-banner),0,1);
+	luminocity = abs(coords.z);
+	linex = coords.z>0?1:-1;
 })",
-//VIS FRAG
+//LINE FRAG
 R"(#version 150 core
+in float luminocity;
+in float linex;
+uniform float scaling;
 out vec4 fragColor;
-void main(){
-	fragColor = vec4(1,1,0,1);
+void main() {
+	fragColor = vec4(0,min(1,(1-abs(linex))*scaling*luminocity),0,min(1,luminocity));
 })");
 
 	logoshader = add_shader(
@@ -368,18 +386,17 @@ void MagicCarpetAudioProcessorEditor::renderOpenGL() {
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	context.extensions.glDisableVertexAttribArray(coord);
 
-	/*
-	glLineWidth(1*scaled_dpi);
-	visshader->use();
-	coord = context.extensions.glGetAttribLocation(visshader->getProgramID(),"aPos");
+	lineshader->use();
+	lineshader->setUniform("banner",banner_offset);
+	lineshader->setUniform("scaling",(float)(width*dpi*LINEWIDTH*.35f*(1-powf(1-knobs[0].slowlerpedvalue,2.f))));
+	lineshader->setUniform("ratio",((float)width)/height);
+	coord = context.extensions.glGetAttribLocation(lineshader->getProgramID(),"coords");
 	context.extensions.glEnableVertexAttribArray(coord);
-	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
-	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*452, visline, GL_DYNAMIC_DRAW);
-	visshader->setUniform("banner",banner_offset);
-	glDrawArrays(GL_LINE_STRIP,0,226);
+	context.extensions.glVertexAttribPointer(coord,3,GL_FLOAT,GL_FALSE,0,0);
+	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*800*6, line, GL_DYNAMIC_DRAW);
+	glDrawArrays(GL_TRIANGLE_STRIP,0,800*2);
 	context.extensions.glDisableVertexAttribArray(coord);
 	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
-	*/
 
 	carpetshader->use();
 	context.extensions.glActiveTexture(GL_TEXTURE0);
@@ -387,6 +404,7 @@ void MagicCarpetAudioProcessorEditor::renderOpenGL() {
 	carpetshader->setUniform("carpettex",0);
 	carpetshader->setUniform("banner",banner_offset);
 	carpetshader->setUniform("orientation",audio_processor.randomui[0]*24);
+	coord = context.extensions.glGetAttribLocation(carpetshader->getProgramID(),"aPos");
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
@@ -428,9 +446,50 @@ void MagicCarpetAudioProcessorEditor::openGLContextClosing() {
 	draw_close();
 }
 void MagicCarpetAudioProcessorEditor::calcvis() {
-	for(int i = 0; i < 226; i++) {
-		visline[i*2] = (i/112.5f)*(1-(16.f/width))+(16.f/width)-1;
-		visline[i*2+1] = 1-(62+sin(i/35.8098621957f)*.8f*38)/(height*.5f);
+	for(int i = 0; i < ((int)floor(1+rmslerped*30)); ++i) {
+		for(int i = 0; i < knobcount; i++)
+			knobs[i].slowlerpedvalue = knobs[i].slowlerpedvalue*.8f+knobs[i].value*.2f;
+		lineindex = (lineindex+1)%800;
+		timey += (1+fmod(rmslerped*30,1))*(.2f *(1-knobs[2].slowlerpedvalue)+.02f );
+		timex += (1+fmod(rmslerped*30,1))*(.05f*   knobs[3].slowlerpedvalue +.005f);
+		float amp = (sin(timey)*1.5*(1-knobs[4].slowlerpedvalue)+knobs[4].slowlerpedvalue)*.8;
+		linedata[lineindex*2] = sin(timex)*amp;
+		linedata[lineindex*2+1] = cos(timex)*amp;
+	}
+
+	// line calculous
+	float nextx = -1;
+	float nexty = 0;
+	nextx = linedata[(lineindex*2+2)%1600];
+	nexty = linedata[(lineindex*2+3)%1600];
+	float x = nextx;
+	float y = nexty;
+	float prevx = nextx;
+	float prevy = nexty;
+	float angle1 = 0;
+	float angle2 = 0;
+	for(int i = 0; i < 800; ++i) {
+		prevx = x;
+		prevy = y;
+		x = nextx;
+		y = nexty;
+		if(i < 799) {
+			nextx = linedata[((lineindex+i)*2+4)%1600];
+			nexty = linedata[((lineindex+i)*2+5)%1600];
+		}
+
+		angle1 = std::atan2(y-prevy,x-prevx);
+		if(i < 799) angle2 = std::atan2(y-nexty,x-nextx);
+		while((angle1-angle2) < -1.5707963268) angle1 += 3.1415926535*2;
+		while((angle1-angle2) >  1.5707963268) angle1 -= 3.1415926535*2;
+		float angle = (angle1+angle2)*.5;
+
+		line[i*6  ] = x+cos(angle)*LINEWIDTH;
+		line[i*6+3] = x-cos(angle)*LINEWIDTH;
+		line[i*6+1] = y+sin(angle)*LINEWIDTH;
+		line[i*6+4] = y-sin(angle)*LINEWIDTH;
+		line[i*6+2] = 1-pow(fmin(1,(1-((float)i)/800.f)/(knobs[1].slowlerpedvalue+.01f)),4);
+		line[i*6+5] = -line[i*6+2];
 	}
 }
 void MagicCarpetAudioProcessorEditor::paint(Graphics& g) { }
@@ -461,8 +520,9 @@ void MagicCarpetAudioProcessorEditor::timerCallback() {
 		audio_processor.rmsadd = 0;
 		audio_processor.rmscount = 0;
 	} else rms *= .9f;
+	rmslerped = rmslerped*.6f+rms*.4f;
 
-	time = fmod(time+.0002f,1.f);
+	calcvis();
 
 	update();
 }
