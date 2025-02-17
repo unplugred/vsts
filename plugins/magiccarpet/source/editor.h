@@ -3,6 +3,8 @@
 #include "processor.h"
 using namespace gl;
 
+#define LINEWIDTH .008
+
 class ui_font : public cool_font {
 public:
 	ui_font() {
@@ -35,6 +37,7 @@ struct knob {
 	int y = 0;
 	float value = .5f;
 	float lerpedvalue = .5f;
+	float slowlerpedvalue = .5f;
 	float indicator = 1.0f;
 	float lerpedindicator = 1.0f;
 	String id;
@@ -98,9 +101,13 @@ private:
 	std::shared_ptr<OpenGLShaderProgram> centershader;
 
 	float rms = 0;
-	float time = 0;
-	float visline[452];
-	std::shared_ptr<OpenGLShaderProgram> visshader;
+	float rmslerped = 0;
+	float timex = 0;
+	float timey = 0;
+	float linedata[1600];
+	float line[4800];
+	int lineindex = 0;
+	std::shared_ptr<OpenGLShaderProgram> lineshader;
 
 	float logoprog = 0;
 	float logopos[6];
