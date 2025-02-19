@@ -15,7 +15,7 @@ juce_add_plugin("${BaseTargetName}"
 	DESCRIPTION "Three delays feedbacking each other into the atmosphere."
 	PLUGIN_MANUFACTURER_CODE Ured
 	PLUGIN_CODE Mgct
-	VST3_CATEGORIES Tools
+	VST3_CATEGORIES Delay
 	VST2_CATEGORY kPlugCategEffect
 	AU_MAIN_TYPE kAudioUnitType_Effect
 	COPY_PLUGIN_AFTER_BUILD TRUE

@@ -15,7 +15,7 @@ MagicCarpetAudioProcessor::MagicCarpetAudioProcessor() :
 	state.seed = presets[0].seed;
 	for(int i = 1; i < getNumPrograms(); i++) {
 		presets[i] = presets[0];
-		presets[i].name = "Program " + (String)(i-7);
+		presets[i].name = "Program " + (String)(i);
 		presets[i].seed += i;
 	}
 
@@ -157,7 +157,7 @@ void MagicCarpetAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuf
 		for(int i = 0; i < paramcount; i++) if(params.pots[i].smoothtime > 0)
 			state.values[i] = params.pots[i].smooth.getNextValue();
 
-		float feedbackval = 1-powf(1-state.values[1],.3f);
+		float feedbackval = state.values[1];
 		if(state.values[2] < .5) feedbackval /= DLINES;
 
 		if(resetdampenings && sample == 0) dampamp.v_current[0] = state.values[3];
@@ -184,8 +184,11 @@ void MagicCarpetAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuf
 				float delout = interpolatesamples(delaydata[channel],dindex[d],delaybuffersize);
 				feedbackout += delout*((d%2)==0?-1:1);
 
-				float pan = ((float)d)/(DLINES-1);
-				pan = (((float)channel)/(channelnum-1))*(pan*2-1)+(1-pan);
+				float pan = 1;
+				if(channelnum > 1) {
+					pan = ((float)d)/(DLINES-1);
+					pan = (((float)channel)/(channelnum-1))*(pan*2-1)+(1-pan);
+				}
 				pannedout += delout*pan;
 			}
 
