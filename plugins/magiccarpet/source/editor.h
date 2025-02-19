@@ -4,6 +4,8 @@
 using namespace gl;
 
 #define LINEWIDTH .008
+#define BUFFERLENGTH 1200
+#define SPEED 1.5
 
 class ui_font : public cool_font {
 public:
@@ -104,8 +106,8 @@ private:
 	float rmslerped = 0;
 	float timex = 0;
 	float timey = 0;
-	float linedata[1600];
-	float line[4800];
+	float linedata[BUFFERLENGTH*2];
+	float line[BUFFERLENGTH*6];
 	int lineindex = 0;
 	std::shared_ptr<OpenGLShaderProgram> lineshader;
 

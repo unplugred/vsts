@@ -173,6 +173,11 @@ void MagicCarpetAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuf
 		}
 
 		for(int channel = 0; channel < channelnum; ++channel) {
+			if(prmscount < samplerate*2) {
+				prmsadd += channeldata[channel][sample]*channeldata[channel][sample];
+				prmscount++;
+			}
+
 			float feedbackout = 0;
 			float pannedout = 0;
 			for(int d = 0; d < DLINES; ++d) {
@@ -198,11 +203,6 @@ void MagicCarpetAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuf
 			delaydata[channel][readpos] = fmax(-1.f,fmin(1.f,feedbackout*damplimiter.nextvalue(thresh,channel)));
 
 			channeldata[channel][sample] = state.values[0]*pannedout+(1-state.values[0])*channeldata[channel][sample];
-
-			if(prmscount < samplerate*2) {
-				prmsadd += channeldata[channel][sample]*channeldata[channel][sample];
-				prmscount++;
-			}
 		}
 		readpos = fmod(readpos+1,delaybuffersize);
 	}
