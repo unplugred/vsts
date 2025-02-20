@@ -27,7 +27,7 @@ target_compile_features("${BaseTargetName}" PRIVATE cxx_std_17)
 
 clap_juce_extensions_plugin(TARGET "${BaseTargetName}"
 	CLAP_ID "com.unplugred.${BaseTargetName}"
-	CLAP_FEATURES audio-effect distortion mono stereo surround ambisonic
+	CLAP_FEATURES audio-effect delay mono stereo surround ambisonic
 	CLAP_USE_JUCE_PARAMETER_RANGES ALL)
 
 target_sources("${BaseTargetName}" PRIVATE
