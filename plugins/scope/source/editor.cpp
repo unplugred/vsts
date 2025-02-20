@@ -245,7 +245,7 @@ void ScopeAudioProcessorEditor::renderOpenGL() {
 	lineshader->setUniform("banner",banner_offset);
 	lineshader->setUniform("scaling",1.f);
 	lineshader->setUniform("opacity",.04f);
-	lineshader->setUniform("bufferscale",(200/DOWNSCALEFACTOR)/((float)width),(150/DOWNSCALEFACTOR)/((float)height));
+	lineshader->setUniform("bufferscale",(200/DOWNSCALEFACTOR)/((float)width*scaled_dpi),(150/DOWNSCALEFACTOR)/((float)height*scaled_dpi));
 	coord = context.extensions.glGetAttribLocation(lineshader->getProgramID(),"coords");
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,3,GL_FLOAT,GL_FALSE,0,0);
