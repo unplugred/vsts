@@ -7,15 +7,15 @@ PisstortionAudioProcessor::PisstortionAudioProcessor() :
 
 	init();
 
-	presets[0] = pluginpreset("Default"				,0.17f	,1.0f	,0.35f	,0.31f	,0.1f	,1.0f	);
-	presets[1] = pluginpreset("Sand in Your Ear"	,0.3f	,1.0f	,1.0f	,0.18f	,0.0f	,1.0f	);
-	presets[2] = pluginpreset("Mega Drive"			,0.02f	,0.42f	,0.0f	,1.0f	,0.0f	,1.0f	);
-	presets[3] = pluginpreset("Easy to Destroy"		,0.32f	,1.0f	,0.13f	,1.0f	,0.0f	,1.0f	);
-	presets[4] = pluginpreset("Screamy"				,0.58f	,1.0f	,0.0f	,0.51f	,0.52f	,1.0f	);
-	presets[5] = pluginpreset("I Love Piss"			,1.0f	,1.0f	,0.0f	,1.0f	,0.25f	,1.0f	);
-	presets[6] = pluginpreset("You Broke It"		,0.09f	,1.0f	,0.0f	,0.02f	,0.0f	,1.0f	);
-	presets[7] = pluginpreset("Splashing"			,1.0f	,1.0f	,0.39f	,0.07f	,0.22f	,1.0f	);
-	presets[8] = pluginpreset("PISS LASERS"			,0.39f	,0.95f	,0.36f	,0.59f	,0.34f	,1.0f	);
+	presets[0] = pluginpreset("Default"				,0.17f	,1.0f	,0.35f	,0.31f	,0.1f	,1.0f	,1.0f	);
+	presets[1] = pluginpreset("Sand in Your Ear"	,0.3f	,1.0f	,1.0f	,0.18f	,0.0f	,1.0f	,1.0f	);
+	presets[2] = pluginpreset("Mega Drive"			,0.02f	,0.42f	,0.0f	,1.0f	,0.0f	,1.0f	,1.0f	);
+	presets[3] = pluginpreset("Easy to Destroy"		,0.32f	,1.0f	,0.13f	,1.0f	,0.0f	,1.0f	,1.0f	);
+	presets[4] = pluginpreset("Screamy"				,0.58f	,1.0f	,0.0f	,0.51f	,0.52f	,1.0f	,1.0f	);
+	presets[5] = pluginpreset("I Love Piss"			,1.0f	,1.0f	,0.0f	,1.0f	,0.25f	,1.0f	,1.0f	);
+	presets[6] = pluginpreset("You Broke It"		,0.09f	,1.0f	,0.0f	,0.02f	,0.0f	,1.0f	,1.0f	);
+	presets[7] = pluginpreset("Splashing"			,1.0f	,1.0f	,0.39f	,0.07f	,0.22f	,1.0f	,1.0f	);
+	presets[8] = pluginpreset("PISS LASERS"			,0.39f	,0.95f	,0.36f	,0.59f	,0.34f	,1.0f	,1.0f	);
 	for(int i = 9; i < getNumPrograms(); i++) {
 		presets[i] = presets[0];
 		presets[i].name = "Program " + (String)(i-8);
@@ -27,6 +27,7 @@ PisstortionAudioProcessor::PisstortionAudioProcessor() :
 	params.pots[3] = potentiometer("Harmonics"			,"harm"		,.001f	,presets[0].values[3]	);
 	params.pots[4] = potentiometer("Stereo"				,"stereo"	,.001f	,presets[0].values[4]	);
 	params.pots[5] = potentiometer("Out Gain"			,"gain"		,.002f	,presets[0].values[5]	);
+	params.pots[6] = potentiometer("Mode"				,"mode"		,0		,presets[0].values[6]	,0,1,potentiometer::booltype);
 
 	for(int i = 0; i < paramcount; i++) {
 		state.values[i] = params.pots[i].inflate(apvts.getParameter(params.pots[i].id)->getValue());
@@ -187,7 +188,14 @@ float PisstortionAudioProcessor::pisstortion(float source, int channel, int chan
 	double channeloffset = 0;
 	if(channelcount > 1) channeloffset = ((double)channel/(channelcount-1))-.5;
 	double ampamount = 50*(stt.values[0]+stt.values[4]*stt.values[0]*channeloffset*(source>0?1:-1));
-	double f = sin(((double)source)*ampamount)+source*fmax(1-ampamount,0);
+	double f = 0;
+	if(stt.values[6] > .5) {
+		f = sin(((double)source)*ampamount)+source*fmax(1-ampamount,0);
+	} else {
+		ampamount *= .6366197724;
+		f = fmod(fabs(((double)source)*ampamount),4);
+		f = (f>3?(f-4):(f>1?(2-f):f))*(source>0?1:-1)+source*fmax(1-ampamount,0);
+	}
 
 	if(stt.values[3] >= 1) {
 		if(f > 0) f = 1;
@@ -265,12 +273,12 @@ void PisstortionAudioProcessor::setStateInformation(const void* data, int sizeIn
 		std::string token;
 
 		std::getline(ss, token, delimiter);
-		int saveversion = std::stoi(token);
+		int save_version = std::stoi(token);
 
 		std::getline(ss, token, delimiter);
 		currentpreset = std::stoi(token);
 
-		if(saveversion >= 3) {
+		if(save_version >= 3) {
 			std::getline(ss, token, delimiter);
 			params.oversampling = std::stof(token) > .5;
 
@@ -278,6 +286,10 @@ void PisstortionAudioProcessor::setStateInformation(const void* data, int sizeIn
 				std::getline(ss, token, delimiter);
 				presets[i].name = token;
 				for(int v = 0; v < paramcount; v++) {
+					if(save_version <= 3 && v == 6) {
+						presets[i].values[v] = 1;
+						continue;
+					}
 					std::getline(ss, token, delimiter);
 					presets[i].values[v] = std::stof(token);
 				}
@@ -290,10 +302,10 @@ void PisstortionAudioProcessor::setStateInformation(const void* data, int sizeIn
 
 			std::getline(ss, token, delimiter);
 			float val = std::stof(token);
-			if(saveversion <= 1) val = val > 1.5 ? 1 : 0;
+			if(save_version <= 1) val = val > 1.5 ? 1 : 0;
 			params.oversampling = val>.5;
 
-			for(int i = 0; i < (saveversion == 0 ? 8 : getNumPrograms()); i++) {
+			for(int i = 0; i < (save_version == 0 ? 8 : getNumPrograms()); i++) {
 				std::getline(ss, token, delimiter);
 				presets[i].name = token;
 				for(int v = 0; v < 5; v++) {
@@ -342,6 +354,10 @@ void PisstortionAudioProcessor::set_preset(const String& preset, int preset_id, 
 		int save_version = std::stoi(token);
 
 		for(int v = 0; v < paramcount; v++) {
+			if(save_version <= 3 && v == 6) {
+				presets[preset_id].values[v] = 1;
+				continue;
+			}
 			std::getline(ss, token, delimiter);
 			presets[preset_id].values[v] = std::stof(token);
 		}
@@ -394,5 +410,6 @@ AudioProcessorValueTreeState::ParameterLayout PisstortionAudioProcessor::create_
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"stereo"		,1},"Stereo"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.1f	));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"gain"		,1},"Out Gain"			,juce::NormalisableRange<float>( 0.0f	,1.0f	),1.0f	));
 	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"oversampling",1},"Over-Sampling"														 ,true	));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"mode"		,1},"Mode"																 ,true	,AudioParameterBoolAttributes().withStringFromValueFunction(tomode).withValueFromStringFunction(frommode)));
 	return { parameters.begin(), parameters.end() };
 }
