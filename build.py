@@ -122,8 +122,7 @@ plugins = [{
 	"standalone": True
 },{
 	"name": "Magic Carpet",
-	"code": "Mgct",
-	"in_bundle": False
+	"code": "Mgct"
 }]
 for i in range(len(plugins)):
 	if "standalone" not in plugins[i]:
