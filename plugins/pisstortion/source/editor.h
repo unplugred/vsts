@@ -99,6 +99,8 @@ private:
 	float oversamplingalpha = 0;
 	float oversamplinglerped = 1;
 	int oversampling = 1;
+	float modelerped = 1;
+	int mode = 1;
 	std::shared_ptr<OpenGLShaderProgram> oversamplingshader;
 
 	float websiteht = -1;

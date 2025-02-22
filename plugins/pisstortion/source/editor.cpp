@@ -21,6 +21,9 @@ PisstortionAudioProcessorEditor::PisstortionAudioProcessorEditor(PisstortionAudi
 	oversampling = params.oversampling;
 	oversamplinglerped = oversampling;
 	add_listener("oversampling");
+	mode = state.values[6];
+	modelerped = mode;
+	add_listener("mode");
 
 	for(int i = 0; i < 20; i++) {
 		bubbleregen(i);
@@ -40,12 +43,12 @@ void PisstortionAudioProcessorEditor::newOpenGLContextCreated() {
 	baseshader = add_shader(
 //BASE VERT
 R"(#version 150 core
-in vec2 aPos;
+in vec2 coords;
 uniform float banner;
 out vec2 uv;
 void main(){
-	gl_Position = vec4(vec2(aPos.x,aPos.y*(1-banner)+banner)*2-1,0,1);
-	uv = aPos;
+	gl_Position = vec4(vec2(coords.x,coords.y*(1-banner)+banner)*2-1,0,1);
+	uv = coords;
 })",
 //BASE FRAG
 R"(#version 150 core
@@ -68,7 +71,7 @@ void main(){
 	knobshader = add_shader(
 //KNOB VERT
 R"(#version 150 core
-in vec2 aPos;
+in vec2 coords;
 uniform float banner;
 uniform vec2 knobscale;
 uniform float ratio;
@@ -77,11 +80,11 @@ uniform float knobrot;
 out vec2 uv;
 out vec2 circlecoord;
 void main(){
-	vec2 pos = ((aPos*2-1)*knobscale)/vec2(ratio,1);
+	vec2 pos = ((coords*2-1)*knobscale)/vec2(ratio,1);
 	gl_Position = vec4(
 		(pos.x*cos(knobrot)-pos.y*sin(knobrot))*ratio-1+knobpos.x,
 		pos.x*sin(knobrot)+pos.y*cos(knobrot)-1+knobpos.y,0,1);
-	uv = aPos;
+	uv = coords;
 	circlecoord = gl_Position.xy*.5+.5;
 	gl_Position.y = gl_Position.y*(1-banner)+banner;
 })",
@@ -107,14 +110,14 @@ void main(){
 	visshader = add_shader(
 //VIS VERT
 R"(#version 150 core
-in vec3 aPos;
+in vec3 coords;
 uniform float banner;
 out vec2 basecoord;
 out float linepos;
 void main(){
-	gl_Position = vec4(aPos.x,aPos.y*(1-banner)+banner,0,1);
-	basecoord = aPos.xy*.5+.5;
-	linepos = aPos.z;
+	gl_Position = vec4(coords.x,coords.y*(1-banner)+banner,0,1);
+	basecoord = coords.xy*.5+.5;
+	linepos = coords.z;
 })",
 //VIS FRAG
 R"(#version 150 core
@@ -131,20 +134,20 @@ void main(){
 	oversamplingshader = add_shader(
 //OVERSAMPLING VERT
 R"(#version 150 core
-in vec2 aPos;
+in vec2 coords;
 uniform float banner;
-uniform float selection;
+uniform vec2 selection;
 out vec2 basecoord;
-out vec2 highlightcoord;
+out vec4 highlightcoord;
 void main(){
-	gl_Position = vec4(aPos.x-.5,aPos.y*(1-banner)*.2+.7+banner*.3,0,1);
-	basecoord = vec2((aPos.x+.5)*.5,1-(1.5-aPos.y)*.1);
-	highlightcoord = vec2((aPos.x-selection)*4.3214285714,aPos.y*3.3-1.1642857143);
+	gl_Position = vec4(coords.x-.5,coords.y*(1-banner)*.2+.7+banner*.3,0,1);
+	basecoord = vec2((coords.x+.5)*.5,1-(1.5-coords.y)*.1);
+	highlightcoord = vec4((coords.x-selection.x)*4.3214285714,coords.y*3.6-1.65,(coords.x-selection.y)*4.3214285714,coords.y*3.6+1-1.65);
 })",
 //OVERSAMPLING FRAG
 R"(#version 150 core
 in vec2 basecoord;
-in vec2 highlightcoord;
+in vec4 highlightcoord;
 uniform sampler2D basetex;
 uniform float alpha;
 uniform float dpi;
@@ -154,7 +157,7 @@ void main(){
 	if(tex.r <= 0) {
 		float bleh = 0;
 		if(tex.g >= .99 && tex.b > .02) bleh = min(max((tex.b-.5)*dpi+.5,0),1);
-		if(highlightcoord.x>0&&highlightcoord.x<1&&highlightcoord.y>0&&highlightcoord.y<1)
+		if((highlightcoord.x>0&&highlightcoord.x<1&&highlightcoord.y>0&&highlightcoord.y<1)||(highlightcoord.z>0&&highlightcoord.z<1&&highlightcoord.w>0&&highlightcoord.w<1))
 			bleh = 1-bleh;
 		fragColor = vec4(.05,.05,.05,bleh*alpha);
 	} else {
@@ -165,14 +168,14 @@ void main(){
 	creditsshader = add_shader(
 //CREDITS VERT
 R"(#version 150 core
-in vec2 aPos;
+in vec2 coords;
 uniform float banner;
 out vec2 uv;
 out vec2 basecoord;
 void main(){
-	gl_Position = vec4(aPos.x*2-1,1-(1-aPos.y*(57./462.)*(1-banner)-banner)*2,0,1);
-	uv = aPos;
-	basecoord = aPos*vec2(1,57./462.);
+	gl_Position = vec4(coords.x*2-1,1-(1-coords.y*(57./462.)*(1-banner)-banner)*2,0,1);
+	uv = coords;
+	basecoord = coords*vec2(1,57./462.);
 })",
 //CREDITS FRAG
 R"(#version 150 core
@@ -205,16 +208,16 @@ void main(){
 	circleshader = add_shader(
 //CIRCLE VERT
 R"(#version 150 core
-in vec2 aPos;
+in vec2 coords;
 uniform vec2 pos;
 uniform float ratio;
 uniform float banner;
 out vec2 uv;
 void main(){
 	float f = .1;
-	gl_Position = vec4((aPos*2-1)*vec2(1,ratio)*f+pos*2-1,0,1);
+	gl_Position = vec4((coords*2-1)*vec2(1,ratio)*f+pos*2-1,0,1);
 	gl_Position.y = gl_Position.y*(1-banner)-banner;
-	uv = aPos*2-1;
+	uv = coords*2-1;
 })",
 //CIRCLE FRAG
 R"(#version 150 core
@@ -244,7 +247,7 @@ void PisstortionAudioProcessorEditor::renderOpenGL() {
 	glDisable(GL_DEPTH_TEST);
 
 	context.extensions.glBindBuffer(GL_ARRAY_BUFFER, array_buffer);
-	auto coord = context.extensions.glGetAttribLocation(baseshader->getProgramID(),"aPos");
+	auto coord = context.extensions.glGetAttribLocation(baseshader->getProgramID(),"coords");
 	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -254,7 +257,7 @@ void PisstortionAudioProcessorEditor::renderOpenGL() {
 	circleshader->setUniform("banner",banner_offset);
 	circleshader->setUniform("ratio",((float)width)/height);
 	circleshader->setUniform("dpi",(float)fmax(scaled_dpi,1));
-	coord = context.extensions.glGetAttribLocation(circleshader->getProgramID(),"aPos");
+	coord = context.extensions.glGetAttribLocation(circleshader->getProgramID(),"coords");
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	for(int i = 0; i < 20; i++) {
@@ -291,7 +294,7 @@ void PisstortionAudioProcessorEditor::renderOpenGL() {
 	knobshader->setUniform("banner",banner_offset);
 	knobshader->setUniform("knobscale",54.f/width,54.f/height);
 	knobshader->setUniform("ratio",((float)height)/width);
-	coord = context.extensions.glGetAttribLocation(knobshader->getProgramID(),"aPos");
+	coord = context.extensions.glGetAttribLocation(knobshader->getProgramID(),"coords");
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	for(int i = 0; i < knobcount; i++) {
@@ -307,7 +310,7 @@ void PisstortionAudioProcessorEditor::renderOpenGL() {
 		if(oversamplingalpha > 0)
 			osalpha = oversamplingalpha<0.5?4*oversamplingalpha*oversamplingalpha*oversamplingalpha:1-(float)pow(2-2*oversamplingalpha,3)/2;
 		visshader->use();
-		coord = context.extensions.glGetAttribLocation(visshader->getProgramID(),"aPos");
+		coord = context.extensions.glGetAttribLocation(visshader->getProgramID(),"coords");
 		context.extensions.glActiveTexture(GL_TEXTURE0);
 		basetex.bind();
 		visshader->setUniform("basetex",0);
@@ -328,14 +331,14 @@ void PisstortionAudioProcessorEditor::renderOpenGL() {
 
 	if(oversamplingalpha > 0) {
 		oversamplingshader->use();
-		coord = context.extensions.glGetAttribLocation(oversamplingshader->getProgramID(),"aPos");
+		coord = context.extensions.glGetAttribLocation(oversamplingshader->getProgramID(),"coords");
 		context.extensions.glActiveTexture(GL_TEXTURE0);
 		basetex.bind();
 		oversamplingshader->setUniform("basetex",0);
 		oversamplingshader->setUniform("dpi",(float)fmax(scaled_dpi,1));
 		oversamplingshader->setUniform("banner",banner_offset);
 		oversamplingshader->setUniform("alpha",osalpha);
-		oversamplingshader->setUniform("selection",.458677686f+oversamplinglerped*.2314049587f);
+		oversamplingshader->setUniform("selection",.458677686f+oversamplinglerped*.2314049587f,.42+modelerped*.2314049587f);
 		context.extensions.glEnableVertexAttribArray(coord);
 		context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
@@ -353,7 +356,7 @@ void PisstortionAudioProcessorEditor::renderOpenGL() {
 	creditsshader->setUniform("creditstex",1);
 	creditsshader->setUniform("alpha",creditsalpha<0.5?4*creditsalpha*creditsalpha*creditsalpha:1-(float)pow(2-2*creditsalpha,3)/2);
 	creditsshader->setUniform("shineprog",websiteht);
-	coord = context.extensions.glGetAttribLocation(creditsshader->getProgramID(),"aPos");
+	coord = context.extensions.glGetAttribLocation(creditsshader->getProgramID(),"coords");
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
@@ -369,6 +372,7 @@ void PisstortionAudioProcessorEditor::calcvis() {
 	pluginpreset pp;
 	for(int i = 0; i < knobcount; i++)
 		pp.values[i] = knobs[i].inflate(knobs[i].value);
+	pp.values[6] = mode;
 	double prevy = 48;
 	double currenty = 48;
 	double nexty = 48;
@@ -414,6 +418,11 @@ void PisstortionAudioProcessorEditor::timerCallback() {
 	if(oversamplinglerped != os?1:0) {
 		if(fabs(oversamplinglerped-os) <= .001f) oversamplinglerped = os;
 		oversamplinglerped = oversamplinglerped*.75f+os*.25f;
+	}
+	float mo = mode?1:0;
+	if(modelerped != mo?1:0) {
+		if(fabs(modelerped-mo) <= .001f) modelerped = mo;
+		modelerped = modelerped*.75f+mo*.25f;
 	}
 
 	if(creditsalpha != ((hover<=-2&&hover>=-3)?1:0))
@@ -461,6 +470,11 @@ void PisstortionAudioProcessorEditor::bubbleregen(int i) {
 void PisstortionAudioProcessorEditor::parameterChanged(const String& parameterID, float newValue) {
 	if(parameterID == "oversampling") {
 		oversampling = newValue>.5f;
+		return;
+	}
+	if(parameterID == "mode") {
+		mode = newValue>.5f;
+		calcvis();
 		return;
 	}
 	for(int i = 0; i < knobcount; i++) if(knobs[i].id == parameterID) {
@@ -517,10 +531,15 @@ void PisstortionAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		audio_processor.lerpchanged[hover] = true;
 		dragpos = event.getScreenPosition();
 		event.source.enableUnboundedMouseMovement(true);
-	} else if(hover < -4) {
+	} else if(hover == -5 || hover == -6) {
 		oversampling = hover == -6;
 		audio_processor.apvts.getParameter("oversampling")->setValueNotifyingHost(oversampling?1.f:0.f);
 		audio_processor.undo_manager.setCurrentTransactionName(oversampling?"Turned oversampling on":"Turned oversampling off");
+		audio_processor.undo_manager.beginNewTransaction();
+	} else if(hover == -7 || hover == -8) {
+		mode = hover == -8;
+		audio_processor.apvts.getParameter("mode")->setValueNotifyingHost(mode?1.f:0.f);
+		audio_processor.undo_manager.setCurrentTransactionName(mode?"Switched mode to fold":"Switched mode to sine fold");
 		audio_processor.undo_manager.beginNewTransaction();
 	}
 }
@@ -581,9 +600,14 @@ int PisstortionAudioProcessorEditor::recalc_hover(float x, float y) {
 	y /= ui_scales[ui_scale_index];
 
 	if(x >= 8 && x <= 234 && y >= 8 && y <= 87) {
-		if(y < 39 || y > 53) return -4;
-		if(x >= 115 && x <= 143) return -5;
-		if(x >= 144 && x <= 172) return -6;
+		if(y < 35 || y > 61) return -4;
+		if(y < 48) {
+			if(x >= 116 && x < 144) return -5;
+			if(x >= 144 && x < 172) return -6;
+		} else {
+			if(x >= 111 && x < 139) return -7;
+			if(x >= 139 && x < 167) return -8;
+		}
 		return -4;
 	} else if(y >= 403 && y < 462) {
 		if(x >= 50 && x <= 196 && y >= 412 && y <= 456) return -3;

@@ -35,14 +35,14 @@ public:
 	}
 };
 struct pluginparams {
-	potentiometer pots[6];
+	potentiometer pots[7];
 	bool oversampling = true;
 };
 
 struct pluginpreset {
 	String name = "";
-	float values[6];
-	pluginpreset(String pname = "", float val1 = 0.f, float val2 = 0.f, float val3 = 0.f, float val4 = 0.f, float val5 = 0.f, float val6 = 0.f) {
+	float values[7];
+	pluginpreset(String pname = "", float val1 = 0.f, float val2 = 0.f, float val3 = 0.f, float val4 = 0.f, float val5 = 0.f, float val6 = 0.f, float val7 = 0.f) {
 		name = pname;
 		values[0] = val1;
 		values[1] = val2;
@@ -50,6 +50,7 @@ struct pluginpreset {
 		values[3] = val4;
 		values[4] = val5;
 		values[5] = val6;
+		values[6] = val7;
 	}
 };
 
@@ -99,18 +100,18 @@ public:
 	Atomic<int> rmscount = 0;
 	Atomic<bool> updatevis;
 
-	int version = 3;
-	const int paramcount = 6;
+	int version = 4;
+	const int paramcount = 7;
 
 	pluginpreset state;
 	pluginparams params;
-	bool lerpchanged[6];
+	bool lerpchanged[7];
 	int currentpreset = 0;
 
 private:
 	pluginpreset presets[20];
 	void timerCallback() override;
-	float lerptable[6];
+	float lerptable[7];
 	float lerpstage = 0;
 	bool preparedtoplay = false;
 	bool saved = false;
@@ -126,4 +127,14 @@ private:
 	int samplerate = 44100;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PisstortionAudioProcessor)
+};
+static std::function<String(bool v, int max)> tomode = [](bool v, int max) {
+	return (String)(v?"Fold":"Sine");
+};
+static std::function<bool(const String& s)> frommode = [](const String& s) {
+	if(s.containsIgnoreCase("s")) return true;
+	if(s.containsIgnoreCase("f")) return false;
+	if(s.containsIgnoreCase("1")) return true;
+	if(s.containsIgnoreCase("0")) return false;
+	return true;
 };
