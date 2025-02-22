@@ -12,7 +12,7 @@ juce_add_plugin("${BaseTargetName}"
 	NEEDS_MIDI_OUTPUT FALSE
 	IS_MIDI_EFFECT FALSE
 	EDITOR_WANTS_KEYBOARD_FOCUS FALSE
-	DESCRIPTION "Three delays feedbacking each other into the atmosphere."
+	DESCRIPTION "Three delays feedbacking into the atmosphere."
 	PLUGIN_MANUFACTURER_CODE Ured
 	PLUGIN_CODE Mgct
 	VST3_CATEGORIES Delay
