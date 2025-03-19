@@ -629,7 +629,11 @@ LookNFeel::LookNFeel() {
 LookNFeel::~LookNFeel() {
 }
 Font LookNFeel::getPopupMenuFont() {
-	Font fontt = Font(font,"Regular",18.f*scale);
+	Font fontt;
+	if(font == "None")
+		fontt = Font(18.f*scale,Font::plain);
+	else
+		fontt = Font(font,"Regular",18.f*scale);
 	fontt.setHorizontalScale(.9f);
 	fontt.setExtraKerningFactor(-.05f);
 	return fontt;

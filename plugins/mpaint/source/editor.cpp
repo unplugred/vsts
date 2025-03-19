@@ -201,6 +201,8 @@ LookNFeel::LookNFeel() {
 LookNFeel::~LookNFeel() {
 }
 Font LookNFeel::getPopupMenuFont() {
+	if(font == "None")
+		return Font(14.f*scale,Font::plain);
 	return Font(font,"Regular",14.f*scale);
 }
 void LookNFeel::drawPopupMenuBackground(Graphics &g, int width, int height) {

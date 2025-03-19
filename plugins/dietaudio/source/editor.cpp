@@ -507,7 +507,9 @@ LookNFeel::LookNFeel() {
 LookNFeel::~LookNFeel() {
 }
 Font LookNFeel::getPopupMenuFont() {
-	return Font(FontOptions(font,"Bold",12.f*scale));
+	if(font == "None")
+		return Font(12.f*scale,Font::bold);
+	return Font(font,"Bold",12.f*scale);
 }
 void LookNFeel::drawPopupMenuBackground(Graphics &g, int width, int height) {
 	g.setColour(fg);
