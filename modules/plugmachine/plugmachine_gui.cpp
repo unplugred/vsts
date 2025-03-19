@@ -19,7 +19,7 @@ String plugmachine_look_n_feel::find_font(String query) {
 				index = i;
 
 	if(index == 999)
-		return words[0];
+		return "None";
 	return words[index];
 }
 String plugmachine_look_n_feel::add_line_breaks(String input, int width) {
