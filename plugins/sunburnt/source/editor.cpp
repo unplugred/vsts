@@ -1705,6 +1705,8 @@ LookNFeel::LookNFeel() {
 LookNFeel::~LookNFeel() {
 }
 Font LookNFeel::getPopupMenuFont() {
+	if(font == "None")
+		return Font(14.f*scale,Font::plain);
 	return Font(ENGFont,"Regular",14.f*scale);
 }
 int LookNFeel::getMenuWindowFlags() {
