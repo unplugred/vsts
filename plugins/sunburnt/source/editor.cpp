@@ -1746,7 +1746,7 @@ void LookNFeel::drawPopupMenuItem(Graphics &g, const Rectangle<int> &area, bool 
 	float maxFontHeight = ((float)r.getHeight())/1.45f;
 	if(((int)text.toRawUTF8()[1]) < 0) {
 		if(CJKFont == "None")
-			return Font(20.f*scale,Font::plain);
+			font = Font(20.f*scale,Font::plain);
 		font = Font(CJKFont,"Regular",20.f*scale);
 		maxFontHeight = r.getHeight();
 	}
