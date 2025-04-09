@@ -27,14 +27,12 @@ ModManAudioProcessor::ModManAudioProcessor() :
 	params.modulators[2].name = M3;
 	params.modulators[3].name = M4;
 	params.modulators[4].name = M5;
-	params.modulators[5].name = M6;
-	params.modulators[6].name = M7;
 
 	for(int m = 0; m < MC; ++m) {
 		time[m] = 0;
 		params.modulators[m].id = m;
 		for(int i = 0; i < (paramcount-1); i++) {
-			if(i == 1 && (m == 0 || m == 5)) {
+			if(i == 1 && m == 0) {
 				params.modulators[m].defaults[i] = 0;
 				state.values[m][i] = 0;
 				presets[currentpreset].values[m][i] = 0;
@@ -76,7 +74,7 @@ void ModManAudioProcessor::setCurrentProgram(int index) {
 
 	for(int m = 0; m < MC; ++m) {
 		for(int i = 0; i < (paramcount-1); i++) {
-			if(i == 1 && (m == 0 || m == 5)) continue;
+			if(i == 1 && m == 0) continue;
 			apvts.getParameter("m"+((String)m)+params.pots[i].id)->setValueNotifyingHost(params.pots[i].normalize(presets[currentpreset].values[m][i]));
 		}
 	}
@@ -191,14 +189,7 @@ void ModManAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 					break;
 				case 3: // SATURATION
 					break;
-				case 4: // BITCRUSH
-					center = 1;
-					break;
-				case 5: // FLANGE
-					min = 0;
-					max = 1;
-					break;
-				case 6: // AMPLITUDE
+				case 4: // AMPLITUDE
 					center = .5f;
 					break;
 			}
@@ -233,21 +224,9 @@ void ModManAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 				channel_data[c][s] = (1-pow(1-fmin(fabs(channel_data[c][s]),1),1/satval))*(channel_data[c][s]>0?1:-1)*(1-(1-satval)*.92);
 			}
 
-			//BITCRUSH
-			if(ison[4]) {
-				float bitval = pow(1-modulator_data[(4*channelnum+c)*samplesperblock+s],3)*.99+.01;
-				channel_data[c][s] = round(channel_data[c][s]/bitval)*bitval;
-			}
-
-			//FLANGE
-			if(ison[5]) {
-				flange_data[c*MAX_FLANGE*samplerate+flangeindex] = channel_data[c][s];
-				channel_data[c][s] = interpolatesamples(&flange_data[c*MAX_FLANGE*samplerate],flangeindex+1+MAX_FLANGE*samplerate*(1-2.f/(samplerate*MAX_FLANGE))*modulator_data[(5*channelnum+c)*samplesperblock+s],MAX_FLANGE*samplerate)*state.values[5][2]*.5f+channel_data[c][s]*(1-state.values[5][2]*.5f);
-			}
-
 			//AMPLITUDE
-			if(ison[6]) {
-				channel_data[c][s] *= 2*pow(modulator_data[(6*channelnum+c)*samplesperblock+s],2);
+			if(ison[4]) {
+				channel_data[c][s] *= 2*pow(modulator_data[(4*channelnum+c)*samplesperblock+s],1.5f);
 			}
 
 			if(prmscount < samplerate*2) {
@@ -323,7 +302,7 @@ const String ModManAudioProcessor::get_preset(int preset_id, const char delimite
 	data << version << delimiter;
 	for(int m = 0; m < MC; ++m) {
 		for(int i = 0; i < (paramcount-1); i++) {
-			if(i == 1 && (m == 0 || m == 5))
+			if(i == 1 && m == 0)
 				continue;
 			data << presets[preset_id].values[m][i] << delimiter;
 		}
@@ -344,7 +323,7 @@ void ModManAudioProcessor::set_preset(const String& preset, int preset_id, const
 
 		for(int m = 0; m < MC; ++m) {
 			for(int i = 0; i < (paramcount-1); i++) {
-				if(i == 1 && (m == 0 || m == 5))
+				if(i == 1 && m == 0)
 					continue;
 				std::getline(ss, token, delimiter);
 				presets[preset_id].values[m][i] = std::stof(token);
@@ -373,7 +352,7 @@ void ModManAudioProcessor::set_preset(const String& preset, int preset_id, const
 
 	for(int m = 0; m < MC; ++m) {
 		for(int i = 0; i < (paramcount-1); i++) {
-			if(i == 1 && (m == 0 || m == 5)) continue;
+			if(i == 1 && m == 0) continue;
 			apvts.getParameter("m"+((String)m)+params.pots[i].id)->setValueNotifyingHost(params.pots[i].normalize(presets[currentpreset].values[m][i]));
 		}
 	}
@@ -416,11 +395,9 @@ AudioProcessorValueTreeState::ParameterLayout ModManAudioProcessor::create_param
 			case 2: name = M3; break;
 			case 3: name = M4; break;
 			case 4: name = M5; break;
-			case 5: name = M6; break;
-			case 6: name = M7; break;
 		} //TODO defaults, lpres
 		parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"m"+((String)m)+"on"		,1},name+" On"															 ,false	));
-		if(m == 0 || m == 5) {
+		if(m == 0) {
 		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"max"		,1},name+" Range"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),1.0f	));
 		} else {
 		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"min"		,1},name+" Min Range"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	));

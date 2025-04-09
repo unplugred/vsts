@@ -17,7 +17,7 @@ ModManAudioProcessorEditor::ModManAudioProcessorEditor(ModManAudioProcessor& p, 
 			knobs[i].name = params.pots[i-1].name;
 			if(i < paramcount) {
 				for(int m = 0; m < MC; ++m) {
-					if((i-1) == 1 && (m == 0 || m == 5)) {
+					if((i-1) == 1 && m == 0) {
 						knobs[i].value[m] = 0;
 						knobs[i].defaultvalue[m] = 0;
 						continue;
@@ -156,7 +156,7 @@ void ModManAudioProcessorEditor::renderOpenGL() {
 	knobshader->setUniform("knobscale",48.f*2.f/width,48.f*2.f/height);
 	knobshader->setUniform("banner",banner_offset);
 	for(int i = 0; i < knobcount; i++) {
-		if((i-1) == 1 && (selectedmodulator == 0 || selectedmodulator == 5)) continue;
+		if((i-1) == 1 && selectedmodulator == 0) continue;
 		knobshader->setUniform("knobpos",((float)knobs[i].x*2-48.f)/width-1,1-((float)knobs[i].y*2+48.f)/height);
 		knobshader->setUniform("knobrot",(knobs[i].value[(i==0||i==(knobcount-1))?0:selectedmodulator]-.5f)*5.5f);
 		knobshader->setUniform("hoverstate",hover==i?1:0);
@@ -166,7 +166,7 @@ void ModManAudioProcessorEditor::renderOpenGL() {
 
 	debug_font.scale = ui_scales[ui_scale_index];
 	for(int i = 0; i < knobcount; i++) {
-		if((i-1) == 1 && (selectedmodulator == 0 || selectedmodulator == 5)) continue;
+		if((i-1) == 1 && selectedmodulator == 0) continue;
 		String name = knobs[i].name;
 		if(i == 0) {
 			switch(selectedmodulator) {
@@ -175,10 +175,8 @@ void ModManAudioProcessorEditor::renderOpenGL() {
 				case 2: name = M3; break;
 				case 3: name = M4; break;
 				case 4: name = M5; break;
-				case 5: name = M6; break;
-				case 6: name = M7; break;
 			}
-		} else if((i-1) == 2 && (selectedmodulator == 0 || selectedmodulator == 5)) {
+		} else if((i-1) == 2 && selectedmodulator == 0) {
 			name = "Range";
 		}
 		debug_font.draw_string(1,1,hover==i?1:0,1,0,0,hover==i?1:0,1,name,0,((float)knobs[i].x)/width,((float)knobs[i].y+45)/height,.5f,1);
