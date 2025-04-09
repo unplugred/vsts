@@ -18,9 +18,9 @@ juce_add_plugin("${BaseTargetName}"
 	VST2_CATEGORY kPlugCategEffect
 	AU_MAIN_TYPE kAudioUnitType_Effect
 	COPY_PLUGIN_AFTER_BUILD TRUE
-	VST3_COPY_DIR "${freedir}"
-	VST_COPY_DIR "${freedir}"
-	AU_COPY_DIR "${freedir}")
+	VST3_COPY_DIR "${outdir}"
+	VST_COPY_DIR "${outdir}"
+	AU_COPY_DIR "${outdir}")
 
 target_compile_features("${BaseTargetName}" PRIVATE cxx_std_17)
 add_compile_definitions(BANNER)
