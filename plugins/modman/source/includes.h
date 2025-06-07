@@ -12,4 +12,3 @@ using namespace juce;
 #define M5 "Amplitude"
 
 #define MAX_DRIFT 0.1
-#define MAX_FLANGE 0.01

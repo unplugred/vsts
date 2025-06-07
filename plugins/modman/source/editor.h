@@ -19,11 +19,12 @@ public:
 	String font = "n";
 };
 struct knob {
-	int x = 0;
-	int y = 0;
+	float x = 0;
+	float y = 0;
+	float centerx = .5f;
+	float centery = .5f;
 	float value[MC];
 	float defaultvalue[MC];
-	int hoverstate = 0;
 	String id;
 	String name;
 	float minimumvalue = 0.f;
@@ -34,6 +35,16 @@ struct knob {
 	float inflate(float val) {
 		return val*(maximumvalue-minimumvalue)+minimumvalue;
 	}
+};
+struct flower {
+	float x = 0;
+	float y = 0;
+	float s = 0;
+	float lx1 = 0;
+	float ly1 = 0;
+	float lx2 = 0;
+	float ly2 = 0;
+	float rot = 0;
 };
 class ModManAudioProcessorEditor : public AudioProcessorEditor, public plugmachine_gui {
 public:
@@ -57,31 +68,55 @@ public:
 	void mouseWheelMove(const MouseEvent& event, const MouseWheelDetails& wheel) override;
 	int recalc_hover(float x, float y);
 
-	knob knobs[7];
+	knob knobs[6];
 	int knobcount = 0;
 private:
 	ModManAudioProcessor& audio_processor;
 
 	OpenGLTexture basetex;
+	OpenGLTexture bannertex;
 	std::shared_ptr<OpenGLShaderProgram> baseshader;
 
 	int selectedmodulator = 0;
 	int hover = -1;
 	int initialdrag = 0;
-	int held = 0;
 	float initialvalue = 0;
 	bool finemode = false;
 	float valueoffset = 0;
 	Point<int> dragpos = Point<int>(0,0);
+	OpenGLTexture knobtex;
 	std::shared_ptr<OpenGLShaderProgram> knobshader;
 
-	float websiteht = -1;
-	float creditsalpha = 0;
-	OpenGLTexture creditstex;
-	std::shared_ptr<OpenGLShaderProgram> creditsshader;
+	OpenGLTexture flowerstex;
+	OpenGLTexture labelstex;
+	flower flowers[MC];
+	int framecount = 0;
+	std::shared_ptr<OpenGLShaderProgram> flowersshader;
+
+	OpenGLTexture tackstex;
+	OpenGLTexture numberstex;
+	float tackpos[2] = {0,0};
+	std::shared_ptr<OpenGLShaderProgram> tackshader;
+
+	OpenGLTexture cubertex;
+	float cuberindex = 0;
+	float cuberpos[2] = {0,0};
+	float cuberposclamp[2] = {0,0};
+	float cubersize = 1;
+	std::shared_ptr<OpenGLShaderProgram> cubershader;
+
+	OpenGLTexture onofftex;
+	int offnum = 0;
+	int onnum = 0;
+	std::shared_ptr<OpenGLShaderProgram> onoffshader;
+
+	float websiteht = -1; //TODO
+	float creditsalpha = 0; //TODO
 
 	float rms = 0;
 	float time = 0;
+
+	Random random;
 
 	LookNFeel look_n_feel;
 
