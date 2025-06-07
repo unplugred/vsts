@@ -43,7 +43,7 @@ struct modulatorparams {
 struct pluginparams {
 	potentiometer pots[6];
 	modulatorparams modulators[MC];
-	int selectedmodulator = 0;
+	Atomic<int> selectedmodulator = 0;
 };
 
 struct pluginpreset {
@@ -98,6 +98,8 @@ public:
 
 	Atomic<float> rmsadd = 0;
 	Atomic<int> rmscount = 0;
+	Atomic<float> flower_rot[MC];
+	Atomic<float> cuber_rot[2];
 
 	int version = 0;
 	const int paramcount = 6;
@@ -119,9 +121,7 @@ private:
 	bool ison[MC];
 
 	std::vector<float> drift_data;
-	std::vector<float> flange_data;
 	int driftindex = 0;
-	int flangeindex = 0;
 
 	dsp::StateVariableTPTFilter<float> lowpass;
 

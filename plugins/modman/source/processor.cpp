@@ -51,6 +51,9 @@ ModManAudioProcessor::ModManAudioProcessor() :
 	if(params.pots[paramcount-1].smoothtime > 0) params.pots[paramcount-1].smooth[0].setCurrentAndTargetValue(state.masterspeed);
 	add_listener(params.pots[paramcount-1].id);
 
+	for(int c = 0 ; c < 2; ++c)
+		cuber_rot[c] = -.1f;
+
 	prlin.init();
 }
 
@@ -115,10 +118,6 @@ void ModManAudioProcessor::reseteverything() {
 	drift_data.resize(channelnum*MAX_DRIFT*samplerate);
 	for(int i = 0; i < (channelnum*MAX_DRIFT*samplerate); ++i)
 		drift_data[i] = 0;
-
-	flange_data.resize(channelnum*MAX_FLANGE*samplerate);
-	for(int i = 0; i < (channelnum*MAX_FLANGE*samplerate); ++i)
-		flange_data[i] = 0;
 
 	dsp::ProcessSpec spec;
 	spec.sampleRate = samplerate;
@@ -199,10 +198,15 @@ void ModManAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 				modulator_data[(m*channelnum+c)*samplesperblock+s] = ((prlin.noise(time[m],((((float)c)/(channelnum-1))-.5)*stereo+m*10)*.5f+.5f)*(max-min)+min)*on+center*(1-on);
 			}
 		}
+		float mono = 0;
+		for(int c = 0; c < channelnum; ++c)
+			mono += modulator_data[(m*channelnum+c)*samplesperblock];
+		flower_rot[m] = mono/channelnum;
 	}
+	for(int c = 0 ; c < fmin(channelnum,2); ++c)
+		cuber_rot[c] = modulator_data[(params.selectedmodulator.get()*channelnum+c*(channelnum-1))*samplesperblock];
 	for(int s = 0; s < numsamples; ++s) {
 		driftindex = fmod(driftindex+1,MAX_DRIFT*samplerate);
-		flangeindex = fmod(flangeindex+1,MAX_FLANGE*samplerate);
 		for(int c = 0; c < channelnum; ++c) {
 
 			//DRIFT
@@ -254,7 +258,7 @@ void ModManAudioProcessor::getStateInformation(MemoryBlock& destData) {
 
 	data << version << delimiter
 		<< currentpreset << delimiter
-		<< params.selectedmodulator << delimiter;
+		<< params.selectedmodulator.get() << delimiter;
 
 	for(int i = 0; i < getNumPrograms(); i++) {
 		data << presets[i].name << delimiter;
