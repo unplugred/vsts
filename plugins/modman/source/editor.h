@@ -110,8 +110,15 @@ private:
 	int onnum = 0;
 	std::shared_ptr<OpenGLShaderProgram> onoffshader;
 
-	float websiteht = -1; //TODO
-	float creditsalpha = 0; //TODO
+	OpenGLTexture logotex;
+	OpenGLTexture logoalphatex;
+	float logolerp = 0;
+	float logoease = 0;
+	float websiteht = 0;
+	float originpos[3] = {0,0,0};
+	float targetpos[3] = {0,0,0};
+	std::shared_ptr<OpenGLShaderProgram> logoshader;
+
 
 	float rms = 0;
 	float time = 0;

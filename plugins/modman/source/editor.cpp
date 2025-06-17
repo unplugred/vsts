@@ -80,6 +80,13 @@ ModManAudioProcessorEditor::ModManAudioProcessorEditor(ModManAudioProcessor& p, 
 	if(offnum >= prevoff) offnum += 1;
 	if(onnum >= prevon) onnum += 1;
 
+	originpos[0] = -178.5f/width;
+	targetpos[0] = (random.nextFloat()-.5f)*.02f+.01f;
+	originpos[1] = (random.nextFloat()-.5f)*.2f +.38f;
+	targetpos[1] = (random.nextFloat()-.5f)*.05f+.38f;
+	originpos[2] = (random.nextFloat()-.5f)*1.f;
+	targetpos[2] = (random.nextFloat()-.5f)*.1f;
+
 	setResizable(false,false);
 	init(&look_n_feel);
 }
@@ -364,6 +371,38 @@ void main() {
 	fragColor = vec4(min(texture(basetex,baseuv).rgb,texture(onofftex,uv).rgb),1);
 })");
 
+	logoshader = add_shader(
+//LOGO VERT
+R"(#version 150 core
+in vec2 aPos;
+uniform float banner;
+uniform vec4 pos;
+uniform vec4 posuv;
+uniform float rot;
+uniform float ratio;
+out vec2 uv;
+out vec2 alphauv;
+void main() {
+	gl_Position = vec4(aPos.x-.5,(aPos.y-.5)*ratio,0,1);
+	gl_Position.xy = (vec2(
+		 gl_Position.x*cos(rot)-gl_Position.y*sin(rot),
+		(gl_Position.x*sin(rot)+gl_Position.y*cos(rot))/ratio)+.5)*pos.xy+pos.zw;
+	gl_Position.xy = vec2(gl_Position.x,gl_Position.y*(1-banner)+banner)*2-1;
+	uv = aPos*posuv.xy+posuv.zw;
+	alphauv = aPos;
+})",
+//LOGO FRAG
+R"(#version 150 core
+in vec2 uv;
+in vec2 alphauv;
+uniform sampler2D logotex;
+uniform sampler2D logoalphatex;
+uniform float index;
+out vec4 fragColor;
+void main() {
+	fragColor = vec4(texture(logotex,(max(min(uv,1),0)+vec2(0,9-index))*vec2(1,.1)).rgb,texture(logoalphatex,alphauv).r);
+})");
+
 	add_texture(&basetex, BinaryData::base_png, BinaryData::base_pngSize);
 	add_texture(&bannertex, BinaryData::banner_png, BinaryData::banner_pngSize);
 	add_texture(&flowerstex, BinaryData::flowers_png, BinaryData::flowers_pngSize);
@@ -373,6 +412,8 @@ void main() {
 	add_texture(&cubertex, BinaryData::cuber_png, BinaryData::cuber_pngSize);
 	add_texture(&onofftex, BinaryData::onoff_png, BinaryData::onoff_pngSize);
 	add_texture(&knobtex, BinaryData::knob_png, BinaryData::knob_pngSize);
+	add_texture(&logotex, BinaryData::logo_png, BinaryData::logo_pngSize);
+	add_texture(&logoalphatex, BinaryData::logoalpha_png, BinaryData::logoalpha_pngSize);
 
 	draw_init();
 }
@@ -556,6 +597,28 @@ void ModManAudioProcessorEditor::renderOpenGL() {
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	context.extensions.glDisableVertexAttribArray(coord);
 
+	logoshader->use();
+	context.extensions.glActiveTexture(GL_TEXTURE0);
+	logotex.bind();
+	logoshader->setUniform("logotex",0);
+	context.extensions.glActiveTexture(GL_TEXTURE1);
+	logoalphatex.bind();
+	logoshader->setUniform("logoalphatex",1);
+	logoshader->setUniform("banner",banner_offset);
+	logoshader->setUniform("pos",178.5f/width,76.f/height,
+			originpos[0]*(1-logoease)+targetpos[0]*logoease,
+			originpos[1]*(1-logoease)+targetpos[1]*logoease);
+	logoshader->setUniform("rot",
+			originpos[2]*(1-logoease)+targetpos[2]*logoease);
+	logoshader->setUniform("ratio",.5f);
+	logoshader->setUniform("posuv",178.5f/148.5f,76.f/46.5f,-.106f,-.305f);
+	logoshader->setUniform("index",(float)fmin(9,fmax(0,floor(websiteht))));
+	coord = context.extensions.glGetAttribLocation(logoshader->getProgramID(),"aPos");
+	context.extensions.glEnableVertexAttribArray(coord);
+	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+	context.extensions.glDisableVertexAttribArray(coord);
+
 	draw_end();
 }
 void ModManAudioProcessorEditor::openGLContextClosing() {
@@ -564,13 +627,27 @@ void ModManAudioProcessorEditor::openGLContextClosing() {
 void ModManAudioProcessorEditor::paint(Graphics& g) { }
 
 void ModManAudioProcessorEditor::timerCallback() {
-	//if(creditsalpha != ((hover<=-2&&hover>=-3)?1:0)) { //TODO
-	//	creditsalpha = fmax(fmin(creditsalpha+((hover<=-2&&hover>=-3)?.17f:-.17f),1),0);
-	//}
-	//if(creditsalpha <= 0) websiteht = -1;
-	//if(websiteht > -1 && creditsalpha >= 1) {
-	//	websiteht -= .0815;
-	//}
+	if(logolerp != ((hover<=-13&&hover>=-14)?1:0)) {
+		logolerp = fmax(fmin(logolerp+((hover<=-13&&hover>=-14)?.13f:-.13f),1),0);
+		logoease = 1-(1-logolerp)*(1-logolerp);
+		if(logolerp <= 0) {
+			originpos[0] = -178.5f/width;
+			targetpos[0] = (random.nextFloat()-.5f)*.02f+.01f;
+			originpos[1] = (random.nextFloat()-.5f)*.2f +.38f;
+			targetpos[1] = (random.nextFloat()-.5f)*.05f+.38f;
+			originpos[2] = (random.nextFloat()-.5f)*1.f;
+			targetpos[2] = (random.nextFloat()-.5f)*.1f;
+			websiteht = 0;
+		}
+	}
+	if(websiteht > 0 && logolerp >= 1) {
+		websiteht -= .5f;
+		if(fmod(websiteht,1.f) < .1f) {
+			targetpos[0] += (random.nextFloat()-.5f)*.002f;
+			targetpos[1] += (random.nextFloat()-.5f)*.004f;
+			targetpos[2] += (random.nextFloat()-.5f)*.02f;
+		}
+	}
 
 	if(framecount++ >= 1) {
 		float val = 0;
@@ -630,8 +707,8 @@ void ModManAudioProcessorEditor::parameterChanged(const String& parameterID, flo
 void ModManAudioProcessorEditor::mouseMove(const MouseEvent& event) {
 	int prevhover = hover;
 	hover = recalc_hover(event.x,event.y);
-	//if(hover == -3 && prevhover != -3 && websiteht <= -1) websiteht = .65f; TODO
-	//else if(hover > -2 && prevhover <= -2) websiteht = -2;
+	if(hover == -14 && prevhover != -14 && websiteht <= 0) websiteht = 9.5f;
+	else if(hover > -13 && prevhover <= -13) websiteht = 0.f;
 }
 void ModManAudioProcessorEditor::mouseExit(const MouseEvent& event) {
 	hover = -1;
@@ -727,10 +804,10 @@ void ModManAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 		}
 
 		valueoffset = fmax(fmin(valueoffset,value+.1f),value-1.1f);
-	//} else if(initialdrag == -3) { TODO
-	//	int prevhover = hover;
-	//	hover = recalc_hover(event.x,event.y)==-3?-3:-2;
-	//	if(hover == -3 && prevhover != -3 && websiteht < -1) websiteht = .65f;
+	} else if(initialdrag == -14) {
+		int prevhover = hover;
+		hover = recalc_hover(event.x,event.y)==-14?-14:-13;
+		if(hover == -14 && prevhover != -14 && websiteht <= 0) websiteht = 9.5f;
 	}
 }
 void ModManAudioProcessorEditor::mouseUp(const MouseEvent& event) {
@@ -748,10 +825,10 @@ void ModManAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 	} else {
 		int prevhover = hover;
 		hover = recalc_hover(event.x,event.y);
-		//if(hover == -3) { TODO
-		//	if(prevhover == -3) URL("https://vst.unplug.red/").launchInDefaultBrowser();
-		//	else if(websiteht < -1) websiteht = .65f;
-		//}
+		if(hover == -14) {
+			if(prevhover == -14) URL("https://vst.unplug.red/").launchInDefaultBrowser();
+			else if(websiteht <= 0) websiteht = 9.5f;
+		}
 	}
 }
 void ModManAudioProcessorEditor::mouseDoubleClick(const MouseEvent& event) {
@@ -779,9 +856,18 @@ int ModManAudioProcessorEditor::recalc_hover(float x, float y) {
 	x /= ui_scales[ui_scale_index];
 	y /= ui_scales[ui_scale_index];
 
-	// curve prestets -14 - -9
+	// website -14 - -13
+	if(x < 197) {
+		float logox =    (targetpos[0]) *width +14.5f;
+		float logoy = (1-(targetpos[1]))*height-12.5f;
+		if(x >= logox && x < (logox+152) && y >= (logoy-52) && y < logoy) {
+			return -14;
+		} else {
+			return -13;
+		}
+	}
 
-	// website -8 - -7
+	// curve prestets -12 - -7
 
 	// flowers -6 - -2
 	for(int i = 0; i < MC; ++i) {
