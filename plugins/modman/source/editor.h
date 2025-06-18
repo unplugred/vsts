@@ -12,10 +12,9 @@ public:
 	void drawPopupMenuItem(Graphics &g, const Rectangle<int> &area, bool isSeparator, bool isActive, bool isHighlighted, bool isTicked, bool hasSubMenu, const String &text, const String &shortcutKeyText, const Drawable *icon, const Colour *textColour) override; //biggest function ive seen ever
 	void getIdealPopupMenuItemSize(const String& text, const bool isSeparator, int standardMenuItemHeight, int& idealWidth, int& idealHeight) override;
 	int getPopupMenuBorderSize() override;
-	Colour bg1 = Colour::fromFloatRGBA(0.f,0.f,0.f,1.f);
-	Colour fg1 = Colour::fromFloatRGBA(1.f,1.f,0.f,1.f);
-	Colour bg2 = Colour::fromFloatRGBA(0.f,0.f,1.f,1.f);
-	Colour fg2 = Colour::fromFloatRGBA(1.f,1.f,1.f,1.f);
+	Colour bg1 = Colour::fromFloatRGBA(.839f,.839f,.859f,1.f);
+	Colour bg2 = Colour::fromFloatRGBA(.659f,.655f,.612f,1.f);
+	Colour fg = Colour::fromFloatRGBA(.231f,.243f,.22f,1.f);
 	String font = "n";
 };
 struct knob {

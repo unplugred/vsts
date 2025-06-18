@@ -725,10 +725,50 @@ void ModManAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 			scalemenu->addItem(i,(String)round(ui_scales[i-21]*100)+"%",true,(i-21)==ui_scale_index);
 
 		rightclickmenu->setLookAndFeel(&look_n_feel);
-		rightclickmenu->addItem(1,"'Copy preset",true);
-		rightclickmenu->addItem(2,"'Paste preset",audio_processor.is_valid_preset_string(SystemClipboard::getTextFromClipboard()));
+		rightclickmenu->addItem(1,"'copy preset",true);
+		rightclickmenu->addItem(2,"'paste preset",audio_processor.is_valid_preset_string(SystemClipboard::getTextFromClipboard()));
 		rightclickmenu->addSeparator();
-		rightclickmenu->addSubMenu("'Scale",*scalemenu);
+		rightclickmenu->addSubMenu("'scale",*scalemenu);
+
+		String description = "";
+		if(hover != -1) {
+			if(hover == -14)
+				description = "made with love by mel :)";
+			else if(hover == -13 || (hover >= -6 && hover <= -2)) {
+				int modnum = hover==-13?selectedmodulator:(hover+6);
+				     if(modnum == 0)
+					description = "tape drift. results in changes in the pitch and speed of the incoming audio.";
+				else if(modnum == 1)
+					description = "low pass cutoff. results in changes in the amount of high frequencies of the incoming audio.";
+				else if(modnum == 2)
+					description = "low pass resonance. only works if the low pass modulator is on. when off, use the range selector to select a static resonance.";
+				else if(modnum == 3)
+					description = "saturation. results in changes in the amount of harmonics of the incoming audio.";
+				else if(modnum == 4)
+					description = "amplitude. results in changes in the loudness of the incoming audio. can also alter the panning when increasing the stereo knob.";
+			} else if(hover == 0)
+				description = "enables/disables the modulator";
+			else if(hover == 1)
+				description = "minimum range for the modulation";
+			else if(hover == 2)
+				description = "maximum range for the modulation";
+			else if(hover == 3)
+				description = "modulation speed";
+			else if(hover == 4)
+				description = "stereo separation between channels in modulator";
+			else if(hover == 5)
+				description = "global speed multiplier for all modulators. this parameter is shared across all modulators.";
+			else if(hover == 2)
+				description = "";
+			else if(hover == 2)
+				description = "";
+			description = look_n_feel.add_line_breaks(description);
+		}
+		if(description != "") {
+			rightclickmenu->addSeparator();
+			rightclickmenu->addItem(-1,"'"+description,false);
+		}
+
 		rightclickmenu->showMenuAsync(PopupMenu::Options(),[this](int result){
 			if(result <= 0) return;
 			else if(result >= 20) {
@@ -881,7 +921,7 @@ int ModManAudioProcessorEditor::recalc_hover(float x, float y) {
 	if(x >= (.48*width) && x <= (.48*width+76.5) && y >= (.77f*height-47.5f) && y <= (.77f*height))
 		return 0;
 
-	// knobs 1 - 2
+	// range selectors 1 - 2
 	if(x >= 398 && x <= 438) {
 		for(int i = 0; i < 2; ++i) {
 			if(i == 0 && selectedmodulator == 0) continue;
@@ -907,37 +947,42 @@ int ModManAudioProcessorEditor::recalc_hover(float x, float y) {
 
 LookNFeel::LookNFeel() {
 	setColour(PopupMenu::backgroundColourId,Colour::fromFloatRGBA(0.f,0.f,0.f,0.f));
-	font = find_font("Consolas|Noto Mono|DejaVu Sans Mono|Menlo|Andale Mono|SF Mono|Lucida Console|Liberation Mono");
+	font = find_font("Arial|Helvetica Neue|Helvetica|Roboto");
 }
 LookNFeel::~LookNFeel() {
 }
 Font LookNFeel::getPopupMenuFont() {
+	Font fontt;
 	if(font == "None")
-		return Font(18.f*scale,Font::plain);
-	return Font(font,"Regular",18.f*scale);
+		fontt = Font(16.f*scale,Font::plain);
+	else
+		fontt = Font(font,"Regular",16.f*scale);
+	fontt.setHorizontalScale(1.1f);
+	fontt.setExtraKerningFactor(-.02f);
+	return fontt;
 }
 void LookNFeel::drawPopupMenuBackground(Graphics &g, int width, int height) {
-	g.setColour(fg1);
+	g.setColour(fg);
 	g.fillRect(0,0,width,height);
 	g.setColour(bg1);
-	g.fillRect(scale,scale,width-2*scale,height-2*scale);
+	g.fillRect(1.5f*scale,1.5f*scale,width-3*scale,height-3*scale);
 }
 void LookNFeel::drawPopupMenuItem(Graphics &g, const Rectangle<int> &area, bool isSeparator, bool isActive, bool isHighlighted, bool isTicked, bool hasSubMenu, const String &text, const String &shortcutKeyText, const Drawable *icon, const Colour *textColour) {
 	if(isSeparator) {
-		g.setColour(fg1);
+		g.setColour(fg);
 		g.fillRect(0,0,area.getWidth(),area.getHeight());
 		return;
 	}
 
 	bool removeleft = text.startsWith("'");
 	if(isHighlighted && isActive) {
-		g.setColour(fg2);
+		g.setColour(fg);
 		g.fillRect(0,0,area.getWidth(),area.getHeight());
 		g.setColour(bg2);
-		g.fillRect(scale,0.f,area.getWidth()-2*scale,(float)area.getHeight());
-		g.setColour(fg2);
+		g.fillRect(1.5f*scale,0.f,area.getWidth()-3*scale,(float)area.getHeight());
+		g.setColour(fg);
 	} else {
-		g.setColour(fg1);
+		g.setColour(fg);
 	}
 	if(textColour != nullptr)
 		g.setColour(*textColour);
@@ -948,9 +993,6 @@ void LookNFeel::drawPopupMenuItem(Graphics &g, const Rectangle<int> &area, bool 
 
 	Font font = getPopupMenuFont();
 	if(!isActive && removeleft) font.setItalic(true);
-	float maxFontHeight = ((float)r.getHeight())/1.45f;
-	if(font.getHeight() > maxFontHeight)
-		font.setHeight(maxFontHeight);
 	g.setFont(font);
 
 	Rectangle<float> iconArea = area.toFloat().withX(area.getX()+(r.getX()-area.getX())*.5f-area.getHeight()*.5f).withWidth(area.getHeight());
@@ -986,13 +1028,13 @@ void LookNFeel::drawPopupMenuItem(Graphics &g, const Rectangle<int> &area, bool 
 	}
 }
 int LookNFeel::getPopupMenuBorderSize() {
-	return (int)floor(scale);
+	return (int)floor(1.5f*scale);
 }
 void LookNFeel::getIdealPopupMenuItemSize(const String& text, const bool isSeparator, int standardMenuItemHeight, int& idealWidth, int& idealHeight)
 {
 	if(isSeparator) {
 		idealWidth = 50*scale;
-		idealHeight = (int)floor(scale);
+		idealHeight = (int)floor(1.5f*scale);
 	} else {
 		Font font(getPopupMenuFont());
 
