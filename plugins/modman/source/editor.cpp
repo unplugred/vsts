@@ -505,7 +505,8 @@ void ModManAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	for(int i = 0; i < 2; ++i) {
-		if(i == 0 && selectedmodulator == 0) continue;
+		if(i == 0 && (selectedmodulator == 0 || (selectedmodulator == 2 && knobs[0].value[2] < .5)))
+			continue;
 
 		float val = knobs[i+1].value[selectedmodulator];
 		bool ms = false;
@@ -652,22 +653,26 @@ void ModManAudioProcessorEditor::timerCallback() {
 	if(framecount++ >= 1) {
 		float val = 0;
 		framecount = 0;
-		for(int i = 0; i < MC; ++i) if(knobs[0].value[i] > .5)
-			flowers[i].rot = round(audio_processor.flower_rot[i].get()*10*10)/10;
+		for(int i = 0; i < MC; ++i)
+			if(knobs[0].value[i] > .5 && (i != 2 || knobs[0].value[1] > .5))
+				flowers[i].rot = round(audio_processor.flower_rot[i].get()*10*10)/10;
 		for(int i = 0; i < 2; ++i) {
 			val = knobs[i+1].value[selectedmodulator];
 			if(i == 0) val = fmin(val,knobs[2].value[selectedmodulator]);
-			if(selectedmodulator != 0) val = val*.9f+i*.1f;
+			if(selectedmodulator != 0 && (selectedmodulator != 2 || knobs[0].value[2] > .5))
+				val = val*.9f+i*.1f;
 			else if(i == 1) val = val*.97f+.03f;
 			else val = -.07f;
 			tackpos[i] = tackpos[i]*.3f+val*.7f;
 
 			val = knobs[i+1].value[selectedmodulator];
-			if(selectedmodulator != 0) val = val*.93f+.07f;
+			if(selectedmodulator != 0 && (selectedmodulator != 2 || knobs[0].value[2] > .5))
+				val = val*.93f+.07f;
 			cuberposclamp[i] = cuberposclamp[i]*.3f+val*.7f;
 		}
+		bool ison = knobs[0].value[selectedmodulator] > .5 && (selectedmodulator != 2 || knobs[0].value[1] > .5);
 		for(int i = 0; i < 2; ++i) {
-			if(knobs[0].value[selectedmodulator] > .5) {
+			if(ison) {
 				val = audio_processor.cuber_rot[i].get();
 				if(selectedmodulator != 0) val = val*.93f+.07f;
 			} else {
@@ -675,7 +680,7 @@ void ModManAudioProcessorEditor::timerCallback() {
 			}
 			cuberpos[i] = fmin(fmax(cuberpos[i]*.3f+val*.7f,cuberposclamp[0]),cuberposclamp[1]);
 		}
-		cubersize = cubersize*.5f+knobs[0].value[selectedmodulator]*.5f;
+		cubersize = cubersize*.5f+(ison?1:0)*.5f;
 	}
 	cuberindex = fmod(cuberindex+.3333f,6);
 
@@ -835,11 +840,14 @@ void ModManAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 		if(hover == (knobcount-1)) {
 			audio_processor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(value-valueoffset);
 		} else {
+			bool singletick = selectedmodulator == 2 && knobs[0].value[2] < .5;
 			float val = value-valueoffset;
-			if(selectedmodulator != 0) {
+			if(selectedmodulator != 0 && !singletick) {
 				if(hover == 1) val = fmin(val,knobs[2].value[selectedmodulator]); else
 				if(hover == 2) val = fmax(val,knobs[1].value[selectedmodulator]);
 			}
+			if(singletick && hover == 2 && val < knobs[1].value[selectedmodulator])
+				audio_processor.apvts.getParameter("m"+((String)selectedmodulator)+knobs[1].id)->setValueNotifyingHost(val);
 			audio_processor.apvts.getParameter("m"+((String)selectedmodulator)+knobs[hover].id)->setValueNotifyingHost(val);
 		}
 
@@ -900,11 +908,10 @@ int ModManAudioProcessorEditor::recalc_hover(float x, float y) {
 	if(x < 197) {
 		float logox =    (targetpos[0]) *width +14.5f;
 		float logoy = (1-(targetpos[1]))*height-12.5f;
-		if(x >= logox && x < (logox+152) && y >= (logoy-52) && y < logoy) {
+		if(x >= logox && x < (logox+152) && y >= (logoy-52) && y < logoy)
 			return -14;
-		} else {
+		else
 			return -13;
-		}
 	}
 
 	// curve prestets -12 - -7
@@ -924,10 +931,10 @@ int ModManAudioProcessorEditor::recalc_hover(float x, float y) {
 	// range selectors 1 - 2
 	if(x >= 398 && x <= 438) {
 		for(int i = 0; i < 2; ++i) {
-			if(i == 0 && selectedmodulator == 0) continue;
-			if(y >= (14+(1-tackpos[i])*295.5) && y <= (32+(1-tackpos[i])*295.5)) {
+			if(i == 0 && (selectedmodulator == 0 || (selectedmodulator == 2 && knobs[0].value[2] < .5)))
+				continue;
+			if(y >= (14+(1-tackpos[i])*295.5) && y <= (32+(1-tackpos[i])*295.5))
 				return i+1;
-			}
 		}
 		return -1;
 	}
@@ -1007,7 +1014,7 @@ void LookNFeel::drawPopupMenuItem(Graphics &g, const Rectangle<int> &area, bool 
 		float y = area.getCentreY();
 		Path path;
 		path.startNewSubPath
-				   (x,y-s*.5f);
+		           (x,y-s*.5f);
 		path.lineTo(x+s*.7f,y);
 		path.lineTo(x,y+s*.5f);
 		path.lineTo(x,y-s*.5f);

@@ -183,8 +183,7 @@ void ModManAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 					center = 1;
 					break;
 				case 2: // LOW PASS RESONANCE
-					//TODO: center = parameter
-					center = .5f;
+					center = max;
 					break;
 				case 3: // SATURATION
 					break;
@@ -306,8 +305,7 @@ const String ModManAudioProcessor::get_preset(int preset_id, const char delimite
 	data << version << delimiter;
 	for(int m = 0; m < MC; ++m) {
 		for(int i = 0; i < (paramcount-1); i++) {
-			if(i == 1 && m == 0)
-				continue;
+			if(i == 1 && m == 0) continue;
 			data << presets[preset_id].values[m][i] << delimiter;
 		}
 	}
@@ -327,8 +325,7 @@ void ModManAudioProcessor::set_preset(const String& preset, int preset_id, const
 
 		for(int m = 0; m < MC; ++m) {
 			for(int i = 0; i < (paramcount-1); i++) {
-				if(i == 1 && m == 0)
-					continue;
+				if(i == 1 && m == 0) continue;
 				std::getline(ss, token, delimiter);
 				presets[preset_id].values[m][i] = std::stof(token);
 			}
@@ -399,7 +396,7 @@ AudioProcessorValueTreeState::ParameterLayout ModManAudioProcessor::create_param
 			case 2: name = M3; break;
 			case 3: name = M4; break;
 			case 4: name = M5; break;
-		} //TODO defaults, lpres
+		} //TODO defaults
 		parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"m"+((String)m)+"on"		,1},name+" On"															 ,false	));
 		if(m == 0) {
 		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"max"		,1},name+" Range"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),1.0f	));
@@ -409,9 +406,6 @@ AudioProcessorValueTreeState::ParameterLayout ModManAudioProcessor::create_param
 		}
 		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"speed"	,1},name+" Speed"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	));
 		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"stereo"	,1},name+" Stereo"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.3f	));
-		if(m == 1) {
-		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"res"		,1},name+" Resonance"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.3f	));
-		}
 	}
 		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"masterspeed"				,1},"Master Speed"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	));
 	return { parameters.begin(), parameters.end() };
