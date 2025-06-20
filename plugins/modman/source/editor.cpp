@@ -807,7 +807,7 @@ void ModManAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		}
 	} else if(hover == 0) {
 		audio_processor.apvts.getParameter("m"+((String)selectedmodulator)+knobs[hover].id)->setValueNotifyingHost(1-knobs[hover].value[selectedmodulator]);
-		audio_processor.undo_manager.setCurrentTransactionName(knobs[hover].value[selectedmodulator]>.5f?"Turned modulator off":"Turned modulator on");
+		audio_processor.undo_manager.setCurrentTransactionName(knobs[hover].value[selectedmodulator]>.5f?"turned modulator off":"turned modulator on");
 		audio_processor.undo_manager.beginNewTransaction();
 	} else if(hover > 0 && hover < knobcount) {
 		initialvalue = knobs[hover].value[hover==(knobcount-1)?0:selectedmodulator];
@@ -864,7 +864,7 @@ void ModManAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 		event.source.enableUnboundedMouseMovement(false);
 		Desktop::setMousePosition(dragpos);
 		audio_processor.undo_manager.setCurrentTransactionName(
-			(String)((knobs[hover].value[hover==(knobcount-1)?0:selectedmodulator]-initialvalue)>=0?"Increased ":"Decreased ") += knobs[hover].name);
+			(String)((knobs[hover].value[hover==(knobcount-1)?0:selectedmodulator]-initialvalue)>=0?"increased ":"decreased ") += knobs[hover].name);
 		if(hover == (knobcount-1))
 			audio_processor.apvts.getParameter(knobs[hover].id)->endChangeGesture();
 		else
@@ -881,7 +881,7 @@ void ModManAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 }
 void ModManAudioProcessorEditor::mouseDoubleClick(const MouseEvent& event) {
 	if(hover <= 0 || hover >= knobcount) return;
-	audio_processor.undo_manager.setCurrentTransactionName((String)"Reset " += knobs[hover].name);
+	audio_processor.undo_manager.setCurrentTransactionName((String)"reset " += knobs[hover].name);
 	if(hover == (knobcount-1)) {
 		audio_processor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(knobs[hover].defaultvalue[0]);
 	} else {

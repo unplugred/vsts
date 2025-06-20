@@ -8,19 +8,22 @@ ModManAudioProcessor::ModManAudioProcessor() :
 	init();
 
 	currentpreset = -1;
-	//set_preset("",0); TODO
+	presets[0].name = "default";
+	set_preset("0,0,1,0.5,0.3,2,0,0,0.5,1,1,0.5,0,0,0.3,0.5,0.3,2,0,0,0.5,1,1,0.5,0,0,0.3,0.5,0.3,2,0,0,0.5,1,1,0.5,0,0,0.3,0.5,0.3,2,0,0,0.5,1,1,0.5,0,0,0.3,0.5,0.3,2,0,0,0.5,1,1,0.5,0.5,",0); //TODO better defaults
 	currentpreset = 0;
 	for(int i = 1; i < getNumPrograms(); i++) {
 		presets[i] = presets[0];
-		presets[i].name = "Program "+((String)i);
+		presets[i].name = "program "+((String)i);
+		for(int m = 0; m < MC; ++m)
+			presets[i].curves[m] = curve("2,0,0,0.5,1,1,0.5"); //TODO
 	}
 
-	params.pots[0] = potentiometer("On"				,"on"			,.001f	,0.f	,1.f	,potentiometer::booltype);
-	params.pots[1] = potentiometer("Min Range"		,"min"			,.001f	);
-	params.pots[2] = potentiometer("Max Range"		,"max"			,.001f	);
-	params.pots[3] = potentiometer("Speed"			,"speed"		,0		);
-	params.pots[4] = potentiometer("Stereo"			,"stereo"		,.001f	);
-	params.pots[5] = potentiometer("Master Speed"	,"masterspeed"	,0		);
+	params.pots[0] = potentiometer("on"				,"on"			,.001f	,0.f	,1.f	,potentiometer::booltype);
+	params.pots[1] = potentiometer("min range"		,"min"			,.001f	);
+	params.pots[2] = potentiometer("max range"		,"max"			,.001f	);
+	params.pots[3] = potentiometer("speed"			,"speed"		,0		);
+	params.pots[4] = potentiometer("stereo"			,"stereo"		,.001f	);
+	params.pots[5] = potentiometer("master speed"	,"masterspeed"	,0		);
 
 	params.modulators[0].name = M1;
 	params.modulators[1].name = M2;
@@ -55,6 +58,9 @@ ModManAudioProcessor::ModManAudioProcessor() :
 		cuber_rot[c] = -.1f;
 
 	prlin.init();
+
+	updatedcurve = true;
+	updatevis = true;
 }
 
 ModManAudioProcessor::~ModManAudioProcessor(){
@@ -128,6 +134,8 @@ void ModManAudioProcessor::reseteverything() {
 	lowpass.setCutoffFrequency(20000);
 	lowpass.setResonance(1./MathConstants<double>::sqrt2);
 	lowpass.reset();
+
+	updatedcurve = true;
 }
 void ModManAudioProcessor::releaseResources() { }
 
@@ -308,6 +316,9 @@ const String ModManAudioProcessor::get_preset(int preset_id, const char delimite
 			if(i == 1 && m == 0) continue;
 			data << presets[preset_id].values[m][i] << delimiter;
 		}
+		data << presets[preset_id].curves[m].points.size() << delimiter;
+		for(int p = 0; p < presets[preset_id].curves[m].points.size(); ++p)
+			data << presets[preset_id].curves[m].points[p].x << delimiter << presets[preset_id].curves[m].points[p].y << delimiter << presets[preset_id].curves[m].points[p].tension << delimiter;
 	}
 	data << presets[preset_id].masterspeed << delimiter;
 
@@ -328,6 +339,23 @@ void ModManAudioProcessor::set_preset(const String& preset, int preset_id, const
 				if(i == 1 && m == 0) continue;
 				std::getline(ss, token, delimiter);
 				presets[preset_id].values[m][i] = std::stof(token);
+			}
+			presets[preset_id].curves[m].points.clear();
+			std::getline(ss, token, delimiter);
+			int size = std::stof(token);
+			if(size < 2) throw std::invalid_argument("Invalid point data");
+			float prevx = 0;
+			for(int p = 0; p < size; ++p) {
+				std::getline(ss, token, delimiter);
+				float x = std::stof(token);
+				std::getline(ss, token, delimiter);
+				float y = std::stof(token);
+				std::getline(ss, token, delimiter);
+				float tension = std::stof(token);
+				if(x > 1 || x < prevx || y > 1 || y < 0 || tension > 1 || tension < 0 || (p == 0 && x != 0) || (p == (size-1) && x != 1))
+					throw std::invalid_argument("Invalid point data");
+				prevx = x;
+				presets[preset_id].curves[m].points.push_back(point(x,y,tension));
 			}
 		}
 		std::getline(ss, token, delimiter);
@@ -358,6 +386,8 @@ void ModManAudioProcessor::set_preset(const String& preset, int preset_id, const
 		}
 	}
 	apvts.getParameter(params.pots[paramcount-1].id)->setValueNotifyingHost(params.pots[paramcount-1].normalize(presets[currentpreset].masterspeed));
+	updatedcurve = true;
+	updatevis = true;
 }
 
 void ModManAudioProcessor::parameterChanged(const String& parameterID, float newValue) {
@@ -384,6 +414,49 @@ float ModManAudioProcessor::calcresonance(float val) {
 	return mapToLog10(val,0.1f,40.f);
 }
 
+void ModManAudioProcessor::movepoint(int index, float x, float y) {
+	int i = params.selectedmodulator.get();
+	presets[currentpreset].curves[i].points[index].x = x;
+	presets[currentpreset].curves[i].points[index].y = y;
+	if(ison[i]) updatedcurve = true;
+}
+void ModManAudioProcessor::movetension(int index, float tension) {
+	int i = params.selectedmodulator.get();
+	presets[currentpreset].curves[i].points[index].tension = tension;
+	if(ison[i]) updatedcurve = true;
+}
+void ModManAudioProcessor::addpoint(int index, float x, float y) {
+	int i = params.selectedmodulator.get();
+	presets[currentpreset].curves[i].points.insert(presets[currentpreset].curves[i].points.begin()+index,point(x,y,presets[currentpreset].curves[i].points[index-1].tension));
+	if(ison[i]) updatedcurve = true;
+}
+void ModManAudioProcessor::deletepoint(int index) {
+	int i = params.selectedmodulator.get();
+	presets[currentpreset].curves[i].points.erase(presets[currentpreset].curves[i].points.begin()+index);
+	if(ison[i]) updatedcurve = true;
+}
+const String ModManAudioProcessor::curvetostring(const char delimiter) {
+	int i = params.selectedmodulator.get();
+	return presets[currentpreset].curves[i].tostring(delimiter);
+}
+void ModManAudioProcessor::curvefromstring(String str, const char delimiter) {
+	int i = params.selectedmodulator.get();
+	String revert = presets[currentpreset].curves[i].tostring();
+	try {
+		presets[currentpreset].curves[i] = curve(str,delimiter);
+	} catch(...) {
+		presets[currentpreset].curves[i] = curve(revert);
+	}
+	updatevis = true;
+	if(ison[i]) updatedcurve = true;
+}
+void ModManAudioProcessor::resetcurve() {
+	int i = params.selectedmodulator.get();
+	presets[currentpreset].curves[i] = curve("2,0,0,0.5,1,1,0.5"); //TODO
+	updatevis = true;
+	if(ison[i]) updatedcurve = true;
+}
+
 AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new ModManAudioProcessor(); }
 
 AudioProcessorValueTreeState::ParameterLayout ModManAudioProcessor::create_parameters() {
@@ -397,22 +470,22 @@ AudioProcessorValueTreeState::ParameterLayout ModManAudioProcessor::create_param
 			case 3: name = M4; break;
 			case 4: name = M5; break;
 		} //TODO defaults
-		parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"m"+((String)m)+"on"		,1},name+" On"															 ,false	,AudioParameterBoolAttributes()	.withStringFromValueFunction(tobool			).withValueFromStringFunction(frombool			)));
+		parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"m"+((String)m)+"on"		,1},name+" on"															 ,false	,AudioParameterBoolAttributes()	.withStringFromValueFunction(tobool			).withValueFromStringFunction(frombool			)));
 		if(m == 0) {
-		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"max"		,1},name+" Range"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),1.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(toms			).withValueFromStringFunction(fromms			)));
+		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"max"		,1},name+" range"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),1.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(toms			).withValueFromStringFunction(fromms			)));
 		} else if(m == 1) {
-		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"min"		,1},name+" Min Range"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(tocutoff		).withValueFromStringFunction(fromcutoff		)));
-		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"max"		,1},name+" Max Range"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.3f	,AudioParameterFloatAttributes().withStringFromValueFunction(tocutoff		).withValueFromStringFunction(fromcutoff		)));
+		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"min"		,1},name+" min range"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(tocutoff		).withValueFromStringFunction(fromcutoff		)));
+		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"max"		,1},name+" max range"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.3f	,AudioParameterFloatAttributes().withStringFromValueFunction(tocutoff		).withValueFromStringFunction(fromcutoff		)));
 		} else if(m == 2) {
-		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"min"		,1},name+" Min Range"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(toresonance	).withValueFromStringFunction(fromresonance		)));
-		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"max"		,1},name+" Max Range"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.3f	,AudioParameterFloatAttributes().withStringFromValueFunction(toresonance	).withValueFromStringFunction(fromresonance		)));
+		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"min"		,1},name+" min range"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(toresonance	).withValueFromStringFunction(fromresonance		)));
+		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"max"		,1},name+" max range"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.3f	,AudioParameterFloatAttributes().withStringFromValueFunction(toresonance	).withValueFromStringFunction(fromresonance		)));
 		} else {
-		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"min"		,1},name+" Min Range"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(tonormalized	).withValueFromStringFunction(fromnormalized	)));
-		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"max"		,1},name+" Max Range"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.3f	,AudioParameterFloatAttributes().withStringFromValueFunction(tonormalized	).withValueFromStringFunction(fromnormalized	)));
+		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"min"		,1},name+" min range"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(tonormalized	).withValueFromStringFunction(fromnormalized	)));
+		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"max"		,1},name+" max range"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.3f	,AudioParameterFloatAttributes().withStringFromValueFunction(tonormalized	).withValueFromStringFunction(fromnormalized	)));
 		}
-		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"speed"	,1},name+" Speed"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	,AudioParameterFloatAttributes().withStringFromValueFunction(tonormalized	).withValueFromStringFunction(fromnormalized	)));
-		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"stereo"	,1},name+" Stereo"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.3f	,AudioParameterFloatAttributes().withStringFromValueFunction(tonormalized	).withValueFromStringFunction(fromnormalized	)));
+		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"speed"	,1},name+" speed"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	,AudioParameterFloatAttributes().withStringFromValueFunction(tonormalized	).withValueFromStringFunction(fromnormalized	)));
+		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"stereo"	,1},name+" stereo"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.3f	,AudioParameterFloatAttributes().withStringFromValueFunction(tonormalized	).withValueFromStringFunction(fromnormalized	)));
 	}
-		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"masterspeed"				,1},"Master Speed"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	,AudioParameterFloatAttributes().withStringFromValueFunction(tonormalized	).withValueFromStringFunction(fromnormalized	)));
+		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"masterspeed"				,1},"master speed"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	,AudioParameterFloatAttributes().withStringFromValueFunction(tonormalized	).withValueFromStringFunction(fromnormalized	)));
 	return { parameters.begin(), parameters.end() };
 }

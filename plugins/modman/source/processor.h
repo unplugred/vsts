@@ -1,6 +1,7 @@
 #pragma once
 #include "includes.h"
 #include "perlin.h"
+#include "curves.h"
 
 struct potentiometer {
 public:
@@ -48,6 +49,7 @@ struct pluginparams {
 
 struct pluginpreset {
 	String name = "";
+	curve curves[MC];
 	float values[MC][5];
 	float masterspeed = .5f;
 	pluginpreset() {}
@@ -92,6 +94,14 @@ public:
 	virtual void parameterChanged(const String& parameterID, float newValue);
 	float calccutoff(float val);
 	float calcresonance(float val);
+
+	void movepoint(int index, float x, float y);
+	void movetension(int index, float tension);
+	void addpoint(int index, float x, float y);
+	void deletepoint(int index);
+	const String curvetostring(const char delimiter = ',');
+	void curvefromstring(String str, const char delimiter = ',');
+	void resetcurve();
  
 	AudioProcessorValueTreeState::ParameterLayout create_parameters();
 	AudioProcessorValueTreeState apvts;
@@ -107,6 +117,8 @@ public:
 	pluginpreset state;
 	pluginparams params;
 	int currentpreset = 0;
+
+	Atomic<bool> updatevis = false; // TODO
 
 private:
 	pluginpreset presets[20];
@@ -124,6 +136,8 @@ private:
 	int driftindex = 0;
 
 	dsp::StateVariableTPTFilter<float> lowpass;
+
+	Atomic<bool> updatedcurve = true; //TODO
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ModManAudioProcessor)
 };
