@@ -5,10 +5,10 @@
 using namespace juce;
 
 #define MC 5
-#define M1 "Drift"
-#define M2 "Low Pass"
-#define M3 "Low Pass Resonance"
-#define M4 "Saturation"
-#define M5 "Amplitude"
+#define M1 "drift"
+#define M2 "low pass"
+#define M3 "low pass resonance"
+#define M4 "saturation"
+#define M5 "amplitude"
 
 #define MAX_DRIFT 0.1
