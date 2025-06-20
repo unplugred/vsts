@@ -127,3 +127,45 @@ private:
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ModManAudioProcessor)
 };
+static std::function<String(float v, int max)> toms = [](float v, int max) {
+	return String(round(v*MAX_DRIFT*1000))+"ms";
+};
+static std::function<float(const String& s)> fromms = [](const String& s) {
+	float val = s.getFloatValue();
+	if(s.containsIgnoreCase("ms") || val > 1)
+		val /= MAX_DRIFT*1000;
+	else if(s.containsIgnoreCase("s"))
+		val /= MAX_DRIFT;
+	return jlimit(0.f,1.f,val);
+};
+static std::function<String(float v, int max)> tocutoff = [](float v, int max) {
+	return String(round(mapToLog10(v,20.f,20000.f)))+"hz";
+};
+static std::function<float(const String& s)> fromcutoff = [](const String& s) {
+	float val = s.getFloatValue();
+	if((s.containsIgnoreCase("k")) || (!s.containsIgnoreCase("hz") && val < 20))
+		val *= 1000;
+	return jlimit(0.f,1.f,mapFromLog10(val,20.f,20000.f));
+};
+static std::function<String(float v, int max)> toresonance = [](float v, int max) {
+	return String(mapToLog10(v,.1f,40.f),1);
+};
+static std::function<float(const String& s)> fromresonance = [](const String& s) {
+	return jlimit(0.f,1.f,mapFromLog10(s.getFloatValue(),.1f,40.f));
+};
+static std::function<String(bool v, int max)> tobool = [](bool v, int max) {
+	return (String)(v?"on":"off");
+};
+static std::function<bool(const String& s)> frombool = [](const String& s) {
+	if(s.containsIgnoreCase("n")) return true;
+	if(s.containsIgnoreCase("f")) return false;
+	if(s.containsIgnoreCase("1")) return true;
+	if(s.containsIgnoreCase("0")) return false;
+	return true;
+};
+static std::function<String(float v, int max)> tonormalized = [](float v, int max) {
+	return String(v,3);
+};
+static std::function<float(const String& s)> fromnormalized = [](const String& s) {
+	return jlimit(0.f,1.f,s.getFloatValue());
+};
