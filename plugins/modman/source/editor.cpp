@@ -644,9 +644,9 @@ void ModManAudioProcessorEditor::timerCallback() {
 	if(websiteht > 0 && logolerp >= 1) {
 		websiteht -= .5f;
 		if(fmod(websiteht,1.f) < .1f) {
-			targetpos[0] += (random.nextFloat()-.5f)*.002f;
-			targetpos[1] += (random.nextFloat()-.5f)*.004f;
-			targetpos[2] += (random.nextFloat()-.5f)*.02f;
+			targetpos[0] += (random.nextFloat()-.5f)*.001f;
+			targetpos[1] += (random.nextFloat()-.5f)*.002f;
+			targetpos[2] += (random.nextFloat()-.5f)*.01f;
 		}
 	}
 
