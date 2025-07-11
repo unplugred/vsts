@@ -30,6 +30,8 @@ ModManAudioProcessorEditor::ModManAudioProcessorEditor(ModManAudioProcessor& p, 
 		knobcount++;
 	}
 	selectedmodulator = params.selectedmodulator.get();
+	for(int i = 0; i < MC; i++)
+		curves[i] = state.curves[i];
 
 	knobs[3].x = 229.f;
 	knobs[3].y = 286.25f;
@@ -79,6 +81,8 @@ ModManAudioProcessorEditor::ModManAudioProcessorEditor(ModManAudioProcessor& p, 
 	onnum = floor(random.nextFloat()*2);
 	if(offnum >= prevoff) offnum += 1;
 	if(onnum >= prevon) onnum += 1;
+
+	calcvis();
 
 	originpos[0] = -178.5f/width;
 	targetpos[0] = (random.nextFloat()-.5f)*.02f+.01f;
@@ -137,9 +141,9 @@ void main() {
 	gl_Position.xy = vec2(gl_Position.x,gl_Position.y*(1-banner)+banner)*2-1;
 	uv = aPos.xy*2-1;
 	knobuv = vec4(
-		    ((aPos.x-center.x)*cos(knobrot)-(aPos.y-center.y     )*sin(knobrot))*5.5+.5,
+		    ((aPos.x-center.x)*cos(knobrot)-(aPos.y-center.y     )*sin(knobrot))*5.2+.5,
 		.95-((aPos.x-center.x)*sin(knobrot)+(aPos.y-center.y     )*cos(knobrot))       ,
-		    ((aPos.x-center.x)*cos(knobrot)-(aPos.y-center.y-.035)*sin(knobrot))*5.5+.5,
+		    ((aPos.x-center.x)*cos(knobrot)-(aPos.y-center.y-.035)*sin(knobrot))*5.2+.5,
 		.95-((aPos.x-center.x)*sin(knobrot)+(aPos.y-center.y-.035)*cos(knobrot))       );
 })",
 //KNOB FRAG
@@ -403,6 +407,52 @@ void main() {
 	fragColor = vec4(texture(logotex,(max(min(uv,1),0)+vec2(0,9-index))*vec2(1,.1)).rgb,texture(logoalphatex,alphauv).r);
 })");
 
+	lineshader = add_shader(
+//LINE VERT
+R"(#version 150 core
+in vec4 aPos;
+uniform float banner;
+uniform float white;
+out vec2 uv;
+void main(){
+	gl_Position = vec4(vec2(aPos.x,(aPos.y+white*.003)*(1-banner)+banner)*2-1,0,1);
+	uv = aPos.zw;
+})",
+//LINE FRAG
+R"(#version 150 core
+in vec2 uv;
+uniform float dpi;
+uniform float white;
+uniform sampler2D linetex;
+out vec4 fragColor;
+void main(){
+	fragColor = texture(linetex,uv);
+	if(white > .5)
+		fragColor = vec4(.839,.839,.859,1.)*.8*fragColor.a;
+})");
+
+	dotsshader = add_shader(
+//DOTS VERT
+R"(#version 150 core
+in vec2 aPos;
+uniform float banner;
+uniform vec2 pos;
+uniform vec2 size;
+uniform float index;
+out vec2 uv;
+void main() {
+	gl_Position = vec4(vec2(aPos.x*size.x+pos.x,(aPos.y*size.y+pos.y)*(1-banner)+banner)*2-1,0,1);
+	uv = vec2(aPos.x,(aPos.y+index)/6);
+})",
+//DOTS FRAG
+R"(#version 150 core
+in vec2 uv;
+uniform sampler2D dotstex;
+out vec4 fragColor;
+void main() {
+	fragColor = texture(dotstex,uv);
+})");
+
 	add_texture(&basetex, BinaryData::base_png, BinaryData::base_pngSize);
 	add_texture(&bannertex, BinaryData::banner_png, BinaryData::banner_pngSize);
 	add_texture(&flowerstex, BinaryData::flowers_png, BinaryData::flowers_pngSize);
@@ -414,6 +464,8 @@ void main() {
 	add_texture(&knobtex, BinaryData::knob_png, BinaryData::knob_pngSize);
 	add_texture(&logotex, BinaryData::logo_png, BinaryData::logo_pngSize);
 	add_texture(&logoalphatex, BinaryData::logoalpha_png, BinaryData::logoalpha_pngSize);
+	add_texture(&linetex, BinaryData::line_png, BinaryData::line_pngSize);
+	add_texture(&dotstex, BinaryData::dots_png, BinaryData::dots_pngSize);
 
 	draw_init();
 }
@@ -428,6 +480,7 @@ void ModManAudioProcessorEditor::renderOpenGL() {
 
 	OpenGLHelpers::clear(Colour::fromRGB(214,214,219));
 
+	// banner
 	context.extensions.glBindBuffer(GL_ARRAY_BUFFER, array_buffer);
 	auto coord = context.extensions.glGetAttribLocation(baseshader->getProgramID(),"aPos");
 	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
@@ -443,6 +496,8 @@ void ModManAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+
+	// base
 	basetex.bind();
 	baseshader->setUniform("pos",200.f/width,295.f/width);
 	baseshader->setUniform("margin",0.f,0.f);
@@ -450,6 +505,27 @@ void ModManAudioProcessorEditor::renderOpenGL() {
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	context.extensions.glDisableVertexAttribArray(coord);
 
+	// flowers
+	flowersshader->use();
+	flowersshader->setUniform("basetex",0);
+	context.extensions.glActiveTexture(GL_TEXTURE1);
+	flowerstex.bind();
+	flowersshader->setUniform("flowerstex",1);
+	context.extensions.glActiveTexture(GL_TEXTURE2);
+	labelstex.bind();
+	flowersshader->setUniform("labelstex",2);
+	flowersshader->setUniform("banner",banner_offset);
+	flowersshader->setUniform("pos",175.f/width,10.f/295.f,175.f/10.f);
+	flowersshader->setUniform("rot",flowers[0].rot,flowers[1].rot,flowers[2].rot,flowers[3].rot);
+	flowersshader->setUniform("rot2",flowers[4].rot);
+	flowersshader->setUniform("selected",selectedmodulator);
+	coord = context.extensions.glGetAttribLocation(flowersshader->getProgramID(),"aPos");
+	context.extensions.glEnableVertexAttribArray(coord);
+	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+	context.extensions.glDisableVertexAttribArray(coord);
+
+	// knobs
 	knobshader->use();
 	knobshader->setUniform("basetex",0);
 	context.extensions.glActiveTexture(GL_TEXTURE1);
@@ -470,25 +546,7 @@ void ModManAudioProcessorEditor::renderOpenGL() {
 	}
 	context.extensions.glDisableVertexAttribArray(coord);
 
-	flowersshader->use();
-	flowersshader->setUniform("basetex",0);
-	context.extensions.glActiveTexture(GL_TEXTURE1);
-	flowerstex.bind();
-	flowersshader->setUniform("flowerstex",1);
-	context.extensions.glActiveTexture(GL_TEXTURE2);
-	labelstex.bind();
-	flowersshader->setUniform("labelstex",2);
-	flowersshader->setUniform("banner",banner_offset);
-	flowersshader->setUniform("pos",175.f/width,10.f/295.f,175.f/10.f);
-	flowersshader->setUniform("rot",flowers[0].rot,flowers[1].rot,flowers[2].rot,flowers[3].rot);
-	flowersshader->setUniform("rot2",flowers[4].rot);
-	flowersshader->setUniform("selected",selectedmodulator);
-	coord = context.extensions.glGetAttribLocation(flowersshader->getProgramID(),"aPos");
-	context.extensions.glEnableVertexAttribArray(coord);
-	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
-	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
-	context.extensions.glDisableVertexAttribArray(coord);
-
+	// tacks
 	tackshader->use();
 	tackshader->setUniform("basetex",0);
 	context.extensions.glActiveTexture(GL_TEXTURE1);
@@ -563,6 +621,7 @@ void ModManAudioProcessorEditor::renderOpenGL() {
 	}
 	context.extensions.glDisableVertexAttribArray(coord);
 
+	// cubers
 	if(cubersize > 0) {
 		cubershader->use();
 		cubershader->setUniform("basetex",0);
@@ -582,6 +641,7 @@ void ModManAudioProcessorEditor::renderOpenGL() {
 		context.extensions.glDisableVertexAttribArray(coord);
 	}
 
+	// on off
 	onoffshader->use();
 	onoffshader->setUniform("basetex",0);
 	context.extensions.glActiveTexture(GL_TEXTURE1);
@@ -598,6 +658,7 @@ void ModManAudioProcessorEditor::renderOpenGL() {
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	context.extensions.glDisableVertexAttribArray(coord);
 
+	// logo
 	logoshader->use();
 	context.extensions.glActiveTexture(GL_TEXTURE0);
 	logotex.bind();
@@ -620,16 +681,101 @@ void ModManAudioProcessorEditor::renderOpenGL() {
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	context.extensions.glDisableVertexAttribArray(coord);
 
+	// line
+	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+	lineshader->use();
+	context.extensions.glActiveTexture(GL_TEXTURE0);
+	linetex.bind();
+	lineshader->setUniform("linetex",0);
+	coord = context.extensions.glGetAttribLocation(lineshader->getProgramID(),"aPos");
+	context.extensions.glEnableVertexAttribArray(coord);
+	context.extensions.glVertexAttribPointer(coord,4,GL_FLOAT,GL_FALSE,0,0);
+	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*2880, visline, GL_DYNAMIC_DRAW);
+	lineshader->setUniform("banner",banner_offset);
+	lineshader->setUniform("basepos",-200.f/width,width/295.f);
+	lineshader->setUniform("dpi",scaled_dpi);
+	lineshader->setUniform("white",1.f);
+	glDrawArrays(GL_TRIANGLE_STRIP,0,720);
+	lineshader->setUniform("white",0.f);
+	glDrawArrays(GL_TRIANGLE_STRIP,0,720);
+	context.extensions.glDisableVertexAttribArray(coord);
+	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
+
+	// tension points
+	dotsshader->use();
+	context.extensions.glActiveTexture(GL_TEXTURE0);
+	dotstex.bind();
+	dotsshader->setUniform("dotstex",0);
+	coord = context.extensions.glGetAttribLocation(dotsshader->getProgramID(),"aPos");
+	context.extensions.glEnableVertexAttribArray(coord);
+	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+	dotsshader->setUniform("banner",banner_offset);
+	dotsshader->setUniform("size",11.f/width,10.f/height);
+	int nextpoint = 0;
+	for(int i = 0; i < (curves[selectedmodulator].points.size()-1); ++i) {
+		if(!curves[selectedmodulator].points[i].enabled) continue;
+		++nextpoint;
+		while(!curves[selectedmodulator].points[nextpoint].enabled) ++nextpoint;
+		if(((curves[selectedmodulator].points[nextpoint].x-curves[selectedmodulator].points[i].x)*1.42f) <= .02 || fabs(curves[selectedmodulator].points[nextpoint].y-curves[selectedmodulator].points[i].y) <= .02) continue;
+		double interp = curve::calctension(.5,curves[selectedmodulator].points[i].tension);
+		dotsshader->setUniform("pos",
+				((curves[selectedmodulator].points[i].x           +curves[selectedmodulator].points[nextpoint].x       )*.5f*180.f+208.f-5.5f)/width ,
+				((curves[selectedmodulator].points[i].y*(1-interp)+curves[selectedmodulator].points[nextpoint].y*interp)    *163.f+128.f-5.f )/height);
+		dotsshader->setUniform("index",(float)fmod((float)i,3));
+		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+	}
+
+	// control points
+	for(int i = 0; i < curves[selectedmodulator].points.size(); ++i) {
+		if(!curves[selectedmodulator].points[i].enabled) continue;
+		dotsshader->setUniform("pos",
+			(curves[selectedmodulator].points[i].x*180.f+208.f-5.5f)/width,
+			(curves[selectedmodulator].points[i].y*163.f+128.f-5.f)/height);
+		dotsshader->setUniform("index",(float)fmod((float)i,3)+3.f);
+		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+	}
+
 	draw_end();
 }
 void ModManAudioProcessorEditor::openGLContextClosing() {
 	draw_close();
 }
+void ModManAudioProcessorEditor::calcvis() {
+	curveiterator iterator;
+	iterator.reset(curves[selectedmodulator],360);
+	double prevy = 128+iterator.next()*163;
+	double currenty = prevy;
+	double nexty = prevy;
+	double dist = 0;
+	for(int i = 0; i < 360; i++) {
+		nexty = 128+iterator.next()*163;
+		dist += (fabs(currenty-prevy)+1)/253.f;
+		double angle1 = std::atan2(currenty-prevy,.5)+1.5707963268;
+		double angle2 = std::atan2(nexty-currenty,.5)+1.5707963268;
+		double angle = (angle1+angle2)*.5;
+		if(fabs(angle1-angle2)>1) {
+			if(fabs(currenty-prevy) > fabs(nexty-currenty))
+				angle = angle1;
+			else
+				angle = angle2;
+		}
+		visline[i*8  ] = (i*.5+208+cos(angle)*2.25f)/width;
+		visline[i*8+4] = (i*.5+208-cos(angle)*2.25f)/width;
+		visline[i*8+1] = (currenty+sin(angle)*2.025f)/height;
+		visline[i*8+5] = (currenty-sin(angle)*2.025f)/height;
+		visline[i*8+2] = 0.f;
+		visline[i*8+6] = 1.f;
+		visline[i*8+3] = dist;
+		visline[i*8+7] = dist;
+		prevy = currenty;
+		currenty = nexty;
+	}
+}
 void ModManAudioProcessorEditor::paint(Graphics& g) { }
 
 void ModManAudioProcessorEditor::timerCallback() {
-	if(logolerp != ((hover<=-13&&hover>=-14)?1:0)) {
-		logolerp = fmax(fmin(logolerp+((hover<=-13&&hover>=-14)?.13f:-.13f),1),0);
+	if(logolerp != ((hover<=-14&&hover>=-15)?1:0)) {
+		logolerp = fmax(fmin(logolerp+((hover<=-14&&hover>=-15)?.13f:-.13f),1),0);
 		logoease = 1-(1-logolerp)*(1-logolerp);
 		if(logolerp <= 0) {
 			originpos[0] = -178.5f/width;
@@ -692,6 +838,13 @@ void ModManAudioProcessorEditor::timerCallback() {
 
 	time = fmod(time+.0002f,1.f);
 
+	if(audio_processor.updatevis.get()) {
+		for(int i = 0; i < MC; i++)
+			curves[i] = audio_processor.presets[audio_processor.currentpreset].curves[i];
+		calcvis();
+		audio_processor.updatevis = false;
+	}
+
 	update();
 }
 
@@ -712,8 +865,8 @@ void ModManAudioProcessorEditor::parameterChanged(const String& parameterID, flo
 void ModManAudioProcessorEditor::mouseMove(const MouseEvent& event) {
 	int prevhover = hover;
 	hover = recalc_hover(event.x,event.y);
-	if(hover == -14 && prevhover != -14 && websiteht <= 0) websiteht = 9.5f;
-	else if(hover > -13 && prevhover <= -13) websiteht = 0.f;
+	if(hover == -15 && prevhover != -15 && websiteht <= 0) websiteht = 9.5f;
+	else if(hover > -14 && prevhover <= -14) websiteht = 0.f;
 }
 void ModManAudioProcessorEditor::mouseExit(const MouseEvent& event) {
 	hover = -1;
@@ -730,17 +883,23 @@ void ModManAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 			scalemenu->addItem(i,(String)round(ui_scales[i-21]*100)+"%",true,(i-21)==ui_scale_index);
 
 		rightclickmenu->setLookAndFeel(&look_n_feel);
-		rightclickmenu->addItem(1,"'copy preset",true);
-		rightclickmenu->addItem(2,"'paste preset",audio_processor.is_valid_preset_string(SystemClipboard::getTextFromClipboard()));
+		if(hover == -13 || hover >= knobcount) {
+			rightclickmenu->addItem(1,"'copy curve",true);
+			rightclickmenu->addItem(2,"'paste curve",curve::isvalidcurvestring(SystemClipboard::getTextFromClipboard()));
+			rightclickmenu->addItem(3,"'reset curve",true);
+			rightclickmenu->addSeparator();
+		}
+		rightclickmenu->addItem(4,"'copy preset",true);
+		rightclickmenu->addItem(5,"'paste preset",audio_processor.is_valid_preset_string(SystemClipboard::getTextFromClipboard()));
 		rightclickmenu->addSeparator();
 		rightclickmenu->addSubMenu("'scale",*scalemenu);
 
 		String description = "";
 		if(hover != -1) {
-			if(hover == -14)
+			if(hover == -15)
 				description = "made with love by mel :)";
-			else if(hover == -13 || (hover >= -6 && hover <= -2)) {
-				int modnum = hover==-13?selectedmodulator:(hover+6);
+			else if(hover == -14 || (hover >= -6 && hover <= -2)) {
+				int modnum = hover==-14?selectedmodulator:(hover+6);
 				     if(modnum == 0)
 					description = "tape drift. results in changes in the pitch and speed of the incoming audio.";
 				else if(modnum == 1)
@@ -763,10 +922,6 @@ void ModManAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 				description = "stereo separation between channels in modulator";
 			else if(hover == 5)
 				description = "global speed multiplier for all modulators. this parameter is shared across all modulators.";
-			else if(hover == 2)
-				description = "";
-			else if(hover == 2)
-				description = "";
 			description = look_n_feel.add_line_breaks(description);
 		}
 		if(description != "") {
@@ -776,13 +931,18 @@ void ModManAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 
 		rightclickmenu->showMenuAsync(PopupMenu::Options(),[this](int result){
 			if(result <= 0) return;
-			else if(result >= 20) {
+			else if(result >= 20)
 				set_ui_scale(result-21);
-			} else if(result == 1) { //copy preset
+			else if(result == 1) //copy curve
+				SystemClipboard::copyTextToClipboard(audio_processor.curvetostring());
+			else if(result == 2) //paste curve
+				audio_processor.curvefromstring(SystemClipboard::getTextFromClipboard());
+			else if(result == 3) //reset curve
+				audio_processor.resetcurve();
+			else if(result == 4) //copy preset
 				SystemClipboard::copyTextToClipboard(audio_processor.get_preset(audio_processor.currentpreset));
-			} else if(result == 2) { //paste preset
+			else if(result == 5) //paste preset
 				audio_processor.set_preset(SystemClipboard::getTextFromClipboard(), audio_processor.currentpreset);
-			}
 		});
 		return;
 	}
@@ -804,44 +964,188 @@ void ModManAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 			onnum = floor(random.nextFloat()*2);
 			if(offnum >= prevoff) offnum += 1;
 			if(onnum >= prevon) onnum += 1;
+
+			calcvis();
 		}
 	} else if(hover == 0) {
 		audio_processor.apvts.getParameter("m"+((String)selectedmodulator)+knobs[hover].id)->setValueNotifyingHost(1-knobs[hover].value[selectedmodulator]);
 		audio_processor.undo_manager.setCurrentTransactionName(knobs[hover].value[selectedmodulator]>.5f?"turned modulator off":"turned modulator on");
 		audio_processor.undo_manager.beginNewTransaction();
-	} else if(hover > 0 && hover < knobcount) {
-		initialvalue = knobs[hover].value[hover==(knobcount-1)?0:selectedmodulator];
-		valueoffset = 0;
+	} else if(hover > 0) {
+		valueoffset[0] = 0;
+		audio_processor.undo_manager.beginNewTransaction();
 		dragpos = event.getScreenPosition();
 		event.source.enableUnboundedMouseMovement(true);
-		audio_processor.undo_manager.beginNewTransaction();
-		if(hover == (knobcount-1))
-			audio_processor.apvts.getParameter(knobs[hover].id)->beginChangeGesture();
-		else
-			audio_processor.apvts.getParameter("m"+((String)selectedmodulator)+knobs[hover].id)->beginChangeGesture();
+		if(hover >= knobcount) {
+			int i = round(initialdrag-knobcount);
+			if((i%2) == 0) {
+				i /= 2;
+				initialvalue[0] = curves[selectedmodulator].points[i].x;
+				initialvalue[1] = curves[selectedmodulator].points[i].y;
+				initialdotvalue[0] = initialvalue[0];
+				initialdotvalue[1] = initialvalue[1];
+				valueoffset[1] = 0;
+			} else {
+				i = (i-1)/2;
+				initialvalue[0] = curves[selectedmodulator].points[i].tension;
+				initialdotvalue[0] = initialvalue[0];
+			}
+		} else {
+			initialvalue[0] = knobs[hover].value[hover==(knobcount-1)?0:selectedmodulator];
+			if(hover == (knobcount-1))
+				audio_processor.apvts.getParameter(knobs[hover].id)->beginChangeGesture();
+			else
+				audio_processor.apvts.getParameter("m"+((String)selectedmodulator)+knobs[hover].id)->beginChangeGesture();
+		}
 	}
 }
 void ModManAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 	if(hover == -1) return;
-	if(initialdrag > 0 && initialdrag < knobcount) {
+
+	if(initialdrag >= knobcount) {
+		float dragspeed = 1.f/(180*ui_scales[ui_scale_index]);
+		int i = initialdrag-knobcount;
+		if((i%2) == 0) { // dragging a dot
+			i /= 2;
+			if(!finemode && event.mods.isAltDown()) { //start of fine mode
+				finemode = true;
+				initialvalue[0] += event.getDistanceFromDragStartX()*dragspeed*.9f;
+				initialvalue[1] -= event.getDistanceFromDragStartY()*dragspeed*.9f*1.42f;
+			} else if(finemode && !event.mods.isAltDown()) { //end of fine mode
+				finemode = false;
+				initialvalue[0] -= event.getDistanceFromDragStartX()*dragspeed*.9f;
+				initialvalue[1] += event.getDistanceFromDragStartY()*dragspeed*.9f*1.42f;
+			}
+
+			float valuey = initialvalue[1]-event.getDistanceFromDragStartY()*dragspeed*(finemode?.1f:1)*1.42f;
+			float pointy = valuey-valueoffset[1];
+
+			if(i > 0 && i < (curves[selectedmodulator].points.size()-1)) {
+				float valuex = initialvalue[0]+event.getDistanceFromDragStartX()*dragspeed*(finemode?.1f:1);
+				float pointx = valuex-valueoffset[0];
+
+				if(event.mods.isCtrlDown()) { // one axis
+					if(axislock == -1) {
+						initialaxispoint[0] = pointx;
+						initialaxispoint[1] = pointy;
+						axisvaluediff[0] = valuex;
+						axisvaluediff[1] = valuey;
+						axislock = 0;
+					} else if(axislock == 0 && (fabs(valuex-axisvaluediff[0])+fabs(valuey-axisvaluediff[1])) > .1) {
+						if(fabs(valuex-axisvaluediff[0]) > fabs(valuey-axisvaluediff[1]))
+							axislock = 1;
+						else
+							axislock = 2;
+					} else if(axislock == 1) {
+						valueoffset[1] += valuey-axisvaluediff[1];
+						axisvaluediff[1] = valuey;
+						pointy = initialaxispoint[1];
+					} else if(axislock == 2) {
+						valueoffset[0] += valuex-axisvaluediff[0];
+						axisvaluediff[0] = valuex;
+						pointx = initialaxispoint[0];
+					}
+				} else axislock = -1;
+
+				if(event.mods.isShiftDown()) { // free mode
+					if((i > 1 && pointx < curves[selectedmodulator].points[i-1].x) || (i < (curves[selectedmodulator].points.size()-2) && pointx > curves[selectedmodulator].points[i+1].x)) {
+						point pnt = curves[selectedmodulator].points[i];
+						int n = 1;
+						for(n = 1; n < (curves[selectedmodulator].points.size()-1); ++n) //finding new position
+							if(pnt.x < curves[selectedmodulator].points[n].x) break;
+						if(n > i) { // move points back
+							n--;
+							for(int f = i; f <= n; f++)
+								curves[selectedmodulator].points[f] = curves[selectedmodulator].points[f+1];
+						} else { //move points forward
+							for(int f = i; f >= n; f--)
+								curves[selectedmodulator].points[f] = curves[selectedmodulator].points[f-1];
+						}
+						i = n;
+						initialdrag = i*2+knobcount;
+						hover = initialdrag;
+					}
+				}
+
+				// clampage to nearby pointe
+				float preclampx = pointx;
+				float preclampy = pointy;
+				bool clamppedx = false;
+				bool clamppedy = false;
+				float xleft = 0;
+				float xright = 1;
+				if(!event.mods.isShiftDown()) { // no free mode
+					if(i > 1) {
+						xleft = curves[selectedmodulator].points[i-1].x;
+						if(pointx <= curves[selectedmodulator].points[i-1].x) {
+							pointx = curves[selectedmodulator].points[i-1].x;
+							clamppedx = true;
+						}
+					}
+					if(i < (curves[selectedmodulator].points.size()-2)) {
+						xright = curves[selectedmodulator].points[i+1].x;
+						if(pointx >= curves[selectedmodulator].points[i+1].x) {
+							pointx = curves[selectedmodulator].points[i+1].x;
+							clamppedx = true;
+						}
+					}
+				}
+				if(pointx < 0) { pointx = 0; clamppedx = true; }
+				if(pointx > 1) { pointx = 1; clamppedx = true; }
+				if(pointy < 0) { pointy = 0; clamppedy = true; }
+				if(pointy > 1) { pointy = 1; clamppedy = true; }
+				if(clamppedx)
+					amioutofbounds[0] += preclampx-pointx-fmin(fmax(amioutofbounds[0],-.1f),.1f);
+				else amioutofbounds[0] = 0;
+				if(clamppedy)
+					amioutofbounds[1] += preclampy-pointy-fmin(fmax(amioutofbounds[1],-.1f),.1f);
+				else amioutofbounds[1] = 0;
+				curves[selectedmodulator].points[i].enabled = (fabs(amioutofbounds[0])+fabs(amioutofbounds[1])) < .8;
+
+				curves[selectedmodulator].points[i].x = pointx;
+				if(axislock != 2)
+					valueoffset[0] = fmax(fmin(valueoffset[0],valuex-xleft+.1f),valuex-xright-.1f);
+			}
+			curves[selectedmodulator].points[i].y = fmax(fmin(pointy,1),0);
+			if(axislock != 1)
+				valueoffset[1] = fmax(fmin(valueoffset[1],valuey+.1f),valuey-1.1f);
+
+		} else { //dragging tension
+			i = (i-1)/2;
+			int dir = curves[selectedmodulator].points[i].y > curves[selectedmodulator].points[i+1].y ? -1 : 1;
+			if(!finemode && (event.mods.isShiftDown() || event.mods.isAltDown())) {
+				finemode = true;
+				initialvalue[0] -= dir*event.getDistanceFromDragStartY()*dragspeed*.9f*1.42f;
+			} else if(finemode && !(event.mods.isShiftDown() || event.mods.isAltDown())) {
+				finemode = false;
+				initialvalue[0] += dir*event.getDistanceFromDragStartY()*dragspeed*.9f*1.42f;
+			}
+
+			float value = initialvalue[0]-dir*event.getDistanceFromDragStartY()*dragspeed*(finemode?.1f:1)*1.42f;
+			curves[selectedmodulator].points[i].tension = fmin(fmax(value-valueoffset[0],0),1);
+
+			valueoffset[0] = fmax(fmin(valueoffset[0],value+.1f),value-1.1f);
+		}
+		calcvis();
+	} else if(initialdrag > 0 && initialdrag < knobcount) {
 		if(!finemode && (event.mods.isShiftDown() || event.mods.isAltDown())) {
 			finemode = true;
-			initialvalue -= (event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*.0045f;
+			initialvalue[0] -= (event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*.0045f;
 		} else if(finemode && !(event.mods.isShiftDown() || event.mods.isAltDown())) {
 			finemode = false;
-			initialvalue += (event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*.0045f;
+			initialvalue[0] += (event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*.0045f;
 		}
 
 		float value = 0;
 		if(hover == 1 || hover == 2)
-			value = initialvalue-event.getDistanceFromDragStartY()*(finemode?.0005f:.005f)*.75f/ui_scales[ui_scale_index];
+			value = initialvalue[0]-event.getDistanceFromDragStartY()*(finemode?.0005f:.005f)*.75f/ui_scales[ui_scale_index];
 		else
-			value = initialvalue-(event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*(finemode?.0005f:.005f);
+			value = initialvalue[0]-(event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*(finemode?.0005f:.005f);
 		if(hover == (knobcount-1)) {
-			audio_processor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(value-valueoffset);
+			audio_processor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(value-valueoffset[0]);
 		} else {
 			bool singletick = selectedmodulator == 2 && knobs[0].value[2] < .5;
-			float val = value-valueoffset;
+			float val = value-valueoffset[0];
 			if(selectedmodulator != 0 && !singletick) {
 				if(hover == 1) val = fmin(val,knobs[2].value[selectedmodulator]); else
 				if(hover == 2) val = fmax(val,knobs[1].value[selectedmodulator]);
@@ -851,43 +1155,105 @@ void ModManAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 			audio_processor.apvts.getParameter("m"+((String)selectedmodulator)+knobs[hover].id)->setValueNotifyingHost(val);
 		}
 
-		valueoffset = fmax(fmin(valueoffset,value+.1f),value-1.1f);
-	} else if(initialdrag == -14) {
+		valueoffset[0] = fmax(fmin(valueoffset[0],value+.1f),value-1.1f);
+	} else if(initialdrag == -15) {
 		int prevhover = hover;
-		hover = recalc_hover(event.x,event.y)==-14?-14:-13;
-		if(hover == -14 && prevhover != -14 && websiteht <= 0) websiteht = 9.5f;
+		hover = recalc_hover(event.x,event.y)==-15?-15:-14;
+		if(hover == -15 && prevhover != -15 && websiteht <= 0) websiteht = 9.5f;
 	}
 }
 void ModManAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 	if(dpi < 0) return;
-	if(hover > 0 && hover < knobcount) {
+	if(hover > 0) {
+		if(hover >= knobcount) {
+			int i = hover-knobcount;
+			if((i%2) == 0) {
+				i /= 2;
+				axislock = -1;
+				if((fabs(initialdotvalue[0]-curves[selectedmodulator].points[i].x)+fabs(initialdotvalue[1]-curves[selectedmodulator].points[i].y)) < .00001) {
+					curves[selectedmodulator].points[i].x = initialdotvalue[0];
+					curves[selectedmodulator].points[i].y = initialdotvalue[1];
+					return;
+				}
+				dragpos.x += (curves[selectedmodulator].points[i].x-initialdotvalue[0])*ui_scales[ui_scale_index]*180;
+				dragpos.y += (initialdotvalue[1]-curves[selectedmodulator].points[i].y)*ui_scales[ui_scale_index]*163;
+				if(!curves[selectedmodulator].points[i].enabled) {
+					curves[selectedmodulator].points.erase(curves[selectedmodulator].points.begin()+i);
+					audio_processor.deletepoint(i);
+				} else audio_processor.movepoint(i,curves[selectedmodulator].points[i].x,curves[selectedmodulator].points[i].y);
+			} else {
+				i = (i-1)/2;
+				if(fabs(initialdotvalue[0]-curves[selectedmodulator].points[i].tension) < .00001) {
+					curves[selectedmodulator].points[i].tension = initialdotvalue[0];
+					return;
+				}
+				float interp = curve::calctension(.5,curves[selectedmodulator].points[i].tension)-curve::calctension(.5,initialdotvalue[0]);
+				dragpos.y += (curves[selectedmodulator].points[i].y-curves[selectedmodulator].points[i+1].y)*interp*ui_scales[ui_scale_index]*200.f;
+				audio_processor.movetension(i,curves[selectedmodulator].points[i].tension);
+			}
+		}
 		event.source.enableUnboundedMouseMovement(false);
 		Desktop::setMousePosition(dragpos);
-		audio_processor.undo_manager.setCurrentTransactionName(
-			(String)((knobs[hover].value[hover==(knobcount-1)?0:selectedmodulator]-initialvalue)>=0?"increased ":"decreased ") += knobs[hover].name);
-		if(hover == (knobcount-1))
-			audio_processor.apvts.getParameter(knobs[hover].id)->endChangeGesture();
-		else
-			audio_processor.apvts.getParameter("m"+((String)selectedmodulator)+knobs[hover].id)->endChangeGesture();
+		if(hover >= knobcount) {
+			if(((initialdrag-knobcount)%2) == 0) audio_processor.undo_manager.setCurrentTransactionName("Moved point");
+			else audio_processor.undo_manager.setCurrentTransactionName("Moved tension");
+		} else if(hover > 0) {
+			audio_processor.undo_manager.setCurrentTransactionName(
+				(String)((knobs[hover].value[hover==(knobcount-1)?0:selectedmodulator]-initialvalue[0])>=0?"increased ":"decreased ") += knobs[hover].name);
+			if(hover == (knobcount-1))
+				audio_processor.apvts.getParameter(knobs[hover].id)->endChangeGesture();
+			else
+				audio_processor.apvts.getParameter("m"+((String)selectedmodulator)+knobs[hover].id)->endChangeGesture();
+		}
 		audio_processor.undo_manager.beginNewTransaction();
+		axislock = -1;
 	} else {
 		int prevhover = hover;
 		hover = recalc_hover(event.x,event.y);
-		if(hover == -14) {
-			if(prevhover == -14) URL("https://vst.unplug.red/").launchInDefaultBrowser();
+		if(hover == -15) {
+			if(prevhover == -15) URL("https://vst.unplug.red/").launchInDefaultBrowser();
 			else if(websiteht <= 0) websiteht = 9.5f;
 		}
 	}
 }
 void ModManAudioProcessorEditor::mouseDoubleClick(const MouseEvent& event) {
-	if(hover <= 0 || hover >= knobcount) return;
-	audio_processor.undo_manager.setCurrentTransactionName((String)"reset " += knobs[hover].name);
-	if(hover == (knobcount-1)) {
-		audio_processor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(knobs[hover].defaultvalue[0]);
+	if(hover == -13) {
+		float x = fmin(fmax((((float)event.x)/ui_scales[ui_scale_index]-208)/180.f,0),1);
+		float y = fmin(fmax(1-(((float)event.y)/ui_scales[ui_scale_index]-39)/163.f,0),1);
+		int i = 1;
+		for(i = 1; i < curves[selectedmodulator].points.size(); ++i)
+			if(x < curves[selectedmodulator].points[i].x) break;
+		curves[selectedmodulator].points.insert(curves[selectedmodulator].points.begin()+i,point(x,y,curves[selectedmodulator].points[i-1].tension));
+		audio_processor.addpoint(i,x,y);
+		calcvis();
+		hover = recalc_hover(event.x,event.y);
+	} else if(hover <= 0) {
+		return;
+	} else if(hover >= knobcount) {
+		int i = initialdrag-knobcount;
+		if((i%2) == 0) {
+			i /= 2;
+			if(i > 0 && i < (curves[selectedmodulator].points.size()-1)) {
+				curves[selectedmodulator].points.erase(curves[selectedmodulator].points.begin()+i);
+				audio_processor.deletepoint(i);
+			}
+		} else {
+			i = (i-1)/2;
+			if(fabs(curves[selectedmodulator].points[i].tension-.5) < .00001f) return;
+			curves[selectedmodulator].points[i].tension = .5f;
+			audio_processor.movetension(i,.5f);
+		}
+		calcvis();
+		hover = recalc_hover(event.x,event.y);
 	} else {
-		audio_processor.apvts.getParameter("m"+((String)selectedmodulator)+knobs[hover].id)->setValueNotifyingHost(knobs[hover].defaultvalue[selectedmodulator]);
+		audio_processor.undo_manager.setCurrentTransactionName((String)"reset " += knobs[hover].name);
+		if(hover == (knobcount-1)) {
+			audio_processor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(knobs[hover].defaultvalue[0]);
+		} else {
+			audio_processor.apvts.getParameter("m"+((String)selectedmodulator)+knobs[hover].id)->setValueNotifyingHost(knobs[hover].defaultvalue[selectedmodulator]);
+		}
+		audio_processor.undo_manager.beginNewTransaction();
 	}
-	audio_processor.undo_manager.beginNewTransaction();
 }
 void ModManAudioProcessorEditor::mouseWheelMove(const MouseEvent& event, const MouseWheelDetails& wheel) {
 	if(hover <= 0 || hover >= knobcount) return;
@@ -904,14 +1270,14 @@ int ModManAudioProcessorEditor::recalc_hover(float x, float y) {
 	x /= ui_scales[ui_scale_index];
 	y /= ui_scales[ui_scale_index];
 
-	// website -14 - -13
+	// website -15 - -14
 	if(x < 197) {
 		float logox =    (targetpos[0]) *width +14.5f;
 		float logoy = (1-(targetpos[1]))*height-12.5f;
 		if(x >= logox && x < (logox+152) && y >= (logoy-52) && y < logoy)
-			return -14;
+			return -15;
 		else
-			return -13;
+			return -14;
 	}
 
 	// curve prestets -12 - -7
@@ -948,6 +1314,28 @@ int ModManAudioProcessorEditor::recalc_hover(float x, float y) {
 	}
 
 	// dots and tensions 6+
+	if(x >= (208-6) && y >= (39-6) && x <= (388+6) && y <= (202+6)) {
+		x -= 208;
+		y -= 39;
+		for(int i = 0; i < curves[selectedmodulator].points.size(); ++i) {
+			float xx = x-curves[selectedmodulator].points[i].x*180;
+			float yy = y-(1-curves[selectedmodulator].points[i].y)*163;
+			//dot
+			if((xx*xx+yy*yy)<=37.1) return i*2+knobcount;
+
+			if(i < (curves[selectedmodulator].points.size()-1)) {
+				float interp = curve::calctension(.5,curves[selectedmodulator].points[i].tension);
+				xx = x-(curves[selectedmodulator].points[i].x+curves[selectedmodulator].points[i+1].x)*.5f*180.f;
+				yy = y-(1-(curves[selectedmodulator].points[i].y*(1-interp)+curves[selectedmodulator].points[i+1].y*interp))*163.f;
+				//tension
+				if((xx*xx+yy*yy)<=37.1) return i*2+1+knobcount;
+			}
+		}
+
+		// curve bg
+		if(x >= 6 && y >= 6 && x <= (180-6) && y <= (163-6))
+			return -13;
+	}
 
 	return -1;
 }

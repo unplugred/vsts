@@ -53,6 +53,7 @@ public:
 	void newOpenGLContextCreated() override;
 	void renderOpenGL() override;
 	void openGLContextClosing() override;
+	void calcvis();
 	void paint(Graphics&) override;
 
 	void timerCallback() override;
@@ -79,9 +80,14 @@ private:
 	int selectedmodulator = 0;
 	int hover = -1;
 	int initialdrag = 0;
-	float initialvalue = 0;
+	float initialvalue[2] {0,0};
+	float initialdotvalue[2] {0,0};
+	float initialaxispoint[2] {0,0};
+	float axisvaluediff[2] {0,0};
+	float amioutofbounds[2] {0,0};
 	bool finemode = false;
-	float valueoffset = 0;
+	int axislock = -1;
+	float valueoffset[2] {0,0};
 	Point<int> dragpos = Point<int>(0,0);
 	OpenGLTexture knobtex;
 	std::shared_ptr<OpenGLShaderProgram> knobshader;
@@ -118,6 +124,13 @@ private:
 	float targetpos[3] = {0,0,0};
 	std::shared_ptr<OpenGLShaderProgram> logoshader;
 
+	float visline[2880];
+	curve curves[MC];
+	OpenGLTexture linetex;
+	std::shared_ptr<OpenGLShaderProgram> lineshader;
+
+	OpenGLTexture dotstex;
+	std::shared_ptr<OpenGLShaderProgram> dotsshader;
 
 	float rms = 0;
 	float time = 0;

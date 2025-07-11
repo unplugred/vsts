@@ -115,13 +115,13 @@ public:
 	const int paramcount = 6;
 
 	pluginpreset state;
-	pluginparams params;
+	pluginpreset presets[20];
 	int currentpreset = 0;
+	pluginparams params;
 
-	Atomic<bool> updatevis = false; // TODO
+	Atomic<bool> updatevis = false;
 
 private:
-	pluginpreset presets[20];
 
 	int channelnum = 0;
 	int samplesperblock = 0;

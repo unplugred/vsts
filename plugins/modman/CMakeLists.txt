@@ -63,7 +63,9 @@ juce_add_binary_data("${BaseTargetName}BinaryData" HEADER_NAME BinaryData.h NAME
 	resources/onoff.png
 	resources/knob.png
 	resources/logo.png
-	resources/logoalpha.png)
+	resources/logoalpha.png
+	resources/dots.png
+	resources/line.png)
 set_target_properties("${BaseTargetName}BinaryData" PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 
 target_link_libraries("${BaseTargetName}" PRIVATE
