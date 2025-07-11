@@ -452,11 +452,11 @@ def configure(version):
 	with open("saved_data.json","w") as out_file:
 		json.dump(saved_data,out_file);
 
-	version_num = 0
+	version_num = 2
 	if version == "free":
-		version_num = 1
+		version_num = 0
 	elif version == "beta":
-		version_num = 2
+		version_num = 1
 	cmd = "cmake -DBANNERTYPE="+str(version_num)+" -B \"build_"+systems[system]["code"]+"\" -G "
 	if systems[system]["code"] == "win":
 		run_command(cmd+"\""+systems[system]["compiler"]+"\" -T host=x64 -A x64")
