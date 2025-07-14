@@ -110,6 +110,7 @@ public:
 	Atomic<int> rmscount = 0;
 	Atomic<float> flower_rot[MC];
 	Atomic<float> cuber_rot[2];
+	float driftmult = 1;
 
 	int version = 0;
 	const int paramcount = 6;
