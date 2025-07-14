@@ -19,6 +19,10 @@ struct curve {
 	std::vector<point> points;
 	static double calctension(double interp, double tension);
 	static bool isvalidcurvestring(String str, const char delimiter = ',');
+	double process(double input, int channel);
+	void resizechannels(int channelnum);
+	std::vector<int> nextpoint;
+	std::vector<int> currentpoint;
 };
 class curveiterator {
 public:

@@ -26,6 +26,41 @@ double curveiterator::next() {
 	double interp = curve::calctension((xx-points[currentpoint].x)/(points[nextpoint].x-points[currentpoint].x),points[currentpoint].tension);
 	return points[currentpoint].y*(1-interp)+points[nextpoint].y*interp;
 }
+double curve::process(double input, int channel) {
+	int c = fmin(channel,nextpoint.size());
+	if(input <= 0) return points[0].y;
+	if(input >= 1) return points[points.size()-1].y;
+	if(nextpoint[c] >= points.size()) {
+		currentpoint[c] = points.size()-1;
+		nextpoint[c] = currentpoint[c]--;
+		while(!points[currentpoint[c]].enabled) --currentpoint[c];
+	}
+	while(input < points[currentpoint[c]].x) {
+		nextpoint[c] = currentpoint[c]--;
+		while(!points[currentpoint[c]].enabled) --currentpoint[c];
+	}
+	while(input >= points[nextpoint[c]].x) {
+		currentpoint[c] = nextpoint[c]++;
+		while(!points[nextpoint[c]].enabled) ++nextpoint[c];
+	}
+	double interp = .5f;
+	if((points[nextpoint[c]].x-points[currentpoint[c]].x) >= .0001f)
+		interp = curve::calctension((input-points[currentpoint[c]].x)/(points[nextpoint[c]].x-points[currentpoint[c]].x),points[currentpoint[c]].tension);
+	return points[currentpoint[c]].y*(1-interp)+points[nextpoint[c]].y*interp;
+}
+void curve::resizechannels(int channelnum) {
+	currentpoint.resize(channelnum);
+	nextpoint.resize(channelnum);
+
+	currentpoint[0] = 0;
+	nextpoint[0] = 1;
+	while(!points[nextpoint[0]].enabled) ++nextpoint[0];
+
+	for(int i = 0; i < channelnum; ++i) {
+		currentpoint[i] = currentpoint[0];
+		nextpoint[i] = nextpoint[0];
+	}
+}
 curve::curve(String str, const char delimiter) {
 	std::stringstream ss(str.trim().toRawUTF8());
 	std::string token;

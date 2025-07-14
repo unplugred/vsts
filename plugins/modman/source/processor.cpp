@@ -111,9 +111,12 @@ void ModManAudioProcessor::changechannelnum(int newchannelnum) {
 void ModManAudioProcessor::reseteverything() {
 	if(channelnum <= 0 || samplesperblock <= 0) return;
 
-	for(int m = 0; m < MC; ++m)
+	for(int m = 0; m < MC; ++m) {
 		for(int i = 0; i < (paramcount-1); ++i) if(params.pots[i].smoothtime > 0)
 			params.pots[i].smooth[m].reset(samplerate,params.pots[i].smoothtime);
+
+		presets[currentpreset].curves[m].resizechannels(channelnum);
+	}
 	if(params.pots[paramcount-1].smoothtime > 0)
 		params.pots[paramcount-1].smooth[0].reset(samplerate,params.pots[paramcount-1].smoothtime);
 
@@ -185,6 +188,7 @@ void ModManAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 			switch(m) {
 				case 0: // DRIFT
 					min = 0;
+					if(s == 0) driftmult = 1.f/fmax(max,0.0001f);
 					max = pow(max,2);
 					break;
 				case 1: // LOW PASS
@@ -202,16 +206,20 @@ void ModManAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 
 			time[m] += pow(speed*2,4)*pow(state.masterspeed*2,4)*.00003f;
 			for(int c = 0; c < channelnum; ++c) {
-				modulator_data[(m*channelnum+c)*samplesperblock+s] = ((prlin.noise(time[m],((((float)c)/(channelnum-1))-.5)*stereo+m*10)*.5f+.5f)*(max-min)+min)*on+center*(1-on);
+				modulator_data[(m*channelnum+c)*samplesperblock+s] = (presets[currentpreset].curves[m].process(prlin.noise(time[m],((((float)c)/(channelnum-1))-.5)*stereo+m*10)*.5f+.5f,c)*(max-min)+min)*on+center*(1-on);
 			}
 		}
 		float mono = 0;
 		for(int c = 0; c < channelnum; ++c)
 			mono += modulator_data[(m*channelnum+c)*samplesperblock];
-		flower_rot[m] = mono/channelnum;
+		if(m == 0) flower_rot[0] = (mono/channelnum)*driftmult;
+		else flower_rot[m] = mono/channelnum;
 	}
-	for(int c = 0 ; c < fmin(channelnum,2); ++c)
-		cuber_rot[c] = modulator_data[(params.selectedmodulator.get()*channelnum+c*(channelnum-1))*samplesperblock];
+	for(int c = 0 ; c < fmin(channelnum,2); ++c) {
+		float r = modulator_data[(params.selectedmodulator.get()*channelnum+c*(channelnum-1))*samplesperblock];
+		if(params.selectedmodulator.get() == 0) r *= driftmult;
+		cuber_rot[c] = r;
+	}
 	for(int s = 0; s < numsamples; ++s) {
 		driftindex = fmod(driftindex+1,MAX_DRIFT*samplerate);
 		for(int c = 0; c < channelnum; ++c) {
