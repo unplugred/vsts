@@ -59,7 +59,7 @@ ModManAudioProcessor::ModManAudioProcessor() :
 
 	prlin.init();
 
-	updatedcurve = true;
+	updatedcurve = 1+2+4+8+16;
 	updatevis = true;
 }
 
@@ -115,7 +115,7 @@ void ModManAudioProcessor::reseteverything() {
 		for(int i = 0; i < (paramcount-1); ++i) if(params.pots[i].smoothtime > 0)
 			params.pots[i].smooth[m].reset(samplerate,params.pots[i].smoothtime);
 
-		presets[currentpreset].curves[m].resizechannels(channelnum);
+		state.curves[m].resizechannels(channelnum);
 	}
 	if(params.pots[paramcount-1].smoothtime > 0)
 		params.pots[paramcount-1].smooth[0].reset(samplerate,params.pots[paramcount-1].smoothtime);
@@ -138,7 +138,7 @@ void ModManAudioProcessor::reseteverything() {
 	lowpass.setResonance(1./MathConstants<double>::sqrt2);
 	lowpass.reset();
 
-	updatedcurve = true;
+	updatedcurve = 1+2+4+8+16;
 }
 void ModManAudioProcessor::releaseResources() { }
 
@@ -166,6 +166,13 @@ void ModManAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 	dsp::AudioBlock<float> block(buffer);
 
 	float* const* channel_data = buffer.getArrayOfWritePointers();
+
+	if(updatedcurve.get() > 0) {
+		int uc = updatedcurve.get();
+		updatedcurve = 0;
+		for(int m = 0; m < MC; ++m) if((uc&(1<<m)) > 0)
+			state.curves[m].points = presets[currentpreset].curves[m].points;
+	}
 
 	for(int m = 0; m < MC; ++m) {
 		if(params.pots[0].smoothtime > 0)
@@ -206,7 +213,7 @@ void ModManAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 
 			time[m] += pow(speed*2,4)*pow(state.masterspeed*2,4)*.00003f;
 			for(int c = 0; c < channelnum; ++c) {
-				modulator_data[(m*channelnum+c)*samplesperblock+s] = (presets[currentpreset].curves[m].process(prlin.noise(time[m],((((float)c)/(channelnum-1))-.5)*stereo+m*10)*.5f+.5f,c)*(max-min)+min)*on+center*(1-on);
+				modulator_data[(m*channelnum+c)*samplesperblock+s] = (state.curves[m].process(prlin.noise(time[m],((((float)c)/(channelnum-1))-.5)*stereo+m*10)*.5f+.5f,c)*(max-min)+min)*on+center*(1-on);
 			}
 		}
 		float mono = 0;
@@ -394,7 +401,7 @@ void ModManAudioProcessor::set_preset(const String& preset, int preset_id, const
 		}
 	}
 	apvts.getParameter(params.pots[paramcount-1].id)->setValueNotifyingHost(params.pots[paramcount-1].normalize(presets[currentpreset].masterspeed));
-	updatedcurve = true;
+	updatedcurve = 1+2+4+8+16;
 	updatevis = true;
 }
 
@@ -426,22 +433,22 @@ void ModManAudioProcessor::movepoint(int index, float x, float y) {
 	int i = params.selectedmodulator.get();
 	presets[currentpreset].curves[i].points[index].x = x;
 	presets[currentpreset].curves[i].points[index].y = y;
-	if(ison[i]) updatedcurve = true;
+	updatedcurve = updatedcurve.get()|(1<<i);
 }
 void ModManAudioProcessor::movetension(int index, float tension) {
 	int i = params.selectedmodulator.get();
 	presets[currentpreset].curves[i].points[index].tension = tension;
-	if(ison[i]) updatedcurve = true;
+	updatedcurve = updatedcurve.get()|(1<<i);
 }
 void ModManAudioProcessor::addpoint(int index, float x, float y) {
 	int i = params.selectedmodulator.get();
 	presets[currentpreset].curves[i].points.insert(presets[currentpreset].curves[i].points.begin()+index,point(x,y,presets[currentpreset].curves[i].points[index-1].tension));
-	if(ison[i]) updatedcurve = true;
+	updatedcurve = updatedcurve.get()|(1<<i);
 }
 void ModManAudioProcessor::deletepoint(int index) {
 	int i = params.selectedmodulator.get();
 	presets[currentpreset].curves[i].points.erase(presets[currentpreset].curves[i].points.begin()+index);
-	if(ison[i]) updatedcurve = true;
+	updatedcurve = updatedcurve.get()|(1<<i);
 }
 const String ModManAudioProcessor::curvetostring(const char delimiter) {
 	int i = params.selectedmodulator.get();
@@ -456,13 +463,13 @@ void ModManAudioProcessor::curvefromstring(String str, const char delimiter) {
 		presets[currentpreset].curves[i] = curve(revert);
 	}
 	updatevis = true;
-	if(ison[i]) updatedcurve = true;
+	updatedcurve = updatedcurve.get()|(1<<i);
 }
 void ModManAudioProcessor::resetcurve() {
 	int i = params.selectedmodulator.get();
 	presets[currentpreset].curves[i] = curve("2,0,0,0.5,1,1,0.5"); //TODO
 	updatevis = true;
-	if(ison[i]) updatedcurve = true;
+	updatedcurve = updatedcurve.get()|(1<<i);
 }
 
 AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new ModManAudioProcessor(); }

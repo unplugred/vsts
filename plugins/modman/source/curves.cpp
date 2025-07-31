@@ -27,26 +27,35 @@ double curveiterator::next() {
 	return points[currentpoint].y*(1-interp)+points[nextpoint].y*interp;
 }
 double curve::process(double input, int channel) {
-	int c = fmin(channel,nextpoint.size());
 	if(input <= 0) return points[0].y;
 	if(input >= 1) return points[points.size()-1].y;
-	if(nextpoint[c] >= points.size()) {
-		currentpoint[c] = points.size()-1;
-		nextpoint[c] = currentpoint[c]--;
-		while(!points[currentpoint[c]].enabled) --currentpoint[c];
+	
+	if(nextpoint[channel] >= points.size()) {
+		nextpoint[channel] = points.size()-1;
+		currentpoint[channel] = nextpoint[channel]-1;
 	}
-	while(input < points[currentpoint[c]].x) {
-		nextpoint[c] = currentpoint[c]--;
-		while(!points[currentpoint[c]].enabled) --currentpoint[c];
+	if(input < points[currentpoint[channel]].x) {
+		while(!points[currentpoint[channel]].enabled) --currentpoint[channel];
+		while(input < points[currentpoint[channel]].x) {
+			nextpoint[channel] = currentpoint[channel]--;
+			while(!points[currentpoint[channel]].enabled) --currentpoint[channel];
+		}
+	} else if(input >= points[nextpoint[channel]].x) {
+		while(!points[nextpoint[channel]].enabled) ++nextpoint[channel];
+		while(input >= points[nextpoint[channel]].x || !points[nextpoint[channel]].enabled) {
+			currentpoint[channel] = nextpoint[channel]++;
+			while(!points[nextpoint[channel]].enabled) ++nextpoint[channel];
+		}
+	} else {
+		while(!points[nextpoint[channel]].enabled) ++nextpoint[channel];
+		currentpoint[channel] = nextpoint[channel]-1;
+		while(!points[currentpoint[channel]].enabled) --currentpoint[channel];
 	}
-	while(input >= points[nextpoint[c]].x) {
-		currentpoint[c] = nextpoint[c]++;
-		while(!points[nextpoint[c]].enabled) ++nextpoint[c];
-	}
+
 	double interp = .5f;
-	if((points[nextpoint[c]].x-points[currentpoint[c]].x) >= .0001f)
-		interp = curve::calctension((input-points[currentpoint[c]].x)/(points[nextpoint[c]].x-points[currentpoint[c]].x),points[currentpoint[c]].tension);
-	return points[currentpoint[c]].y*(1-interp)+points[nextpoint[c]].y*interp;
+	if((points[nextpoint[channel]].x-points[currentpoint[channel]].x) >= .0001f)
+		interp = curve::calctension((input-points[currentpoint[channel]].x)/(points[nextpoint[channel]].x-points[currentpoint[channel]].x),points[currentpoint[channel]].tension);
+	return points[currentpoint[channel]].y*(1-interp)+points[nextpoint[channel]].y*interp;
 }
 void curve::resizechannels(int channelnum) {
 	currentpoint.resize(channelnum);
@@ -54,14 +63,24 @@ void curve::resizechannels(int channelnum) {
 
 	currentpoint[0] = 0;
 	nextpoint[0] = 1;
-	while(!points[nextpoint[0]].enabled) ++nextpoint[0];
+	if(points.size() > 0)
+		while(!points[nextpoint[0]].enabled) ++nextpoint[0];
 
-	for(int i = 0; i < channelnum; ++i) {
+	for(int i = 1; i < channelnum; ++i) {
 		currentpoint[i] = currentpoint[0];
 		nextpoint[i] = nextpoint[0];
 	}
 }
-curve::curve(String str, const char delimiter) {
+curve::curve(String str, const char delimiter, int channelnum) {
+	if(channelnum > 0) {
+		currentpoint.resize(channelnum);
+		nextpoint.resize(channelnum);
+		for(int i = 0; i < channelnum; ++i) {
+			currentpoint[i] = 0;
+			nextpoint[i] = 1;
+		}
+	}
+
 	std::stringstream ss(str.trim().toRawUTF8());
 	std::string token;
 	std::getline(ss, token, delimiter);
