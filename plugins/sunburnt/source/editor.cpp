@@ -369,7 +369,7 @@ out vec2 uv;
 void main(){
 	vec2 temppos = aPos*texpos.zw+texpos.xy-.5;
 	gl_Position = vec4(vec2(
-		(temppos.x*cos(rot)-temppos.y*sin(rot)+.5)*pos.z+pos.x,
+		 (temppos.x*cos(rot)-temppos.y*sin(rot)+.5)*pos.z+pos.x,
 		((temppos.x*sin(rot)+temppos.y*cos(rot)+.5)*pos.w+pos.y)*(1-banner))*2-1,0,1);
 	uv = aPos*texcoords.zw+texcoords.xy;
 })",
@@ -1470,11 +1470,13 @@ void SunBurntAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 	}
 
 	if(hover > -1 || hover < -20) {
+		event.source.enableUnboundedMouseMovement(false);
+		Desktop::setMousePosition(dragpos);
+		axislock = -1;
 		if(hover >= knobcount) {
 			int i = hover-knobcount;
 			if((i%2) == 0) {
 				i /= 2;
-				axislock = -1;
 				if((fabs(initialdotvalue[0]-curves[curveindex[curveselection]].points[i].x)+fabs(initialdotvalue[1]-curves[curveindex[curveselection]].points[i].y)) < .00001) {
 					curves[curveindex[curveselection]].points[i].x = initialdotvalue[0];
 					curves[curveindex[curveselection]].points[i].y = initialdotvalue[1];
@@ -1496,10 +1498,6 @@ void SunBurntAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 				dragpos.y += (curves[curveindex[curveselection]].points[i].y-curves[curveindex[curveselection]].points[i+1].y)*interp*ui_scales[ui_scale_index]*200.f;
 				audio_processor.movetension(i,curves[curveindex[curveselection]].points[i].tension);
 			}
-		}
-		event.source.enableUnboundedMouseMovement(false);
-		Desktop::setMousePosition(dragpos);
-		if(hover >= knobcount) {
 			if(((initialdrag-knobcount)%2) == 0) audio_processor.undo_manager.setCurrentTransactionName("Moved point");
 			else audio_processor.undo_manager.setCurrentTransactionName("Moved tension");
 		} else if(hover > -1) {
@@ -1517,7 +1515,6 @@ void SunBurntAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 			audio_processor.apvts.getParameter(sliders[slidersvisible[hover+30]].id)->endChangeGesture();
 		}
 		audio_processor.undo_manager.beginNewTransaction();
-		axislock = -1;
 	} else {
 		int prevhover = hover;
 		hover = recalc_hover(event.x,event.y);

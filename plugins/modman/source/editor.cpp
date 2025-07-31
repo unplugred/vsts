@@ -1165,11 +1165,13 @@ void ModManAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 void ModManAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 	if(dpi < 0) return;
 	if(hover > 0) {
+		event.source.enableUnboundedMouseMovement(false);
+		Desktop::setMousePosition(dragpos);
+		axislock = -1;
 		if(hover >= knobcount) {
 			int i = hover-knobcount;
 			if((i%2) == 0) {
 				i /= 2;
-				axislock = -1;
 				if((fabs(initialdotvalue[0]-curves[selectedmodulator].points[i].x)+fabs(initialdotvalue[1]-curves[selectedmodulator].points[i].y)) < .00001) {
 					curves[selectedmodulator].points[i].x = initialdotvalue[0];
 					curves[selectedmodulator].points[i].y = initialdotvalue[1];
@@ -1191,10 +1193,6 @@ void ModManAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 				dragpos.y += (curves[selectedmodulator].points[i].y-curves[selectedmodulator].points[i+1].y)*interp*ui_scales[ui_scale_index]*200.f;
 				audio_processor.movetension(i,curves[selectedmodulator].points[i].tension);
 			}
-		}
-		event.source.enableUnboundedMouseMovement(false);
-		Desktop::setMousePosition(dragpos);
-		if(hover >= knobcount) {
 			if(((initialdrag-knobcount)%2) == 0) audio_processor.undo_manager.setCurrentTransactionName("Moved point");
 			else audio_processor.undo_manager.setCurrentTransactionName("Moved tension");
 		} else if(hover > 0) {
@@ -1206,7 +1204,6 @@ void ModManAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 				audio_processor.apvts.getParameter("m"+((String)selectedmodulator)+knobs[hover].id)->endChangeGesture();
 		}
 		audio_processor.undo_manager.beginNewTransaction();
-		axislock = -1;
 	} else {
 		int prevhover = hover;
 		hover = recalc_hover(event.x,event.y);
