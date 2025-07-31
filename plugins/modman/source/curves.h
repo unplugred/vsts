@@ -14,13 +14,14 @@ struct point {
 };
 struct curve {
 	curve() { }
-	curve(String str, const char delimiter = ',');
-	String tostring(const char delimiter = ',');
-	std::vector<point> points;
-	static double calctension(double interp, double tension);
-	static bool isvalidcurvestring(String str, const char delimiter = ',');
-	double process(double input, int channel);
+	curve(String str, const char delimiter = ',', int channelnum = 0);
 	void resizechannels(int channelnum);
+	String tostring(const char delimiter = ',');
+	static bool isvalidcurvestring(String str, const char delimiter = ',');
+	static double calctension(double interp, double tension);
+	double process(double input, int channel);
+
+	std::vector<point> points;
 	std::vector<int> nextpoint;
 	std::vector<int> currentpoint;
 };

@@ -138,7 +138,7 @@ private:
 
 	dsp::StateVariableTPTFilter<float> lowpass;
 
-	Atomic<bool> updatedcurve = true; //TODO
+	Atomic<int> updatedcurve = true;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ModManAudioProcessor)
 };
