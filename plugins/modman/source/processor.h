@@ -121,6 +121,7 @@ public:
 	pluginparams params;
 
 	Atomic<bool> updatevis = false;
+	Atomic<int> updatedcurve = 1+2+4+8+16;
 
 private:
 
@@ -137,8 +138,6 @@ private:
 	int driftindex = 0;
 
 	dsp::StateVariableTPTFilter<float> lowpass;
-
-	Atomic<int> updatedcurve = 1+2+4+8+16;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ModManAudioProcessor)
 };

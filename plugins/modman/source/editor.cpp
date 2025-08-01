@@ -843,7 +843,8 @@ void ModManAudioProcessorEditor::timerCallback() {
 			curves[i] = audio_processor.presets[audio_processor.currentpreset].curves[i];
 		calcvis();
 		audio_processor.updatevis = false;
-	}
+	} else if(updatetempvis) calcvis();
+	updatetempvis = false;
 
 	update();
 }
@@ -948,7 +949,30 @@ void ModManAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 	}
 
 	initialdrag = hover;
-	if(hover < -1 && hover >= (-1-MC)) {
+	if(hover >= -12 && hover <= -7) {
+		if(hover == -12) {
+			audio_processor.curvefromstring("2,0,0,0.5,1,1,0.5");
+			audio_processor.undo_manager.setCurrentTransactionName("Set preset");
+			audio_processor.undo_manager.beginNewTransaction();
+		} else {
+			valueoffset[0] = 0;
+			audio_processor.undo_manager.beginNewTransaction();
+			dragpos = event.getScreenPosition();
+			event.source.enableUnboundedMouseMovement(true);
+			if(hover == -10 || hover == -7) { // TODO
+			} else if(hover == -11) {
+				curves[selectedmodulator] = curve("3,0,0,0.15,0.5,1,0.85,1,0,0.5");
+				initialvalue[0] = .15f;
+			} else if(hover == -9) {
+				curves[selectedmodulator] = curve("3,0,0,0.85,0.5,0.5,0.15,1,1,0.5");
+				initialvalue[0] = .7f;
+			} else if(hover == -8) {
+				curves[selectedmodulator] = curve("3,0,0,0.15,0.5,0.5,0.85,1,1,0.5");
+				initialvalue[0] = .7f;
+			}
+			updatetempvis = true;
+		}
+	} else if(hover < -1 && hover >= (-1-MC)) {
 		selectedmodulator = hover+MC+1;
 		if(audio_processor.params.selectedmodulator.get() != selectedmodulator) {
 			audio_processor.params.selectedmodulator = selectedmodulator;
@@ -965,44 +989,70 @@ void ModManAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 			if(offnum >= prevoff) offnum += 1;
 			if(onnum >= prevon) onnum += 1;
 
-			calcvis();
+			updatetempvis = true;
 		}
 	} else if(hover == 0) {
 		audio_processor.apvts.getParameter("m"+((String)selectedmodulator)+knobs[hover].id)->setValueNotifyingHost(1-knobs[hover].value[selectedmodulator]);
 		audio_processor.undo_manager.setCurrentTransactionName(knobs[hover].value[selectedmodulator]>.5f?"turned modulator off":"turned modulator on");
 		audio_processor.undo_manager.beginNewTransaction();
+	} else if(hover >= knobcount) {
+		valueoffset[0] = 0;
+		audio_processor.undo_manager.beginNewTransaction();
+		dragpos = event.getScreenPosition();
+		event.source.enableUnboundedMouseMovement(true);
+		int i = round(initialdrag-knobcount);
+		if((i%2) == 0) {
+			i /= 2;
+			initialvalue[0] = curves[selectedmodulator].points[i].x;
+			initialvalue[1] = curves[selectedmodulator].points[i].y;
+			initialdotvalue[0] = initialvalue[0];
+			initialdotvalue[1] = initialvalue[1];
+			valueoffset[1] = 0;
+		} else {
+			i = (i-1)/2;
+			initialvalue[0] = curves[selectedmodulator].points[i].tension;
+			initialdotvalue[0] = initialvalue[0];
+		}
 	} else if(hover > 0) {
 		valueoffset[0] = 0;
 		audio_processor.undo_manager.beginNewTransaction();
 		dragpos = event.getScreenPosition();
 		event.source.enableUnboundedMouseMovement(true);
-		if(hover >= knobcount) {
-			int i = round(initialdrag-knobcount);
-			if((i%2) == 0) {
-				i /= 2;
-				initialvalue[0] = curves[selectedmodulator].points[i].x;
-				initialvalue[1] = curves[selectedmodulator].points[i].y;
-				initialdotvalue[0] = initialvalue[0];
-				initialdotvalue[1] = initialvalue[1];
-				valueoffset[1] = 0;
-			} else {
-				i = (i-1)/2;
-				initialvalue[0] = curves[selectedmodulator].points[i].tension;
-				initialdotvalue[0] = initialvalue[0];
-			}
-		} else {
-			initialvalue[0] = knobs[hover].value[hover==(knobcount-1)?0:selectedmodulator];
-			if(hover == (knobcount-1))
-				audio_processor.apvts.getParameter(knobs[hover].id)->beginChangeGesture();
-			else
-				audio_processor.apvts.getParameter("m"+((String)selectedmodulator)+knobs[hover].id)->beginChangeGesture();
-		}
+		initialvalue[0] = knobs[hover].value[hover==(knobcount-1)?0:selectedmodulator];
+		if(hover == (knobcount-1))
+			audio_processor.apvts.getParameter(knobs[hover].id)->beginChangeGesture();
+		else
+			audio_processor.apvts.getParameter("m"+((String)selectedmodulator)+knobs[hover].id)->beginChangeGesture();
 	}
 }
 void ModManAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 	if(hover == -1) return;
 
-	if(initialdrag >= knobcount) {
+	if(hover >= -11 && hover <= -7) {
+		if(!finemode && (event.mods.isShiftDown() || event.mods.isAltDown())) {
+			finemode = true;
+			initialvalue[0] -= (event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*.0045f;
+		} else if(finemode && !(event.mods.isShiftDown() || event.mods.isAltDown())) {
+			finemode = false;
+			initialvalue[0] += (event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*.0045f;
+		}
+
+		float value = initialvalue[0]-(event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*(finemode?.0005f:.005f);
+		if(hover == -10 || hover == -7) { // TODO
+		} else if(hover == -11) {
+			curves[selectedmodulator].points[0].tension = fmin(fmax(value-valueoffset[0],0),1);
+			curves[selectedmodulator].points[1].tension = 1-curves[selectedmodulator].points[0].tension;
+		} else if(hover == -9) {
+			curves[selectedmodulator].points[0].tension = fmin(fmax(value-valueoffset[0],0),1)*.5+.5;
+			curves[selectedmodulator].points[1].tension = 1-curves[selectedmodulator].points[0].tension;
+		} else if(hover == -8) {
+			curves[selectedmodulator].points[1].tension = fmin(fmax(value-valueoffset[0],0),1)*.5+.5;
+			curves[selectedmodulator].points[0].tension = 1-curves[selectedmodulator].points[1].tension;
+		}
+		updatetempvis = true;
+
+		valueoffset[0] = fmax(fmin(valueoffset[0],value+.1f),value-1.1f);
+	} else if(initialdrag >= knobcount) {
 		float dragspeed = 1.f/(180*ui_scales[ui_scale_index]);
 		int i = initialdrag-knobcount;
 		if((i%2) == 0) { // dragging a dot
@@ -1126,8 +1176,8 @@ void ModManAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 
 			valueoffset[0] = fmax(fmin(valueoffset[0],value+.1f),value-1.1f);
 		}
-		calcvis();
-	} else if(initialdrag > 0 && initialdrag < knobcount) {
+		updatetempvis = true;
+	} else if(initialdrag > 0) {
 		if(!finemode && (event.mods.isShiftDown() || event.mods.isAltDown())) {
 			finemode = true;
 			initialvalue[0] -= (event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*.0045f;
@@ -1164,45 +1214,53 @@ void ModManAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 }
 void ModManAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 	if(dpi < 0) return;
-	if(hover > 0) {
+	if(hover >= -11 && hover <= -7) {
+		event.source.enableUnboundedMouseMovement(false);
+		Desktop::setMousePosition(dragpos);
+		audio_processor.presets[audio_processor.currentpreset].curves[selectedmodulator].points = curves[selectedmodulator].points;
+		audio_processor.updatedcurve = audio_processor.updatedcurve.get()|(1<<selectedmodulator);
+		audio_processor.undo_manager.setCurrentTransactionName("Set preset");
+		audio_processor.undo_manager.beginNewTransaction();
+	} else if(hover >= knobcount) {
 		event.source.enableUnboundedMouseMovement(false);
 		Desktop::setMousePosition(dragpos);
 		axislock = -1;
-		if(hover >= knobcount) {
-			int i = hover-knobcount;
-			if((i%2) == 0) {
-				i /= 2;
-				if((fabs(initialdotvalue[0]-curves[selectedmodulator].points[i].x)+fabs(initialdotvalue[1]-curves[selectedmodulator].points[i].y)) < .00001) {
-					curves[selectedmodulator].points[i].x = initialdotvalue[0];
-					curves[selectedmodulator].points[i].y = initialdotvalue[1];
-					return;
-				}
-				dragpos.x += (curves[selectedmodulator].points[i].x-initialdotvalue[0])*ui_scales[ui_scale_index]*180;
-				dragpos.y += (initialdotvalue[1]-curves[selectedmodulator].points[i].y)*ui_scales[ui_scale_index]*163;
-				if(!curves[selectedmodulator].points[i].enabled) {
-					curves[selectedmodulator].points.erase(curves[selectedmodulator].points.begin()+i);
-					audio_processor.deletepoint(i);
-				} else audio_processor.movepoint(i,curves[selectedmodulator].points[i].x,curves[selectedmodulator].points[i].y);
-			} else {
-				i = (i-1)/2;
-				if(fabs(initialdotvalue[0]-curves[selectedmodulator].points[i].tension) < .00001) {
-					curves[selectedmodulator].points[i].tension = initialdotvalue[0];
-					return;
-				}
-				float interp = curve::calctension(.5,curves[selectedmodulator].points[i].tension)-curve::calctension(.5,initialdotvalue[0]);
-				dragpos.y += (curves[selectedmodulator].points[i].y-curves[selectedmodulator].points[i+1].y)*interp*ui_scales[ui_scale_index]*200.f;
-				audio_processor.movetension(i,curves[selectedmodulator].points[i].tension);
+		int i = hover-knobcount;
+		if((i%2) == 0) {
+			i /= 2;
+			if((fabs(initialdotvalue[0]-curves[selectedmodulator].points[i].x)+fabs(initialdotvalue[1]-curves[selectedmodulator].points[i].y)) < .00001) {
+				curves[selectedmodulator].points[i].x = initialdotvalue[0];
+				curves[selectedmodulator].points[i].y = initialdotvalue[1];
+				return;
 			}
-			if(((initialdrag-knobcount)%2) == 0) audio_processor.undo_manager.setCurrentTransactionName("Moved point");
-			else audio_processor.undo_manager.setCurrentTransactionName("Moved tension");
-		} else if(hover > 0) {
-			audio_processor.undo_manager.setCurrentTransactionName(
-				(String)((knobs[hover].value[hover==(knobcount-1)?0:selectedmodulator]-initialvalue[0])>=0?"increased ":"decreased ") += knobs[hover].name);
-			if(hover == (knobcount-1))
-				audio_processor.apvts.getParameter(knobs[hover].id)->endChangeGesture();
-			else
-				audio_processor.apvts.getParameter("m"+((String)selectedmodulator)+knobs[hover].id)->endChangeGesture();
+			dragpos.x += (curves[selectedmodulator].points[i].x-initialdotvalue[0])*ui_scales[ui_scale_index]*180;
+			dragpos.y += (initialdotvalue[1]-curves[selectedmodulator].points[i].y)*ui_scales[ui_scale_index]*163;
+			if(!curves[selectedmodulator].points[i].enabled) {
+				curves[selectedmodulator].points.erase(curves[selectedmodulator].points.begin()+i);
+				audio_processor.deletepoint(i);
+			} else audio_processor.movepoint(i,curves[selectedmodulator].points[i].x,curves[selectedmodulator].points[i].y);
+		} else {
+			i = (i-1)/2;
+			if(fabs(initialdotvalue[0]-curves[selectedmodulator].points[i].tension) < .00001) {
+				curves[selectedmodulator].points[i].tension = initialdotvalue[0];
+				return;
+			}
+			float interp = curve::calctension(.5,curves[selectedmodulator].points[i].tension)-curve::calctension(.5,initialdotvalue[0]);
+			dragpos.y += (curves[selectedmodulator].points[i].y-curves[selectedmodulator].points[i+1].y)*interp*ui_scales[ui_scale_index]*200.f;
+			audio_processor.movetension(i,curves[selectedmodulator].points[i].tension);
 		}
+		if(((initialdrag-knobcount)%2) == 0) audio_processor.undo_manager.setCurrentTransactionName("Moved point");
+		else audio_processor.undo_manager.setCurrentTransactionName("Moved tension");
+		audio_processor.undo_manager.beginNewTransaction();
+	} else if(hover > 0) {
+		event.source.enableUnboundedMouseMovement(false);
+		Desktop::setMousePosition(dragpos);
+		audio_processor.undo_manager.setCurrentTransactionName(
+			(String)((knobs[hover].value[hover==(knobcount-1)?0:selectedmodulator]-initialvalue[0])>=0?"increased ":"decreased ") += knobs[hover].name);
+		if(hover == (knobcount-1))
+			audio_processor.apvts.getParameter(knobs[hover].id)->endChangeGesture();
+		else
+			audio_processor.apvts.getParameter("m"+((String)selectedmodulator)+knobs[hover].id)->endChangeGesture();
 		audio_processor.undo_manager.beginNewTransaction();
 	} else {
 		int prevhover = hover;
@@ -1222,7 +1280,7 @@ void ModManAudioProcessorEditor::mouseDoubleClick(const MouseEvent& event) {
 			if(x < curves[selectedmodulator].points[i].x) break;
 		curves[selectedmodulator].points.insert(curves[selectedmodulator].points.begin()+i,point(x,y,curves[selectedmodulator].points[i-1].tension));
 		audio_processor.addpoint(i,x,y);
-		calcvis();
+		updatetempvis = true;
 		hover = recalc_hover(event.x,event.y);
 	} else if(hover <= 0) {
 		return;
@@ -1240,7 +1298,7 @@ void ModManAudioProcessorEditor::mouseDoubleClick(const MouseEvent& event) {
 			curves[selectedmodulator].points[i].tension = .5f;
 			audio_processor.movetension(i,.5f);
 		}
-		calcvis();
+		updatetempvis = true;
 		hover = recalc_hover(event.x,event.y);
 	} else {
 		audio_processor.undo_manager.setCurrentTransactionName((String)"reset " += knobs[hover].name);
@@ -1278,6 +1336,12 @@ int ModManAudioProcessorEditor::recalc_hover(float x, float y) {
 	}
 
 	// curve prestets -12 - -7
+	if(x >= 207 && x <= 387 && y >= 10 && y <= 34) {
+		for(int i = 0; i < 6; ++i) {
+			if(x <= (207+30*(i+1)))
+				return i-12;
+		}
+	}
 
 	// flowers -6 - -2
 	for(int i = 0; i < MC; ++i) {

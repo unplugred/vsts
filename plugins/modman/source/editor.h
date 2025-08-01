@@ -127,6 +127,7 @@ private:
 	float visline[2880];
 	curve curves[MC];
 	OpenGLTexture linetex;
+	bool updatetempvis = false;
 	std::shared_ptr<OpenGLShaderProgram> lineshader;
 
 	OpenGLTexture dotstex;
