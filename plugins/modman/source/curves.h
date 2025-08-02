@@ -2,6 +2,7 @@
 #include "includes.h"
 
 struct point {
+	point() {}
 	point(float px, float py, float ptension = .5f) {
 		x = px;
 		y = py;
@@ -13,7 +14,7 @@ struct point {
 	bool enabled = true;
 };
 struct curve {
-	curve() { }
+	curve() {}
 	curve(String str, const char delimiter = ',', int channelnum = 0);
 	void resizechannels(int channelnum);
 	String tostring(const char delimiter = ',');
