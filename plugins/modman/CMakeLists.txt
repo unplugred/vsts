@@ -11,10 +11,10 @@ juce_add_plugin("${BaseTargetName}"
 	NEEDS_MIDI_OUTPUT FALSE
 	IS_MIDI_EFFECT FALSE
 	EDITOR_WANTS_KEYBOARD_FOCUS FALSE
-	DESCRIPTION "A prototyping plugin for internal use."
+	DESCRIPTION "Adds movement."
 	PLUGIN_MANUFACTURER_CODE Ured
 	PLUGIN_CODE Mdmn
-	VST3_CATEGORIES Tools
+	VST3_CATEGORIES Modulation
 	VST2_CATEGORY kPlugCategEffect
 	AU_MAIN_TYPE kAudioUnitType_Effect
 	COPY_PLUGIN_AFTER_BUILD TRUE
@@ -28,7 +28,7 @@ add_compile_definitions(BETA)
 
 clap_juce_extensions_plugin(TARGET "${BaseTargetName}"
 	CLAP_ID "com.unplugred.${BaseTargetName}"
-	CLAP_FEATURES audio-effect distortion mono stereo surround ambisonic
+	CLAP_FEATURES audio-effect glitch mono stereo surround ambisonic
 	CLAP_USE_JUCE_PARAMETER_RANGES ALL)
 
 target_sources("${BaseTargetName}" PRIVATE
