@@ -18,12 +18,12 @@ ModManAudioProcessor::ModManAudioProcessor() :
 			presets[i].curves[m] = curve("2,0,0,0.5,1,1,0.5"); //TODO
 	}
 
-	params.pots[0] = potentiometer("on"				,"on"			,.001f	,0.f	,1.f	,potentiometer::booltype);
-	params.pots[1] = potentiometer("min range"		,"min"			,.001f	);
-	params.pots[2] = potentiometer("max range"		,"max"			,.001f	);
-	params.pots[3] = potentiometer("speed"			,"speed"		,0		);
-	params.pots[4] = potentiometer("stereo"			,"stereo"		,.001f	);
-	params.pots[5] = potentiometer("master speed"	,"masterspeed"	,0		);
+	params.pots[0] = potentiometer("on"				,"on"			,0	,0.f	,1.f	,potentiometer::booltype);
+	params.pots[1] = potentiometer("min range"		,"min"			,0	);
+	params.pots[2] = potentiometer("max range"		,"max"			,0	);
+	params.pots[3] = potentiometer("speed"			,"speed"		,0	);
+	params.pots[4] = potentiometer("stereo"			,"stereo"		,0	);
+	params.pots[5] = potentiometer("master speed"	,"masterspeed"	,0	);
 
 	params.modulators[0].name = M1;
 	params.modulators[1].name = M2;
@@ -39,19 +39,16 @@ ModManAudioProcessor::ModManAudioProcessor() :
 				params.modulators[m].defaults[i] = 0;
 				state.values[m][i] = 0;
 				presets[currentpreset].values[m][i] = 0;
-				if(params.pots[i].smoothtime > 0) params.pots[i].smooth[m].setCurrentAndTargetValue(0);
 				continue;
 			}
 			params.modulators[m].defaults[i] = presets[0].values[m][i];
 			state.values[m][i] = params.pots[i].inflate(apvts.getParameter("m"+((String)m)+params.pots[i].id)->getValue());
 			presets[currentpreset].values[m][i] = state.values[m][i];
-			if(params.pots[i].smoothtime > 0) params.pots[i].smooth[m].setCurrentAndTargetValue(state.values[m][i]);
 			add_listener("m"+((String)m)+params.pots[i].id);
 		}
 	}
 	state.masterspeed = params.pots[paramcount-1].inflate(apvts.getParameter(params.pots[paramcount-1].id)->getValue());
 	presets[currentpreset].masterspeed = state.masterspeed;
-	if(params.pots[paramcount-1].smoothtime > 0) params.pots[paramcount-1].smooth[0].setCurrentAndTargetValue(state.masterspeed);
 	add_listener(params.pots[paramcount-1].id);
 
 	for(int c = 0 ; c < 2; ++c)
@@ -111,14 +108,8 @@ void ModManAudioProcessor::changechannelnum(int newchannelnum) {
 void ModManAudioProcessor::reseteverything() {
 	if(channelnum <= 0 || samplesperblock <= 0) return;
 
-	for(int m = 0; m < MC; ++m) {
-		for(int i = 0; i < (paramcount-1); ++i) if(params.pots[i].smoothtime > 0)
-			params.pots[i].smooth[m].reset(samplerate,params.pots[i].smoothtime);
-
+	for(int m = 0; m < MC; ++m)
 		state.curves[m].resizechannels(channelnum);
-	}
-	if(params.pots[paramcount-1].smoothtime > 0)
-		params.pots[paramcount-1].smooth[0].reset(samplerate,params.pots[paramcount-1].smoothtime);
 
 	modulator_data.resize(MC*channelnum*samplesperblock);
 	for(int i = 0; i < (MC*channelnum*samplesperblock); ++i)
@@ -127,6 +118,11 @@ void ModManAudioProcessor::reseteverything() {
 	drift_data.resize(channelnum*MAX_DRIFT*samplerate);
 	for(int i = 0; i < (channelnum*MAX_DRIFT*samplerate); ++i)
 		drift_data[i] = 0;
+
+	smooth.resize(MC*channelnum);
+	for(int i = 0; i < (MC*channelnum); ++i)
+		smooth[i].reset(samplerate,.001f);
+	resetsmooth = true;
 
 	dsp::ProcessSpec spec;
 	spec.sampleRate = samplerate;
@@ -175,58 +171,59 @@ void ModManAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 	}
 
 	for(int m = 0; m < MC; ++m) {
-		if(params.pots[0].smoothtime > 0)
-			ison[m] = params.pots[0].smooth[m].getCurrentValue() > 0 || params.pots[0].smooth[m].getTargetValue() > 0;
-		else
-			ison[m] = state.values[m][0];
+		ison[m] = state.values[m][0];
+		float center = 0;
+		float on = state.values[m][0];
+		float min = state.values[m][1];
+		float max = state.values[m][2];
+		float speed = state.values[m][3];
+		float stereo = pow(state.values[m][4],2);
+		float v = 0;
+		switch(m) {
+			case 0: // DRIFT
+				min = 0;
+				driftmult = 1.f/fmax(max,0.0001f);
+				max = pow(max,2);
+				break;
+			case 1: // LOW PASS
+				center = 1;
+				break;
+			case 2: // LOW PASS RESONANCE
+				center = max;
+				break;
+			case 3: // SATURATION
+				break;
+			case 4: // AMPLITUDE
+				center = .5f;
+				break;
+		}
+
 		for(int s = 0; s < numsamples; ++s) {
-			for(int m = 0; m < MC; ++m)
-				for(int i = 0; i < (paramcount-1); ++i) if(params.pots[i].smoothtime > 0)
-					state.values[m][i] = params.pots[i].smooth[m].getNextValue();
-			if(params.pots[paramcount-1].smoothtime > 0)
-				state.masterspeed = params.pots[paramcount-1].smooth[0].getNextValue();
-
-			float center = 0;
-			float on = state.values[m][0];
-			float min = state.values[m][1];
-			float max = state.values[m][2];
-			float speed = state.values[m][3];
-			float stereo = pow(state.values[m][4],2);
-			switch(m) {
-				case 0: // DRIFT
-					min = 0;
-					if(s == 0) driftmult = 1.f/fmax(max,0.0001f);
-					max = pow(max,2);
-					break;
-				case 1: // LOW PASS
-					center = 1;
-					break;
-				case 2: // LOW PASS RESONANCE
-					center = max;
-					break;
-				case 3: // SATURATION
-					break;
-				case 4: // AMPLITUDE
-					center = .5f;
-					break;
-			}
-
 			time[m] += pow(speed*2,4)*pow(state.masterspeed*2,4)*.00003f;
-			for(int c = 0; c < channelnum; ++c) {
-				modulator_data[(m*channelnum+c)*samplesperblock+s] = (state.curves[m].process(prlin.noise(time[m],((((float)c)/(channelnum-1))-.5)*stereo+m*10)*.5f+.5f,c)*(max-min)+min)*on+center*(1-on);
+			for(int c = 0; c < channelnum; ++c) { // TODO smooth
+				v = (state.curves[m].process(prlin.noise(time[m],((((float)c)/(channelnum-1))-.5)*stereo+m*10)*.5f+.5f,c)*(max-min)+min)*on+center*(1-on);
+				if(resetsmooth)
+					smooth[m*channelnum+c].setCurrentAndTargetValue(v);
+				else
+					smooth[m*channelnum+c].setTargetValue(v);
+				modulator_data[(m*channelnum+c)*samplesperblock+s] = smooth[m*channelnum+c].getNextValue();
 			}
 		}
+
 		float mono = 0;
 		for(int c = 0; c < channelnum; ++c)
 			mono += modulator_data[(m*channelnum+c)*samplesperblock];
 		if(m == 0) flower_rot[0] = (mono/channelnum)*driftmult;
 		else flower_rot[m] = mono/channelnum;
 	}
+	resetsmooth = false;
+
 	for(int c = 0 ; c < fmin(channelnum,2); ++c) {
 		float r = modulator_data[(params.selectedmodulator.get()*channelnum+c*(channelnum-1))*samplesperblock];
 		if(params.selectedmodulator.get() == 0) r *= driftmult;
 		cuber_rot[c] = r;
 	}
+
 	for(int s = 0; s < numsamples; ++s) {
 		driftindex = fmod(driftindex+1,MAX_DRIFT*samplerate);
 		for(int c = 0; c < channelnum; ++c) {
@@ -407,15 +404,13 @@ void ModManAudioProcessor::set_preset(const String& preset, int preset_id, const
 
 void ModManAudioProcessor::parameterChanged(const String& parameterID, float newValue) {
 	if(parameterID == params.pots[paramcount-1].id) {
-		if(params.pots[paramcount-1].smoothtime > 0) params.pots[paramcount-1].smooth[0].setTargetValue(newValue);
-		else state.masterspeed = newValue;
+		state.masterspeed = newValue;
 		presets[currentpreset].masterspeed = newValue;
 	}
 	for(int m = 0; m < MC; ++m) {
 		for(int i = 0; i < (paramcount-1); i++) {
 			if(parameterID == ("m"+((String)m)+params.pots[i].id)) {
-				if(params.pots[i].smoothtime > 0) params.pots[i].smooth[m].setTargetValue(newValue);
-				else state.values[m][i] = newValue;
+				state.values[m][i] = newValue;
 				presets[currentpreset].values[m][i] = newValue;
 				return;
 			}
