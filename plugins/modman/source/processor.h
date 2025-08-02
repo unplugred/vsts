@@ -15,15 +15,9 @@ public:
 	float minimumvalue = 0;
 	float maximumvalue = 1;
 	ptype ttype = ptype::floattype;
-	SmoothedValue<float,ValueSmoothingTypes::Linear> smooth[MC];
-	float smoothtime = 0;
 	potentiometer(String potname = "", String potid = "", float smoothed = 0, float potmin = 0.f, float potmax = 1.f, ptype pottype = ptype::floattype) {
 		name = potname;
 		id = potid;
-		smoothtime = smoothed;
-		if(smoothed > 0)
-			for(int m = 0; m < MC; ++m)
-				smooth[m].setCurrentAndTargetValue(0);
 		minimumvalue = potmin;
 		maximumvalue = potmax;
 		ttype = pottype;
@@ -131,6 +125,8 @@ private:
 
 	perlin prlin;
 	double time[MC];
+	std::vector<SmoothedValue<float,ValueSmoothingTypes::Linear>> smooth;
+	bool resetsmooth = true;
 	std::vector<float> modulator_data;
 	bool ison[MC];
 
