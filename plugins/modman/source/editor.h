@@ -53,8 +53,10 @@ public:
 	void newOpenGLContextCreated() override;
 	void renderOpenGL() override;
 	void openGLContextClosing() override;
-	void calcvis();
 	void paint(Graphics&) override;
+
+	void gennoise(float distance, float amount, float tension);
+	void calcvis();
 
 	void timerCallback() override;
 
@@ -137,6 +139,7 @@ private:
 	float time = 0;
 
 	Random random;
+	float noisetable[21];
 
 	LookNFeel look_n_feel;
 
