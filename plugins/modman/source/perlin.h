@@ -3,11 +3,11 @@
 
 class perlin {
 public:
-	float noise(float xin, float yin);
+	double noise(double xin, double yin);
 	void init();
 private:
-	float dot(float g[], float x, float y);
-	float grad3[12][3] {{1,1,0},{-1,1,0},{1,-1,0},{-1,-1,0},{1,0,1},{-1,0,1},{1,0,-1},{-1,0,-1},{0,1,1},{0,-1,1},{0,1,-1},{0,-1,-1}};
+	double dot(double g[], double x, double y);
+	double grad3[12][3] {{1,1,0},{-1,1,0},{1,-1,0},{-1,-1,0},{1,0,1},{-1,0,1},{1,0,-1},{-1,0,-1},{0,1,1},{0,-1,1},{0,1,-1},{0,-1,-1}};
 	int preperm[512];
 	int perm[512];
 	Random random;
