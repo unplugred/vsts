@@ -85,6 +85,9 @@ void ModManAudioProcessor::setCurrentProgram(int index) {
 		}
 	}
 	apvts.getParameter(params.pots[paramcount-1].id)->setValueNotifyingHost(params.pots[paramcount-1].normalize(presets[currentpreset].masterspeed));
+
+	updatedcurve = 1+2+4+8+16;
+	updatevis = true;
 }
 const String ModManAudioProcessor::getProgramName(int index) {
 	return { presets[index].name };
