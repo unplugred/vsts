@@ -225,7 +225,7 @@ void ModManAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 	}
 	resetsmooth = false;
 
-	if(previson) for(int c = 0 ; c < fmin(channelnum,2); ++c) {
+	if(previson) for(int c = 0 ; c < 2; ++c) {
 		float r = modulator_data[(params.selectedmodulator.get()*channelnum+c*(channelnum-1))*samplesperblock];
 		if(params.selectedmodulator.get() == 0) r *= driftmult;
 		cuber_rot[c] = r;
