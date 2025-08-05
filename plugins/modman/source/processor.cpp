@@ -160,6 +160,7 @@ void ModManAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 
 	float prmsadd = rmsadd.get();
 	int prmscount = rmscount.get();
+	bool previson = ison[params.selectedmodulator.get()];
 
 	int numsamples = buffer.getNumSamples();
 	dsp::AudioBlock<float> block(buffer);
@@ -174,14 +175,11 @@ void ModManAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 	}
 
 	for(int m = 0; m < MC; ++m) {
-		ison[m] = state.values[m][0];
 		float center = 0;
-		float on = state.values[m][0];
 		float min = state.values[m][1];
 		float max = state.values[m][2];
 		float speed = state.values[m][3];
 		float stereo = pow(state.values[m][4],2);
-		float v = 0;
 		switch(m) {
 			case 0: // DRIFT
 				min = 0;
@@ -201,11 +199,19 @@ void ModManAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 				break;
 		}
 
+		ison[m] = state.values[m][0] > .5;
+		if(!ison[m])
+			for(int c = 0; c < channelnum; ++c)
+				if(smooth[m*channelnum+c].getCurrentValue() != center)
+					ison[m] = true;
+		if(!ison[m]) continue;
+
+		float v = 0;
 		for(int s = 0; s < numsamples; ++s) {
 			time[m] += pow(speed*2,4)*pow(state.masterspeed*2,4)*.00003f;
 			for(int c = 0; c < channelnum; ++c) {
-				v = (state.curves[m].process(prlin.noise(time[m],((((float)c)/(channelnum-1))-.5)*stereo+m*10)*.5f+.5f,c)*(max-min)+min)*on+center*(1-on);
-				if(resetsmooth)
+				v = (state.curves[m].process(prlin.noise(time[m],((((float)c)/(channelnum-1))-.5)*stereo+m*10)*.5f+.5f,c)*(max-min)+min)*state.values[m][0]+center*(1-state.values[m][0]);
+				if(s == 0 && resetsmooth)
 					smooth[m*channelnum+c].setCurrentAndTargetValue(v);
 				else
 					smooth[m*channelnum+c].setTargetValue(v);
@@ -221,45 +227,43 @@ void ModManAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 	}
 	resetsmooth = false;
 
-	for(int c = 0 ; c < fmin(channelnum,2); ++c) {
+	if(previson) for(int c = 0 ; c < fmin(channelnum,2); ++c) {
 		float r = modulator_data[(params.selectedmodulator.get()*channelnum+c*(channelnum-1))*samplesperblock];
 		if(params.selectedmodulator.get() == 0) r *= driftmult;
 		cuber_rot[c] = r;
 	}
 
+	//DRIFT
 	for(int s = 0; s < numsamples; ++s) {
 		driftindex = fmod(driftindex+1,MAX_DRIFT*samplerate);
 		for(int c = 0; c < channelnum; ++c) {
-
-			//DRIFT
-			if(ison[0]) {
-				drift_data[c*MAX_DRIFT*samplerate+driftindex] = channel_data[c][s];
+			drift_data[c*MAX_DRIFT*samplerate+driftindex] = channel_data[c][s];
+			if(ison[0])
 				channel_data[c][s] = interpolatesamples(&drift_data[c*MAX_DRIFT*samplerate],driftindex+1+MAX_DRIFT*samplerate*(1-2.f/(samplerate*MAX_DRIFT))*modulator_data[c*samplesperblock+s],MAX_DRIFT*samplerate);
-			}
-
-			//LOWPASS
-			if(ison[1]) {
-				lowpass.setCutoffFrequency(calccutoff(modulator_data[(channelnum+c)*samplesperblock+s]));
-				lowpass.setResonance(calcresonance(modulator_data[(2*channelnum+c)*samplesperblock+s]));
-				channel_data[c][s] = lowpass.processSample(c,channel_data[c][s]);
-			}
-
-			//SATURATION
-			if(ison[3]) {
-				float satval = 1-(1-(pow(1-modulator_data[(3*channelnum+c)*samplesperblock+s],10)+(1-pow(modulator_data[(3*channelnum+c)*samplesperblock+s],.2)))*.5)*.99;
-				channel_data[c][s] = (1-pow(1-fmin(fabs(channel_data[c][s]),1),1/satval))*(channel_data[c][s]>0?1:-1)*(1-(1-satval)*.92);
-			}
-
-			//AMPLITUDE
-			if(ison[4]) {
-				channel_data[c][s] *= 2*pow(modulator_data[(4*channelnum+c)*samplesperblock+s],1.5f);
-			}
-
-			if(prmscount < samplerate*2) {
-				prmsadd += channel_data[c][s]*channel_data[c][s];
-				prmscount++;
-			}
 		}
+	}
+
+	//LOWPASS
+	if(ison[1]) for(int s = 0; s < numsamples; ++s) for(int c = 0; c < channelnum; ++c) {
+		lowpass.setCutoffFrequency(calccutoff(modulator_data[(channelnum+c)*samplesperblock+s]));
+		lowpass.setResonance(calcresonance(modulator_data[(2*channelnum+c)*samplesperblock+s]));
+		channel_data[c][s] = lowpass.processSample(c,channel_data[c][s]);
+	}
+
+	//SATURATION
+	if(ison[3]) for(int s = 0; s < numsamples; ++s) for(int c = 0; c < channelnum; ++c) {
+		float satval = 1-(1-(pow(1-modulator_data[(3*channelnum+c)*samplesperblock+s],10)+(1-pow(modulator_data[(3*channelnum+c)*samplesperblock+s],.2)))*.5)*.99;
+		channel_data[c][s] = (1-pow(1-fmin(fabs(channel_data[c][s]),1),1/satval))*(channel_data[c][s]>0?1:-1)*(1-(1-satval)*.92);
+	}
+
+	//AMPLITUDE
+	if(ison[4]) for(int s = 0; s < numsamples; ++s) for(int c = 0; c < channelnum; ++c) {
+		channel_data[c][s] *= 2*pow(modulator_data[(4*channelnum+c)*samplesperblock+s],1.5f);
+	}
+
+	if(prmscount < samplerate*2) for(int s = 0; s < numsamples; ++s) for(int c = 0; c < channelnum; ++c) {
+		prmsadd += channel_data[c][s]*channel_data[c][s];
+		prmscount++;
 	}
 
 	rmsadd = prmsadd;
