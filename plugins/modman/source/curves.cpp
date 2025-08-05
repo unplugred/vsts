@@ -34,23 +34,11 @@ double curve::process(double input, int channel) {
 		nextpoint[channel] = points.size()-1;
 		currentpoint[channel] = nextpoint[channel]-1;
 	}
-	if(input < points[currentpoint[channel]].x) {
-		while(!points[currentpoint[channel]].enabled) --currentpoint[channel];
-		while(input < points[currentpoint[channel]].x) {
-			nextpoint[channel] = currentpoint[channel]--;
-			while(!points[currentpoint[channel]].enabled) --currentpoint[channel];
-		}
-	} else if(input >= points[nextpoint[channel]].x) {
-		while(!points[nextpoint[channel]].enabled) ++nextpoint[channel];
-		while(input >= points[nextpoint[channel]].x || !points[nextpoint[channel]].enabled) {
-			currentpoint[channel] = nextpoint[channel]++;
-			while(!points[nextpoint[channel]].enabled) ++nextpoint[channel];
-		}
-	} else {
-		while(!points[nextpoint[channel]].enabled) ++nextpoint[channel];
-		currentpoint[channel] = nextpoint[channel]-1;
-		while(!points[currentpoint[channel]].enabled) --currentpoint[channel];
-	}
+
+	while(input < points[currentpoint[channel]].x)
+		nextpoint[channel] = currentpoint[channel]--;
+	while(input >= points[nextpoint[channel]].x)
+		currentpoint[channel] = nextpoint[channel]++;
 
 	double interp = .5f;
 	if((points[nextpoint[channel]].x-points[currentpoint[channel]].x) >= .0001f)
@@ -63,8 +51,6 @@ void curve::resizechannels(int channelnum) {
 
 	currentpoint[0] = 0;
 	nextpoint[0] = 1;
-	if(points.size() > 0)
-		while(!points[nextpoint[0]].enabled) ++nextpoint[0];
 
 	for(int i = 1; i < channelnum; ++i) {
 		currentpoint[i] = currentpoint[0];
