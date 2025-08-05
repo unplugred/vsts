@@ -124,7 +124,7 @@ void ModManAudioProcessor::reseteverything() {
 
 	smooth.resize(MC*channelnum);
 	for(int i = 0; i < (MC*channelnum); ++i)
-		smooth[i].reset(samplerate,.001f);
+		smooth[i].reset(samplerate,i<channelnum?.01f:.001f);
 	resetsmooth = true;
 
 	dsp::ProcessSpec spec;
