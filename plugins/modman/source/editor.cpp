@@ -847,14 +847,6 @@ void ModManAudioProcessorEditor::timerCallback() {
 	}
 	cuberindex = fmod(cuberindex+.3333f,6);
 
-	if(audio_processor.rmscount.get() > 0) {
-		rms = sqrt(audio_processor.rmsadd.get()/audio_processor.rmscount.get());
-		audio_processor.rmsadd = 0;
-		audio_processor.rmscount = 0;
-	} else rms *= .9f;
-
-	time = fmod(time+.0002f,1.f);
-
 	if(audio_processor.updatevis.get()) {
 		for(int i = 0; i < MC; i++)
 			curves[i] = audio_processor.presets[audio_processor.currentpreset].curves[i];

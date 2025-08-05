@@ -135,9 +135,6 @@ private:
 	OpenGLTexture dotstex;
 	std::shared_ptr<OpenGLShaderProgram> dotsshader;
 
-	float rms = 0;
-	float time = 0;
-
 	Random random;
 	float noisetable[21];
 

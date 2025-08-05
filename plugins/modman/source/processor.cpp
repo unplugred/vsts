@@ -158,8 +158,6 @@ void ModManAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 	for(auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
 		buffer.clear(i, 0, buffer.getNumSamples());
 
-	float prmsadd = rmsadd.get();
-	int prmscount = rmscount.get();
 	bool previson = ison[params.selectedmodulator.get()];
 
 	int numsamples = buffer.getNumSamples();
@@ -260,14 +258,6 @@ void ModManAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 	if(ison[4]) for(int s = 0; s < numsamples; ++s) for(int c = 0; c < channelnum; ++c) {
 		channel_data[c][s] *= 2*pow(modulator_data[(4*channelnum+c)*samplesperblock+s],1.5f);
 	}
-
-	if(prmscount < samplerate*2) for(int s = 0; s < numsamples; ++s) for(int c = 0; c < channelnum; ++c) {
-		prmsadd += channel_data[c][s]*channel_data[c][s];
-		prmscount++;
-	}
-
-	rmsadd = prmsadd;
-	rmscount = prmscount;
 }
 float ModManAudioProcessor::interpolatesamples(float* buffer, float position, int buffersize) {
 	return buffer[((int)floor(position))%buffersize]*(1-fmod(position,1.f))+buffer[((int)ceil(position))%buffersize]*fmod(position,1.f);
