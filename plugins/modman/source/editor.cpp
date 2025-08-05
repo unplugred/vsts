@@ -568,18 +568,26 @@ void ModManAudioProcessorEditor::renderOpenGL() {
 
 		float val = knobs[i+1].value[selectedmodulator];
 		bool ms = false;
-		if(selectedmodulator == 0) {
-			val = val*MAX_DRIFT;
-			if(val < .1) {
-				ms = true;
-				val *= 1000;
-			}
-		} else if(selectedmodulator == 1) {
-			val = mapToLog10(val,20.f,20000.f)/1000.f;
-		} else if(selectedmodulator == 2) {
-			val = mapToLog10(val,0.1f,40.f);
-		} else {
-			val *= 10;
+		switch(selectedmodulator) {
+			case 0:
+				val = val*MAX_DRIFT;
+				if(val < .1) {
+					ms = true;
+					val *= 1000;
+				}
+				break;
+			case 1:
+				val = mapToLog10(val,20.f,20000.f)/1000.f;
+				break;
+			case 2:
+				val = mapToLog10(val,0.1f,40.f);
+				break;
+			case 3:
+				val *= 10;
+				break;
+			case 4:
+				val = 2*pow(val,1.5f);
+				break;
 		}
 
 		float l1, l2, l3, l4;
