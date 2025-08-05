@@ -100,8 +100,6 @@ public:
 	AudioProcessorValueTreeState::ParameterLayout create_parameters();
 	AudioProcessorValueTreeState apvts;
 
-	Atomic<float> rmsadd = 0;
-	Atomic<int> rmscount = 0;
 	Atomic<float> flower_rot[MC];
 	Atomic<float> cuber_rot[2];
 	float driftmult = 1;
