@@ -193,7 +193,7 @@ void ModManAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 			case 3: // SATURATION
 				break;
 			case 4: // AMPLITUDE
-				center = .5f;
+				center = .62996052493f;
 				break;
 		}
 
