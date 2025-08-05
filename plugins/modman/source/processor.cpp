@@ -208,7 +208,7 @@ void ModManAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 		for(int s = 0; s < numsamples; ++s) {
 			time[m] += pow(speed*2,4)*pow(state.masterspeed*2,4)*.00003f;
 			for(int c = 0; c < channelnum; ++c) {
-				v = (state.curves[m].process(prlin.noise(time[m],((((float)c)/(channelnum-1))-.5)*stereo+m*10)*.5f+.5f,c)*(max-min)+min)*state.values[m][0]+center*(1-state.values[m][0]);
+				v = (state.curves[m].process(prlin.noise(time[m],((((float)c)/fmax(channelnum-1,1))-.5)*stereo+m*10)*.5f+.5f,c)*(max-min)+min)*state.values[m][0]+center*(1-state.values[m][0]);
 				if(s == 0 && resetsmooth)
 					smooth[m*channelnum+c].setCurrentAndTargetValue(v);
 				else
