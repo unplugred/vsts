@@ -177,7 +177,7 @@ void ModManAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 		float min = state.values[m][1];
 		float max = state.values[m][2];
 		float speed = state.values[m][3];
-		float stereo = pow(state.values[m][4],2);
+		float stereo = channelnum<2?0:pow(state.values[m][4],2);
 		switch(m) {
 			case 0: // DRIFT
 				min = 0;
