@@ -237,10 +237,15 @@ void ModManAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 	}
 
 	//LOWPASS
-	if(ison[1]) for(int s = 0; s < numsamples; ++s) for(int c = 0; c < channelnum; ++c) {
-		lowpass.setCutoffFrequency(calccutoff(modulator_data[(channelnum+c)*samplesperblock+s]));
-		lowpass.setResonance(calcresonance(modulator_data[(2*channelnum+c)*samplesperblock+s]));
-		channel_data[c][s] = lowpass.processSample(c,channel_data[c][s]);
+	if(ison[1]) {
+		if(!ison[2])
+			lowpass.setResonance(calcresonance(0));
+		for(int s = 0; s < numsamples; ++s) for(int c = 0; c < channelnum; ++c) {
+			lowpass.setCutoffFrequency(calccutoff(modulator_data[(channelnum+c)*samplesperblock+s]));
+			if(ison[2])
+				lowpass.setResonance(calcresonance(modulator_data[(2*channelnum+c)*samplesperblock+s]));
+			channel_data[c][s] = lowpass.processSample(c,channel_data[c][s]);
+		}
 	}
 
 	//SATURATION
