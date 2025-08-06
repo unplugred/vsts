@@ -187,11 +187,6 @@ void ModManAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 			case 1: // LOW PASS
 				center = 1;
 				break;
-			case 2: // LOW PASS RESONANCE
-				center = max;
-				break;
-			case 3: // SATURATION
-				break;
 			case 4: // AMPLITUDE
 				center = .62996052493f;
 				break;
