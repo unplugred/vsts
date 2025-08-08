@@ -570,7 +570,7 @@ void ModManAudioProcessorEditor::renderOpenGL() {
 		bool ms = false;
 		switch(selectedmodulator) {
 			case 0:
-				val = val*MAX_DRIFT;
+				val = pow(val,2)*MAX_DRIFT;
 				if(val < .1) {
 					ms = true;
 					val *= 1000;
