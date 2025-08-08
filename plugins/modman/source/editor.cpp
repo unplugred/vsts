@@ -921,7 +921,7 @@ void ModManAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 				else if(modnum == 1)
 					description = "low pass cutoff. results in changes in the amount of high frequencies of the incoming audio.";
 				else if(modnum == 2)
-					description = "low pass resonance. only works if the low pass modulator is on. when off, use the range selector to select a static resonance.";
+					description = "low pass resonance. only works if the low pass modulator is on.";
 				else if(modnum == 3)
 					description = "saturation. results in changes in the amount of harmonics of the incoming audio.";
 				else if(modnum == 4)
