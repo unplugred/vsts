@@ -9,13 +9,37 @@ ModManAudioProcessor::ModManAudioProcessor() :
 
 	currentpreset = -1;
 	presets[0].name = "default";
-	set_preset("0,0,1,0.5,0.3,2,0,0,0.5,1,1,0.5,0,0,0.3,0.5,0.3,2,0,0,0.5,1,1,0.5,0,0,0.3,0.5,0.3,2,0,0,0.5,1,1,0.5,0,0,0.3,0.5,0.3,2,0,0,0.5,1,1,0.5,0,0,0.3,0.5,0.3,2,0,0,0.5,1,1,0.5,0.5,",0); //TODO better defaults
+	set_preset("0,1,0.41,0.405,0.505,2,0,0,0.5,1,1,0.5,0,0.445,0.9575,0.705,0.3,2,0,0,0.5,1,1,0.5,1,0.2325,1,0.39,0,2,0,0,0.5,1,1,0.5,0,0,0.85,0.66,0.3,2,0,0,0.5,1,1,0.5,0,0.2425,1,0.595,1,2,0,0,0.5,1,1,0.5,0.5,",0);
+	presets[1].name = "cheap tape";
+	set_preset("0,1,1,0.88,0.625,5,0,0.483852,0.5,0.137037,0.480866,0.194963,0.237037,0.505993,0.5,0.707407,0.48203,0.5,1,0.495111,0.5,1,0.7875,0.935,0.61,0.375,13,0,0.0144644,1,0.0406938,0.0878419,1,0.132555,0.166626,1,0.224416,0.188107,1,0.316278,0.504791,1,0.408139,0.464529,1,0.5,0.576695,1,0.591861,0.614624,1,0.683722,0.685599,1,0.775584,0.607186,1,0.867445,0.830611,1,0.959306,0.858362,1,1,0.838254,1,1,0.0925,0.1925,0.375,0.3,2,0,0,0.5,1,1,0.5,1,0,0.0575,0.52,0.62,7,0,0.92563,0.279111,0.0962963,0.0349485,0.757704,0.318519,0.941347,0.121333,0.581481,0.855383,0.689333,0.696296,0.422954,0.599926,0.807407,0.969912,0.494741,1,1,0.5,1,0,1,0.495,0.3,5,0,0.957185,0.5,0.337037,0.895706,0.5,0.677778,0.967579,0.5,0.777778,0.757791,0.5,1,1,0.5,0.5,",1);
+	presets[2].name = "unstable pad";
+	set_preset("0,1,1,0.27,0.475,2,0,0,0.5,1,1,0.5,1,0.2625,0.6575,0.345,0.475,2,0,0,0.5,1,1,0.5,1,0.0775,0.505,0.39,0.525,2,0,0,0.5,1,1,0.5,0,0,0.3,0.5,0.3,2,0,0.883555,0.5,1,1,0.5,1,0.42,0.8825,0.245,0.205,2,0,0,0.5,1,1,0.5,0.5,",2);
+	presets[3].name = "his guitar amp";
+	set_preset("0,0,0.41,0.405,0.505,2,0,0,0.5,1,1,0.5,1,0.6975,0.6975,0.5,0.3,2,0,0,0.5,1,1,0.5,1,0.2525,0.57,0.46,0.715,3,0,0,0.85,0.5,0.5,0.15,1,1,0.5,1,1,1,0.5,0.3,2,0,0,0.5,1,1,0.5,0,0.2425,1,0.595,1,2,0,0,0.5,1,1,0.5,0.5,",3);
+	presets[4].name = "first dub";
+	set_preset("0,0,0.41,0.405,0.505,2,0,0,0.5,1,1,0.5,1,0.31,0.8625,0.63,0.3,3,0,0,0.15,0.5,0.5,0.85,1,1,0.5,1,0.4,0.7425,0.62,0.78,13,0,0,0.5,0.0623148,0.75339,0.5,0.138,0.229738,0.5,0.2285,0.352302,0.5,0.319,0.427579,0.5,0.4095,0.410268,0.5,0.5,0.560533,0.5,0.5905,0.696249,0.5,0.681,0.572321,0.5,0.7715,0.596401,0.5,0.862,0.786482,0.5,0.92287,0.477307,0.35763,1,1,0.5,0,0,1,0.5,0.3,2,0,0,0.5,1,1,0.5,0,0.2425,1,0.595,1,2,0,0,0.5,1,1,0.5,0.5,",4);
+	presets[5].name = "eruption";
+	set_preset("0,1,1,0.875,0.3,2,0,0,0.0105185,1,1,0.5,1,0.39,1,0.29,0.3,2,0,0,0.5,1,1,0.5,1,0.3675,1,0.5,0,13,0,0.0953367,1,0.0541937,0.0899692,1,0.143355,0.257013,1,0.232516,0.27234,1,0.321678,0.487043,1,0.410839,0.299614,1,0.5,0.384897,1,0.589161,0.414293,1,0.678322,0.719629,1,0.767484,0.809268,1,0.856645,0.811171,1,0.945806,0.950059,1,1,0.72759,1,1,0,0.385,0.375,0.3,2,0,0,0.5,1,1,0.5,0,0.2425,1,0.595,1,2,0,0,0.5,1,1,0.5,0.5,",5);
+	presets[6].name = "ping pong scratching";
+	set_preset("0,0,0.41,0.405,0.505,2,0,0,0.5,1,1,0.5,1,0.72,1,0.545,0.56,2,0,0,0.0424445,1,1,0.5,1,0.485,0.485,0.5,0.3,2,0,0,0.5,1,1,0.5,0,0,0.3,0.5,0.3,2,0,0,0.5,1,1,0.5,1,0,0.6525,0.565,0.3,3,0,0,0.0736296,0.5,1,1,1,0,0.5,0.5,",6);
+	presets[7].name = "broken portamento";
+	set_preset("0,1,1,0.475,1,5,0,0,0.5,0.177778,0,0.5,0.177778,1,0.879111,0.540741,0,0.136667,1,1,0.5,1,0.8375,1,0.965,0,13,0,0.149543,0.5,0.0475,0.105658,0.5,0.138,0.2127,0.5,0.2285,0.428855,0.5,0.319,0.393677,0.5,0.4095,0.500138,0.5,0.5,0.623489,0.5,0.5905,0.691118,0.5,0.681,0.625649,0.5,0.7715,0.735789,0.5,0.862,0.722408,0.5,0.9525,0.722345,0.5,1,0.798465,0.5,1,0.3,0.3,0.5,0.3,2,0,0,0.5,1,1,0.5,0,0,0.3,0.5,0.3,2,0,0,0.5,1,1,0.5,0,0.4225,0.9425,0.5,0.3,2,0,0,0.5,1,1,0.5,0.5,",7);
+	presets[8].name = "the less lie";
+	set_preset("0,1,0.2325,0.63,1,2,0,0,0.5,1,1,0.5,1,0.915,1,0.56,0,2,0,0,0.5,1,1,0.5,1,0.425,0.425,0.5,0,2,0,0,0.5,1,1,0.5,1,0.145,0.145,0.5,0.3,2,0,0,0.5,1,1,0.5,1,0.4,0.9575,0.47,0.51,3,0,0,0.15,0.5,1,0.85,1,0,0.5,0.5,",8);
+	presets[9].name = "annoying wildlife";
+	set_preset("0,1,0.16,0.555,0.93,3,0,0,0.1475,0.5,0.5,0.8525,1,1,0.5,1,0.78,1,0.64,0.425,2,0,0,0.5,1,1,0.5,1,0.3725,0.735,0.5,0.3,2,0,0,0.5,1,1,0.5,1,0,0.9725,0.425,1,3,0,0,0.0315556,0.896296,1,0.0315556,1,1,0.5,1,0.225,0.835,0.82,0.715,2,0,0,0.5,1,1,0.5,0.5,",9);
+	presets[10].name = "crazy cat";
+	set_preset("0,1,0.385,0.61,0.42,13,0,0.178691,0.5,0.0475,0.114013,0.5,0.138,0.24347,0.5,0.2285,0.160655,0.5,0.319,0.426177,0.5,0.4095,0.51448,0.5,0.5,0.512621,0.5,0.5905,0.557756,0.5,0.681,0.748026,0.5,0.7715,0.543361,0.5,0.862,0.864732,0.5,0.9525,0.903339,0.5,1,0.976119,0.5,1,0.4875,0.85,0.71,0.22,3,0,0,0.15,0.5,1,0.85,1,0,0.5,1,0.3275,0.92,0.5,0.3,3,0,0,0.155,0.5,0.5,0.845,1,1,0.5,1,0.58,0.8225,0.67,0.65,13,0,0.0711376,0.5,0.0475,0.11367,0.5,0.138,0.169817,0.5,0.2285,0.277909,0.5,0.319,0.231111,0.5,0.4095,0.355876,0.5,0.5,0.586744,0.5,0.5905,0.534028,0.5,0.681,0.554166,0.5,0.7715,0.731643,0.5,0.862,0.715541,0.5,0.9525,0.767356,0.5,1,0.70029,0.5,1,0.54,1,0.67,0.615,2,0,0,0.5,1,1,0.5,0.5,",10);
+	presets[11].name = "life on mars";
+	set_preset("0,1,1,0.535,0.395,3,0,0.504889,0.5,0.488889,0.425358,0.5,1,0.552963,0.5,1,0.1375,0.8075,0.435,0.18,13,0,0.743973,1,0.0586111,0.541428,1,0.138,0.258343,1,0.2285,0.381029,1,0.319,0.409338,1,0.394685,0.231706,1,0.474074,0.921448,1,0.5905,0.521888,1,0.681,0.568713,1,0.7715,0.733078,1,0.854593,0.148108,1,0.915463,0.922648,1,1,0.716807,1,1,0.2775,0.845,0.36,0,3,0,0,0.5,0.488889,1,0.5,1,0,0.5,1,0.1075,0.2975,0.625,0.3,13,0,0.106381,1,0.0475,0.321761,1,0.138,0.379836,1,0.2285,0.275218,1,0.319,0.340265,1,0.4095,0.433289,1,0.5,0.583963,1,0.5905,0.648189,1,0.681,0.713848,1,0.7715,0.590608,1,0.862,0.734829,1,0.9525,0.908464,1,1,0.73222,1,0,0.29,0.94,0.385,0.3,2,0,0,0.5,1,1,0.5,0.5,",11);
+	presets[12].name = "we drift apart";
+	set_preset("0,1,1,0.29,1,5,0,1,0.818444,0.237037,0,0.245185,0.355556,0.276367,0.85,0.611111,0.525926,0.15,1,1,0.5,1,0.3525,0.925,0.195,0.715,7,0,0.552222,0.5,0.22963,0,0.5,0.411111,0.387931,0.5,0.57037,0.203275,0.5,0.722222,1,0.5,0.855556,0.531697,0.5,1,0.400444,0.5,1,0.095,0.7175,0.375,0,2,0,0,0.5,1,1,0.5,0,0.35,0.54,0.35,0.75,13,0,0.195303,1,0.0475,0.135404,1,0.138,0.14604,1,0.2285,0.285271,1,0.319,0.301488,1,0.4095,0.472191,1,0.5,0.543018,1,0.5905,0.563741,1,0.681,0.514974,1,0.7715,0.822394,1,0.862,0.829151,1,0.9525,0.808214,1,1,0.986958,1,0,0.3375,0.81,0.7,0.565,2,0,0,0.5,1,1,0.5,0.5,",12);
+	presets[13].name = "very unfaithful";
+	set_preset("0,1,1,0.68,1,4,0,0.483852,0.5,0.207407,0.499565,0.5,0.688889,0.490215,0.5,1,0.484593,0.5,1,0.6575,1,0.505,0.3,3,0,0,0.5,0.488889,1,0.5,1,0,0.5,0,0,0.68,0.5,0.3,3,0,0.625852,0.5,0.388889,0.299096,0.5,1,1,0.5,1,0.9625,1,0.48,0.3,3,0,0,0.5,0.488889,1,0.5,1,0,0.5,1,0.76,0.94,0.805,0.38,3,0,0,0.5,0.488889,1,0.5,1,0,0.5,0.5,",13);
 	currentpreset = 0;
-	for(int i = 1; i < getNumPrograms(); i++) {
+	for(int i = 14; i < getNumPrograms(); i++) {
 		presets[i] = presets[0];
-		presets[i].name = "program "+((String)i);
-		for(int m = 0; m < MC; ++m)
-			presets[i].curves[m] = curve("2,0,0,0.5,1,1,0.5"); //TODO
+		presets[i].name = "program "+((String)(i-13));
 	}
 
 	params.pots[0] = potentiometer("on"				,"on"			,0	,0.f	,1.f	,potentiometer::booltype);
@@ -459,7 +483,7 @@ void ModManAudioProcessor::curvefromstring(String str, const char delimiter) {
 }
 void ModManAudioProcessor::resetcurve() {
 	int i = params.selectedmodulator.get();
-	presets[currentpreset].curves[i] = curve("2,0,0,0.5,1,1,0.5"); //TODO
+	presets[currentpreset].curves[i] = curve("2,0,0,0.5,1,1,0.5");
 	updatevis = true;
 	updatedcurve = updatedcurve.get()|(1<<i);
 }
@@ -467,6 +491,10 @@ void ModManAudioProcessor::resetcurve() {
 AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new ModManAudioProcessor(); }
 
 AudioProcessorValueTreeState::ParameterLayout ModManAudioProcessor::create_parameters() {
+	float mins[5]	{0.f	,.445f	,.2325f	,0.f	,.2425f	};
+	float maxs[5]	{.41f	,.9575f	,1.f	,.85f	,1.f	};
+	float spds[5]	{.405f	,.705f	,.39f	,.66f	,.595f	};
+	float strs[5]	{.505f	,.3f	,0.f	,.3f	,1.f	};
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
 	for(int m = 0; m < MC; ++m) {
 		String name;
@@ -476,23 +504,23 @@ AudioProcessorValueTreeState::ParameterLayout ModManAudioProcessor::create_param
 			case 2: name = M3; break;
 			case 3: name = M4; break;
 			case 4: name = M5; break;
-		} //TODO defaults
-		parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"m"+((String)m)+"on"		,1},name+" on"															 ,false	,AudioParameterBoolAttributes()	.withStringFromValueFunction(tobool			).withValueFromStringFunction(frombool			)));
-		if(m == 0) {
-		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"max"		,1},name+" range"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),1.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(toms			).withValueFromStringFunction(fromms			)));
-		} else if(m == 1) {
-		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"min"		,1},name+" min range"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(tocutoff		).withValueFromStringFunction(fromcutoff		)));
-		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"max"		,1},name+" max range"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.3f	,AudioParameterFloatAttributes().withStringFromValueFunction(tocutoff		).withValueFromStringFunction(fromcutoff		)));
-		} else if(m == 2) {
-		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"min"		,1},name+" min range"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(toresonance	).withValueFromStringFunction(fromresonance		)));
-		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"max"		,1},name+" max range"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.3f	,AudioParameterFloatAttributes().withStringFromValueFunction(toresonance	).withValueFromStringFunction(fromresonance		)));
-		} else {
-		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"min"		,1},name+" min range"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(tonormalized	).withValueFromStringFunction(fromnormalized	)));
-		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"max"		,1},name+" max range"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.3f	,AudioParameterFloatAttributes().withStringFromValueFunction(tonormalized	).withValueFromStringFunction(fromnormalized	)));
 		}
-		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"speed"	,1},name+" speed"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	,AudioParameterFloatAttributes().withStringFromValueFunction(tonormalized	).withValueFromStringFunction(fromnormalized	)));
-		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"stereo"	,1},name+" stereo"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.3f	,AudioParameterFloatAttributes().withStringFromValueFunction(tonormalized	).withValueFromStringFunction(fromnormalized	)));
+		parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"m"+((String)m)+"on"		,1},name+" on"															 ,m==0||m==2	,AudioParameterBoolAttributes()	.withStringFromValueFunction(tobool			).withValueFromStringFunction(frombool			)));
+		if(m == 0) {
+		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"max"		,1},name+" range"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),maxs[m]		,AudioParameterFloatAttributes().withStringFromValueFunction(toms			).withValueFromStringFunction(fromms			)));
+		} else if(m == 1) {
+		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"min"		,1},name+" min range"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),mins[m]		,AudioParameterFloatAttributes().withStringFromValueFunction(tocutoff		).withValueFromStringFunction(fromcutoff		)));
+		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"max"		,1},name+" max range"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),maxs[m]		,AudioParameterFloatAttributes().withStringFromValueFunction(tocutoff		).withValueFromStringFunction(fromcutoff		)));
+		} else if(m == 2) {
+		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"min"		,1},name+" min range"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),mins[m]		,AudioParameterFloatAttributes().withStringFromValueFunction(toresonance	).withValueFromStringFunction(fromresonance		)));
+		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"max"		,1},name+" max range"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),maxs[m]		,AudioParameterFloatAttributes().withStringFromValueFunction(toresonance	).withValueFromStringFunction(fromresonance		)));
+		} else {
+		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"min"		,1},name+" min range"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),mins[m]		,AudioParameterFloatAttributes().withStringFromValueFunction(tonormalized	).withValueFromStringFunction(fromnormalized	)));
+		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"max"		,1},name+" max range"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),maxs[m]		,AudioParameterFloatAttributes().withStringFromValueFunction(tonormalized	).withValueFromStringFunction(fromnormalized	)));
+		}
+		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"speed"	,1},name+" speed"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),spds[m]		,AudioParameterFloatAttributes().withStringFromValueFunction(tonormalized	).withValueFromStringFunction(fromnormalized	)));
+		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"m"+((String)m)+"stereo"	,1},name+" stereo"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),strs[m]		,AudioParameterFloatAttributes().withStringFromValueFunction(tonormalized	).withValueFromStringFunction(fromnormalized	)));
 	}
-		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"masterspeed"				,1},"master speed"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f	,AudioParameterFloatAttributes().withStringFromValueFunction(tonormalized	).withValueFromStringFunction(fromnormalized	)));
+		parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"masterspeed"				,1},"master speed"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.5f			,AudioParameterFloatAttributes().withStringFromValueFunction(tonormalized	).withValueFromStringFunction(fromnormalized	)));
 	return { parameters.begin(), parameters.end() };
 }
