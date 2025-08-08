@@ -136,7 +136,7 @@ private:
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ModManAudioProcessor)
 };
 static std::function<String(float v, int max)> toms = [](float v, int max) {
-	return String(round(v*MAX_DRIFT*1000))+"ms";
+	return String(floor(v*v*MAX_DRIFT*1000))+"ms";
 };
 static std::function<float(const String& s)> fromms = [](const String& s) {
 	float val = s.getFloatValue();
@@ -144,7 +144,7 @@ static std::function<float(const String& s)> fromms = [](const String& s) {
 		val /= MAX_DRIFT*1000;
 	else if(s.containsIgnoreCase("s"))
 		val /= MAX_DRIFT;
-	return jlimit(0.f,1.f,val);
+	return jlimit(0.f,1.f,(float)sqrt(val));
 };
 static std::function<String(float v, int max)> tocutoff = [](float v, int max) {
 	return String(round(mapToLog10(v,20.f,20000.f)))+"hz";
