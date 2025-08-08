@@ -232,7 +232,7 @@ void ModManAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 		for(int c = 0; c < channelnum; ++c) {
 			drift_data[c*MAX_DRIFT*samplerate+driftindex] = channel_data[c][s];
 			if(ison[0])
-				channel_data[c][s] = interpolatesamples(&drift_data[c*MAX_DRIFT*samplerate],driftindex+1+MAX_DRIFT*samplerate*(1-2.f/(samplerate*MAX_DRIFT))*modulator_data[c*samplesperblock+s],MAX_DRIFT*samplerate);
+				channel_data[c][s] = interpolatesamples(&drift_data[c*MAX_DRIFT*samplerate],driftindex+1+MAX_DRIFT*samplerate*(1-2.f/(samplerate*MAX_DRIFT))*(1-modulator_data[c*samplesperblock+s]),MAX_DRIFT*samplerate);
 		}
 	}
 
