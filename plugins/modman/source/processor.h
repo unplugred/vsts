@@ -135,6 +135,7 @@ private:
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ModManAudioProcessor)
 };
+
 static std::function<String(float v, int max)> toms = [](float v, int max) {
 	return String(floor(v*v*MAX_DRIFT*1000))+"ms";
 };
