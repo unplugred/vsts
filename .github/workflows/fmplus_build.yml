@@ -1,0 +1,157 @@
+name: FMPlus
+
+env:
+  PLUG: FMPlus
+
+on:
+  push:
+    paths:
+      - '**fmplus**'
+      - 'rebuild_all.txt'
+  pull_request:
+    paths:
+      - '**fmplus**'
+      - 'rebuild_all.txt'
+    branches:
+      - master
+
+jobs:
+  build:
+    name: build
+    strategy:
+      matrix:
+        include:
+        - {
+            name: "Mac",
+            os: macos-13,
+            folder: "build_mac"
+          }
+        - {
+            name: "Win64",
+            os: windows-latest,
+            folder: "build_win"
+          }
+        - {
+            name: "Linux",
+            os: ubuntu-22.04,
+            folder: "build_linux"
+          }
+    runs-on: ${{ matrix.os }}
+    concurrency: build_${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: cache stuff
+      id: cache-stuff
+      uses: actions/cache@v4
+      with:
+        path: "${{ matrix.folder }}"
+        key: "${{ matrix.folder }}"
+
+    - name: prepare
+      id: prepare
+      run: |
+        python3 build.py prepare
+        python3 build.py secrets KEYCHAIN_PASSWORD="${{ secrets.KEYCHAIN_PASSWORD }}" DEV_ID_APP_CERT="${{ secrets.DEV_ID_APP_CERT }}" DEV_ID_APP_PASSWORD="${{ secrets.DEV_ID_APP_PASSWORD }}" DEV_ID_INSTALL_CERT="${{ secrets.DEV_ID_INSTALL_CERT }}" DEV_ID_INSTALL_PASSWORD="${{ secrets.DEV_ID_INSTALL_PASSWORD }}" NOTARIZATION_USERNAME="${{ secrets.NOTARIZATION_USERNAME }}" NOTARIZATION_PASSWORD="${{ secrets.NOTARIZATION_PASSWORD }}" TEAM_ID="${{ secrets.TEAM_ID }}" DEVELOPER_ID_APPLICATION="${{ secrets.DEVELOPER_ID_APPLICATION }}" DEVELOPER_ID_INSTALLER="${{ secrets.DEVELOPER_ID_INSTALLER }}"
+
+    - name: (mac) import certificates
+      id: import-certificates
+      if: startsWith(matrix.os, 'mac')
+      uses: apple-actions/import-codesign-certs@v2
+      with:
+        keychain: unplugred
+        keychain-password: ${{ secrets.KEYCHAIN_PASSWORD }}
+        p12-file-base64: ${{ secrets.DEV_ID_APP_CERT }}
+        p12-password: ${{ secrets.DEV_ID_APP_PASSWORD }}
+
+    - name: (mac) import installer certificates
+      id: import-installer-certificates
+      if: startsWith(matrix.os, 'mac')
+      uses: apple-actions/import-codesign-certs@v2
+      with:
+        keychain: unplugred
+        keychain-password: ${{ secrets.KEYCHAIN_PASSWORD }}
+        p12-file-base64: ${{ secrets.DEV_ID_INSTALL_CERT }}
+        p12-password: ${{ secrets.DEV_ID_INSTALL_PASSWORD }}
+        create-keychain: false
+
+    - name: configure
+      id: configure
+      run: |
+        python3 build.py configure paid
+
+    - name: build audio unit
+      id: build-au
+      if: startsWith(matrix.os, 'mac')
+      run: |
+        python3 build.py "${{ env.PLUG }}" release au
+
+    - name: build clap
+      id: build-clap
+      run: |
+        python3 build.py "${{ env.PLUG }}" release clap
+
+    - name: build vst3
+      id: build-vst3
+      run: |
+        python3 build.py "${{ env.PLUG }}" release vst3
+
+    - name: build standalone
+      id: build-standalone
+      run: |
+        python3 build.py "${{ env.PLUG }}" release standalone no
+
+    - name: installer
+      id: installer
+      run: |
+        python3 build.py "${{ env.PLUG }}" installer
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: ${{ env.PLUG }} ${{ matrix.name }}
+        path: setup/temp
+        compression-level: 9
+
+    - name: configure free
+      id: configure-free
+      run: |
+        python3 build.py configure free
+
+    - name: build audio unit free
+      id: build-au-free
+      if: startsWith(matrix.os, 'mac')
+      run: |
+        python3 build.py "${{ env.PLUG }}" release au
+
+    - name: build clap free
+      id: build-clap-free
+      run: |
+        python3 build.py "${{ env.PLUG }}" release clap
+
+    - name: build vst3 free
+      id: build-vst3-free
+      run: |
+        python3 build.py "${{ env.PLUG }}" release vst3
+
+    - name: build standalone free
+      id: build-standalone-free
+      run: |
+        python3 build.py "${{ env.PLUG }}" release standalone no
+
+    - name: installer free
+      id: installer-free
+      run: |
+        python3 build.py "${{ env.PLUG }}" installer
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: ${{ env.PLUG }} Free ${{ matrix.name }}
+        path: setup/temp
+        compression-level: 9
+
+    - name: cleanup
+      id: cleanup
+      run: |
+        rm -r setup/temp
+        rm saved_data.json
