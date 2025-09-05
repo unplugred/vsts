@@ -126,6 +126,12 @@ plugins = [{
 },{
 	"name": "ModMan",
 	"code": "Mdmn"
+},{
+	"name": "FMPlus",
+	"code": "Fmpl",
+	"product_name": "FM+",
+	"standalone": True,
+	"in_bundle": False
 }]
 for i in range(len(plugins)):
 	if "standalone" not in plugins[i]:
@@ -138,6 +144,8 @@ for i in range(len(plugins)):
 		plugins[i]["additional_files"] = []
 	if "in_bundle" not in plugins[i]:
 		plugins[i]["in_bundle"] = True
+	if "product_name" not in plugins[i]:
+		plugins[i]["product_name"] = plugins[i]["name"]
 	codes["plugin"].append(plugins[i]["name"])
 
 targets = [{
@@ -471,6 +479,7 @@ def build(plugin, config, target):
 
 	nospace = plugin.replace(' ','')
 	lower = nospace.lower()
+	product_name = get_plugin(plugin)["product_name"]
 	free = "free" if (saved_data["is_free"][system] or not get_plugin(plugin)["paid"]) else "paid"
 	folder = "build_"+systems[system]["code"]
 	file_extension = get_target(target)["extension"]
@@ -482,7 +491,7 @@ def build(plugin, config, target):
 		create_dir(join([folder,"plugins",("" if "bundle" not in get_plugin(plugin) else (get_plugin(plugin)["bundle"].replace(' ','').lower()+"/"))+lower,nospace+"_artefacts",config,target]))
 		run_command("cmake --build \""+folder+"\" --config "+config+" --target "+nospace+"_"+get_target(target)["code"])
 		if target == "CLAP" or target == "Standalone":
-			copy(join([folder,"plugins",("" if "bundle" not in get_plugin(plugin) else (get_plugin(plugin)["bundle"].replace(' ','').lower()+"/"))+lower,nospace+"_artefacts",config,target,plugin+file_extension]),target_path)
+			copy(join([folder,"plugins",("" if "bundle" not in get_plugin(plugin) else (get_plugin(plugin)["bundle"].replace(' ','').lower()+"/"))+lower,nospace+"_artefacts",config,target,product_name+file_extension]),target_path)
 			if target == "Standalone":
 				run_command("chmod -R 755 \""+join([target_path,"Contents","MacOS",plugin])+"\"")
 				run_command("chmod -R 755 \""+target_path+"\"")
@@ -511,7 +520,7 @@ def build(plugin, config, target):
 			remove(target_path)
 			move(join(["setup",plugin+file_extension]),target_path)
 		elif target == "CLAP" or target == "Standalone":
-			copy(join([folder,"plugins",("" if "bundle" not in get_plugin(plugin) else (get_plugin(plugin)["bundle"].replace(' ','').lower()+"/"))+lower,nospace+"_artefacts",config,target,plugin+file_extension]),target_path)
+			copy(join([folder,"plugins",("" if "bundle" not in get_plugin(plugin) else (get_plugin(plugin)["bundle"].replace(' ','').lower()+"/"))+lower,nospace+"_artefacts",config,target,product_name+file_extension]),target_path)
 		for file in get_plugin(plugin)["additional_files"]:
 			if ("win_"+free) in file["versions"] and file["copy"] and systems[system]["code"] == "win":
 				if not os.path.isdir(join(["setup",folder,"other",plugin])):
@@ -521,16 +530,17 @@ def build(plugin, config, target):
 	else:
 		run_command("cmake --build \""+folder+"\" --config "+config+" --target "+nospace+"_"+get_target(target)["code"])
 		if target == "CLAP" or target == "Standalone":
-			copy(join([folder,"plugins",("" if "bundle" not in get_plugin(plugin) else (get_plugin(plugin)["bundle"].replace(' ','').lower()+"/"))+lower,nospace+"_artefacts",target,plugin+file_extension]),target_path)
+			copy(join([folder,"plugins",("" if "bundle" not in get_plugin(plugin) else (get_plugin(plugin)["bundle"].replace(' ','').lower()+"/"))+lower,nospace+"_artefacts",target,product_name+file_extension]),target_path)
 
 def run_plugin(plugin, config):
+	product_name = get_plugin(plugin)["product_name"]
 	artefact_path = join(["build_"+systems[system]["code"],"plugins",("" if "bundle" not in get_plugin(plugin) else (get_plugin(plugin)["bundle"].replace(' ','').lower()+"/"))+plugin.replace(' ','').lower(),plugin.replace(' ','')+"_artefacts"])
 	if systems[system]["code"] == "mac":
-		run_command("open -W \""+join([artefact_path,config,"Standalone",plugin+systems[system]["executable"]])+"\"")
+		run_command("open -W \""+join([artefact_path,config,"Standalone",product_name+systems[system]["executable"]])+"\"")
 	elif systems[system]["code"] == "win":
-		run_command("\""+join([artefact_path,config,"Standalone",plugin+systems[system]["executable"]])+"\"")
+		run_command("\""+join([artefact_path,config,"Standalone",product_name+systems[system]["executable"]])+"\"")
 	else:
-		run_command("\""+join([artefact_path,"Standalone",plugin+systems[system]["executable"]])+"\"")
+		run_command("\""+join([artefact_path,"Standalone",product_name+systems[system]["executable"]])+"\"")
 
 def build_installer(plugin, system_i, zip_result=True):
 	debug("BUILDING INSTALLER FOR "+plugin.upper())
