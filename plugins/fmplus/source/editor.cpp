@@ -94,9 +94,42 @@ void main() {
 	}
 })");
 
+	creditsshader = add_shader(
+//CREDITS VERT
+R"(#version 150 core
+in vec2 aPos;
+uniform vec4 pos;
+uniform float banner;
+out vec2 uv;
+out float xpos;
+void main() {
+	gl_Position = vec4(aPos.x*pos.z+pos.x,(aPos.y*pos.w+pos.y)*(1-banner)+banner,0,1);
+	uv = aPos;
+	xpos = aPos.x;
+})",
+//CREDITS FRAG
+R"(#version 150 core
+in vec2 uv;
+in float xpos;
+uniform sampler2D creditstex;
+uniform float shineprog;
+uniform float dpi;
+uniform vec3 col_conf;
+uniform vec3 col_conf_mod;
+uniform vec3 col_outline;
+out vec4 fragColor;
+void main() {
+	float col = max(min((texture(creditstex,uv).r-.5)*dpi+.5,1),0);
+	float shine = 0;
+	if(xpos+shineprog < .65 && xpos+shineprog > 0)
+		shine = max(min((texture(creditstex,uv+vec2(shineprog,0)).g-.5)*dpi+.5,1),0);
+	fragColor = vec4(col_conf*(1-col)+(col_outline*(1-shine)+col_conf_mod*shine)*col,1);
+})");
+
 	add_texture(&basetex, BinaryData::base_png, BinaryData::base_pngSize);
 	add_texture(&tabselecttex, BinaryData::tabselect_png, BinaryData::tabselect_pngSize);
 	add_texture(&headertex, BinaryData::header_png, BinaryData::header_pngSize);
+	add_texture(&creditstex, BinaryData::credits_png, BinaryData::credits_pngSize);
 
 	draw_init();
 }
@@ -134,6 +167,23 @@ void FMPlusAudioProcessorEditor::renderOpenGL() {
 	baseshader->setUniform("col_vis"			,col_vis[0]			,col_vis[1]			,col_vis[2]			);
 	baseshader->setUniform("col_vis_mod"		,col_vis_mod[0]		,col_vis_mod[1]		,col_vis_mod[2]		);
 	baseshader->setUniform("col_highlight"		,col_highlight[0]	,col_highlight[1]	,col_highlight[2]	);
+	context.extensions.glEnableVertexAttribArray(coord);
+	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+	context.extensions.glDisableVertexAttribArray(coord);
+
+	creditsshader->use();
+	context.extensions.glActiveTexture(GL_TEXTURE0);
+	creditstex.bind();
+	creditsshader->setUniform("creditstex",0);
+	creditsshader->setUniform("banner",banner_offset);
+	creditsshader->setUniform("dpi",(float)fmax(scaled_dpi*.5f,1));
+	creditsshader->setUniform("shineprog",websiteht);
+	creditsshader->setUniform("pos",(449.f-75.5f*2)/2/width,(551.f-24.5f*2)/2/height,148.f/width, 46.f/height);
+	creditsshader->setUniform("col_conf"		,col_conf[0]		,col_conf[1]		,col_conf[2]		);
+	creditsshader->setUniform("col_conf_mod"	,col_conf_mod[0]	,col_conf_mod[1]	,col_conf_mod[2]	);
+	creditsshader->setUniform("col_outline"		,col_outline[0]		,col_outline[1]		,col_outline[2]		);
+	coord = context.extensions.glGetAttribLocation(creditsshader->getProgramID(),"aPos");
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
@@ -187,8 +237,7 @@ void FMPlusAudioProcessorEditor::parameterChanged(const String& parameterID, flo
 void FMPlusAudioProcessorEditor::mouseMove(const MouseEvent& event) {
 	int prevhover = hover;
 	hover = recalc_hover(event.x,event.y);
-	if(hover == -3 && prevhover != -3 && websiteht <= -1) websiteht = .65f;
-	else if(hover > -2 && prevhover <= -2) websiteht = -2;
+	if(hover == -15 && prevhover != -15 && websiteht <= -1) websiteht = .65f;
 	if(prevhover != hover && held == 0) {
 		if(hover > -1) knobs[hover].hoverstate = -4;
 		if(prevhover > -1) knobs[prevhover].hoverstate = -3;
@@ -256,10 +305,10 @@ void FMPlusAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 		audio_processor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(value-valueoffset);
 
 		valueoffset = fmax(fmin(valueoffset,value+.1f),value-1.1f);
-	} else if(initialdrag == -3) {
+	} else if(initialdrag == -15) {
 		int prevhover = hover;
-		hover = recalc_hover(event.x,event.y)==-3?-3:-2;
-		if(hover == -3 && prevhover != -3 && websiteht < -1) websiteht = .65f;
+		hover = recalc_hover(event.x,event.y)==-15?-15:-1;
+		if(hover == -15 && prevhover != -15 && websiteht < -1) websiteht = .65f;
 	}
 }
 void FMPlusAudioProcessorEditor::mouseUp(const MouseEvent& event) {
@@ -274,8 +323,8 @@ void FMPlusAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 	} else {
 		int prevhover = hover;
 		hover = recalc_hover(event.x,event.y);
-		if(hover == -3) {
-			if(prevhover == -3) URL("https://vst.unplug.red/").launchInDefaultBrowser();
+		if(hover == -15) {
+			if(prevhover == -15) URL("https://vst.unplug.red/").launchInDefaultBrowser();
 			else if(websiteht < -1) websiteht = .65f;
 		}
 		else if(hover > -1) knobs[hover].hoverstate = -4;
@@ -298,14 +347,28 @@ int FMPlusAudioProcessorEditor::recalc_hover(float x, float y) {
 	x /= ui_scales[ui_scale_index];
 	y /= ui_scales[ui_scale_index];
 
+	// node connections ???
+
+	// -15 logo
+	if(x > 224.5f && x < 298.5f && y > 1.5f && y < 24.5f)
+		return -15;
+
+	// -14 - -13 +-
+
+	// -12 - -2 operators
+
+	// -12 - -2 tabs
 	if(x <= 29) {
 		int i = floor(y/11.f);
 		if(i >= 11) return -1;
 		return i-12;
 	}
 
+	// 0+ knobs
 	for(int i = 0; i < knobcount; i++)
 		if(fabs(knobs[i].x-x) <= 24 && fabs(knobs[i].y-y) <= 24) return i;
+
+	// lfo dots
 
 	return -1;
 }
