@@ -79,86 +79,88 @@ private:
 	Point<int> dragpos = Point<int>(0,0);
 
 	float websiteht = -1;
+	OpenGLTexture creditstex;
+	std::shared_ptr<OpenGLShaderProgram> creditsshader;
 
 	float rms = 0;
 	float time = 0;
 
 	// light theme
 	//*/
-	float	col_bg			[3] = {	 .894f	,.894f	,.894f	};
-	float	col_bg_mod		[3] = {	 1.f	,1.f	,1.f	};
-	float	col_conf		[3] = {	 1.f	,1.f	,1.f	};
-	float	col_conf_mod	[3] = {	 .894f	,.894f	,.894f	};
-	float	col_outline		[3] = {	 0.f	,0.f	,0.f	};
-	float	col_outline_mod	[3] = {	 .384f	,.384f	,.384f	};
-	float	col_vis			[3] = {	 .894f	,.894f	,.894f	};
-	float	col_vis_mod		[3] = {	 .949f	,.949f	,.949f	};
-	float	col_highlight	[3] = {	 1.f	,.761f	,.996f	};
+	float col_bg			[3] = {	 .894f	,.894f	,.894f	};
+	float col_bg_mod		[3] = {	 1.f	,1.f	,1.f	};
+	float col_conf			[3] = {	 1.f	,1.f	,1.f	};
+	float col_conf_mod		[3] = {	 .894f	,.894f	,.894f	};
+	float col_outline		[3] = {	 0.f	,0.f	,0.f	};
+	float col_outline_mod	[3] = {	 .384f	,.384f	,.384f	};
+	float col_vis			[3] = {	 .894f	,.894f	,.894f	};
+	float col_vis_mod		[3] = {	 .949f	,.949f	,.949f	};
+	float col_highlight		[3] = {	 1.f	,.761f	,.996f	};
 	//*/
 
 	// dark theme
 	/*/
-	float	col_bg			[3] = {	 .106f	,.106f	,.106f	};
-	float	col_bg_mod		[3] = {	 0.f	,0.f	,0.f	};
-	float	col_conf		[3] = {	 0.f	,0.f	,0.f	};
-	float	col_conf_mod	[3] = {	 .106f	,.106f	,.106f	};
-	float	col_outline		[3] = {	 .8f	,.8f	,.8f	};
-	float	col_outline_mod	[3] = {	 .616f	,.616f	,.616f	};
-	float	col_vis			[3] = {	 .106f	,.106f	,.106f	};
-	float	col_vis_mod		[3] = {	 .051f	,.051f	,.051f	};
-	float	col_highlight	[3] = {	 0.f	,.239f	,.000f	};
+	float col_bg			[3] = {	 .106f	,.106f	,.106f	};
+	float col_bg_mod		[3] = {	 0.f	,0.f	,0.f	};
+	float col_conf			[3] = {	 0.f	,0.f	,0.f	};
+	float col_conf_mod		[3] = {	 .106f	,.106f	,.106f	};
+	float col_outline		[3] = {	 .8f	,.8f	,.8f	};
+	float col_outline_mod	[3] = {	 .616f	,.616f	,.616f	};
+	float col_vis			[3] = {	 .106f	,.106f	,.106f	};
+	float col_vis_mod		[3] = {	 .051f	,.051f	,.051f	};
+	float col_highlight		[3] = {	 0.f	,.239f	,.000f	};
 	//*/
 
 	// high contrast
 	/*/
-	float	col_bg			[3] = {	  10.f	, 10.f	, 10.f	};
-	float	col_bg_mod		[3] = {	 -10.f	, 10.f	, 10.f	};
-	float	col_conf		[3] = {	  10.f	, 10.f	, 10.f	};
-	float	col_conf_mod	[3] = {	 -10.f	, 10.f	, 10.f	};
-	float	col_outline		[3] = {	 -10.f	,-10.f	,-10.f	};
-	float	col_outline_mod	[3] = {	 -10.f	,-10.f	,-10.f	};
-	float	col_vis			[3] = {	  10.f	, 10.f	, 10.f	};
-	float	col_vis_mod		[3] = {	  10.f	, 10.f	, 10.f	};
-	float	col_highlight	[3] = {	  10.f	, 10.f	,-10.f	};
+	float col_bg			[3] = {	  10.f	, 10.f	, 10.f	};
+	float col_bg_mod		[3] = {	 -10.f	, 10.f	, 10.f	};
+	float col_conf			[3] = {	  10.f	, 10.f	, 10.f	};
+	float col_conf_mod		[3] = {	 -10.f	, 10.f	, 10.f	};
+	float col_outline		[3] = {	 -10.f	,-10.f	,-10.f	};
+	float col_outline_mod	[3] = {	 -10.f	,-10.f	,-10.f	};
+	float col_vis			[3] = {	  10.f	, 10.f	, 10.f	};
+	float col_vis_mod		[3] = {	  10.f	, 10.f	, 10.f	};
+	float col_highlight		[3] = {	  10.f	, 10.f	,-10.f	};
 	//*/
 
 	// seoul
 	/*/
-	float	col_bg			[3] = {	 .145f	,.145f	,.145f	};
-	float	col_bg_mod		[3] = {	 .2f	,.196f	,.2f	};
-	float	col_conf		[3] = {	 .2f	,.196f	,.2f	};
-	float	col_conf_mod	[3] = {	 .294f	,.294f	,.294f	};
-	float	col_outline		[3] = {	 .851f	,.851f	,.851f	};
-	float	col_outline_mod	[3] = {	 .2f	,.196f	,.2f	};
-	float	col_vis			[3] = {	 .145f	,.145f	,.145f	};
-	float	col_vis_mod		[3] = {	 .2f	,.196f	,.2f	};
-	float	col_highlight	[3] = {	 .604f	,.451f	,.447f	};
+	float col_bg			[3] = {	 .145f	,.145f	,.145f	};
+	float col_bg_mod		[3] = {	 .2f	,.196f	,.2f	};
+	float col_conf			[3] = {	 .2f	,.196f	,.2f	};
+	float col_conf_mod		[3] = {	 .294f	,.294f	,.294f	};
+	float col_outline		[3] = {	 .851f	,.851f	,.851f	};
+	float col_outline_mod	[3] = {	 .2f	,.196f	,.2f	};
+	float col_vis			[3] = {	 .145f	,.145f	,.145f	};
+	float col_vis_mod		[3] = {	 .2f	,.196f	,.2f	};
+	float col_highlight		[3] = {	 .604f	,.451f	,.447f	};
 	//*/
 
-	// windowmaker
+	// machinery
 	/*/
-	float	col_bg			[3] = {	 .6f	,.6f	,.6f	};
-	float	col_bg_mod		[3] = {	 .204f	,.224f	,.227f	};
-	float	col_conf		[3] = {	 .929f	,.663f	,.424f	};
-	float	col_conf_mod	[3] = {	 .533f	,.38f	,.243f	};
-	float	col_outline		[3] = {	 1.f	,1.f	,1.f	};
-	float	col_outline_mod	[3] = {	 .11f	,.22f	,.251f	};
-	float	col_vis			[3] = {	 .402f	,.412f	,.414f	};
-	float	col_vis_mod		[3] = {	 .6f	,.6f	,.6f	};
-	float	col_highlight	[3] = {	 .29f	,.573f	,.651f	};
+	float col_bg			[3] = {	 .6f	,.6f	,.6f	};
+	float col_bg_mod		[3] = {	 .204f	,.224f	,.227f	};
+	float col_conf			[3] = {	 .929f	,.663f	,.424f	};
+	float col_conf_mod		[3] = {	 .533f	,.38f	,.243f	};
+	float col_outline		[3] = {	 1.f	,1.f	,1.f	};
+	float col_outline_mod	[3] = {	 .11f	,.22f	,.251f	};
+	float col_vis			[3] = {	 .402f	,.412f	,.414f	};
+	float col_vis_mod		[3] = {	 .6f	,.6f	,.6f	};
+	float col_highlight		[3] = {	 .29f	,.573f	,.651f	};
 	//*/
 
 	// color test
 	/*/
-	//float	col_bg			[3] = {	 1.f	,0.f	,0.f	};
-	//float	col_bg_mod		[3] = {	 0.f	,1.f	,0.f	};
-	//float	col_conf		[3] = {	 0.f	,0.f	,1.f	};
-	//float	col_conf_mod	[3] = {	 .5f	,.5f	,0.f	};
-	//float	col_outline		[3] = {	 .5f	,0.f	,.5f	};
-	//float	col_outline_mod	[3] = {	 0.f	,.5f	,.5f	};
-	//float	col_vis			[3] = {	 1.f	,0.f	.0.f	};
-	//float	col_vis_mod		[3] = {	 0.f	,1.f	.0.f	};
-	//float	col_highlight	[3] = {	 .2f	,.2f	,.2f	};
+	float col_bg			[3] = {	 1.f	,0.f	,0.f	};
+	float col_bg_mod		[3] = {	 0.f	,1.f	,0.f	};
+	float col_conf			[3] = {	 0.f	,0.f	,1.f	};
+	float col_conf_mod		[3] = {	 .5f	,.5f	,0.f	};
+	float col_outline		[3] = {	 .5f	,0.f	,.5f	};
+	float col_outline_mod	[3] = {	 0.f	,.5f	,.5f	};
+	float col_vis			[3] = {	 1.f	,0.f	.0.f	};
+	float col_vis_mod		[3] = {	 0.f	,1.f	.0.f	};
+	float col_highlight		[3] = {	 .2f	,.2f	,.2f	};
 	//*/
 
 	LookNFeel look_n_feel;
