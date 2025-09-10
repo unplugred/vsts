@@ -41,7 +41,7 @@ out vec2 headeruv;
 void main(){
 	gl_Position = vec4(vec2(coords.x,coords.y*(1-banner)+banner)*2-1,0,1);
 	uv = coords;
-	tabuv = (coords-vec2(0,.96-.036667*tabid))*vec2(10,21.42857);
+	tabuv = (coords-vec2(0,.96-.036667*tabid))*vec2(10,18.75);
 	headeruv = (coords-vec2(.1,.043333))      *vec2(2.83019,10 );
 })",
 //BASE FRAG
@@ -64,13 +64,13 @@ uniform vec3 col_vis_mod;
 uniform vec3 col_highlight;
 out vec4 fragColor;
 void main() {
-	if(tabuv.x < 1 && tabuv.y > 0 && tabuv.y < 1) {
+	if(tabuv.x <= 1 && tabuv.y >= .03125 && ((tabuv.y <= .96875 && tabuv.x > .5) || tabuv.y <= .84375)) {
 		vec3 col = max(min((texture(tabselecttex,tabuv).rgb-.5)*dpi+.5,1),0);
 		fragColor = vec4(col,1);
 		if(col.g > 0) {
 			if(tabid < 3) col.b = 0;
 			col = col_conf*(1-col.r-col.g)+col_outline*(col.r+col.b)+col_highlight*(col.g-col.b);
-		} else if(tabid == 10 && tabuv.x < .95 && tabuv.y < .107143) {
+		} else if(tabid == 10 && tabuv.x < .95 && tabuv.y < .09375) {
 			col = col_bg  *(1-col.r      )+col_outline* col.r                                   ;
 		} else {
 			col = col_conf*(1-col.r-col.b)+col_outline* col.r       +col_conf_mod *       col.b ;
