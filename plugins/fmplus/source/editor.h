@@ -29,6 +29,7 @@ struct op {
 	float values[19];
 	int pos[2] { 0,0 };
 	std::vector<connection> inputs;
+	float indicator = 0;
 };
 
 struct knob {
@@ -104,6 +105,8 @@ private:
 	OpenGLTexture operatortex;
 	op ops[MC+1];
 	std::shared_ptr<OpenGLShaderProgram> operatorshader;
+
+	std::shared_ptr<OpenGLShaderProgram> indicatorshader;
 
 	float rms = 0;
 	float time = 0;

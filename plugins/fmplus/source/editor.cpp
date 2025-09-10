@@ -20,6 +20,7 @@ FMPlusAudioProcessorEditor::FMPlusAudioProcessorEditor(FMPlusAudioProcessor& p, 
 	}
 	for(int i = 0; i < (MC+1); ++i) {
 		ops[i].values[0] = i<3;
+		ops[i].indicator = (i==0||i==5)?1.f:0.f;
 		ops[i].pos[0] = 56;
 		ops[i].pos[1] = 180-i*20;
 	}
@@ -46,8 +47,8 @@ out vec2 headeruv;
 void main(){
 	gl_Position = vec4(vec2(coords.x,coords.y*(1-banner)+banner)*2-1,0,1);
 	uv = coords;
-	tabuv = (coords-vec2(0,.96-.036667*tabid))*vec2(10,18.75);
-	headeruv = (coords-vec2(.1,.043333))      *vec2(2.83019,10 );
+	tabuv = (coords-vec2(0,.96-.036667*tabid))*vec2(10,18.75  );
+	headeruv = (coords-vec2(.1,.043333))      *vec2(2.83019,10);
 })",
 //BASE FRAG
 R"(#version 150 core
@@ -151,7 +152,6 @@ uniform vec3 col_conf;
 uniform vec3 col_conf_mod;
 uniform vec3 col_outline;
 uniform vec3 col_highlight;
-uniform float indicator;
 uniform float selected;
 out vec4 fragColor;
 void main() {
@@ -164,14 +164,29 @@ void main() {
 			col.r = 1;
 		}
 	} else if(col.g >= 1 && col.r > 0) {
-		if(indicator > .5) {
-			col.g -= col.r;
-		} else {
-			col.r = 0;
-		}
+		col.g -= col.r;
 	}
 	col.rgb = (col_conf*(col.g-col.b)+col_conf_mod*col.b)*(1-selected)+col_highlight*col.g*selected+col_outline*col.r;
 	fragColor = col;
+})");
+
+	indicatorshader = add_shader(
+//INDICATOR VERT
+R"(#version 150 core
+in vec2 aPos;
+uniform vec4 pos;
+uniform float banner;
+void main() {
+	gl_Position = vec4(vec2(aPos.x*pos.z+pos.x,(aPos.y*pos.w+pos.y)*(1-banner)+banner)*2-1,0,1);
+})",
+//INDICATOR FRAG
+R"(#version 150 core
+uniform vec3 col_outline_mod;
+uniform vec3 col_highlight;
+uniform float light;
+out vec4 fragColor;
+void main() {
+	fragColor = vec4(col_outline_mod*(1-light)+col_highlight*light,1);
 })");
 
 	add_texture(&basetex, BinaryData::base_png, BinaryData::base_pngSize);
@@ -209,14 +224,14 @@ void FMPlusAudioProcessorEditor::renderOpenGL() {
 	baseshader->setUniform("tabid",(float)audio_processor.selectedtab.get());
 	baseshader->setUniform("banner",banner_offset);
 	baseshader->setUniform("dpi",(float)fmax(scaled_dpi*.5f,1));
-	baseshader->setUniform("col_bg"				,col_bg[0]			,col_bg[1]			,col_bg[2]			);
-	baseshader->setUniform("col_bg_mod"			,col_bg_mod[0]		,col_bg_mod[1]		,col_bg_mod[2]		);
-	baseshader->setUniform("col_conf"			,col_conf[0]		,col_conf[1]		,col_conf[2]		);
-	baseshader->setUniform("col_conf_mod"		,col_conf_mod[0]	,col_conf_mod[1]	,col_conf_mod[2]	);
-	baseshader->setUniform("col_outline"		,col_outline[0]		,col_outline[1]		,col_outline[2]		);
-	baseshader->setUniform("col_vis"			,col_vis[0]			,col_vis[1]			,col_vis[2]			);
-	baseshader->setUniform("col_vis_mod"		,col_vis_mod[0]		,col_vis_mod[1]		,col_vis_mod[2]		);
-	baseshader->setUniform("col_highlight"		,col_highlight[0]	,col_highlight[1]	,col_highlight[2]	);
+	baseshader->setUniform("col_bg"					,col_bg[0]			,col_bg[1]			,col_bg[2]			);
+	baseshader->setUniform("col_bg_mod"				,col_bg_mod[0]		,col_bg_mod[1]		,col_bg_mod[2]		);
+	baseshader->setUniform("col_conf"				,col_conf[0]		,col_conf[1]		,col_conf[2]		);
+	baseshader->setUniform("col_conf_mod"			,col_conf_mod[0]	,col_conf_mod[1]	,col_conf_mod[2]	);
+	baseshader->setUniform("col_outline"			,col_outline[0]		,col_outline[1]		,col_outline[2]		);
+	baseshader->setUniform("col_vis"				,col_vis[0]			,col_vis[1]			,col_vis[2]			);
+	baseshader->setUniform("col_vis_mod"			,col_vis_mod[0]		,col_vis_mod[1]		,col_vis_mod[2]		);
+	baseshader->setUniform("col_highlight"			,col_highlight[0]	,col_highlight[1]	,col_highlight[2]	);
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
@@ -231,14 +246,20 @@ void FMPlusAudioProcessorEditor::renderOpenGL() {
 	creditsshader->setUniform("dpi",(float)fmax(scaled_dpi*.5f,1));
 	creditsshader->setUniform("shineprog",websiteht);
 	creditsshader->setUniform("pos",149.f/width,251.f/height,148.f/width,46.f/height);
-	creditsshader->setUniform("col_conf"		,col_conf[0]		,col_conf[1]		,col_conf[2]		);
-	creditsshader->setUniform("col_conf_mod"	,col_conf_mod[0]	,col_conf_mod[1]	,col_conf_mod[2]	);
-	creditsshader->setUniform("col_outline"		,col_outline[0]		,col_outline[1]		,col_outline[2]		);
+	creditsshader->setUniform("col_conf"			,col_conf[0]		,col_conf[1]		,col_conf[2]		);
+	creditsshader->setUniform("col_conf_mod"		,col_conf_mod[0]	,col_conf_mod[1]	,col_conf_mod[2]	);
+	creditsshader->setUniform("col_outline"			,col_outline[0]		,col_outline[1]		,col_outline[2]		);
 	coord = context.extensions.glGetAttribLocation(creditsshader->getProgramID(),"aPos");
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	context.extensions.glDisableVertexAttribArray(coord);
+
+	// SQUARE
+
+	// LINE
+
+	// CIRCLE
 
 	// OPERATOR
 	operatorshader->use();
@@ -247,21 +268,42 @@ void FMPlusAudioProcessorEditor::renderOpenGL() {
 	operatorshader->setUniform("operatortex",0);
 	operatorshader->setUniform("banner",banner_offset);
 	operatorshader->setUniform("dpi",(float)fmax(scaled_dpi*.5f,1));
-	operatorshader->setUniform("col_conf"		,col_conf[0]		,col_conf[1]		,col_conf[2]		);
-	operatorshader->setUniform("col_conf_mod"	,col_conf_mod[0]	,col_conf_mod[1]	,col_conf_mod[2]	);
-	operatorshader->setUniform("col_outline"	,col_outline[0]		,col_outline[1]		,col_outline[2]		);
-	operatorshader->setUniform("col_highlight"	,col_highlight[0]	,col_highlight[1]	,col_highlight[2]	);
+	operatorshader->setUniform("col_conf"			,col_conf[0]		,col_conf[1]		,col_conf[2]		);
+	operatorshader->setUniform("col_conf_mod"		,col_conf_mod[0]	,col_conf_mod[1]	,col_conf_mod[2]	);
+	operatorshader->setUniform("col_outline"		,col_outline[0]		,col_outline[1]		,col_outline[2]		);
+	operatorshader->setUniform("col_highlight"		,col_highlight[0]	,col_highlight[1]	,col_highlight[2]	);
 	coord = context.extensions.glGetAttribLocation(operatorshader->getProgramID(),"aPos");
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	for(int i = MC; i >= 0; --i) {
 		if(ops[i].values[0] < .5) continue;
 		operatorshader->setUniform("selected",(float)(audio_processor.selectedtab.get()==(i==0?0:(i+2))?1.f:0.f));
-		operatorshader->setUniform("indicator",i==0?0.f:1.f);
 		operatorshader->setUniform("pos",(153.f+ops[i].pos[0])/width,(256.f-ops[i].pos[1])/height,36.f/width,18.f/height);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	}
 	context.extensions.glDisableVertexAttribArray(coord);
+
+	// INDICATOR
+	indicatorshader->use();
+	indicatorshader->setUniform("banner",banner_offset);
+	indicatorshader->setUniform("col_outline_mod"	,col_outline_mod[0]	,col_outline_mod[1]	,col_outline_mod[2]	);
+	indicatorshader->setUniform("col_highlight"		,col_highlight[0]	,col_highlight[1]	,col_highlight[2]	);
+	coord = context.extensions.glGetAttribLocation(indicatorshader->getProgramID(),"aPos");
+	context.extensions.glEnableVertexAttribArray(coord);
+	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+	for(int i = MC; i >= 0; --i) {
+		indicatorshader->setUniform("light",ops[i].indicator);
+		if(i > 0) {
+			indicatorshader->setUniform("pos",2.f/width,1.f-(30.f+11.f*i)/height,2.f/width,6.f/height);
+			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+		}
+		if(ops[i].values[0] < .5) continue;
+		indicatorshader->setUniform("pos",(153.f+6.f+ops[i].pos[0])/width,(256.f+6.f-ops[i].pos[1])/height,2.f/width,6.f/height);
+		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+	}
+	context.extensions.glDisableVertexAttribArray(coord);
+
+	// TEXT
 
 	draw_end();
 }
