@@ -18,6 +18,19 @@ public:
 	Colour fg2 = Colour::fromFloatRGBA(1.f,1.f,1.f,1.f);
 	String font = "n";
 };
+
+struct connection {
+	int output = -1;
+	int input = -1;
+	float influence = .5f;
+};
+
+struct op {
+	float values[19];
+	int pos[2] { 0,0 };
+	std::vector<connection> inputs;
+};
+
 struct knob {
 	int x = 0;
 	int y = 0;
@@ -35,6 +48,7 @@ struct knob {
 		return val*(maximumvalue-minimumvalue)+minimumvalue;
 	}
 };
+
 class FMPlusAudioProcessorEditor : public AudioProcessorEditor, public plugmachine_gui {
 public:
 	FMPlusAudioProcessorEditor(FMPlusAudioProcessor&, int paramcount, pluginpreset state, pluginparams params);
@@ -73,14 +87,23 @@ private:
 	int hover = -1;
 	int initialdrag = 0;
 	int held = 0;
-	float initialvalue = 0;
+	float initialvalue[2] = {0,0};
+	float initialdotvalue[2] = {0,0};
+	float initialaxispoint[2] = {0,0};
+	float axisvaluediff[2] = {0,0};
+	float amioutofbounds[2] = {0,0};
 	bool finemode = false;
-	float valueoffset = 0;
+	int axislock = -1;
+	float valueoffset[2] = {0,0};
 	Point<int> dragpos = Point<int>(0,0);
 
 	float websiteht = -1;
 	OpenGLTexture creditstex;
 	std::shared_ptr<OpenGLShaderProgram> creditsshader;
+
+	OpenGLTexture operatortex;
+	op ops[MC+1];
+	std::shared_ptr<OpenGLShaderProgram> operatorshader;
 
 	float rms = 0;
 	float time = 0;

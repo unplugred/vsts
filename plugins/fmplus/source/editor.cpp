@@ -18,6 +18,11 @@ FMPlusAudioProcessorEditor::FMPlusAudioProcessorEditor(FMPlusAudioProcessor& p, 
 			add_listener(knobs[i].id);
 		}
 	}
+	for(int i = 0; i < (MC+1); ++i) {
+		ops[i].values[0] = i<3;
+		ops[i].pos[0] = 56;
+		ops[i].pos[1] = 180-i*20;
+	}
 
 	calcvis();
 
@@ -126,10 +131,54 @@ void main() {
 	fragColor = vec4(col_conf*(1-col)+(col_outline*(1-shine)+col_conf_mod*shine)*col,1);
 })");
 
+	operatorshader = add_shader(
+//OPERATOR VERT
+R"(#version 150 core
+in vec2 aPos;
+uniform vec4 pos;
+uniform float banner;
+out vec2 uv;
+void main() {
+	gl_Position = vec4(vec2(aPos.x*pos.z+pos.x,(aPos.y*pos.w+pos.y)*(1-banner)+banner)*2-1,0,1);
+	uv = aPos;
+})",
+//OPERATOR FRAG
+R"(#version 150 core
+in vec2 uv;
+uniform sampler2D operatortex;
+uniform float dpi;
+uniform vec3 col_conf;
+uniform vec3 col_conf_mod;
+uniform vec3 col_outline;
+uniform vec3 col_highlight;
+uniform float indicator;
+uniform float selected;
+out vec4 fragColor;
+void main() {
+	vec4 col = vec4(max(min((texture(operatortex,uv).rgb-.5)*dpi+.5,1),0),1);
+	if(col.g <= 0) {
+		if(selected < .5 && (abs(uv.x-.5) >= 0.430556 || abs(uv.y-.5) >= 0.333333)) {
+			col.a = 0;
+		} else {
+			col.a = col.r;
+			col.r = 1;
+		}
+	} else if(col.g >= 1 && col.r > 0) {
+		if(indicator > .5) {
+			col.g -= col.r;
+		} else {
+			col.r = 0;
+		}
+	}
+	col.rgb = (col_conf*(col.g-col.b)+col_conf_mod*col.b)*(1-selected)+col_highlight*col.g*selected+col_outline*col.r;
+	fragColor = col;
+})");
+
 	add_texture(&basetex, BinaryData::base_png, BinaryData::base_pngSize);
 	add_texture(&tabselecttex, BinaryData::tabselect_png, BinaryData::tabselect_pngSize);
 	add_texture(&headertex, BinaryData::header_png, BinaryData::header_pngSize);
 	add_texture(&creditstex, BinaryData::credits_png, BinaryData::credits_pngSize);
+	add_texture(&operatortex, BinaryData::operator_png, BinaryData::operator_pngSize);
 
 	draw_init();
 }
@@ -142,6 +191,7 @@ void FMPlusAudioProcessorEditor::renderOpenGL() {
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_LINE_SMOOTH);
 
+	// BASE
 	context.extensions.glBindBuffer(GL_ARRAY_BUFFER, array_buffer);
 	auto coord = context.extensions.glGetAttribLocation(baseshader->getProgramID(),"coords");
 	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
@@ -172,6 +222,7 @@ void FMPlusAudioProcessorEditor::renderOpenGL() {
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	context.extensions.glDisableVertexAttribArray(coord);
 
+	// CREDITS
 	creditsshader->use();
 	context.extensions.glActiveTexture(GL_TEXTURE0);
 	creditstex.bind();
@@ -179,7 +230,7 @@ void FMPlusAudioProcessorEditor::renderOpenGL() {
 	creditsshader->setUniform("banner",banner_offset);
 	creditsshader->setUniform("dpi",(float)fmax(scaled_dpi*.5f,1));
 	creditsshader->setUniform("shineprog",websiteht);
-	creditsshader->setUniform("pos",(449.f-75.5f*2)/2/width,(551.f-24.5f*2)/2/height,148.f/width, 46.f/height);
+	creditsshader->setUniform("pos",149.f/width,251.f/height,148.f/width,46.f/height);
 	creditsshader->setUniform("col_conf"		,col_conf[0]		,col_conf[1]		,col_conf[2]		);
 	creditsshader->setUniform("col_conf_mod"	,col_conf_mod[0]	,col_conf_mod[1]	,col_conf_mod[2]	);
 	creditsshader->setUniform("col_outline"		,col_outline[0]		,col_outline[1]		,col_outline[2]		);
@@ -187,6 +238,29 @@ void FMPlusAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+	context.extensions.glDisableVertexAttribArray(coord);
+
+	// OPERATOR
+	operatorshader->use();
+	context.extensions.glActiveTexture(GL_TEXTURE0);
+	operatortex.bind();
+	operatorshader->setUniform("operatortex",0);
+	operatorshader->setUniform("banner",banner_offset);
+	operatorshader->setUniform("dpi",(float)fmax(scaled_dpi*.5f,1));
+	operatorshader->setUniform("col_conf"		,col_conf[0]		,col_conf[1]		,col_conf[2]		);
+	operatorshader->setUniform("col_conf_mod"	,col_conf_mod[0]	,col_conf_mod[1]	,col_conf_mod[2]	);
+	operatorshader->setUniform("col_outline"	,col_outline[0]		,col_outline[1]		,col_outline[2]		);
+	operatorshader->setUniform("col_highlight"	,col_highlight[0]	,col_highlight[1]	,col_highlight[2]	);
+	coord = context.extensions.glGetAttribLocation(operatorshader->getProgramID(),"aPos");
+	context.extensions.glEnableVertexAttribArray(coord);
+	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+	for(int i = MC; i >= 0; --i) {
+		if(ops[i].values[0] < .5) continue;
+		operatorshader->setUniform("selected",(float)(audio_processor.selectedtab.get()==(i==0?0:(i+2))?1.f:0.f));
+		operatorshader->setUniform("indicator",i==0?0.f:1.f);
+		operatorshader->setUniform("pos",(153.f+ops[i].pos[0])/width,(256.f-ops[i].pos[1])/height,36.f/width,18.f/height);
+		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+	}
 	context.extensions.glDisableVertexAttribArray(coord);
 
 	draw_end();
@@ -237,7 +311,7 @@ void FMPlusAudioProcessorEditor::parameterChanged(const String& parameterID, flo
 void FMPlusAudioProcessorEditor::mouseMove(const MouseEvent& event) {
 	int prevhover = hover;
 	hover = recalc_hover(event.x,event.y);
-	if(hover == -15 && prevhover != -15 && websiteht <= -1) websiteht = .65f;
+	if(hover == -26 && prevhover != -26 && websiteht <= -1) websiteht = .65f;
 	if(prevhover != hover && held == 0) {
 		if(hover > -1) knobs[hover].hoverstate = -4;
 		if(prevhover > -1) knobs[prevhover].hoverstate = -3;
@@ -279,8 +353,8 @@ void FMPlusAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 	initialdrag = hover;
 	if(hover == -1) return;
 	if(hover > -1) {
-		initialvalue = knobs[hover].value;
-		valueoffset = 0;
+		initialvalue[0] = knobs[hover].value;
+		valueoffset[0] = 0;
 		audio_processor.undo_manager.beginNewTransaction();
 		audio_processor.apvts.getParameter(knobs[hover].id)->beginChangeGesture();
 		audio_processor.lerpchanged[hover] = true;
@@ -288,6 +362,12 @@ void FMPlusAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		event.source.enableUnboundedMouseMovement(true);
 	} else if(hover >= -12) {
 		audio_processor.selectedtab = hover+12;
+	} else if(hover >= -23) {
+		int i = hover+23;
+		audio_processor.selectedtab = i;
+		if(i != 0) i -= 2;
+		initialvalue[0] = ops[i].pos[0];
+		initialvalue[1] = ops[i].pos[1];
 	}
 }
 void FMPlusAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
@@ -295,27 +375,34 @@ void FMPlusAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 	if(initialdrag > -1) {
 		if(!finemode && (event.mods.isShiftDown() || event.mods.isAltDown())) {
 			finemode = true;
-			initialvalue -= (event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*.0045f;
+			initialvalue[0] -= (event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*.0045f;
 		} else if(finemode && !(event.mods.isShiftDown() || event.mods.isAltDown())) {
 			finemode = false;
-			initialvalue += (event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*.0045f;
+			initialvalue[0] += (event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*.0045f;
 		}
 
-		float value = initialvalue-(event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*(finemode?.0005f:.005f);
-		audio_processor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(value-valueoffset);
+		float value = initialvalue[0]-(event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*(finemode?.0005f:.005f);
+		audio_processor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(value-valueoffset[0]);
 
-		valueoffset = fmax(fmin(valueoffset,value+.1f),value-1.1f);
-	} else if(initialdrag == -15) {
+		valueoffset[0] = fmax(fmin(valueoffset[0],value+.1f),value-1.1f);
+	} else if(initialdrag >= -12) {
+		return;
+	} else if(initialdrag >= -23) {
+		int i = audio_processor.selectedtab.get();
+		if(i != 0) i -= 2;
+		ops[i].pos[0] = fmin(112,fmax(0,initialvalue[0]+event.getDistanceFromDragStartX()/ui_scales[ui_scale_index]));
+		ops[i].pos[1] = fmin(257,fmax(0,initialvalue[1]+event.getDistanceFromDragStartY()/ui_scales[ui_scale_index]));
+	} else if(initialdrag == -26) {
 		int prevhover = hover;
-		hover = recalc_hover(event.x,event.y)==-15?-15:-1;
-		if(hover == -15 && prevhover != -15 && websiteht < -1) websiteht = .65f;
+		hover = recalc_hover(event.x,event.y)==-26?-26:-1;
+		if(hover == -26 && prevhover != -26 && websiteht < -1) websiteht = .65f;
 	}
 }
 void FMPlusAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 	if(dpi < 0) return;
 	if(hover > -1) {
 		audio_processor.undo_manager.setCurrentTransactionName(
-			(String)((knobs[hover].value-initialvalue)>=0?"Increased ":"Decreased ") += knobs[hover].name);
+			(String)((knobs[hover].value-initialvalue[0])>=0?"Increased ":"Decreased ") += knobs[hover].name);
 		audio_processor.apvts.getParameter(knobs[hover].id)->endChangeGesture();
 		audio_processor.undo_manager.beginNewTransaction();
 		event.source.enableUnboundedMouseMovement(false);
@@ -323,8 +410,8 @@ void FMPlusAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 	} else {
 		int prevhover = hover;
 		hover = recalc_hover(event.x,event.y);
-		if(hover == -15) {
-			if(prevhover == -15) URL("https://vst.unplug.red/").launchInDefaultBrowser();
+		if(hover == -26) {
+			if(prevhover == -26) URL("https://vst.unplug.red/").launchInDefaultBrowser();
 			else if(websiteht < -1) websiteht = .65f;
 		}
 		else if(hover > -1) knobs[hover].hoverstate = -4;
@@ -347,15 +434,18 @@ int FMPlusAudioProcessorEditor::recalc_hover(float x, float y) {
 	x /= ui_scales[ui_scale_index];
 	y /= ui_scales[ui_scale_index];
 
-	// node connections ???
-
-	// -15 logo
+	// -26 logo
 	if(x > 224.5f && x < 298.5f && y > 1.5f && y < 24.5f)
-		return -15;
+		return -26;
 
-	// -14 - -13 +-
+	// -25 - -24 +-
 
-	// -12 - -2 operators
+	// -23 - -13 operators
+	for(int i = 0; i < (MC+1); ++i) {
+		if(ops[i].values[0] < .5) continue;
+		if(x >= (ops[i].pos[0]+157) && x < (ops[i].pos[0]+187) && y >= (ops[i].pos[1]+30) && y < (ops[i].pos[1]+42))
+			return i==0?-23:(i-21);
+	}
 
 	// -12 - -2 tabs
 	if(x <= 29) {
@@ -368,7 +458,9 @@ int FMPlusAudioProcessorEditor::recalc_hover(float x, float y) {
 	for(int i = 0; i < knobcount; i++)
 		if(fabs(knobs[i].x-x) <= 24 && fabs(knobs[i].y-y) <= 24) return i;
 
-	// lfo dots
+	// 100+ lfo dots
+
+	// 200 - 1000 node connections
 
 	return -1;
 }
