@@ -19,29 +19,41 @@ public:
 	String font = "n";
 };
 
-struct connection {
-	int output = -1;
-	int input = -1;
-	float influence = .5f;
+struct box {
+	int x = 0;
+	int y = 0;
+	int w = 0;
+	int h = 0;
+	int type = 0; // -1 - inactive, 0 - line, 1 - centered, 2 - noline, 3 - tick, 4 - burger
+	int knob = -1;
+	bool corner = false;
+	int mesh = -1;
+	box(int pknob = -1, int px = 0, int py = 0, int pw = 0, int ph = 0, int ptype = -1, bool pcorner = false) {
+		knob = pknob;
+		x = px;
+		y = py;
+		w = pw;
+		h = ph;
+		type = ptype;
+		corner = pcorner;
+	}
 };
 
 struct op {
-	float values[19];
 	int pos[2] { 0,0 };
-	std::vector<connection> inputs;
+	std::vector<connection> connections;
 	float indicator = 0;
 };
 
 struct knob {
-	int x = 0;
-	int y = 0;
-	float value = .5f;
-	int hoverstate = 0;
+	float value[MC];
 	String id;
 	String name;
+	bool isbool = false;
 	float minimumvalue = 0.f;
 	float maximumvalue = 1.f;
 	float defaultvalue = 0.f;
+	int box = -1;
 	float normalize(float val) {
 		return (val-minimumvalue)/(maximumvalue-minimumvalue);
 	}
@@ -52,7 +64,7 @@ struct knob {
 
 class FMPlusAudioProcessorEditor : public AudioProcessorEditor, public plugmachine_gui {
 public:
-	FMPlusAudioProcessorEditor(FMPlusAudioProcessor&, int paramcount, pluginpreset state, pluginparams params);
+	FMPlusAudioProcessorEditor(FMPlusAudioProcessor&, int pgeneralcount, int pparamcount, pluginpreset state, pluginparams params);
 	~FMPlusAudioProcessorEditor() override;
 
 	void newOpenGLContextCreated() override;
@@ -71,10 +83,12 @@ public:
 	void mouseUp(const MouseEvent& event) override;
 	void mouseDoubleClick(const MouseEvent& event) override;
 	void mouseWheelMove(const MouseEvent& event, const MouseWheelDetails& wheel) override;
-	int recalc_hover(float x, float y);
+	int recalc_hover(float x, float y, bool update_highlight = true);
 
-	knob knobs[6];
+	knob knobs[16+19];
 	int knobcount = 0;
+	int generalcount = 0;
+	int paramcount = 0;
 	float visline[2][452];
 	bool is_stereo = false;
 private:
@@ -83,11 +97,11 @@ private:
 	OpenGLTexture basetex;
 	OpenGLTexture tabselecttex;
 	OpenGLTexture headertex;
+	int selectedtab = 3;
 	std::shared_ptr<OpenGLShaderProgram> baseshader;
 
 	int hover = -1;
 	int initialdrag = 0;
-	int held = 0;
 	float initialvalue[2] = {0,0};
 	float initialdotvalue[2] = {0,0};
 	float initialaxispoint[2] = {0,0};
@@ -101,6 +115,15 @@ private:
 	float websiteht = -1;
 	OpenGLTexture creditstex;
 	std::shared_ptr<OpenGLShaderProgram> creditsshader;
+
+	box boxes[24];
+	float squaremesh[38*6*4];
+	int currentpoint = -1;
+	int boxnum = 0;
+	std::shared_ptr<OpenGLShaderProgram> squareshader;
+	void rebuildtab();
+	void updateburger();
+	void addsquare(float x, float y, float w, float h, float color = 0, bool corner = false);
 
 	OpenGLTexture operatortex;
 	op ops[MC+1];

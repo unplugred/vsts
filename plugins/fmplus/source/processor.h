@@ -14,13 +14,14 @@ public:
 	float maximumvalue = 1;
 	float defaultvalue = 0;
 	ptype ttype = ptype::floattype;
-	SmoothedValue<float,ValueSmoothingTypes::Linear> smooth;
+	SmoothedValue<float,ValueSmoothingTypes::Linear> smooth[MC];
 	float smoothtime = 0;
 	potentiometer(String potname = "", String potid = "", float smoothed = 0, float potdefault = 0.f, float potmin = 0.f, float potmax = 1.f, ptype pottype = ptype::floattype) {
 		name = potname;
 		id = potid;
 		smoothtime = smoothed;
-		if(smoothed > 0) smooth.setCurrentAndTargetValue(defaultvalue);
+		if(smoothed > 0) for(int o = 0; o < MC; ++o)
+			smooth[o].setCurrentAndTargetValue(defaultvalue);
 		defaultvalue = potdefault;
 		minimumvalue = potmin;
 		maximumvalue = potmax;
@@ -34,25 +35,39 @@ public:
 	}
 };
 struct pluginparams {
-	potentiometer pots[6];
-	bool oversampling = true;
+	potentiometer general[15];
+	potentiometer values[19];
+	float antialiasing = .7f; // 0.0 aa, 0.5 1x, 0.625 2x, 0.75 4x, 0.875 8x
+	Atomic<int> selectedtab = 3;
+	String tuningfile = "Standard";
+	String themefile = "Default";
+	float theme[9*3];
 };
 
+struct connection {
+	int input = 0;
+	int output = 0;
+	float influence = .5f;
+	connection(int pinput, int poutput, float pinfluence) {
+		input = pinput;
+		output = poutput;
+		influence = pinfluence;
+	}
+};
 struct pluginpreset {
 	String name = "";
-	float values[6];
-	pluginpreset(String pname = "", float val1 = 0.f, float val2 = 0.f, float val3 = 0.f, float val4 = 0.f, float val5 = 0.f, float val6 = 0.f) {
+	bool unsaved = false;
+	float general[16];
+	float values[MC][19];
+	int oppos[(MC+1)*2];
+	std::vector<connection> opconnections[9];
+	//curve curves[MC]; TODO
+	pluginpreset(String pname = "") {
 		name = pname;
-		values[0] = val1;
-		values[1] = val2;
-		values[2] = val3;
-		values[3] = val4;
-		values[4] = val5;
-		values[5] = val6;
 	}
 };
 
-class FMPlusAudioProcessor : public plugmachine_dsp, private Timer {
+class FMPlusAudioProcessor : public plugmachine_dsp {
 public:
 	FMPlusAudioProcessor();
 	~FMPlusAudioProcessor() override;
@@ -65,9 +80,7 @@ public:
 	bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
 
 	void processBlock(AudioBuffer<float>&, MidiBuffer&) override;
-	float plasticfuneral(float source, int channel, int channelcount, pluginpreset stt, float nrm);
-	float normalizegain(float fat, float dry);
-	void setoversampling(bool toggle);
+	void setoversampling();
 
 	AudioProcessorEditor* createEditor() override;
 	bool hasEditor() const override;
@@ -91,7 +104,7 @@ public:
 	void set_preset(const String& preset, int preset_id, const char delimiter = ',', bool print_errors = false) override;
 
 	virtual void parameterChanged(const String& parameterID, float newValue);
- 
+
 	AudioProcessorValueTreeState::ParameterLayout create_parameters();
 	AudioProcessorValueTreeState apvts;
 
@@ -99,33 +112,28 @@ public:
 	Atomic<int> rmscount = 0;
 
 	int version = 0;
-	const int paramcount = 6;
+	const int generalcount = 15;
+	const int paramcount = 19;
 
 	pluginpreset state;
 	pluginparams params;
-	bool lerpchanged[6];
 	int currentpreset = 0;
-	Atomic<int> selectedtab = 3;
+	pluginpreset presets[20];
 
 private:
-	pluginpreset presets[20];
-	void timerCallback() override;
-	float lerptable[6];
-	float lerpstage = 0;
 	bool preparedtoplay = false;
 	bool saved = false;
 
-	std::unique_ptr<dsp::Oversampling<float>> os;
+	int osindex = 0;
+	std::unique_ptr<dsp::Oversampling<float>> os[3]; // 2 4 8
 	AudioBuffer<float> osbuffer;
 	std::vector<float*> ospointerarray;
+
+	float pitches[128];
 
 	int channelnum = 0;
 	int samplesperblock = 0;
 	int samplerate = 44100;
-
-	float curfat = -1000;
-	float curdry = -1000;
-	double curnorm = 1;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(FMPlusAudioProcessor)
 };

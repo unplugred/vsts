@@ -7,64 +7,84 @@ FMPlusAudioProcessor::FMPlusAudioProcessor() :
 
 	init();
 
-	presets[0] = pluginpreset("Default");
-	for(int i = 8; i < getNumPrograms(); i++) {
-		presets[i] = presets[0];
-		presets[i].name = "Program " + (String)(i-7);
+	for(int i = 0; i < 128; ++i)
+		pitches[i] = (440.f/32.f)*pow(2.f,((i-9.f)/12.f));
+
+	presets[0] = pluginpreset("Default"); // TODO stringify default preset
+	for(int i = 0; i < generalcount; ++i)
+		presets[0].general[i] = 0;
+	for(int i = 0; i < paramcount; ++i) for(int o = 0; o < MC; ++o)
+		presets[0].values[o][i] = 0;
+	for(int i = 0; i < (MC+1); ++i) {
+		presets[0].oppos[i*2  ] = 56;
+		presets[0].oppos[i*2+1] = 180-i*20;
 	}
 
-	params.pots[ 0] = potentiometer("Voices"										,"voices"					,0		,presets[0].values[ 0]	,1	,24		,potentiometer::inttype		);
-	params.pots[ 1] = potentiometer("Portamento"									,"portamento"				,.001f	,presets[0].values[ 1]	);
-	params.pots[ 2] = potentiometer("Legato"										,"legato"					,0		,presets[0].values[ 2]	,0	,1		,potentiometer::booltype	);
-	params.pots[ 3] = potentiometer("Pitch Bend"									,"pitchbend"				,.001f	,presets[0].values[ 3]	,0	,24		,potentiometer::inttype		);
-	params.pots[ 4] = potentiometer("LFO Sync"										,"lfosync"					,0		,presets[0].values[ 4]	,0	,2		,potentiometer::inttype		);
-	params.pots[ 5] = potentiometer("Arp On"										,"arpon"					,0		,presets[0].values[ 5]	,0	,1		,potentiometer::booltype	);
-	//params.pots[ 6] = potentiometer("Arp Speed"										,"arpspeed"					,0		,presets[0].values[ 6]	);
-	//params.pots[ 7] = potentiometer("Arp Speed (eighth note)"						,"arpbpm"					,0		,presets[0].values[ 7]	,0	,32		,potentiometer::inttype		);
-	//params.pots[ 8] = potentiometer("Arp Direction"									,"arpdirection"				,0		,presets[0].values[ 8]	,0	,4		,potentiometer::inttype		);
-	//params.pots[ 9] = potentiometer("Arp Length"									,"arplength"				,0		,presets[0].values[ 9]	);
-	//params.pots[10] = potentiometer("Vibrato On"									,"vibratoon"				,.001f	,presets[0].values[10]	,0	,1		,potentiometer::booltype	);
-	//params.pots[11] = potentiometer("Vibrato Rate"									,"vibratorate"				,.001f	,presets[0].values[11]	);
-	//params.pots[12] = potentiometer("Vibrato Rate (eighth note)"					,"vibratobpm"				,.001f	,presets[0].values[12]	,0	,32		,potentiometer::inttype		);
-	//params.pots[13] = potentiometer("Vibrato Amount"								,"vibratoamount"			,.001f	,presets[0].values[13]	);
-	//params.pots[14] = potentiometer("Vibrato Attack"								,"vibratoattack"			,0		,presets[0].values[14]	);
-	//params.pots[15] = potentiometer("Anti-Alias"									,"antialias"				,0		,presets[0].values[15]	);
-	//for(int o = 0; o < MC; ++o) {
-	//params.pots[ 0] = potentiometer("OP"+(String)(o+1)+" On"						,"o"+(String)o+"on"		 	,0		,presets[0].values[ 0]	,0	,1		,potentiometer::booltype	);
-	//params.pots[ 1] = potentiometer("OP"+(String)(o+1)+" Pan"						,"o"+(String)o+"pan"		,0		,presets[0].values[ 1]	);
-	//params.pots[ 2] = potentiometer("OP"+(String)(o+1)+" Amplitude"					,"o"+(String)o+"amp"		,0		,presets[0].values[ 2]	);
-	//params.pots[ 3] = potentiometer("OP"+(String)(o+1)+" Tone"						,"o"+(String)o+"tone"		,.001f	,presets[0].values[ 3]	);
-	//params.pots[ 4] = potentiometer("OP"+(String)(o+1)+" Velocity"					,"o"+(String)o+"velocity"	,0		,presets[0].values[ 4]	);
-	//params.pots[ 5] = potentiometer("OP"+(String)(o+1)+" After-Touch"				,"o"+(String)o+"aftertouch"	,.001f	,presets[0].values[ 5]	);
-	//params.pots[ 6] = potentiometer("OP"+(String)(o+1)+" Frequency Mode"			,"o"+(String)o+"freqmode"	,0		,presets[0].values[ 6]	,0	,1		,potentiometer::booltype	);
-	//params.pots[ 7] = potentiometer("OP"+(String)(o+1)+" Frequency Multiplier"		,"o"+(String)o+"freqmult"	,.001f	,presets[0].values[ 7]	);
-	//params.pots[ 8] = potentiometer("OP"+(String)(o+1)+" Frequency Offset"			,"o"+(String)o+"freqadd"	,.001f	,presets[0].values[ 8]	);
-	//params.pots[ 9] = potentiometer("OP"+(String)(o+1)+" Attack"					,"o"+(String)o+"attack"		,.001f	,presets[0].values[ 9]	);
-	//params.pots[10] = potentiometer("OP"+(String)(o+1)+" Decay"						,"o"+(String)o+"decay"		,.001f	,presets[0].values[10]	);
-	//params.pots[11] = potentiometer("OP"+(String)(o+1)+" Sustain"					,"o"+(String)o+"sustain"	,.001f	,presets[0].values[11]	);
-	//params.pots[12] = potentiometer("OP"+(String)(o+1)+" Release"					,"o"+(String)o+"release"	,.001f	,presets[0].values[12]	);
-	//params.pots[13] = potentiometer("OP"+(String)(o+1)+" LFO On"					,"o"+(String)o+"lfoon"		,.001f	,presets[0].values[13]	,0	,1		,potentiometer::booltype	);
-	//params.pots[14] = potentiometer("OP"+(String)(o+1)+" LFO Target"				,"o"+(String)o+"lfotarget"	,0		,presets[0].values[14]	,0	,3		,potentiometer::inttype		);
-	//params.pots[15] = potentiometer("OP"+(String)(o+1)+" LFO Rate"					,"o"+(String)o+"lforate"	,.001f	,presets[0].values[15]	);
-	//params.pots[16] = potentiometer("OP"+(String)(o+1)+" LFO Rate (eighth note)"	,"o"+(String)o+"lfobpm"		,.001f	,presets[0].values[16]	,0	,32		,potentiometer::inttype		);
-	//params.pots[17] = potentiometer("OP"+(String)(o+1)+" LFO Amount"				,"o"+(String)o+"lfoamount"	,.001f	,presets[0].values[17]	);
-	//params.pots[18] = potentiometer("OP"+(String)(o+1)+" LFO Attack"				,"o"+(String)o+"lfoattack"	,.001f	,presets[0].values[18]	);
-	//}
+	for(int i = 1; i < getNumPrograms(); ++i) {
+		presets[i] = presets[0];
+		presets[i].name = "Program " + (String)i;
+	}
+
+	params.general[ 0] = potentiometer("Voices"						,"voices"			,0		,presets[0].general  [ 0]	,1	,24		,potentiometer::inttype		);
+	params.general[ 1] = potentiometer("Portamento"					,"portamento"		,.001f	,presets[0].general  [ 1]	);
+	params.general[ 2] = potentiometer("Legato"						,"legato"			,0		,presets[0].general  [ 2]	,0	,1		,potentiometer::booltype	);
+	params.general[ 3] = potentiometer("Pitch Bend"					,"pitchbend"		,.001f	,presets[0].general  [ 3]	,0	,24		,potentiometer::inttype		);
+	params.general[ 4] = potentiometer("LFO Sync"					,"lfosync"			,0		,presets[0].general  [ 4]	,0	,3		,potentiometer::inttype		);
+	params.general[ 5] = potentiometer("Arp On"						,"arpon"			,0		,presets[0].general  [ 5]	,0	,1		,potentiometer::booltype	);
+	params.general[ 6] = potentiometer("Arp Speed"					,"arpspeed"			,0		,presets[0].general  [ 6]	);
+	params.general[ 7] = potentiometer("Arp Speed (eighth note)"	,"arpbpm"			,0		,presets[0].general  [ 7]	,0	,32		,potentiometer::inttype		);
+	params.general[ 8] = potentiometer("Arp Direction"				,"arpdirection"		,0		,presets[0].general  [ 8]	,0	,4		,potentiometer::inttype		);
+	params.general[ 9] = potentiometer("Arp Length"					,"arplength"		,0		,presets[0].general  [ 9]	);
+	params.general[10] = potentiometer("Vibrato On"					,"vibratoon"		,.001f	,presets[0].general  [10]	,0	,1		,potentiometer::booltype	);
+	params.general[11] = potentiometer("Vibrato Rate"				,"vibratorate"		,.001f	,presets[0].general  [11]	);
+	params.general[12] = potentiometer("Vibrato Rate (eighth note)"	,"vibratobpm"		,.001f	,presets[0].general  [12]	,0	,32		,potentiometer::inttype		);
+	params.general[13] = potentiometer("Vibrato Amount"				,"vibratoamount"	,.001f	,presets[0].general  [13]	);
+	params.general[14] = potentiometer("Vibrato Attack"				,"vibratoattack"	,0		,presets[0].general  [14]	);
+	// TODO per op defaults
+	params.values [ 0] = potentiometer("On"							,"on"		 		,0		,presets[0].values[0][ 0]	,0	,1		,potentiometer::booltype	);
+	params.values [ 1] = potentiometer("Pan"						,"pan"				,0		,presets[0].values[0][ 1]	);
+	params.values [ 2] = potentiometer("Amplitude"					,"amp"				,0		,presets[0].values[0][ 2]	);
+	params.values [ 3] = potentiometer("Tone"						,"tone"				,.001f	,presets[0].values[0][ 3]	);
+	params.values [ 4] = potentiometer("Velocity"					,"velocity"			,0		,presets[0].values[0][ 4]	);
+	params.values [ 5] = potentiometer("After-Touch"				,"aftertouch"		,.001f	,presets[0].values[0][ 5]	);
+	params.values [ 6] = potentiometer("Frequency Mode"				,"freqmode"			,0		,presets[0].values[0][ 6]	,0	,1		,potentiometer::booltype	);
+	params.values [ 7] = potentiometer("Frequency Multiplier"		,"freqmult"			,.001f	,presets[0].values[0][ 7]	);
+	params.values [ 8] = potentiometer("Frequency Offset"			,"freqadd"			,.001f	,presets[0].values[0][ 8]	);
+	params.values [ 9] = potentiometer("Attack"						,"attack"			,.001f	,presets[0].values[0][ 9]	);
+	params.values [10] = potentiometer("Decay"						,"decay"			,.001f	,presets[0].values[0][10]	);
+	params.values [11] = potentiometer("Sustain"					,"sustain"			,.001f	,presets[0].values[0][11]	);
+	params.values [12] = potentiometer("Release"					,"release"			,.001f	,presets[0].values[0][12]	);
+	params.values [13] = potentiometer("LFO On"						,"lfoon"			,.001f	,presets[0].values[0][13]	,0	,1		,potentiometer::booltype	);
+	params.values [14] = potentiometer("LFO Target"					,"lfotarget"		,0		,presets[0].values[0][14]	,0	,3		,potentiometer::inttype		);
+	params.values [15] = potentiometer("LFO Rate"					,"lforate"			,.001f	,presets[0].values[0][15]	);
+	params.values [16] = potentiometer("LFO Rate (eighth note)"		,"lfobpm"			,.001f	,presets[0].values[0][16]	,0	,32		,potentiometer::inttype		);
+	params.values [17] = potentiometer("LFO Amount"					,"lfoamount"		,.001f	,presets[0].values[0][17]	);
+	params.values [18] = potentiometer("LFO Attack"					,"lfoattack"		,.001f	,presets[0].values[0][18]	);
 	// TODO FX
 
-	for(int i = 0; i < paramcount; i++) {
-		state.values[i] = params.pots[i].inflate(apvts.getParameter(params.pots[i].id)->getValue());
-		presets[currentpreset].values[i] = state.values[i];
-		if(params.pots[i].smoothtime > 0) params.pots[i].smooth.setCurrentAndTargetValue(state.values[i]);
-		add_listener(params.pots[i].id);
+	for(int i = 0; i < generalcount; ++i) {
+		state.general[i] = params.general[i].inflate(apvts.getParameter(params.general[i].id)->getValue());
+		presets[currentpreset].general[i] = state.general[i];
+		if(params.general[i].smoothtime > 0) params.general[i].smooth[0].setCurrentAndTargetValue(state.general[i]);
+		add_listener(params.general[i].id);
 	}
+	for(int i = 0; i < paramcount; ++i) {
+		for(int o = 0; o < MC; ++o) {
+			state.values[o][i] = params.values[i].inflate(apvts.getParameter("o"+(String)o+params.values[i].id)->getValue());
+			presets[currentpreset].values[o][i] = state.values[o][i];
+			if(params.values[i].smoothtime > 0) params.values[i].smooth[o].setCurrentAndTargetValue(state.values[o][i]);
+			add_listener("o"+(String)o+params.values[i].id);
+		}
+	}
+	params.antialiasing = apvts.getParameter("antialias")->getValue();
+	add_listener("antialias");
 }
 
 FMPlusAudioProcessor::~FMPlusAudioProcessor(){
 	close();
 }
 
-const String FMPlusAudioProcessor::getName() const { return "Plastic Funeral"; }
+const String FMPlusAudioProcessor::getName() const { return "FM+"; }
 bool FMPlusAudioProcessor::acceptsMidi() const { return false; }
 bool FMPlusAudioProcessor::producesMidi() const { return false; }
 bool FMPlusAudioProcessor::isMidiEffect() const { return false; }
@@ -76,32 +96,12 @@ void FMPlusAudioProcessor::setCurrentProgram(int index) {
 	if(currentpreset == index) return;
 
 	undo_manager.beginNewTransaction((String)"Changed preset to " += presets[index].name);
-	for(int i = 0; i < paramcount; i++) {
-		if(lerpstage < .001 || lerpchanged[i])
-			lerptable[i] = params.pots[i].normalize(presets[currentpreset].values[i]);
-		lerpchanged[i] = false;
-	}
 	currentpreset = index;
 
-	if(lerpstage <= 0) {
-		lerpstage = 1;
-		startTimerHz(30);
-	} else lerpstage = 1;
-}
-void FMPlusAudioProcessor::timerCallback() {
-	lerpstage *= .64f;
-	if(lerpstage < .001) {
-		for(int i = 0; i < paramcount; i++) if(!lerpchanged[i])
-			apvts.getParameter(params.pots[i].id)->setValueNotifyingHost(params.pots[i].normalize(presets[currentpreset].values[i]));
-		lerpstage = 0;
-		undo_manager.beginNewTransaction();
-		stopTimer();
-		return;
-	}
-	for(int i = 0; i < paramcount; i++) if(!lerpchanged[i]) {
-		lerptable[i] = (params.pots[i].normalize(presets[currentpreset].values[i])-lerptable[i])*.36f+lerptable[i];
-		apvts.getParameter(params.pots[i].id)->setValueNotifyingHost(lerptable[i]);
-	}
+	for(int i = 0; i < generalcount; ++i)
+		apvts.getParameter(params.general[i].id)->setValueNotifyingHost(params.general[i].normalize(presets[currentpreset].general[i]));
+	for(int i = 0; i < paramcount; ++i) for(int o = 0; o < MC; ++o)
+		apvts.getParameter("o"+(String)o+params.values[i].id)->setValueNotifyingHost(params.values[i].normalize(presets[currentpreset].values[o][i]));
 }
 const String FMPlusAudioProcessor::getProgramName(int index) {
 	return { presets[index].name };
@@ -112,8 +112,8 @@ void FMPlusAudioProcessor::changeProgramName(int index, const String& newName) {
 
 void FMPlusAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
 	if(!saved && sampleRate > 60000) {
-		params.oversampling = false;
-		//apvts.getParameter("oversampling")->setValueNotifyingHost(0);
+		params.antialiasing = .5f;
+		apvts.getParameter("antialias")->setValueNotifyingHost(.5f);
 	}
 	samplesperblock = samplesPerBlock;
 	samplerate = sampleRate;
@@ -129,15 +129,15 @@ void FMPlusAudioProcessor::changechannelnum(int newchannelnum) {
 void FMPlusAudioProcessor::reseteverything() {
 	if(channelnum <= 0 || samplesperblock <= 0) return;
 
-	for(int i = 0; i < paramcount; i++) if(params.pots[i].smoothtime > 0)
-		params.pots[i].smooth.reset(samplerate*(params.oversampling?2:1), params.pots[i].smoothtime);
-
-	preparedtoplay = true;
 	ospointerarray.resize(channelnum);
-	os.reset(new dsp::Oversampling<float>(channelnum,1,dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR));
-	os->initProcessing(samplesperblock);
-	os->setUsingIntegerLatency(true);
-	setoversampling(params.oversampling);
+	for(int i = 0; i < 3; ++i) {
+		os[i].reset(new dsp::Oversampling<float>(channelnum,i+1,dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR));
+		os[i]->initProcessing(samplesperblock);
+		os[i]->setUsingIntegerLatency(true);
+	}
+	preparedtoplay = true;
+	setoversampling();
+
 }
 void FMPlusAudioProcessor::releaseResources() { }
 
@@ -164,30 +164,26 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 
 	int numsamples = buffer.getNumSamples();
 	dsp::AudioBlock<float> block(buffer);
-	if(params.oversampling) {
-		dsp::AudioBlock<float> osblock = os->processSamplesUp(block);
-		for(int i = 0; i < channelnum; i++)
+	if(osindex > 0) {
+		dsp::AudioBlock<float> osblock = os[osindex-1]->processSamplesUp(block);
+		for(int i = 0; i < channelnum; ++i)
 			ospointerarray[i] = osblock.getChannelPointer(i);
 		osbuffer = AudioBuffer<float>(ospointerarray.data(), channelnum, static_cast<int>(osblock.getNumSamples()));
 		numsamples = osbuffer.getNumSamples();
 	}
 
 	float* const* channelData;
-	if(params.oversampling) channelData = osbuffer.getArrayOfWritePointers();
+	if(osindex > 0) channelData = osbuffer.getArrayOfWritePointers();
 	else channelData = buffer.getArrayOfWritePointers();
 
 	for(int sample = 0; sample < numsamples; ++sample) {
-		for(int i = 0; i < paramcount; i++) if(params.pots[i].smoothtime > 0)
-			state.values[i] = params.pots[i].smooth.getNextValue();
-
-		if(curfat != state.values[1] || curdry != state.values[3]) {
-			curfat = state.values[1];
-			curdry = state.values[3];
-			curnorm = normalizegain(curfat,curdry);
-		}
+		for(int i = 0; i < generalcount; ++i) if(params.general[i].smoothtime > 0)
+			state.general[i] = params.general[i].smooth[0].getNextValue();
+		for(int i = 0; i < paramcount; ++i) if(params.values[i].smoothtime > 0) for(int o = 0; o < MC; ++o)
+			state.values[o][i] = params.values[i].smooth[o].getNextValue();
 
 		for(int channel = 0; channel < channelnum; ++channel) {
-			channelData[channel][sample] = plasticfuneral(channelData[channel][sample],channel,channelnum,state,curnorm);
+			//channelData[channel][sample] = ???; TODO processing
 			if(prmscount < samplerate*2) {
 				prmsadd += channelData[channel][sample]*channelData[channel][sample];
 				prmscount++;
@@ -195,61 +191,32 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 		}
 	}
 
-	if(params.oversampling) os->processSamplesDown(block);
+	if(osindex > 0) os[osindex-1]->processSamplesDown(block);
 
 	rmsadd = prmsadd;
 	rmscount = prmscount;
 }
 
-float FMPlusAudioProcessor::plasticfuneral(float source, int channel, int channelcount, pluginpreset stt, float nrm) {
-	double channeloffset = 0;
-	if(channelcount > 1) channeloffset = ((double)channel / (channelcount - 1)) * 2 - 1;
-	double freq = fmax(fmin(stt.values[0] + stt.values[4] * .2 * channeloffset, 1), 0);
-	double smpl = source * (100 - cos(freq * 1.5708) * 99);
-	double pfreq = fmod(fabs(smpl), 4);
-	pfreq = (pfreq > 3 ? (pfreq - 4) : (pfreq > 1 ? (2 - pfreq) : pfreq)) * (smpl > 0 ? 1 : -1);
-	double pdrive = fmax(fmin(smpl, 1), -1);
-	smpl = pdrive * stt.values[2] + pfreq * (1 - stt.values[2]);
-	return (float)fmin(fmax(((smpl + (sin(smpl * 1.5708) - smpl) * stt.values[1]) * (1 - stt.values[3]) + source * stt.values[3]) * stt.values[5] * nrm,-1),1);
-}
-
-float FMPlusAudioProcessor::normalizegain(float fat, float dry) {
-	if(fat > 0 || dry == 0) {
-		double c = fat*dry-fat;
-		double x = (c+1)/(c*1.5708);
-		if(x > 0 && x < 1) {
-			x = acos(x)/1.5708;
-			return 1/fmax(fabs((fat*(sin(x*1.5708)-x)+x)*(1-dry)+x*dry),1);
-		}
-		return 1;
-	}
-	if(fat < -7.2f) {
-		double newnorm = 1;
-		for(double i = .4836f; i <= .71f; i += .005f)
-			newnorm = fmax(newnorm,fabs(i+(sin(i*1.5708)-i)*fat)*(1-dry)+i*dry);
-		return 1/newnorm;
-	}
-	return 1;
-}
-
-void FMPlusAudioProcessor::setoversampling(bool toggle) {
+void FMPlusAudioProcessor::setoversampling() {
 	if(!preparedtoplay) return;
-	if(toggle) {
+	osindex = fmin(3,fmax(0,floor(params.antialiasing*8-4)));
+	if(osindex > 0) {
 		if(channelnum <= 0) return;
-		os->reset();
-		setLatencySamples(os->getLatencyInSamples());
-		for(int i = 0; i < paramcount; i++) if(params.pots[i].smoothtime > 0)
-			params.pots[i].smooth.reset(samplerate*2, params.pots[i].smoothtime);
+		os[osindex-1]->reset();
+		setLatencySamples(os[osindex-1]->getLatencyInSamples());
 	} else {
 		setLatencySamples(0);
-		for(int i = 0; i < paramcount; i++) if(params.pots[i].smoothtime > 0)
-			params.pots[i].smooth.reset(samplerate, params.pots[i].smoothtime);
 	}
+	int oversampleamount = pow(2,osindex);
+	for(int i = 0; i < paramcount; ++i) if(params.general[i].smoothtime > 0)
+		params.general[i].smooth[0].reset(samplerate*oversampleamount,params.general[i].smoothtime);
+	for(int i = 0; i < paramcount; ++i) if(params.values[i].smoothtime > 0) for(int o = 0; o < MC; ++o)
+		params.values[i].smooth[o].reset(samplerate*oversampleamount,params.values[i].smoothtime);
 }
 
 bool FMPlusAudioProcessor::hasEditor() const { return true; }
 AudioProcessorEditor* FMPlusAudioProcessor::createEditor() {
-	return new FMPlusAudioProcessorEditor(*this,paramcount,presets[currentpreset],params);
+	return new FMPlusAudioProcessorEditor(*this,generalcount,paramcount,presets[currentpreset],params);
 }
 
 void FMPlusAudioProcessor::getStateInformation(MemoryBlock& destData) {
@@ -258,17 +225,21 @@ void FMPlusAudioProcessor::getStateInformation(MemoryBlock& destData) {
 
 	data << version << delimiter
 		<< currentpreset << delimiter
-		<< (params.oversampling?1:0) << delimiter;
+		<< params.antialiasing << delimiter
+		<< params.selectedtab.get() << delimiter
+		<< params.tuningfile << delimiter;
 
-	for(int i = 0; i < getNumPrograms(); i++) {
-		data << presets[i].name << delimiter;
+	for(int i = 0; i < 128; ++i)
+		data << pitches[i] << delimiter;
+
+	for(int i = 0; i < getNumPrograms(); ++i)
 		data << get_preset(i) << delimiter;
-	}
 
 	MemoryOutputStream stream(destData, false);
 	stream.writeString(data.str());
 }
 void FMPlusAudioProcessor::setStateInformation(const void* data, int sizeInBytes) {
+	//*/
 	const char delimiter = '\n';
 	saved = true;
 	try {
@@ -282,12 +253,20 @@ void FMPlusAudioProcessor::setStateInformation(const void* data, int sizeInBytes
 		currentpreset = std::stoi(token);
 
 		std::getline(ss, token, delimiter);
-		params.oversampling = std::stof(token) > .5;
+		params.antialiasing = std::stof(token);
 
-		for(int i = 0; i < getNumPrograms(); i++) {
+		std::getline(ss, token, delimiter);
+		params.selectedtab = std::stoi(token);
+
+		std::getline(ss, token, delimiter);
+		params.tuningfile = (String)token;
+
+		for(int i = 0; i < 128; ++i) {
 			std::getline(ss, token, delimiter);
-			presets[i].name = token;
+			pitches[i] = std::stof(token);
+		}
 
+		for(int i = 0; i < getNumPrograms(); ++i) {
 			std::getline(ss, token, delimiter);
 			set_preset(token, i, ',', true);
 		}
@@ -300,13 +279,32 @@ void FMPlusAudioProcessor::setStateInformation(const void* data, int sizeInBytes
 	} catch(...) {
 		debug((String)"Error loading saved data");
 	}
+
+	apvts.getParameter("antialias")->setValueNotifyingHost(params.antialiasing);
+	//*/
 }
 const String FMPlusAudioProcessor::get_preset(int preset_id, const char delimiter) {
+
 	std::ostringstream data;
 
-	data << version << delimiter;
-	for(int v = 0; v < paramcount; v++)
-		data << presets[preset_id].values[v] << delimiter;
+	data << version << delimiter
+		<< presets[preset_id].name.replace(",","ñ") << delimiter
+		<< (presets[preset_id].unsaved?1:0) << delimiter;
+
+	for(int i = 0; i < generalcount; i++)
+		data << presets[preset_id].general[i] << delimiter;
+	for(int i = 0; i < paramcount; i++) for(int o = 0; o < MC; ++o)
+		data << presets[preset_id].values[o][i] << delimiter;
+	for(int i = 0; i < (MC+1)*2; ++i)
+		data << presets[preset_id].oppos[i] << delimiter;
+	for(int o = 0; o < (MC+1); ++o) {
+		data << presets[preset_id].opconnections[o].size() << delimiter;
+		for(int i = 0; i < presets[preset_id].opconnections[o].size(); ++i) {
+			data << presets[preset_id].opconnections[o][i].input << delimiter
+				<< presets[preset_id].opconnections[o][i].influence << delimiter;
+		}
+	}
+	// TODO LFO
 
 	return data.str();
 }
@@ -320,10 +318,37 @@ void FMPlusAudioProcessor::set_preset(const String& preset, int preset_id, const
 		std::getline(ss, token, delimiter);
 		int save_version = std::stoi(token);
 
-		for(int v = 0; v < paramcount; v++) {
+		std::getline(ss, token, delimiter);
+		presets[preset_id].name = ((String)token).replace("ñ",",");
+
+		std::getline(ss, token, delimiter);
+		presets[preset_id].unsaved = std::stoi(token) > .5;
+
+		for(int i = 0; i < generalcount; i++) {
 			std::getline(ss, token, delimiter);
-			presets[preset_id].values[v] = std::stof(token);
+			presets[preset_id].general[i] = std::stof(token);
 		}
+		for(int i = 0; i < paramcount; i++) for(int o = 0; o < MC; ++o) {
+			std::getline(ss, token, delimiter);
+			presets[preset_id].values[o][i] = std::stof(token);
+		}
+
+		for(int i = 0; i < (MC+1)*2; ++i) {
+			std::getline(ss, token, delimiter);
+			presets[preset_id].oppos[i] = std::stoi(token);
+		}
+		for(int o = 0; o < (MC+1); ++o) {
+			std::getline(ss, token, delimiter);
+			int size = std::stoi(token);
+			for(int i = 0; i < size; ++i) {
+				std::getline(ss, token, delimiter);
+				int input = std::stoi(token);
+				std::getline(ss, token, delimiter);
+				float influence = std::stof(token);
+				presets[preset_id].opconnections[o].push_back(connection(input,o,influence));
+			}
+		}
+		// TODO LFO
 
 	} catch(const char* e) {
 		error = "Error loading saved data: "+(String)e;
@@ -343,16 +368,28 @@ void FMPlusAudioProcessor::set_preset(const String& preset, int preset_id, const
 
 	if(currentpreset != preset_id) return;
 
-	for(int i = 0; i < paramcount; i++) {
-		apvts.getParameter(params.pots[i].id)->setValueNotifyingHost(params.pots[i].normalize(presets[currentpreset].values[i]));
-	}
+	for(int i = 0; i < generalcount; ++i)
+		apvts.getParameter(params.general[i].id)->setValueNotifyingHost(params.general[i].normalize(presets[currentpreset].general[i]));
+	for(int i = 0; i < paramcount; ++i) for(int o = 0; o < MC; ++o)
+		apvts.getParameter("o"+(String)o+params.values[i].id)->setValueNotifyingHost(params.values[i].normalize(presets[currentpreset].values[o][i]));
 }
 
 void FMPlusAudioProcessor::parameterChanged(const String& parameterID, float newValue) {
-	for(int i = 0; i < paramcount; i++) if(parameterID == params.pots[i].id) {
-		if(params.pots[i].smoothtime > 0) params.pots[i].smooth.setTargetValue(newValue);
-		else state.values[i] = newValue;
-		if(lerpstage < .001 || lerpchanged[i]) presets[currentpreset].values[i] = newValue;
+	if(parameterID == "antialias") {
+		params.antialiasing = newValue;
+		setoversampling();
+		return;
+	}
+	for(int i = 0; i < generalcount; ++i) if(parameterID == params.general[i].id) {
+		if(params.general[i].smoothtime > 0) params.general[i].smooth[0].setTargetValue(newValue);
+		else state.general[i] = newValue;
+		presets[currentpreset].general[i] = newValue;
+		return;
+	}
+	for(int i = 0; i < paramcount; ++i) for(int o = 0; o < MC; ++o) if(parameterID == ("o"+(String)o+params.values[i].id)) {
+		if(params.values[i].smoothtime > 0) params.values[i].smooth[o].setTargetValue(newValue);
+		else state.values[o][i] = newValue;
+		presets[currentpreset].values[o][i] = newValue;
 		return;
 	}
 }
@@ -365,7 +402,7 @@ AudioProcessorValueTreeState::ParameterLayout FMPlusAudioProcessor::create_param
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"portamento"				,1},"Portamento"								,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.0f	));
 	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"legato"					,1},"Legato"																	 				 ,false	));
 	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"pitchbend"				,1},"Pitch Bend"																 ,0		,24		 ,2		));
-	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"lfosync"					,1},"LFO Sync"																	 ,0		,2		 ,0		)); // NOTE, RANDOM, FREE
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"lfosync"					,1},"LFO Sync"																	 ,0		,3		 ,0		)); // NOTE, RANDOM, MONO, TRIGGER
 	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"arpon"					,1},"Arp On"																	 				 ,false	));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"arpspeed"				,1},"Arp Speed"									,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.5f	));
 	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"arpbpm"					,1},"Arp Speed (eighth note)"													 ,0		,32		 ,0		));
@@ -376,9 +413,9 @@ AudioProcessorValueTreeState::ParameterLayout FMPlusAudioProcessor::create_param
 	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"vibratobpm"				,1},"Vibrato Rate (eighth note)"												 ,0		,32		 ,0		));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"vibratoamount"			,1},"Vibrato Amount"							,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.5f	));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"vibratoattack"			,1},"Vibrato Attack"							,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.0f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"antialias"				,1},"Anti-Alias"								,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.5f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"antialias"				,1},"Anti-Alias"								,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.7f	));
 	for(int o = 0; o < MC; ++o) {
-	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"o"+(String)o+"on"		,1},"OP"+(String)(o+1)+" On"													 				 ,o<=2	));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"o"+(String)o+"on"		,1},"OP"+(String)(o+1)+" On"													 				 ,o<=1	));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"o"+(String)o+"pan"		,1},"OP"+(String)(o+1)+" Pan"					,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.5f	));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"o"+(String)o+"amp"		,1},"OP"+(String)(o+1)+" Amplitude"				,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.5f	));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"o"+(String)o+"tone"		,1},"OP"+(String)(o+1)+" Tone"					,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.5f	));

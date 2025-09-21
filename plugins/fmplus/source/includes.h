@@ -19,3 +19,6 @@
 using namespace juce;
 
 #define MC 8
+#define MAXA 8
+#define MAXD 8
+#define MAXR 8
