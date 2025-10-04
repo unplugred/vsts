@@ -34,7 +34,8 @@ clap_juce_extensions_plugin(TARGET "${BaseTargetName}"
 
 target_sources("${BaseTargetName}" PRIVATE
 	source/editor.cpp
-	source/processor.cpp)
+	source/processor.cpp
+	source/functions.cpp)
 
 target_compile_definitions("${BaseTargetName}" PUBLIC
 	JUCE_DISPLAY_SPLASH_SCREEN=0

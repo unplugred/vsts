@@ -1,6 +1,7 @@
 #pragma once
 #include "includes.h"
 #include "processor.h"
+#include "functions.h"
 using namespace gl;
 
 class LookNFeel : public plugmachine_look_n_feel {
@@ -26,15 +27,18 @@ struct box {
 	int h = 0;
 	int type = 0; // -1 - inactive, 0 - line, 1 - centered, 2 - noline, 3 - tick, 4 - burger
 	int knob = -1;
+	int textamount = 0;
 	bool corner = false;
 	int mesh = -1;
-	box(int pknob = -1, int px = 0, int py = 0, int pw = 0, int ph = 0, int ptype = -1, bool pcorner = false) {
+	int textmesh = -1;
+	box(int pknob = -1, int px = 0, int py = 0, int pw = 0, int ph = 0, int ptype = -1, int ptextamount = 0, bool pcorner = false) {
 		knob = pknob;
 		x = px;
 		y = py;
 		w = pw;
 		h = ph;
 		type = ptype;
+		textamount = ptextamount;
 		corner = pcorner;
 	}
 };
@@ -43,13 +47,16 @@ struct op {
 	int pos[2] { 0,0 };
 	std::vector<connection> connections;
 	float indicator = 0;
+	int textmesh = -1;
 };
 
 struct knob {
 	float value[MC];
+	float valuesmoothed = 0;
+	double velocity = 0;
 	String id;
 	String name;
-	bool isbool = false;
+	potentiometer::ptype ttype = potentiometer::ptype::floattype;
 	float minimumvalue = 0.f;
 	float maximumvalue = 1.f;
 	float defaultvalue = 0.f;
@@ -71,6 +78,8 @@ public:
 	void renderOpenGL() override;
 	void openGLContextClosing() override;
 	void calcvis();
+	void rebuildtab(int tab);
+	void updatevalue(int param);
 	void paint(Graphics&) override;
 
 	void timerCallback() override;
@@ -83,7 +92,8 @@ public:
 	void mouseUp(const MouseEvent& event) override;
 	void mouseDoubleClick(const MouseEvent& event) override;
 	void mouseWheelMove(const MouseEvent& event, const MouseWheelDetails& wheel) override;
-	int recalc_hover(float x, float y, bool update_highlight = true);
+	int recalc_hover(float x, float y);
+	void updatehighlight(bool update_adsr = false);
 
 	knob knobs[16+19];
 	int knobcount = 0;
@@ -91,13 +101,16 @@ public:
 	int paramcount = 0;
 	float visline[2][452];
 	bool is_stereo = false;
+	String tuningfile = "";
+	String themefile = "";
+	bool presetunsaved = false;
 private:
 	FMPlusAudioProcessor& audio_processor;
 
 	OpenGLTexture basetex;
 	OpenGLTexture tabselecttex;
 	OpenGLTexture headertex;
-	int selectedtab = 3;
+	int selectedtab = -1;
 	std::shared_ptr<OpenGLShaderProgram> baseshader;
 
 	int hover = -1;
@@ -117,13 +130,24 @@ private:
 	std::shared_ptr<OpenGLShaderProgram> creditsshader;
 
 	box boxes[24];
-	float squaremesh[38*6*4];
-	int currentpoint = -1;
 	int boxnum = 0;
+	double adsr[4*2*3]; // [a,d,s,r],[t,b],[c, t, v]
+	int tabanimation = 100;
+	int opanimation = 100;
+
+	float squaremesh[38*6*4];
+	int squarelength = -1;
+	int highlight = -1;
 	std::shared_ptr<OpenGLShaderProgram> squareshader;
-	void rebuildtab();
-	void updateburger();
 	void addsquare(float x, float y, float w, float h, float color = 0, bool corner = false);
+
+	int prevtextindex[4];
+	float textmesh[285*6*4]; // X Y COL CHAR
+	int textlength = -1;
+	std::shared_ptr<OpenGLShaderProgram> textshader;
+	OpenGLTexture texttex;
+	void addtext(float x, float y, String txt, float color = 0);
+	void replacetext(int id, String txt, int length = -1);
 
 	OpenGLTexture operatortex;
 	op ops[MC+1];
@@ -132,7 +156,6 @@ private:
 	std::shared_ptr<OpenGLShaderProgram> indicatorshader;
 
 	float rms = 0;
-	float time = 0;
 
 	// light theme
 	//*/

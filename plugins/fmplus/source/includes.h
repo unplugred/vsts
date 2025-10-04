@@ -22,3 +22,9 @@ using namespace juce;
 #define MAXA 8
 #define MAXD 8
 #define MAXR 8
+#define MAXPORT 4
+#define MAXARP 1
+#define MAXVIB 1
+#define MAXVIBATT 4
+#define MAXLFO 24
+#define MAXLFOATT 4

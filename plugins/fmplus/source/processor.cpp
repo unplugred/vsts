@@ -10,7 +10,7 @@ FMPlusAudioProcessor::FMPlusAudioProcessor() :
 	for(int i = 0; i < 128; ++i)
 		pitches[i] = (440.f/32.f)*pow(2.f,((i-9.f)/12.f));
 
-	presets[0] = pluginpreset("Default"); // TODO stringify default preset
+	presets[0] = pluginpreset("Init"); // TODO stringify default preset
 	for(int i = 0; i < generalcount; ++i)
 		presets[0].general[i] = 0;
 	for(int i = 0; i < paramcount; ++i) for(int o = 0; o < MC; ++o)
@@ -25,39 +25,39 @@ FMPlusAudioProcessor::FMPlusAudioProcessor() :
 		presets[i].name = "Program " + (String)i;
 	}
 
-	params.general[ 0] = potentiometer("Voices"						,"voices"			,0		,presets[0].general  [ 0]	,1	,24		,potentiometer::inttype		);
+	params.general[ 0] = potentiometer("Voices"						,"voices"			,0		,presets[0].general  [ 0]	,1	,24	,potentiometer::inttype		);
 	params.general[ 1] = potentiometer("Portamento"					,"portamento"		,.001f	,presets[0].general  [ 1]	);
-	params.general[ 2] = potentiometer("Legato"						,"legato"			,0		,presets[0].general  [ 2]	,0	,1		,potentiometer::booltype	);
-	params.general[ 3] = potentiometer("Pitch Bend"					,"pitchbend"		,.001f	,presets[0].general  [ 3]	,0	,24		,potentiometer::inttype		);
-	params.general[ 4] = potentiometer("LFO Sync"					,"lfosync"			,0		,presets[0].general  [ 4]	,0	,3		,potentiometer::inttype		);
-	params.general[ 5] = potentiometer("Arp On"						,"arpon"			,0		,presets[0].general  [ 5]	,0	,1		,potentiometer::booltype	);
-	params.general[ 6] = potentiometer("Arp Speed"					,"arpspeed"			,0		,presets[0].general  [ 6]	);
-	params.general[ 7] = potentiometer("Arp Speed (eighth note)"	,"arpbpm"			,0		,presets[0].general  [ 7]	,0	,32		,potentiometer::inttype		);
-	params.general[ 8] = potentiometer("Arp Direction"				,"arpdirection"		,0		,presets[0].general  [ 8]	,0	,4		,potentiometer::inttype		);
-	params.general[ 9] = potentiometer("Arp Length"					,"arplength"		,0		,presets[0].general  [ 9]	);
-	params.general[10] = potentiometer("Vibrato On"					,"vibratoon"		,.001f	,presets[0].general  [10]	,0	,1		,potentiometer::booltype	);
+	params.general[ 2] = potentiometer("Legato"						,"legato"			,0		,presets[0].general  [ 2]	,0	,1	,potentiometer::booltype	);
+	params.general[ 3] = potentiometer("LFO Sync"					,"lfosync"			,0		,presets[0].general  [ 4]	,0	,3	,potentiometer::inttype		);
+	params.general[ 4] = potentiometer("Pitch Bend"					,"pitchbend"		,.001f	,presets[0].general  [ 3]	,0	,24	,potentiometer::inttype		);
+	params.general[ 5] = potentiometer("Arp On"						,"arpon"			,0		,presets[0].general  [ 5]	,0	,1	,potentiometer::booltype	);
+	params.general[ 6] = potentiometer("Arp Direction"				,"arpdirection"		,0		,presets[0].general  [ 6]	,0	,4	,potentiometer::inttype		);
+	params.general[ 7] = potentiometer("Arp Length"					,"arplength"		,0		,presets[0].general  [ 7]	);
+	params.general[ 8] = potentiometer("Arp Speed"					,"arpspeed"			,0		,presets[0].general  [ 8]	);
+	params.general[ 9] = potentiometer("Arp Speed (BPM sync)"		,"arpbpm"			,0		,presets[0].general  [ 9]	,0	,10	,potentiometer::inttype		);
+	params.general[10] = potentiometer("Vibrato On"					,"vibratoon"		,.001f	,presets[0].general  [10]	,0	,1	,potentiometer::booltype	);
 	params.general[11] = potentiometer("Vibrato Rate"				,"vibratorate"		,.001f	,presets[0].general  [11]	);
-	params.general[12] = potentiometer("Vibrato Rate (eighth note)"	,"vibratobpm"		,.001f	,presets[0].general  [12]	,0	,32		,potentiometer::inttype		);
+	params.general[12] = potentiometer("Vibrato Rate (BPM sync)"	,"vibratobpm"		,.001f	,presets[0].general  [12]	,0	,10	,potentiometer::inttype		);
 	params.general[13] = potentiometer("Vibrato Amount"				,"vibratoamount"	,.001f	,presets[0].general  [13]	);
 	params.general[14] = potentiometer("Vibrato Attack"				,"vibratoattack"	,0		,presets[0].general  [14]	);
 	// TODO per op defaults
-	params.values [ 0] = potentiometer("On"							,"on"		 		,0		,presets[0].values[0][ 0]	,0	,1		,potentiometer::booltype	);
+	params.values [ 0] = potentiometer("On"							,"on"		 		,0		,presets[0].values[0][ 0]	,0	,1	,potentiometer::booltype	);
 	params.values [ 1] = potentiometer("Pan"						,"pan"				,0		,presets[0].values[0][ 1]	);
 	params.values [ 2] = potentiometer("Amplitude"					,"amp"				,0		,presets[0].values[0][ 2]	);
 	params.values [ 3] = potentiometer("Tone"						,"tone"				,.001f	,presets[0].values[0][ 3]	);
 	params.values [ 4] = potentiometer("Velocity"					,"velocity"			,0		,presets[0].values[0][ 4]	);
 	params.values [ 5] = potentiometer("After-Touch"				,"aftertouch"		,.001f	,presets[0].values[0][ 5]	);
-	params.values [ 6] = potentiometer("Frequency Mode"				,"freqmode"			,0		,presets[0].values[0][ 6]	,0	,1		,potentiometer::booltype	);
-	params.values [ 7] = potentiometer("Frequency Multiplier"		,"freqmult"			,.001f	,presets[0].values[0][ 7]	);
+	params.values [ 6] = potentiometer("Frequency Mode"				,"freqmode"			,0		,presets[0].values[0][ 6]	,0	,1	,potentiometer::booltype	);
+	params.values [ 7] = potentiometer("Frequency Multiplier"		,"freqmult"			,.001f	,presets[0].values[0][ 7]	,0	,24	);
 	params.values [ 8] = potentiometer("Frequency Offset"			,"freqadd"			,.001f	,presets[0].values[0][ 8]	);
 	params.values [ 9] = potentiometer("Attack"						,"attack"			,.001f	,presets[0].values[0][ 9]	);
 	params.values [10] = potentiometer("Decay"						,"decay"			,.001f	,presets[0].values[0][10]	);
 	params.values [11] = potentiometer("Sustain"					,"sustain"			,.001f	,presets[0].values[0][11]	);
 	params.values [12] = potentiometer("Release"					,"release"			,.001f	,presets[0].values[0][12]	);
-	params.values [13] = potentiometer("LFO On"						,"lfoon"			,.001f	,presets[0].values[0][13]	,0	,1		,potentiometer::booltype	);
-	params.values [14] = potentiometer("LFO Target"					,"lfotarget"		,0		,presets[0].values[0][14]	,0	,3		,potentiometer::inttype		);
+	params.values [13] = potentiometer("LFO On"						,"lfoon"			,.001f	,presets[0].values[0][13]	,0	,1	,potentiometer::booltype	);
+	params.values [14] = potentiometer("LFO Target"					,"lfotarget"		,0		,presets[0].values[0][14]	,0	,3	,potentiometer::inttype		);
 	params.values [15] = potentiometer("LFO Rate"					,"lforate"			,.001f	,presets[0].values[0][15]	);
-	params.values [16] = potentiometer("LFO Rate (eighth note)"		,"lfobpm"			,.001f	,presets[0].values[0][16]	,0	,32		,potentiometer::inttype		);
+	params.values [16] = potentiometer("LFO Rate (BPM sync)"		,"lfobpm"			,.001f	,presets[0].values[0][16]	,0	,12	,potentiometer::inttype		);
 	params.values [17] = potentiometer("LFO Amount"					,"lfoamount"		,.001f	,presets[0].values[0][17]	);
 	params.values [18] = potentiometer("LFO Attack"					,"lfoattack"		,.001f	,presets[0].values[0][18]	);
 	// TODO FX
@@ -225,6 +225,7 @@ void FMPlusAudioProcessor::getStateInformation(MemoryBlock& destData) {
 
 	data << version << delimiter
 		<< currentpreset << delimiter
+		<< (params.presetunsaved?1:0) << delimiter
 		<< params.antialiasing << delimiter
 		<< params.selectedtab.get() << delimiter
 		<< params.tuningfile << delimiter;
@@ -251,6 +252,9 @@ void FMPlusAudioProcessor::setStateInformation(const void* data, int sizeInBytes
 
 		std::getline(ss, token, delimiter);
 		currentpreset = std::stoi(token);
+
+		std::getline(ss, token, delimiter);
+		params.presetunsaved = std::stoi(token) > .5;
 
 		std::getline(ss, token, delimiter);
 		params.antialiasing = std::stof(token);
@@ -288,8 +292,7 @@ const String FMPlusAudioProcessor::get_preset(int preset_id, const char delimite
 	std::ostringstream data;
 
 	data << version << delimiter
-		<< presets[preset_id].name.replace(",","ñ") << delimiter
-		<< (presets[preset_id].unsaved?1:0) << delimiter;
+		<< presets[preset_id].name.replace(",","ñ") << delimiter;
 
 	for(int i = 0; i < generalcount; i++)
 		data << presets[preset_id].general[i] << delimiter;
@@ -320,9 +323,6 @@ void FMPlusAudioProcessor::set_preset(const String& preset, int preset_id, const
 
 		std::getline(ss, token, delimiter);
 		presets[preset_id].name = ((String)token).replace("ñ",",");
-
-		std::getline(ss, token, delimiter);
-		presets[preset_id].unsaved = std::stoi(token) > .5;
 
 		for(int i = 0; i < generalcount; i++) {
 			std::getline(ss, token, delimiter);
@@ -384,12 +384,16 @@ void FMPlusAudioProcessor::parameterChanged(const String& parameterID, float new
 		if(params.general[i].smoothtime > 0) params.general[i].smooth[0].setTargetValue(newValue);
 		else state.general[i] = newValue;
 		presets[currentpreset].general[i] = newValue;
+
+		params.presetunsaved = true;
 		return;
 	}
 	for(int i = 0; i < paramcount; ++i) for(int o = 0; o < MC; ++o) if(parameterID == ("o"+(String)o+params.values[i].id)) {
 		if(params.values[i].smoothtime > 0) params.values[i].smooth[o].setTargetValue(newValue);
 		else state.values[o][i] = newValue;
 		presets[currentpreset].values[o][i] = newValue;
+
+		params.presetunsaved = true;
 		return;
 	}
 }
@@ -399,41 +403,41 @@ AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new FMPlusAudioProce
 AudioProcessorValueTreeState::ParameterLayout FMPlusAudioProcessor::create_parameters() {
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
 	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"voices"					,1},"Voices"																	 ,1		,24		 ,12	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"portamento"				,1},"Portamento"								,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.0f	));
-	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"legato"					,1},"Legato"																	 				 ,false	));
-	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"pitchbend"				,1},"Pitch Bend"																 ,0		,24		 ,2		));
-	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"lfosync"					,1},"LFO Sync"																	 ,0		,3		 ,0		)); // NOTE, RANDOM, MONO, TRIGGER
-	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"arpon"					,1},"Arp On"																	 				 ,false	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"arpspeed"				,1},"Arp Speed"									,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.5f	));
-	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"arpbpm"					,1},"Arp Speed (eighth note)"													 ,0		,32		 ,0		));
-	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"arpdirection"			,1},"Arp Direction"																 ,0		,4		 ,0		)); // UP, DOWN, U&D, D&U, RANDOM
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"arplength"				,1},"Arp Length"								,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.5f	));
-	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"vibratoon"				,1},"Vibrato On"																 				 ,false	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"vibratorate"				,1},"Vibrato Rate"								,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.5f	));
-	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"vibratobpm"				,1},"Vibrato Rate (eighth note)"												 ,0		,32		 ,0		));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"vibratoamount"			,1},"Vibrato Amount"							,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.5f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"vibratoattack"			,1},"Vibrato Attack"							,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.0f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"antialias"				,1},"Anti-Alias"								,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.7f	));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"portamento"				,1},"Portamento"								,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(toportamento		).withValueFromStringFunction(fromportamento	)));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"legato"					,1},"Legato"																	 				 ,false	,AudioParameterBoolAttributes()	.withStringFromValueFunction(tobool				).withValueFromStringFunction(frombool			)));
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"lfosync"					,1},"LFO Sync"																	 ,0		,3		 ,0		,AudioParameterIntAttributes()	.withStringFromValueFunction(tolfosync			).withValueFromStringFunction(fromlfosync		))); // NOTE, RANDOM, UNISON, TRIGGER
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"pitchbend"				,1},"Pitch Bend"																 ,0		,24		 ,2		,AudioParameterIntAttributes()	.withStringFromValueFunction(topitchbend		).withValueFromStringFunction(frompitchbend		)));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"arpon"					,1},"Arp On"																	 				 ,false	,AudioParameterBoolAttributes()	.withStringFromValueFunction(tobool				).withValueFromStringFunction(frombool			)));
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"arpdirection"			,1},"Arp Direction"																 ,0		,4		 ,0		,AudioParameterIntAttributes()	.withStringFromValueFunction(toarpdirection		).withValueFromStringFunction(fromarpdirection	))); // UP, DOWN, U&D, D&U, RANDOM
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"arpspeed"				,1},"Arp Speed"									,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.5f	,AudioParameterFloatAttributes().withStringFromValueFunction(toarpspeed			).withValueFromStringFunction(fromarpspeed		)));
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"arpbpm"					,1},"Arp Speed (BPM sync)"														 ,0		,10		 ,0		,AudioParameterIntAttributes()	.withStringFromValueFunction(toarpbpm			).withValueFromStringFunction(fromarpbpm		)));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"arplength"				,1},"Arp Length"								,juce::NormalisableRange<float	>(0.0f	,1.0f	),1.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(toarplength		).withValueFromStringFunction(fromarplength		)));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"vibratoon"				,1},"Vibrato On"																 				 ,false	,AudioParameterBoolAttributes()	.withStringFromValueFunction(tobool				).withValueFromStringFunction(frombool			)));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"vibratorate"				,1},"Vibrato Rate"								,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.5f	,AudioParameterFloatAttributes().withStringFromValueFunction(tovibratorate		).withValueFromStringFunction(fromvibratorate	)));
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"vibratobpm"				,1},"Vibrato Rate (BPM sync)"													 ,0		,10		 ,0		,AudioParameterIntAttributes()	.withStringFromValueFunction(tovibratobpm		).withValueFromStringFunction(fromvibratobpm	)));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"vibratoamount"			,1},"Vibrato Amount"							,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.5f	,AudioParameterFloatAttributes().withStringFromValueFunction(tovibratoamount	).withValueFromStringFunction(fromvibratoamount	)));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"vibratoattack"			,1},"Vibrato Attack"							,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(tovibratoattack	).withValueFromStringFunction(fromvibratoattack	)));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"antialias"				,1},"Anti-Alias"								,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.7f	,AudioParameterFloatAttributes().withStringFromValueFunction(toantialias		).withValueFromStringFunction(fromantialias		)));
 	for(int o = 0; o < MC; ++o) {
-	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"o"+(String)o+"on"		,1},"OP"+(String)(o+1)+" On"													 				 ,o<=1	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"o"+(String)o+"pan"		,1},"OP"+(String)(o+1)+" Pan"					,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.5f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"o"+(String)o+"amp"		,1},"OP"+(String)(o+1)+" Amplitude"				,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.5f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"o"+(String)o+"tone"		,1},"OP"+(String)(o+1)+" Tone"					,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.5f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"o"+(String)o+"velocity"	,1},"OP"+(String)(o+1)+" Velocity"				,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.0f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"o"+(String)o+"aftertouch",1},"OP"+(String)(o+1)+" After-Touch"			,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.0f	));
-	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"o"+(String)o+"freqmode"	,1},"OP"+(String)(o+1)+" Frequency Mode"														 ,true	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"o"+(String)o+"freqmult"	,1},"OP"+(String)(o+1)+" Frequency Multiplier"	,juce::NormalisableRange<float	>(0.0f	,1.0f	),1.0f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"o"+(String)o+"freqadd"	,1},"OP"+(String)(o+1)+" Frequency Offset"		,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.5f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"o"+(String)o+"attack"	,1},"OP"+(String)(o+1)+" Attack"				,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.0f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"o"+(String)o+"decay"		,1},"OP"+(String)(o+1)+" Decay"					,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.0f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"o"+(String)o+"sustain"	,1},"OP"+(String)(o+1)+" Sustain"				,juce::NormalisableRange<float	>(0.0f	,1.0f	),1.0f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"o"+(String)o+"release"	,1},"OP"+(String)(o+1)+" Release"				,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.0f	));
-	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"o"+(String)o+"lfoon"		,1},"OP"+(String)(o+1)+" LFO On"												 				 ,false	));
-	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"o"+(String)o+"lfotarget"	,1},"OP"+(String)(o+1)+" LFO Target"											 ,0		,3		 ,0		)); // AMPLITUDE, PITCH, PAN, TONE
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"o"+(String)o+"lforate"	,1},"OP"+(String)(o+1)+" LFO Rate"				,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.5f	));
-	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"o"+(String)o+"lfobpm"	,1},"OP"+(String)(o+1)+" LFO Rate (eighth note)"								 ,0		,32		 ,0		));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"o"+(String)o+"lfoamount"	,1},"OP"+(String)(o+1)+" LFO Amount"			,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.0f	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"o"+(String)o+"lfoattack"	,1},"OP"+(String)(o+1)+" LFO Attack"			,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.0f	));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"o"+(String)o+"on"		,1},"OP"+(String)(o+1)+" On"													 				 ,o<=1	,AudioParameterBoolAttributes()	.withStringFromValueFunction(tobool				).withValueFromStringFunction(frombool			)));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"o"+(String)o+"pan"		,1},"OP"+(String)(o+1)+" Pan"					,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.5f	,AudioParameterFloatAttributes().withStringFromValueFunction(topan				).withValueFromStringFunction(frompan			)));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"o"+(String)o+"amp"		,1},"OP"+(String)(o+1)+" Amplitude"				,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.5f	,AudioParameterFloatAttributes().withStringFromValueFunction(toamp				).withValueFromStringFunction(fromamp			)));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"o"+(String)o+"tone"		,1},"OP"+(String)(o+1)+" Tone"					,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.5f	,AudioParameterFloatAttributes().withStringFromValueFunction(tonormalized		).withValueFromStringFunction(fromnormalized	)));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"o"+(String)o+"velocity"	,1},"OP"+(String)(o+1)+" Velocity"				,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(tovelocity			).withValueFromStringFunction(fromvelocity		)));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"o"+(String)o+"aftertouch",1},"OP"+(String)(o+1)+" After-Touch"			,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(toaftertouch		).withValueFromStringFunction(fromaftertouch	)));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"o"+(String)o+"freqmode"	,1},"OP"+(String)(o+1)+" Frequency Mode"														 ,true	,AudioParameterBoolAttributes()	.withStringFromValueFunction(tofreqmode			).withValueFromStringFunction(fromfreqmode		)));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"o"+(String)o+"freqmult"	,1},"OP"+(String)(o+1)+" Frequency Multiplier"	,juce::NormalisableRange<float	>(0.0f	,24.0f	),1.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(tofreqmult			).withValueFromStringFunction(fromfreqmult		)));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"o"+(String)o+"freqadd"	,1},"OP"+(String)(o+1)+" Frequency Offset"		,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.5f	,AudioParameterFloatAttributes().withStringFromValueFunction(tofreqadd			).withValueFromStringFunction(fromfreqadd		)));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"o"+(String)o+"attack"	,1},"OP"+(String)(o+1)+" Attack"				,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(toattack			).withValueFromStringFunction(fromattack		)));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"o"+(String)o+"decay"		,1},"OP"+(String)(o+1)+" Decay"					,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(todecay			).withValueFromStringFunction(fromdecay			)));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"o"+(String)o+"sustain"	,1},"OP"+(String)(o+1)+" Sustain"				,juce::NormalisableRange<float	>(0.0f	,1.0f	),1.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(tonormalized		).withValueFromStringFunction(fromnormalized	)));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"o"+(String)o+"release"	,1},"OP"+(String)(o+1)+" Release"				,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(torelease			).withValueFromStringFunction(fromrelease		)));
+	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"o"+(String)o+"lfoon"		,1},"OP"+(String)(o+1)+" LFO On"												 				 ,false	,AudioParameterBoolAttributes()	.withStringFromValueFunction(tobool				).withValueFromStringFunction(frombool			)));
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"o"+(String)o+"lfotarget"	,1},"OP"+(String)(o+1)+" LFO Target"											 ,0		,3		 ,0		,AudioParameterIntAttributes()	.withStringFromValueFunction(tolfotarget		).withValueFromStringFunction(fromlfotarget		))); // AMPLITUDE, PITCH, PAN, TONE
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"o"+(String)o+"lforate"	,1},"OP"+(String)(o+1)+" LFO Rate"				,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.5f	,AudioParameterFloatAttributes().withStringFromValueFunction(tolforate			).withValueFromStringFunction(fromlforate		)));
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"o"+(String)o+"lfobpm"	,1},"OP"+(String)(o+1)+" LFO Rate (BPM sync)"									 ,0		,12		 ,0		,AudioParameterIntAttributes()	.withStringFromValueFunction(tolfobpm			).withValueFromStringFunction(fromlfobpm		)));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"o"+(String)o+"lfoamount"	,1},"OP"+(String)(o+1)+" LFO Amount"			,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(tolfoamount		).withValueFromStringFunction(fromlfoamount		)));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"o"+(String)o+"lfoattack"	,1},"OP"+(String)(o+1)+" LFO Attack"			,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(tolfoattack		).withValueFromStringFunction(fromlfoattack		)));
 	}
 	// TODO FX
 	return { parameters.begin(), parameters.end() };
