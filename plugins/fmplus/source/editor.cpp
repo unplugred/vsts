@@ -42,6 +42,8 @@ FMPlusAudioProcessorEditor::FMPlusAudioProcessorEditor(FMPlusAudioProcessor& p, 
 	}
 
 	textlength = -1;
+	addtext(160,31,"+",1);
+	addtext(160,42,"-",1);
 	addtext(5, 0,"Gen");
 	addtext(5,11,"Vis");
 	addtext(5,22,"FX");
@@ -210,6 +212,28 @@ void main() {
 		return;
 	}
 	fragColor = vec4(col_outline*max(0,1-col.x)+col_outline_mod*max(0,1-abs(col.x-1))+col_highlight*max(0,1-abs(col.x-2))+col_conf_mod*max(0,col.x-2),min(1,max(0,(col.y-2.5)*dpi+.5)));
+})");
+
+	circleshader = add_shader(
+//CIRCLE VERT
+R"(#version 150 core
+in vec2 coords;
+uniform vec4 pos;
+uniform float banner;
+out vec2 uv;
+void main(){
+	gl_Position = vec4(vec2(coords.x*pos.z+pos.x,(coords.y*pos.w+pos.y)*(1-banner)+banner)*2-1,0,1);
+	uv = coords*2-1;
+})",
+//CIRCLE FRAG
+R"(#version 150 core
+in vec2 uv;
+uniform float size;
+uniform vec3 col;
+out vec4 fragColor;
+void main(){
+	float x = sqrt(uv.x*uv.x+uv.y*uv.y);
+	fragColor = vec4(col,min(max((1-x)*size*.5f,0),1));
 })");
 
 	operatorshader = add_shader(
@@ -391,6 +415,21 @@ void FMPlusAudioProcessorEditor::renderOpenGL() {
 	// LINE
 
 	// CIRCLE
+	circleshader->use();
+	circleshader->setUniform("banner",banner_offset);
+	circleshader->setUniform("dpi",scaled_dpi);
+	circleshader->setUniform("col"					,col_outline[0]		,col_outline[1]		,col_outline[2]		);
+	coord = context.extensions.glGetAttribLocation(circleshader->getProgramID(),"coords");
+	context.extensions.glEnableVertexAttribArray(coord);
+	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+	circleshader->setUniform("size",8.f*scaled_dpi);
+	float inverse_dpi = 1.f/scaled_dpi;
+	for(int i = 0; i < 2; ++i) {
+		if(!displayaddremove[i]) continue;
+		circleshader->setUniform("pos",(159.f-.5f*inverse_dpi)/width,1.f-(41.f+11.f*i+.5f*inverse_dpi)/height,(9.f+inverse_dpi)/width,(9.f+inverse_dpi)/height);
+		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+	}
+	context.extensions.glDisableVertexAttribArray(coord);
 
 	// OPERATOR
 	operatorshader->use();
@@ -482,8 +521,18 @@ void FMPlusAudioProcessorEditor::calcvis() {
 }
 void FMPlusAudioProcessorEditor::rebuildtab(int tab) {
 	if(selectedtab == tab) return;
+
+	displayaddremove[0] = false;
+	for(int o = 0; o < MC; ++o) if(knobs[generalcount].value[o] < .5f) {
+		displayaddremove[0] = true;
+		break;
+	}
+	displayaddremove[1] = tab>=3&&knobs[generalcount].value[tab-3]>.5f;
+	for(int n = 0; n < 2; ++n) for(int i = 0; i < 6; ++i)
+		textmesh[(n*6+i)*4+2] = displayaddremove[n]?((hover+25)==n?2:1):-10;
+
+	opanimation = 0;
 	if(selectedtab >= 3 && tab >= 3) {
-		opanimation = 0;
 		selectedtab = tab;
 		replacetext(boxes[knobs[generalcount].box].textmesh-6,(String)(selectedtab-2));
 		for(int i = 0; i < paramcount  ; ++i) {
@@ -494,7 +543,6 @@ void FMPlusAudioProcessorEditor::rebuildtab(int tab) {
 		return;
 	}
 	tabanimation = 0;
-	opanimation = 0;
 	selectedtab = tab;
 
 	boxnum = 0;
@@ -557,7 +605,7 @@ void FMPlusAudioProcessorEditor::rebuildtab(int tab) {
 	}
 
 	squarelength = -1;
-	textlength = 353;
+	textlength = 365;
 	for(int i = 0; i < boxnum; ++i) {
 		if(boxes[i].knob != -1) knobs[boxes[i].knob].box = i;
 		if(boxes[i].type == -1) continue;
@@ -635,7 +683,7 @@ void FMPlusAudioProcessorEditor::rebuildtab(int tab) {
 		}
 		updatevalue(i);
 	}
-	prevtextindex[0] = 353;
+	prevtextindex[0] = 365;
 	if(selectedtab == 0) {
 		prevtextindex[1] = boxes[knobs[              5].box-1].textmesh+boxes[knobs[              5].box-1].textamount*6;
 		prevtextindex[2] = boxes[knobs[             10].box-1].textmesh+boxes[knobs[             10].box-1].textamount*6;
@@ -653,7 +701,7 @@ void FMPlusAudioProcessorEditor::rebuildtab(int tab) {
 		updatehighlight(true);
 	}
 	for(int i =   0; i < (1+squarelength); ++i) if(squaremesh[2+i*4] >= 0) squaremesh[2+i*4] -= 10;
-	for(int i = 354; i < (1+textlength  ); ++i) if(textmesh  [2+i*4] >= 0) textmesh  [2+i*4] -= 10;
+	for(int i = 366; i < (1+textlength  ); ++i) if(textmesh  [2+i*4] >= 0) textmesh  [2+i*4] -= 10;
 }
 void FMPlusAudioProcessorEditor::addsquare(float x, float y, float w, float h, float color, bool corner) {
 	squaremesh[++squarelength*4] =     x    /width  ; // top    left
@@ -957,10 +1005,24 @@ void FMPlusAudioProcessorEditor::parameterChanged(const String& parameterID, flo
 				updatevalue(i  );
 			if(i >= (9+generalcount) && i <= (12+generalcount))
 				updatehighlight(true);
+			if(i == generalcount) {
+				if(knobs[i].value[o] > .5f) opanimation = 0;
+				displayaddremove[1] = knobs[generalcount].value[selectedtab-3]>.5f;
+				for(int i = 0; i < 6; ++i)
+					textmesh[(6+i)*4+2] = displayaddremove[1]?(hover==-24?2:1):-10;
+			}
 		}
 
-		if(i == generalcount)
+		if(i == generalcount) {
 			replacetext(ops[o+1].textmesh,knobs[i].value[o]>.5f?("OP"+(String)(o+1)):"   ");
+			displayaddremove[0] = knobs[i].value[o]<.5f;
+			if(!displayaddremove[0]) for(int o = 0; o < MC; ++o) if(knobs[generalcount].value[o] < .5f) {
+				displayaddremove[0] = true;
+				break;
+			}
+			for(int i = 0; i < 6; ++i)
+				textmesh[i*4+2] = displayaddremove[0]?(hover==-25?2:1):-10;
+		}
 
 		if(parameterID != "antialias" && !presetunsaved) {
 			presetunsaved = true;
@@ -1070,6 +1132,25 @@ void FMPlusAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		audio_processor.params.selectedtab = selectedtab;
 		initialvalue[0] = ops[selectedtab==0?0:(selectedtab-2)].pos[0];
 		initialvalue[1] = ops[selectedtab==0?0:(selectedtab-2)].pos[1];
+	} else if(initialdrag == -24) {
+		if(selectedtab >= 3 &&                knobs[generalcount].value[selectedtab -3] > .5) {
+			int prevop = selectedtab-3;
+			   for(int o = 0; o < MC; ++o) if(knobs[generalcount].value[(prevop+o+1)%8] > .5) {
+				rebuildtab((prevop+o+1)%8+3);
+				audio_processor.params.selectedtab = selectedtab;
+				break;
+			}
+			audio_processor.apvts.getParameter("o"+(String)prevop+knobs[generalcount].id)->setValueNotifyingHost(0.f);
+		}
+	} else if(initialdrag == -25) {
+		if(selectedtab >= 3 &&                knobs[generalcount].value[selectedtab -3] < .5) {
+			audio_processor.apvts.getParameter("o"+(String)(selectedtab-3)+knobs[generalcount].id)->setValueNotifyingHost(1.f);
+		} else for(int o = 0; o < MC; ++o) if(knobs[generalcount].value[        o     ] < .5) {
+			rebuildtab(o+3);
+			audio_processor.params.selectedtab = selectedtab;
+			audio_processor.apvts.getParameter("o"+(String)o              +knobs[generalcount].id)->setValueNotifyingHost(1.f);
+			break;
+		}
 	}
 }
 void FMPlusAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
@@ -1267,6 +1348,11 @@ int FMPlusAudioProcessorEditor::recalc_hover(float x, float y) {
 		return -26;
 
 	// -25 - -24 +-
+	float xx = x-163.5f;
+	float yy = y-36.5f;
+	if((xx*xx+yy*yy) <= 30.25f && displayaddremove[0]) return -25;
+	yy -= 11;
+	if((xx*xx+yy*yy) <= 30.25f && displayaddremove[1]) return -24;
 
 	// -23 - -13 operators
 	for(int o = 0; o < (MC+1); ++o) {
@@ -1306,17 +1392,23 @@ void FMPlusAudioProcessorEditor::updatehighlight(bool update_adsr) {
 
 		if(boxes[highlight].knob >= (9+generalcount) && boxes[highlight].knob <= (12+generalcount))
 			adsrlen = true;
+	} else if((highlight == -25 || highlight == -24) && displayaddremove[highlight+25]) {
+		for(int t = 0; t < 6; ++t)
+			textmesh[((highlight+25)*6+t)*4+2] = 1;
 	}
 	if(hover     >= 0 && hover     < boxnum) {
 		if(boxes[hover    ].type != -1 && boxes[hover    ].type != 3)
 			for(int t = 0; t < (boxes[hover    ].type==4?12:6); ++t)
 				squaremesh[(boxes[hover    ].mesh+t)*4+2] = 2;
 
-		if(boxes[hover    ].knob >= (9+generalcount) && boxes[hover    ].knob <= (12+generalcount)               ) {
+		if(boxes[hover    ].knob >= (9+generalcount) && boxes[hover    ].knob <= (12+generalcount)) {
 			adsrlen = false;
 			String s = get_string(boxes[hover].knob-generalcount,knobs[boxes[hover].knob].value[selectedtab-3],selectedtab);
 			replacetext(boxes[hover].textmesh,s.paddedLeft(' ',5));
 		}
+	} else if((hover     == -25 || hover     == -24) && displayaddremove[hover    +25]) {
+		for(int t = 0; t < 6; ++t)
+			textmesh[((hover    +25)*6+t)*4+2] = 2;
 	}
 	if(adsrlen) {
 		String s = format_time(powf(knobs[9+generalcount].value[selectedtab-3],2)*MAXA+powf(knobs[10+generalcount].value[selectedtab-3],2)*MAXD+powf(knobs[12+generalcount].value[selectedtab-3],2)*MAXR);

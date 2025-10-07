@@ -141,19 +141,22 @@ private:
 	std::shared_ptr<OpenGLShaderProgram> squareshader;
 	void addsquare(float x, float y, float w, float h, float color = 0, bool corner = false);
 
-	int prevtextindex[4];
-	float textmesh[285*6*4]; // X Y COL CHAR
-	int textlength = -1;
-	std::shared_ptr<OpenGLShaderProgram> textshader;
-	OpenGLTexture texttex;
-	void addtext(float x, float y, String txt, float color = 0);
-	void replacetext(int id, String txt, int length = -1);
+	bool displayaddremove[2] = { true, true };
+	std::shared_ptr<OpenGLShaderProgram> circleshader;
 
 	OpenGLTexture operatortex;
 	op ops[MC+1];
 	std::shared_ptr<OpenGLShaderProgram> operatorshader;
 
 	std::shared_ptr<OpenGLShaderProgram> indicatorshader;
+
+	int prevtextindex[4];
+	float textmesh[287*6*4]; // X Y COL CHAR
+	int textlength = -1;
+	OpenGLTexture texttex;
+	std::shared_ptr<OpenGLShaderProgram> textshader;
+	void addtext(float x, float y, String txt, float color = 0);
+	void replacetext(int id, String txt, int length = -1);
 
 	float rms = 0;
 
@@ -230,8 +233,8 @@ private:
 	float col_conf_mod		[3] = {	 .5f	,.5f	,0.f	};
 	float col_outline		[3] = {	 .5f	,0.f	,.5f	};
 	float col_outline_mod	[3] = {	 0.f	,.5f	,.5f	};
-	float col_vis			[3] = {	 1.f	,0.f	.0.f	};
-	float col_vis_mod		[3] = {	 0.f	,1.f	.0.f	};
+	float col_vis			[3] = {	 1.f	,0.f	,0.f	};
+	float col_vis_mod		[3] = {	 0.f	,1.f	,0.f	};
 	float col_highlight		[3] = {	 .2f	,.2f	,.2f	};
 	//*/
 
