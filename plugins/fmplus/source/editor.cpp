@@ -77,6 +77,7 @@ FMPlusAudioProcessorEditor::FMPlusAudioProcessorEditor(FMPlusAudioProcessor& p, 
 	rebuildtab(params.selectedtab.get());
 
 	setResizable(false,false);
+	setWantsKeyboardFocus(true);
 	init(&look_n_feel);
 }
 FMPlusAudioProcessorEditor::~FMPlusAudioProcessorEditor() {
@@ -314,12 +315,13 @@ uniform sampler2D texttex;
 uniform vec3 col_outline;
 uniform vec3 col_conf;
 uniform vec3 col_highlight;
+uniform vec3 col_conf_mod;
 out vec4 fragColor;
 void main() {
 	if(col < -1)
 		fragColor = vec4(0,0,0,0);
 	else
-		fragColor = vec4(col_outline*max(0,1-col)+col_conf*(1-abs(col-1))+col_highlight*max(0,col-1),max(min((texture(texttex,uv).r-.5)*dpi+.5,1),0));
+		fragColor = vec4(col_outline*max(0,1-col)+col_conf*max(0,1-abs(col-1))+col_highlight*max(0,1-abs(col-2))+col_conf_mod*max(0,col-2),max(min((texture(texttex,uv).r-.5)*dpi+.5,1),0));
 })");
 
 	add_texture(&basetex, BinaryData::base_png, BinaryData::base_pngSize);
@@ -486,6 +488,7 @@ void FMPlusAudioProcessorEditor::renderOpenGL() {
 	// 0 - outline
 	// 1 - conf
 	// 2 - highlight
+	// 3 - conf mod
 	if(textlength >= 0) {
 		textshader->use();
 		context.extensions.glActiveTexture(GL_TEXTURE0);
@@ -496,6 +499,7 @@ void FMPlusAudioProcessorEditor::renderOpenGL() {
 		textshader->setUniform("col_outline"		,col_outline[0]		,col_outline[1]		,col_outline[2]		);
 		textshader->setUniform("col_conf"			,col_conf[0]		,col_conf[1]		,col_conf[2]		);
 		textshader->setUniform("col_highlight"		,col_highlight[0]	,col_highlight[1]	,col_highlight[2]	);
+		textshader->setUniform("col_conf_mod"		,col_conf_mod[0]	,col_conf_mod[1]	,col_conf_mod[2]	);
 		coord = context.extensions.glGetAttribLocation(textshader->getProgramID(),"coords");
 		context.extensions.glEnableVertexAttribArray(coord);
 		context.extensions.glVertexAttribPointer(coord,4,GL_FLOAT,GL_FALSE,0,0);
@@ -612,10 +616,11 @@ void FMPlusAudioProcessorEditor::rebuildtab(int tab) {
 
 		boxes[i].mesh = squarelength+1;
 		if(boxes[i].type == 0 || boxes[i].type == 1) {
-			addtext(30,boxes[i].y,knobs[boxes[i].knob].name+":");
 			addsquare(boxes[i].x,boxes[i].y,boxes[i].w,boxes[i].h,3,boxes[i].corner);
 			addsquare(boxes[i].x+round(boxes[i].w*boxes[i].type*.5f),boxes[i].y+boxes[i].h-1,1-boxes[i].type,1,0);
+			addtext(30,boxes[i].y,knobs[boxes[i].knob].name+":");
 		} else if(boxes[i].type == 2) {
+			addsquare(boxes[i].x,boxes[i].y,boxes[i].w,boxes[i].h,3,boxes[i].corner);
 			if(selectedtab == 0) {
 				if(i ==  0) {
 					addtext(boxes[i].x+109,boxes[i].y,">");
@@ -633,6 +638,7 @@ void FMPlusAudioProcessorEditor::rebuildtab(int tab) {
 				if(i ==  7) addtext(boxes[i].x+11,boxes[i].y-2,"<");
 				if(i ==  9) addtext(boxes[i].x+11,boxes[i].y-2,">");
 				if(i == 11) addtext(boxes[i].x+11,boxes[i].y-2,"<");
+				if(i == 12) addsquare(boxes[i].x,boxes[i].y,8,boxes[i].h,0);
 				if(i == 13) addtext(boxes[i].x+11,boxes[i].y-2,">");
 				if(i == 12) addtext(137,boxes[i].y,"Hz");
 			}
@@ -649,7 +655,6 @@ void FMPlusAudioProcessorEditor::rebuildtab(int tab) {
 				textmesh[17+(textlength-5)*4] -=  9.f/height; textmesh[20+(textlength-5)*4] += -9.f/width ; // bottom right
 				textmesh[21+(textlength-5)*4] -= -1.f/height;
 			}
-			addsquare(boxes[i].x,boxes[i].y,boxes[i].w,boxes[i].h,3,boxes[i].corner);
 		} else if(boxes[i].type == 3) {
 			addtext(boxes[i].x+boxes[i].w,boxes[i].y-1,knobs[boxes[i].knob].name);
 			addsquare(boxes[i].x,boxes[i].y,boxes[i].w,boxes[i].h,0,boxes[i].corner);
@@ -669,7 +674,7 @@ void FMPlusAudioProcessorEditor::rebuildtab(int tab) {
 		}
 	}
 
-	if(selectedtab >= 3) {
+	if(selectedtab >= 3) { // adsr mesh indicies
 		boxes[knobs[ 9+generalcount].box].textmesh = boxes[knobs[12+generalcount].box].textmesh;
 		boxes[knobs[10+generalcount].box].textmesh = boxes[knobs[12+generalcount].box].textmesh;
 		boxes[knobs[11+generalcount].box].textmesh = boxes[knobs[12+generalcount].box].textmesh;
@@ -683,7 +688,7 @@ void FMPlusAudioProcessorEditor::rebuildtab(int tab) {
 		}
 		updatevalue(i);
 	}
-	prevtextindex[0] = 365;
+	prevtextindex[0] = 365; // animation sections
 	if(selectedtab == 0) {
 		prevtextindex[1] = boxes[knobs[              5].box-1].textmesh+boxes[knobs[              5].box-1].textamount*6;
 		prevtextindex[2] = boxes[knobs[             10].box-1].textmesh+boxes[knobs[             10].box-1].textamount*6;
@@ -693,13 +698,15 @@ void FMPlusAudioProcessorEditor::rebuildtab(int tab) {
 		prevtextindex[2] = boxes[knobs[generalcount+ 9].box-1].textmesh+boxes[knobs[generalcount+ 9].box-1].textamount*6;
 		prevtextindex[3] = boxes[knobs[generalcount+13].box-1].textmesh+boxes[knobs[generalcount+13].box-1].textamount*6;
 
+		// operator title
 		replacetext(boxes[knobs[generalcount].box].textmesh-6,(String)(selectedtab-2));
-		for(int p = 0; p < 8; ++p) {
+		for(int p = 0; p < 8; ++p) { // reset adsr animation
 			adsr[p*3] = adsr[p*3+1]+.0001f;
 			adsr[p*3+2] = 0;
 		}
 		updatehighlight(true);
 	}
+	// make invisible pre animation
 	for(int i =   0; i < (1+squarelength); ++i) if(squaremesh[2+i*4] >= 0) squaremesh[2+i*4] -= 10;
 	for(int i = 366; i < (1+textlength  ); ++i) if(textmesh  [2+i*4] >= 0) textmesh  [2+i*4] -= 10;
 }
@@ -819,9 +826,24 @@ void FMPlusAudioProcessorEditor::updatevalue(int param) {
 				++i;
 		float value = knobs[i].inflate(knobs[i].value[selectedtab<3?0:(selectedtab-3)]);
 		String s = get_string(selectedtab==0?i:(i-generalcount),value,selectedtab);
-		if(i == (generalcount+8)) {
-			if(s.startsWith("-")) s = s.substring(1);
-			replacetext(boxes[knobs[i].box].textmesh-6*4,value>=.5?"+":"-");
+		if(i == (generalcount+7) || i == (generalcount+8)) {
+			if(i == (generalcount+8)) {
+				if(s.startsWith("-")) s = s.substring(1);
+				replacetext(boxes[knobs[i].box].textmesh-6*4,value>=.5?"+":"-");
+			}
+			if(freqdigit >= -10 && (i==(generalcount+8)) == (freqdigit>=10)) {
+				int newdotpos = s.indexOfChar('.');
+				if(newdotpos == -1) newdotpos = 4;
+				int dotpos = 4;
+				for(int n = 0; n < 4; ++n) {
+					int c = textmesh[3+(1+n*6+boxes[knobs[i].box].textmesh)*4]-51;
+					if(c < 0) {
+						dotpos = n;
+						break;
+					}
+				}
+				if(newdotpos != dotpos) freqselect(freqdigit+(newdotpos-dotpos),false);
+			}
 		}
 		replacetext(boxes[knobs[i].box].textmesh,s,boxes[knobs[i].box].textamount);
 	}
@@ -1033,9 +1055,13 @@ void FMPlusAudioProcessorEditor::parameterChanged(const String& parameterID, flo
 	}
 }
 void FMPlusAudioProcessorEditor::mouseMove(const MouseEvent& event) {
+	if(prevx == event.x && prevy == event.y) return;
+	prevx = event.x;
+	prevy = event.y;
 	int prevhover = hover;
 	hover = recalc_hover(event.x,event.y);
 	updatehighlight();
+	scrolldigit = -20;
 	if(hover == -26 && prevhover != -26 && websiteht <= -1) websiteht = .65f;
 }
 void FMPlusAudioProcessorEditor::mouseExit(const MouseEvent& event) {
@@ -1076,13 +1102,40 @@ void FMPlusAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 	}
 
 	initialdrag = hover;
+
+	if(boxes[initialdrag].knob == (7+generalcount) || boxes[initialdrag].knob == (8+generalcount)) {
+		freqselect(fmin(floor((((float)event.x)/ui_scales[ui_scale_index]-boxes[initialdrag].x)/7.f),3)+(boxes[initialdrag].knob-generalcount-7)*20);
+
+		int dotpos = 4;
+		for(int n = 1; n < 4; ++n) {
+			int c = textmesh[3+(1+n*6+boxes[initialdrag].textmesh)*4]-51;
+			if(c < 0) {
+				dotpos = n;
+				break;
+			}
+		}
+		freqoffset = knobs[boxes[initialdrag].knob].value[selectedtab-3];
+		if(boxes[initialdrag].knob == (7+generalcount))
+			freqoffset = knobs[7+generalcount].inflate(freqoffset);
+		else
+			freqoffset = freqaddinflate(freqoffset);
+		     if(dotpos >= 3) freqoffset = round(freqoffset      )     ;
+		else if(dotpos == 2) freqoffset = round(freqoffset*10.f )*.1f ;
+		else                 freqoffset = round(freqoffset*100.f)*.01f;
+		bool flipped = freqoffset<-.005f;
+		freqoffset = round(fmod(fabs(freqoffset)+.00001f,freqstep)*100.f)*.01f;
+		if(flipped) freqoffset = freqstep-fabs(freqoffset);
+
+	} else freqselect(-20);
+
 	if(initialdrag == -1) return;
 	if(initialdrag > -1) {
 		if(boxes[initialdrag].knob == -1) {
-			// TODO special buttons
 			if(selectedtab == 0) {
 				       if(initialdrag ==  0) { // preset
+					// TODO preset select
 				} else if(initialdrag == 15 || initialdrag == 17) { // file select
+					// TODO file select
 				} else if(initialdrag == 16) { // default tuning
 					tuningfile = "Standard";
 					updatevalue(-2);
@@ -1091,12 +1144,29 @@ void FMPlusAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 					updatevalue(-1);
 				}
 			} else if(selectedtab >= 3) {
-				       if(initialdrag ==  7) { // up freq mult
-				} else if(initialdrag ==  9) { // down freq mult
+				       if(initialdrag ==  7 || initialdrag ==  9) { // up down freq mult
+					float v = knobs[generalcount+7].inflate(knobs[generalcount+7].value[selectedtab-3]);
+					float multiplier = 1;
+					     if(v < (initialdrag==7?.375f: .75f)) multiplier = .25f;
+					else if(v < (initialdrag==7?.75f :1.25f)) multiplier = .5f ;
+					audio_processor.apvts.getParameter("o"+(String)(selectedtab-3)+knobs[generalcount+7].id)->setValueNotifyingHost(knobs[generalcount+7].normalize(v+(8-initialdrag)*multiplier));
 				} else if(initialdrag == 10) { // sign freq offset
-				} else if(initialdrag == 11) { // up freq offset
-				} else if(initialdrag == 13) { // down freq offset
+					audio_processor.apvts.getParameter("o"+(String)(selectedtab-3)+knobs[generalcount+8].id)->setValueNotifyingHost(1-knobs[generalcount+8].value[selectedtab-3]);
+				} else if(initialdrag == 11 || initialdrag == 13) { // up down freq offset
+					float v = freqaddinflate(knobs[generalcount+8].value[selectedtab-3]);
+					float s = fabs(get_string(8,knobs[generalcount+8].value[selectedtab-3],selectedtab).getFloatValue());
+					int m = initialdrag==11?1:-1;
+					if((initialdrag==13) == (v>=0)) s -= .001f;
+					     if(s >= 1000) v += 1000*m;
+					else if(s >=  100) v +=  100*m;
+					else if(s >=   10) v +=   10*m;
+					else if(s >=    1) v +=      m;
+					else if(s >=   .1) v +=  .1f*m;
+					else               v += .01f*m;
+					if(fabs(v) <= .005f) v = 0;
+					audio_processor.apvts.getParameter("o"+(String)(selectedtab-3)+knobs[generalcount+8].id)->setValueNotifyingHost(freqaddnormalize(v));
 				} else if(initialdrag == 19) { // lfo
+					// TODO lfo
 				}
 			}
 		} else {
@@ -1112,6 +1182,10 @@ void FMPlusAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 					initialvalue[0] = 1-(1-fmax(0,initialvalue[0]))/(1-1.f/knobs[boxes[initialdrag].knob+1].maximumvalue);
 				}
 			}
+			     if(boxes[initialdrag].knob == (7+generalcount))
+				initialvalue[0] =                  initialvalue[0]              /freqstep*24  /5;
+			else if(boxes[initialdrag].knob == (8+generalcount))
+				initialvalue[0] = ((freqaddinflate(initialvalue[0])/9999+1)*.5f)/freqstep*9999/5;
 
 			valueoffset[0] = 0;
 			audio_processor.undo_manager.beginNewTransaction();
@@ -1192,20 +1266,40 @@ void FMPlusAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 				if(knobs[boxes[initialdrag].knob].value[selectedtab==0?0:(selectedtab-3)] != (initialdrag==hover?(1-initialvalue[0]):initialvalue[0]))
 					audio_processor.apvts.getParameter(id)->setValueNotifyingHost(initialdrag==hover?(1-initialvalue[0]):initialvalue[0]);
 			} else {
-				if(!finemode && (event.mods.isShiftDown() || event.mods.isAltDown())) {
+				       if(!finemode &&  (event.mods.isShiftDown() || event.mods.isAltDown()) && boxes[initialdrag].knob != (7+generalcount) && boxes[initialdrag].knob != (8+generalcount)) {
 					finemode = true;
 					initialvalue[0] -= (event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*.0045f;
-				} else if(finemode && !(event.mods.isShiftDown() || event.mods.isAltDown())) {
+				} else if( finemode && !(event.mods.isShiftDown() || event.mods.isAltDown())) {
 					finemode = false;
 					initialvalue[0] += (event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*.0045f;
 				}
 
 				float value = initialvalue[0]-(event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*(finemode?.0005f:.005f);
-				float updatevalue = value-valueoffset[0];
-				if(bpmmax > 0) updatevalue = 1-(1-fmax(0,updatevalue))*(1-1.f/bpmmax);
+				float updatevalue = value;
+				float clampres = .1f;
+
+				       if(boxes[initialdrag].knob == (7+generalcount)) {
+					clampres = .1f*freqstep/24  *5;
+					value = value *freqstep/24  *5;
+					updatevalue = knobs[7+generalcount].inflate(value-valueoffset[0]);
+					if(!(event.mods.isShiftDown() || event.mods.isAltDown()))
+						updatevalue = floor(fmax(fmin(updatevalue,  24-freqoffset),    0)/freqstep+.00001f)*freqstep;
+					updatevalue = knobs[7+generalcount].normalize(updatevalue+freqoffset);
+				} else if(boxes[initialdrag].knob == (8+generalcount)) {
+					clampres = .1f*freqstep/9999*5;
+					value = value *freqstep/9999*5;
+					updatevalue = (9999*(2*                    (value-valueoffset[0])-1));
+					if(!(event.mods.isShiftDown() || event.mods.isAltDown()))
+						updatevalue = floor(fmax(fmin(updatevalue,9999-freqoffset),-9999.1f)/freqstep+.00001f)*freqstep;
+					updatevalue = freqaddnormalize               (updatevalue+freqoffset);
+
+				} else {
+					updatevalue = value-valueoffset[0];
+					if(bpmmax > 0) updatevalue = 1-(1-fmax(0,updatevalue))*(1-1.f/bpmmax);
+				}
 				audio_processor.apvts.getParameter(id)->setValueNotifyingHost(updatevalue);
 
-				valueoffset[0] = fmax(fmin(valueoffset[0],value+.1f),value-1.1f);
+				valueoffset[0] = fmax(fmin(valueoffset[0],value+clampres),value-1-clampres);
 			}
 		}
 	} else if(initialdrag >= -12) {
@@ -1266,13 +1360,13 @@ void FMPlusAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 			audio_processor.apvts.getParameter(id)->endChangeGesture();
 			audio_processor.undo_manager.beginNewTransaction();
 
-			if(knobs[boxes[initialdrag].knob].ttype == potentiometer::ptype::booltype) {
-				hover = recalc_hover(event.x,event.y);
-				updatehighlight();
-			} else {
+			if(knobs[boxes[initialdrag].knob].ttype != potentiometer::ptype::booltype) {
 				event.source.enableUnboundedMouseMovement(false);
 				Desktop::setMousePosition(dragpos);
 			}
+
+			hover = recalc_hover(event.x,event.y);
+			updatehighlight();
 		}
 	} else {
 		int prevhover = hover;
@@ -1283,6 +1377,7 @@ void FMPlusAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 			else if(websiteht < -1) websiteht = .65f;
 		}
 	}
+	initialdrag = -1;
 }
 void FMPlusAudioProcessorEditor::mouseDoubleClick(const MouseEvent& event) {
 	if(hover <= -1) return;
@@ -1307,7 +1402,7 @@ void FMPlusAudioProcessorEditor::mouseDoubleClick(const MouseEvent& event) {
 	}
 }
 void FMPlusAudioProcessorEditor::mouseWheelMove(const MouseEvent& event, const MouseWheelDetails& wheel) {
-	if(hover <= -1) return;
+	if(initialdrag != -1 || hover <= -1) return;
 	if(boxes[hover].knob == -1) return;
 	if(knobs[boxes[hover].knob].ttype == potentiometer::ptype::booltype) return;
 
@@ -1315,7 +1410,7 @@ void FMPlusAudioProcessorEditor::mouseWheelMove(const MouseEvent& event, const M
 	float value = knobs[boxes[hover].knob].value[selectedtab==0?0:(selectedtab-3)];
 	float range = knobs[boxes[hover].knob].ttype==potentiometer::ptype::floattype?-1:knobs[boxes[hover].knob].maximumvalue-knobs[boxes[hover].knob].minimumvalue;
 	int bpmmax = -1;
-	if(boxes[hover].knob == 8 || boxes[hover].knob == 11 || boxes[hover].knob == (15+generalcount)) {
+	if(boxes[hover].knob == 8 || boxes[hover].knob == 11 || boxes[hover].knob == (15+generalcount)) { // bpm sync
 		if(knobs[boxes[hover].knob+1].value[selectedtab==0?0:(selectedtab-3)] > 0) {
 			value = knobs[boxes[hover].knob+1].value[selectedtab==0?0:(selectedtab-3)];
 			value = 1-(1-fmax(0,value))/(1-1.f/knobs[boxes[hover].knob+1].maximumvalue);
@@ -1331,12 +1426,176 @@ void FMPlusAudioProcessorEditor::mouseWheelMove(const MouseEvent& event, const M
 		}
 	}
 	if(boxes[hover].knob >= generalcount) id = "o"+(String)(selectedtab-3)+id;
-	if(range < 0)
-		value += wheel.deltaY*((event.mods.isShiftDown() || event.mods.isAltDown())?.03f:.2f);
-	else
-		value += (wheel.deltaY>0?1.f:-1.f)*fmax(1.f/range,fabs(wheel.deltaY)*((event.mods.isShiftDown() || event.mods.isAltDown())?.03f:.2f));
-	if(bpmmax > 0) value = 1-(1-fmax(0,value))*(1-1.f/bpmmax);
+	if(boxes[hover].knob == (7+generalcount) || boxes[hover].knob == (8+generalcount)) { // freq
+		int a = fmin(floor((((float)event.x)/ui_scales[ui_scale_index]-boxes[hover].x)/7.f),3)+(boxes[hover].knob-generalcount-7)*20;
+		if(scrolldigit != a) {
+			freqselect(a);
+			scrolldigit = a;
+		}
+
+		       if(boxes[hover].knob == (7+generalcount)) {
+			value = knobs[7+generalcount].inflate  (value);
+			if(event.mods.isShiftDown() || event.mods.isAltDown())
+				value +=  wheel.deltaY*2.f        *freqstep;
+			else if((value+(wheel.deltaY>0?1.f:-1.f)*freqstep) >=     0 && (value+(wheel.deltaY>0?1.f:-1.f)*freqstep) <=   24)
+				value += (wheel.deltaY>0?1.f:-1.f)*freqstep;
+			value = knobs[7+generalcount].normalize(value);
+		} else if(boxes[hover].knob == (8+generalcount)) {
+			value = freqaddinflate                 (value);
+			if(event.mods.isShiftDown() || event.mods.isAltDown())
+				value +=  wheel.deltaY*2.f        *freqstep;
+			else if((value+(wheel.deltaY>0?1.f:-1.f)*freqstep) >= -9999 && (value+(wheel.deltaY>0?1.f:-1.f)*freqstep) <= 9999)
+				value += (wheel.deltaY>0?1.f:-1.f)*freqstep;
+			value = freqaddnormalize               (value);
+		}
+
+	} else { // regular
+		if(range < 0)
+			value += wheel.deltaY*((event.mods.isShiftDown() || event.mods.isAltDown())?.03f:.2f);
+		else
+			value += (wheel.deltaY>0?1.f:-1.f)*fmax(1.f/range,fabs(wheel.deltaY)*((event.mods.isShiftDown() || event.mods.isAltDown())?.03f:.2f));
+		if(bpmmax > 0) value = 1-(1-fmax(0,value))*(1-1.f/bpmmax);
+	}
+
 	audio_processor.apvts.getParameter(id)->setValueNotifyingHost(value);
+}
+bool FMPlusAudioProcessorEditor::keyPressed(const KeyPress& key) {
+	if(freqdigit < -10) return false;
+	int code = key.getKeyCode();
+
+	// tab
+	if(code == 9) {
+		// switch field
+		freqselect(freqdigit>10?0:20);
+		return true;
+	}
+
+	// escape or enter
+	if(code == 27 || code == 13) {
+		// release focus
+		freqselect(-20);
+		return true;
+	}
+
+	// minus or plus
+	if((code == 45 || code == 43) && freqdigit > 10) {
+		// change sign
+		if((code==45) == (knobs[generalcount+8].value[selectedtab-3]>=.5f))
+			audio_processor.apvts.getParameter("o"+(String)(selectedtab-3)+knobs[generalcount+8].id)->setValueNotifyingHost(1-knobs[generalcount+8].value[selectedtab-3]);
+		return true;
+	}
+
+	// slash or backslash or asterisk
+	if((code == 47 || code == 92 || code == 42) && freqdigit <= 10) {
+		// change mult mode
+		audio_processor.apvts.getParameter("o"+(String)(selectedtab-3)+knobs[generalcount+6].id)->setValueNotifyingHost(code==42?1:0);
+		return true;
+	}
+
+	// left or right or h or l or a or d or backspace or space
+	if(code == 268435537 || code == 104 || code == 97 || code == 8 || code == 268435539 || code == 108 || code == 100 || code == 32) {
+		bool right = code == 268435537 || code == 104 || code == 97 || code == 8;
+		// move cursor
+		int min = freqdigit>10?20:0;
+		freqselect(fmin(min+3,fmax(min,(right?-1:1)+fmin(min+3,fmax(min,freqdigit)))));
+		return true;
+	}
+
+	// up or down or k or j or w or s
+	if(code == 268435538 || code == 107 || code == 119 || code == 268435540 || code == 106 || code == 115) {
+		bool up = code == 268435538 || code == 107 || code == 119;
+		// increment digit
+		if(freqdigit > 10)
+			audio_processor.apvts.getParameter("o"+(String)(selectedtab-3)+knobs[generalcount+8].id)->setValueNotifyingHost(               freqaddnormalize(               freqaddinflate(knobs[generalcount+8].value[selectedtab-3])+(up?1:-1)*freqstep));
+		else
+			audio_processor.apvts.getParameter("o"+(String)(selectedtab-3)+knobs[generalcount+7].id)->setValueNotifyingHost(knobs[generalcount+7].normalize(knobs[generalcount+7].inflate(knobs[generalcount+7].value[selectedtab-3])+(up?1:-1)*freqstep));
+		return true;
+	}
+
+	if(code != 46 && (code < 48 || code > 57)) return false;
+
+	int current = fmin(3,fmax(0,freqdigit>10?(freqdigit-20):freqdigit));
+	int dotpos = 4;
+	int nums[4];
+	for(int n = 0; n < 4; ++n) {
+		nums[n] = textmesh[3+(1+n*6+boxes[knobs[generalcount+(freqdigit>10?8:7)].box].textmesh)*4]-51;
+		if(nums[n] < 0) dotpos = n;
+	}
+
+	// dot
+	if(code == 46) {
+		if(current == 0) {
+			//if first digit, set start to 0., skip to third digit
+			nums[0] = 0;
+			nums[1] = -3;
+			if(dotpos >= 2) {
+				for(int i = 2; i < 4; ++i) {
+					if((i+dotpos-1) >= 4)
+						nums[i] = 0;
+					else
+						nums[i] = nums[i+dotpos-1];
+				}
+			}
+			dotpos = 1;
+			current = 1;
+		} else {
+			//if dot is ahead, truncate number
+			if(dotpos > current) {
+				for(int i = current+1; i < 4; ++i) {
+					if((i+dotpos-current) >= 4)
+						nums[i] = 0;
+					else
+						nums[i] = nums[i+dotpos-current];
+				}
+				nums[current] = -3;
+				dotpos = current;
+			//if dot is before, do nothing
+			} else if(dotpos < current) {
+				return true;
+			}
+			//if dot is current, ignore
+		}
+
+	// digit
+	} else if(nums[current] >= 0 || current <= 1 || freqdigit >= 10) {
+		//if dot is current, inflate.
+		if(freqdigit < 10 && current == 0 && dotpos == 2 && (code-48) > 2) {
+			nums[0] = code-48;
+			nums[1] = -3;
+			for(int i = 2; i < 3; ++i) nums[i] = nums[i+1];
+			nums[3] = 0;
+			--dotpos;
+			++current;
+		} else {
+			if(nums[current] < 0) {
+				for(int i = 3; i >= (current+1); --i) nums[i] = nums[i-1];
+				++dotpos;
+			}
+			//replace digit
+			nums[current] = code-48;
+			if(nums[current] == 0 && current == 0 && dotpos > 1) --current;
+			else if(freqdigit < 10 && ((current == 1 && dotpos == 2) || (current == 0 && nums[current] > 2))) ++current;
+		}
+	}
+
+	float v = 0;
+	for(int n = 0; n < 4; ++n) {
+		if(dotpos == n) continue;
+		v += nums[n]*pow(10,dotpos-n-(dotpos>n?1:0));
+	}
+	if(freqdigit <= 10) {
+		audio_processor.apvts.getParameter("o"+(String)(selectedtab-3)+knobs[generalcount+7].id)->setValueNotifyingHost(knobs[7+generalcount].normalize(v));
+	} else {
+		if(knobs[generalcount+8].value[selectedtab-3] < .5f) v *= -1;
+		audio_processor.apvts.getParameter("o"+(String)(selectedtab-3)+knobs[generalcount+8].id)->setValueNotifyingHost(               freqaddnormalize(v));
+	}
+
+	if(current == 3)
+		freqselect(-20);
+	else
+		freqselect(current+(freqdigit>10?21:1));
+
+	return true;
 }
 int FMPlusAudioProcessorEditor::recalc_hover(float x, float y) {
 	if(dpi < 0) return -1;
@@ -1390,6 +1649,10 @@ void FMPlusAudioProcessorEditor::updatehighlight(bool update_adsr) {
 			for(int t = 0; t < (boxes[highlight].type==4?12:6); ++t)
 				squaremesh[(boxes[highlight].mesh+t)*4+2] = 3;
 
+		if((boxes[highlight].knob == (7+generalcount) && freqdigit >= -10 && freqdigit < 10) || (boxes[highlight].knob == (8+generalcount) && freqdigit >= 10))
+			for(int t = 0; t < 6; ++t)
+				textmesh[(boxes[highlight].textmesh+6*(int)fmin(3,fmax(0,freqdigit>=10?(freqdigit-20):freqdigit))+t+1)*4+2] = 3;
+
 		if(boxes[highlight].knob >= (9+generalcount) && boxes[highlight].knob <= (12+generalcount))
 			adsrlen = true;
 	} else if((highlight == -25 || highlight == -24) && displayaddremove[highlight+25]) {
@@ -1400,6 +1663,10 @@ void FMPlusAudioProcessorEditor::updatehighlight(bool update_adsr) {
 		if(boxes[hover    ].type != -1 && boxes[hover    ].type != 3)
 			for(int t = 0; t < (boxes[hover    ].type==4?12:6); ++t)
 				squaremesh[(boxes[hover    ].mesh+t)*4+2] = 2;
+
+		if((boxes[hover    ].knob == (7+generalcount) && freqdigit >= -10 && freqdigit < 10) || (boxes[hover    ].knob == (8+generalcount) && freqdigit >= 10))
+			for(int t = 0; t < 6; ++t)
+				textmesh[(boxes[hover    ].textmesh+6*(int)fmin(3,fmax(0,freqdigit>=10?(freqdigit-20):freqdigit))+t+1)*4+2] = 2;
 
 		if(boxes[hover    ].knob >= (9+generalcount) && boxes[hover    ].knob <= (12+generalcount)) {
 			adsrlen = false;
@@ -1415,6 +1682,49 @@ void FMPlusAudioProcessorEditor::updatehighlight(bool update_adsr) {
 		replacetext(boxes[knobs[9+generalcount].box].textmesh,s.paddedLeft(' ',5));
 	}
 	highlight = hover;
+}
+void FMPlusAudioProcessorEditor::freqselect(int digit, bool calcfreqstep) {
+	int square = boxes[knobs[generalcount+8].box].mesh;
+	int nbox = knobs[generalcount+(    digit>10?8:7)].box;
+	int pbox = knobs[generalcount+(freqdigit>10?8:7)].box;
+	if((digit<-10) != (freqdigit<-10)) {
+		if(digit >= -10)
+			grabKeyboardFocus();
+		else
+			giveAwayKeyboardFocus();
+		for(int t = 0; t < 6; ++t)
+				squaremesh[(square             +6              +t  )*4+2] = digit<-10?-10:0;
+	}
+	if(freqdigit >= -10) {
+		for(int t = 0; t < 6; ++t)
+				textmesh  [(boxes[pbox].textmesh+6*(int)fmin(3,fmax(0,freqdigit>=10?(freqdigit-20):freqdigit))+t+1)*4+2] = 0;
+	}
+	if(digit >= -10) {
+		int clampeddigit =                         (int)fmin(3,fmax(0,    digit>=10?(    digit-20):    digit));
+		for(int t = 0; t < 6; ++t)
+				textmesh  [(boxes[nbox].textmesh+6*clampeddigit                                               +t+1)*4+2] = hover==nbox?2:3;
+		for(int t = 0; t < 6; ++t) {
+			if(fmod(fmax(1,fmin(4,t)),2) == 1)
+				squaremesh[(square              +6              +t  )*4  ] = (boxes[nbox].x+clampeddigit*7.f  )/width;
+			else
+				squaremesh[(square              +6              +t  )*4  ] = (boxes[nbox].x+clampeddigit*7.f+8)/width;
+		}
+	}
+	freqdigit = digit;
+
+	if(freqdigit >= -10 && calcfreqstep) {
+		int dotpos = 4;
+		for(int n = 1; n < 4; ++n) {
+			int c = textmesh[3+(1+n*6+boxes[nbox].textmesh)*4]-51;
+			if(c < 0) {
+				dotpos = n;
+				break;
+			}
+		}
+		freqstep = dotpos-fmin(3,fmax(0,freqdigit>10?(freqdigit-20):freqdigit));
+		if(freqstep > 0) --freqstep;
+		freqstep = powf(10,freqstep);
+	}
 }
 
 LookNFeel::LookNFeel() {

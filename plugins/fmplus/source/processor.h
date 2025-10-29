@@ -138,6 +138,12 @@ private:
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(FMPlusAudioProcessor)
 };
 
+static float freqaddinflate(float value) {
+	return (mapToLog10((float)fabs(value*2-1),1.f,10000.f)-1)*(round(value)*2-1);
+};
+static float freqaddnormalize(float value) {
+	return mapFromLog10((float)fabs(value)+1,1.f,10000.f)*(value>=0?.5f:-.5f)+.5f;
+};
 static String format_time(float value, bool ms = false) {
 	if(time) {
 		     if(value <= .00005f)
@@ -227,7 +233,7 @@ static String get_string(int param, float value, int tab) {
 		} else if(param ==  7) {
 			return String(value,2).substring(0,4);
 		} else if(param ==  8) {
-			String s = String(mapToLog10((float)fabs(value*2-1),1.f,10000.f)-1,2).substring(0,4);
+			String s = String(fabs(freqaddinflate(value)),2).substring(0,4);
 			if(value < .5) s = "-"+s;
 			return s;
 		} else if(param ==  9) {

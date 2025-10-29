@@ -92,9 +92,13 @@ public:
 	void mouseUp(const MouseEvent& event) override;
 	void mouseDoubleClick(const MouseEvent& event) override;
 	void mouseWheelMove(const MouseEvent& event, const MouseWheelDetails& wheel) override;
+	bool keyPressed(const KeyPress& key) override;
 	int recalc_hover(float x, float y);
 	void updatehighlight(bool update_adsr = false);
+	void freqselect(int digit, bool calcfreqstep = true);
 
+	int prevx = 0;
+	int prevy = 0;
 	knob knobs[16+19];
 	int knobcount = 0;
 	int generalcount = 0;
@@ -114,7 +118,7 @@ private:
 	std::shared_ptr<OpenGLShaderProgram> baseshader;
 
 	int hover = -1;
-	int initialdrag = 0;
+	int initialdrag = -1;
 	float initialvalue[2] = {0,0};
 	float initialdotvalue[2] = {0,0};
 	float initialaxispoint[2] = {0,0};
@@ -135,9 +139,13 @@ private:
 	int tabanimation = 100;
 	int opanimation = 100;
 
-	float squaremesh[38*6*4];
+	float squaremesh[39*6*4];
 	int squarelength = -1;
 	int highlight = -1;
+	int freqdigit = -20;
+	float freqstep = -1;
+	float freqoffset = 0;
+	int scrolldigit = -20;
 	std::shared_ptr<OpenGLShaderProgram> squareshader;
 	void addsquare(float x, float y, float w, float h, float color = 0, bool corner = false);
 
