@@ -77,7 +77,7 @@ public:
 	void newOpenGLContextCreated() override;
 	void renderOpenGL() override;
 	void openGLContextClosing() override;
-	void calcvis();
+	void calcvis(int curveupdated);
 	void rebuildtab(int tab);
 	void updatevalue(int param);
 	void paint(Graphics&) override;
@@ -103,8 +103,6 @@ public:
 	int knobcount = 0;
 	int generalcount = 0;
 	int paramcount = 0;
-	float visline[2][452];
-	bool is_stereo = false;
 	String tuningfile = "";
 	String themefile = "";
 	bool presetunsaved = false;
@@ -148,6 +146,24 @@ private:
 	int scrolldigit = -20;
 	std::shared_ptr<OpenGLShaderProgram> squareshader;
 	void addsquare(float x, float y, float w, float h, float color = 0, bool corner = false);
+
+	curve curves[MC];
+	int lfohover = -1;
+
+	int linewritepos = -1;
+	float prevdpi = -1;
+	int curvemesh[4];
+	float visline[480*3];
+	int linelength = -1;
+	float lineprevx = 0;
+	float lineprevy = 020;
+	float linecurrentx = 0;
+	float linecurrenty = 0;
+	bool linebegun = true;
+	std::shared_ptr<OpenGLShaderProgram> lineshader;
+	void beginline(float x, float y);
+	void endline();
+	void nextpoint(float x, float y, bool knee = false);
 
 	bool displayaddremove[2] = { true, true };
 	std::shared_ptr<OpenGLShaderProgram> circleshader;

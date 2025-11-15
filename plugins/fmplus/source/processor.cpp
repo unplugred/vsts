@@ -78,6 +78,9 @@ FMPlusAudioProcessor::FMPlusAudioProcessor() :
 	}
 	params.antialiasing = apvts.getParameter("antialias")->getValue();
 	add_listener("antialias");
+
+	updatedcurve = 1+2+4+8+16+32+64+128;
+	updatevis = true;
 }
 
 FMPlusAudioProcessor::~FMPlusAudioProcessor(){
@@ -102,6 +105,9 @@ void FMPlusAudioProcessor::setCurrentProgram(int index) {
 		apvts.getParameter(params.general[i].id)->setValueNotifyingHost(params.general[i].normalize(presets[currentpreset].general[i]));
 	for(int i = 0; i < paramcount; ++i) for(int o = 0; o < MC; ++o)
 		apvts.getParameter("o"+(String)o+params.values[i].id)->setValueNotifyingHost(params.values[i].normalize(presets[currentpreset].values[o][i]));
+
+	updatedcurve = 1+2+4+8+16+32+64+128;
+	updatevis = true;
 }
 const String FMPlusAudioProcessor::getProgramName(int index) {
 	return { presets[index].name };
@@ -138,6 +144,10 @@ void FMPlusAudioProcessor::reseteverything() {
 	preparedtoplay = true;
 	setoversampling();
 
+	for(int o = 0; o < MC; ++o)
+		state.curves[o].resizechannels(channelnum);
+
+	updatedcurve = 1+2+4+8+16+32+64+128;
 }
 void FMPlusAudioProcessor::releaseResources() { }
 
@@ -161,6 +171,13 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 
 	float prmsadd = rmsadd.get();
 	int prmscount = rmscount.get();
+
+	if(updatedcurve.get() > 0) {
+		int uc = updatedcurve.get();
+		updatedcurve = 0;
+		for(int o = 0; o < MC; ++o) if((uc&(1<<o)) > 0)
+			state.curves[o].points = presets[currentpreset].curves[o].points;
+	}
 
 	int numsamples = buffer.getNumSamples();
 	dsp::AudioBlock<float> block(buffer);
@@ -298,6 +315,11 @@ const String FMPlusAudioProcessor::get_preset(int preset_id, const char delimite
 		data << presets[preset_id].general[i] << delimiter;
 	for(int i = 0; i < paramcount; i++) for(int o = 0; o < MC; ++o)
 		data << presets[preset_id].values[o][i] << delimiter;
+	for(int o = 0; o < MC; ++o) {
+		data << presets[preset_id].curves[o].points.size() << delimiter;
+		for(int p = 0; p < presets[preset_id].curves[o].points.size(); ++p)
+			data << presets[preset_id].curves[o].points[p].x << delimiter << presets[preset_id].curves[o].points[p].y << delimiter << presets[preset_id].curves[o].points[p].tension << delimiter;
+	}
 	for(int i = 0; i < (MC+1)*2; ++i)
 		data << presets[preset_id].oppos[i] << delimiter;
 	for(int o = 0; o < (MC+1); ++o) {
@@ -307,7 +329,6 @@ const String FMPlusAudioProcessor::get_preset(int preset_id, const char delimite
 				<< presets[preset_id].opconnections[o][i].influence << delimiter;
 		}
 	}
-	// TODO LFO
 
 	return data.str();
 }
@@ -333,6 +354,26 @@ void FMPlusAudioProcessor::set_preset(const String& preset, int preset_id, const
 			presets[preset_id].values[o][i] = std::stof(token);
 		}
 
+		for(int o = 0; o < MC; ++o) {
+			std::getline(ss, token, delimiter);
+			int size = std::stof(token);
+			if(size < 2) throw std::invalid_argument("Invalid point data");
+			presets[preset_id].curves[o].points.clear();
+			float prevx = 0;
+			for(int p = 0; p < size; ++p) {
+				std::getline(ss, token, delimiter);
+				float x = std::stof(token);
+				std::getline(ss, token, delimiter);
+				float y = std::stof(token);
+				std::getline(ss, token, delimiter);
+				float tension = std::stof(token);
+				if(x > 1 || x < prevx || y > 1 || y < 0 || tension > 1 || tension < 0 || (p == 0 && x != 0) || (p == (size-1) && x != 1))
+					throw std::invalid_argument("Invalid point data");
+				prevx = x;
+				presets[preset_id].curves[o].points.push_back(point(x,y,tension));
+			}
+		}
+
 		for(int i = 0; i < (MC+1)*2; ++i) {
 			std::getline(ss, token, delimiter);
 			presets[preset_id].oppos[i] = std::stoi(token);
@@ -348,7 +389,6 @@ void FMPlusAudioProcessor::set_preset(const String& preset, int preset_id, const
 				presets[preset_id].opconnections[o].push_back(connection(input,o,influence));
 			}
 		}
-		// TODO LFO
 
 	} catch(const char* e) {
 		error = "Error loading saved data: "+(String)e;
@@ -372,6 +412,8 @@ void FMPlusAudioProcessor::set_preset(const String& preset, int preset_id, const
 		apvts.getParameter(params.general[i].id)->setValueNotifyingHost(params.general[i].normalize(presets[currentpreset].general[i]));
 	for(int i = 0; i < paramcount; ++i) for(int o = 0; o < MC; ++o)
 		apvts.getParameter("o"+(String)o+params.values[i].id)->setValueNotifyingHost(params.values[i].normalize(presets[currentpreset].values[o][i]));
+	updatedcurve = 1+2+4+8+16+32+64+128;
+	updatevis = true;
 }
 
 void FMPlusAudioProcessor::parameterChanged(const String& parameterID, float newValue) {
@@ -396,6 +438,49 @@ void FMPlusAudioProcessor::parameterChanged(const String& parameterID, float new
 		params.presetunsaved = true;
 		return;
 	}
+}
+
+void FMPlusAudioProcessor::movepoint(int index, float x, float y) {
+	int i = params.selectedtab.get();
+	presets[currentpreset].curves[i].points[index].x = x;
+	presets[currentpreset].curves[i].points[index].y = y;
+	updatedcurve = updatedcurve.get()|(1<<i);
+}
+void FMPlusAudioProcessor::movetension(int index, float tension) {
+	int i = params.selectedtab.get();
+	presets[currentpreset].curves[i].points[index].tension = tension;
+	updatedcurve = updatedcurve.get()|(1<<i);
+}
+void FMPlusAudioProcessor::addpoint(int index, float x, float y) {
+	int i = params.selectedtab.get();
+	presets[currentpreset].curves[i].points.insert(presets[currentpreset].curves[i].points.begin()+index,point(x,y,presets[currentpreset].curves[i].points[index-1].tension));
+	updatedcurve = updatedcurve.get()|(1<<i);
+}
+void FMPlusAudioProcessor::deletepoint(int index) {
+	int i = params.selectedtab.get();
+	presets[currentpreset].curves[i].points.erase(presets[currentpreset].curves[i].points.begin()+index);
+	updatedcurve = updatedcurve.get()|(1<<i);
+}
+const String FMPlusAudioProcessor::curvetostring(const char delimiter) {
+	int i = params.selectedtab.get();
+	return presets[currentpreset].curves[i].tostring(delimiter);
+}
+void FMPlusAudioProcessor::curvefromstring(String str, const char delimiter) {
+	int i = params.selectedtab.get();
+	String revert = presets[currentpreset].curves[i].tostring();
+	try {
+		presets[currentpreset].curves[i] = curve(str,delimiter);
+	} catch(...) {
+		presets[currentpreset].curves[i] = curve(revert);
+	}
+	updatevis = true;
+	updatedcurve = updatedcurve.get()|(1<<i);
+}
+void FMPlusAudioProcessor::resetcurve() {
+	int i = params.selectedtab.get();
+	presets[currentpreset].curves[i] = curve("3,0,0,0.5,0.5,1,0.5,1,0,0.5");
+	updatevis = true;
+	updatedcurve = updatedcurve.get()|(1<<i);
 }
 
 AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new FMPlusAudioProcessor(); }

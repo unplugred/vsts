@@ -1,5 +1,6 @@
 #pragma once
 #include "includes.h"
+#include "curves.h"
 
 struct potentiometer {
 public:
@@ -61,9 +62,10 @@ struct pluginpreset {
 	float values[MC][19];
 	int oppos[(MC+1)*2];
 	std::vector<connection> opconnections[9];
-	//curve curves[MC]; TODO
+	curve curves[MC];
 	pluginpreset(String pname = "") {
 		name = pname;
+		for(int o = 0; o < MC; ++o) curves[o] = curve("3,0,0,0.5,0.5,1,0.5,1,0,0.5");
 	}
 };
 
@@ -105,6 +107,16 @@ public:
 
 	virtual void parameterChanged(const String& parameterID, float newValue);
 
+	void movepoint(int index, float x, float y);
+	void movetension(int index, float tension);
+	void addpoint(int index, float x, float y);
+	void deletepoint(int index);
+	const String curvetostring(const char delimiter = ',');
+	void curvefromstring(String str, const char delimiter = ',');
+	void resetcurve();
+	Atomic<bool> updatevis = false;
+	Atomic<int> updatedcurve = 1+2+4+8+16+32+64+128;
+ 
 	AudioProcessorValueTreeState::ParameterLayout create_parameters();
 	AudioProcessorValueTreeState apvts;
 
@@ -138,6 +150,16 @@ private:
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(FMPlusAudioProcessor)
 };
 
+static float oscillator(float x, float shape) { // TODO object
+	if(shape < .5f) {
+		shape = 1-shape*2;
+		float gc = (1-powf(1-pow(shape,1.74f),1.34f))*1.79f-3.04f;
+		float val = .5f-3.f*shape*shape;
+		return (x+x*x*x*(val*x*x-1.f-val))*gc;
+	}
+	float osc = x+x*x*x*(.5f*x*x-1.5f);
+	return (1-pow(1-fabs(osc*-3.04f),shape*2))*(osc>0?-1:1);
+}
 static float freqaddinflate(float value) {
 	return (mapToLog10((float)fabs(value*2-1),1.f,10000.f)-1)*(round(value)*2-1);
 };
