@@ -540,7 +540,7 @@ def run_plugin(plugin, config):
 	elif systems[system]["code"] == "win":
 		run_command("\""+join([artefact_path,config,"Standalone",product_name+systems[system]["executable"]])+"\"")
 	else:
-		run_command("\""+join([artefact_path,"Standalone",product_name+systems[system]["executable"]])+"\"")
+		run_command("gdb -ex run \""+join([artefact_path,"Standalone",product_name+systems[system]["executable"]])+"\"")
 
 def build_installer(plugin, system_i, zip_result=True):
 	debug("BUILDING INSTALLER FOR "+plugin.upper())
