@@ -36,6 +36,7 @@ target_sources("${BaseTargetName}" PRIVATE
 	source/editor.cpp
 	source/processor.cpp
 	source/curves.cpp
+	source/midihandler.cpp
 	source/functions.cpp)
 
 target_compile_definitions("${BaseTargetName}" PUBLIC

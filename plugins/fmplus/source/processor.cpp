@@ -7,9 +7,6 @@ FMPlusAudioProcessor::FMPlusAudioProcessor() :
 
 	init();
 
-	for(int i = 0; i < 128; ++i)
-		pitches[i] = (440.f/32.f)*pow(2.f,((i-9.f)/12.f));
-
 	presets[0] = pluginpreset("Init"); // TODO stringify default preset
 	for(int i = 0; i < generalcount; ++i)
 		presets[0].general[i] = 0;
@@ -79,6 +76,10 @@ FMPlusAudioProcessor::FMPlusAudioProcessor() :
 	params.antialiasing = apvts.getParameter("antialias")->getValue();
 	add_listener("antialias");
 
+	midihandle.params = state.general;
+	for(int i = 0; i < 128; ++i)
+		midihandle.pitches[i] = (440.f/32.f)*pow(2.f,((i-9.f)/12.f));
+
 	updatedcurve = 1+2+4+8+16+32+64+128;
 	updatevis = true;
 }
@@ -88,7 +89,7 @@ FMPlusAudioProcessor::~FMPlusAudioProcessor(){
 }
 
 const String FMPlusAudioProcessor::getName() const { return "FM+"; }
-bool FMPlusAudioProcessor::acceptsMidi() const { return false; }
+bool FMPlusAudioProcessor::acceptsMidi() const { return true; }
 bool FMPlusAudioProcessor::producesMidi() const { return false; }
 bool FMPlusAudioProcessor::isMidiEffect() const { return false; }
 double FMPlusAudioProcessor::getTailLengthSeconds() const { return 0.0; }
@@ -146,7 +147,6 @@ void FMPlusAudioProcessor::reseteverything() {
 
 	for(int o = 0; o < MC; ++o)
 		state.curves[o].resizechannels(channelnum);
-
 	updatedcurve = 1+2+4+8+16+32+64+128;
 }
 void FMPlusAudioProcessor::releaseResources() { }
@@ -156,6 +156,18 @@ bool FMPlusAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) co
 		return false;
 
 	return (layouts.getMainInputChannels() > 0);
+}
+
+void oscillator::reset(int channelnum, int samplesperblock) {
+	fb.resize(channelnum                );
+	p .resize(channelnum                );
+	a .resize(channelnum*samplesperblock);
+	f .resize(           samplesperblock);
+	w .resize(           samplesperblock);
+	for(int c = 0; c < channelnum; ++c) {
+		fb[c] = 0;
+		p [c] = 0;
+	}
 }
 
 void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& midiMessages) {
@@ -181,6 +193,7 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 
 	int numsamples = buffer.getNumSamples();
 	dsp::AudioBlock<float> block(buffer);
+	int oversampleamount = pow(2,osindex);
 	if(osindex > 0) {
 		dsp::AudioBlock<float> osblock = os[osindex-1]->processSamplesUp(block);
 		for(int i = 0; i < channelnum; ++i)
@@ -193,20 +206,72 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 	if(osindex > 0) channelData = osbuffer.getArrayOfWritePointers();
 	else channelData = buffer.getArrayOfWritePointers();
 
-	for(int sample = 0; sample < numsamples; ++sample) {
+	// ---- MIDI PASS ----
+	midihandle.newbuffer();
+	MidiBufferIterator midiiterator = midiMessages.begin();
+	for(int s = 0; s < numsamples; ++s) {
 		for(int i = 0; i < generalcount; ++i) if(params.general[i].smoothtime > 0)
 			state.general[i] = params.general[i].smooth[0].getNextValue();
-		for(int i = 0; i < paramcount; ++i) if(params.values[i].smoothtime > 0) for(int o = 0; o < MC; ++o)
-			state.values[o][i] = params.values[i].smooth[o].getNextValue();
+		// TODO smooth velocity + aftertouch
 
-		for(int channel = 0; channel < channelnum; ++channel) {
-			//channelData[channel][sample] = ???; TODO processing
-			if(prmscount < samplerate*2) {
-				prmsadd += channelData[channel][sample]*channelData[channel][sample];
-				prmscount++;
+		while(midiiterator != midiMessages.end() && ((*midiiterator).samplePosition*oversampleamount) <= s) {
+			midihandle.processmessage((*midiiterator).getMessage());
+			++midiiterator;
+		}
+		midihandle.tick();
+
+		for(int c = 0; c < channelnum; ++c) {
+			channelData[c][s] = 0;
+			for(int v = 0; v < midihandle.activevoicessize; ++v) {
+				osc[0][midihandle.activevoices[v]].p[c] = fmod(osc[0][midihandle.activevoices[v]].p[c]+(midihandle.voices[midihandle.activevoices[v]].freq[1]/samplerate/oversampleamount),1);
+				for(int c = 0; c < channelnum; ++c)
+					channelData[c][s] += sin(osc[0][midihandle.activevoices[v]].p[c]*MathConstants<double>::twoPi)*midihandle.notes[midihandle.voices[midihandle.activevoices[v]].noteindex].velocity;
 			}
 		}
 	}
+	//for(int i = 0; i < paramcount; ++i) if(params.values[i].smoothtime > 0) for(int o = 0; o < MC; ++o)
+	//	state.values[o][i] = params.values[i].smooth[o].getNextValue(); TODO
+	// ---- TODO ADSR PASS ----
+	for(int o = 0; o < MC; ++o) {
+		for(int s = 0; s < numsamples; ++s) {
+			// smooth
+			for(int v = 0; v < state.general[0]; ++v) {
+				for(int c = 0; c < channelnum; ++c) {
+				}
+			}
+		}
+	}
+	// ---- TODO LFO+PARAM PASS ----
+	for(int o = 0; o < MC; ++o) {
+		for(int s = 0; s < numsamples; ++s) {
+			// smooth
+			for(int v = 0; v < state.general[0]; ++v) {
+				for(int c = 0; c < channelnum; ++c) {
+				}
+			}
+		}
+	}
+	// ---- TODO BLOCK VIS ----
+	for(int o = 0; o < MC; ++o) {
+		for(int v = 0; v < state.general[0]; ++v) {
+			for(int c = 0; c < channelnum; ++c) {
+			}
+		}
+	}
+	// ---- TODO OSC PASS ----
+	for(int v = 0; v < state.general[0]; ++v) {
+		for(int s = 0; s < numsamples; ++s) {
+			for(int o = 0; o < MC; ++o) {
+				for(int c = 0; c < channelnum; ++c) {
+				}
+			}
+		}
+	}
+	// ---- TODO OP VIS ----
+	for(int o = 0; o < MC; ++o) {
+	}
+	// ---- TODO FX PASS ----
+	// ---- TODO VIS ----
 
 	if(osindex > 0) os[osindex-1]->processSamplesDown(block);
 
@@ -225,10 +290,16 @@ void FMPlusAudioProcessor::setoversampling() {
 		setLatencySamples(0);
 	}
 	int oversampleamount = pow(2,osindex);
+
 	for(int i = 0; i < paramcount; ++i) if(params.general[i].smoothtime > 0)
 		params.general[i].smooth[0].reset(samplerate*oversampleamount,params.general[i].smoothtime);
 	for(int i = 0; i < paramcount; ++i) if(params.values[i].smoothtime > 0) for(int o = 0; o < MC; ++o)
 		params.values[i].smooth[o].reset(samplerate*oversampleamount,params.values[i].smoothtime);
+
+	midihandle.reset(samplesperblock*oversampleamount);
+	for(int v = 0; v < state.general[0]; ++v)
+		for(int o = 0; o < MC; ++o)
+			osc[o][v].reset(channelnum,samplesperblock*oversampleamount);
 }
 
 bool FMPlusAudioProcessor::hasEditor() const { return true; }
@@ -248,7 +319,7 @@ void FMPlusAudioProcessor::getStateInformation(MemoryBlock& destData) {
 		<< params.tuningfile << delimiter;
 
 	for(int i = 0; i < 128; ++i)
-		data << pitches[i] << delimiter;
+		data << midihandle.pitches[i] << delimiter;
 
 	for(int i = 0; i < getNumPrograms(); ++i)
 		data << get_preset(i) << delimiter;
@@ -284,7 +355,7 @@ void FMPlusAudioProcessor::setStateInformation(const void* data, int sizeInBytes
 
 		for(int i = 0; i < 128; ++i) {
 			std::getline(ss, token, delimiter);
-			pitches[i] = std::stof(token);
+			midihandle.pitches[i] = std::stof(token);
 		}
 
 		for(int i = 0; i < getNumPrograms(); ++i) {
@@ -419,14 +490,28 @@ void FMPlusAudioProcessor::set_preset(const String& preset, int preset_id, const
 void FMPlusAudioProcessor::parameterChanged(const String& parameterID, float newValue) {
 	if(parameterID == "antialias") {
 		params.antialiasing = newValue;
-		setoversampling();
+		int newindex = fmin(3,fmax(0,floor(newValue*8-4)));
+		if(newindex != osindex) setoversampling();
 		return;
 	}
+	if(parameterID == "voices" && preparedtoplay) {
+		int osblock = samplesperblock*pow(2,osindex);
+		midihandle.setvoices(osblock,newValue);
+		if(state.general[0] < newValue) {
+			for(int v = state.general[0]; v < newValue; ++v)
+				for(int o = 0; o < MC; ++o)
+					osc[o][v].reset(channelnum,osblock);
+		} else {
+			for(int v = newValue; v < state.general[0]; ++v)
+				for(int o = 0; o < MC; ++o)
+					osc[o][v].reset(0,0);
+		}
+	}
+
 	for(int i = 0; i < generalcount; ++i) if(parameterID == params.general[i].id) {
 		if(params.general[i].smoothtime > 0) params.general[i].smooth[0].setTargetValue(newValue);
 		else state.general[i] = newValue;
 		presets[currentpreset].general[i] = newValue;
-
 		params.presetunsaved = true;
 		return;
 	}

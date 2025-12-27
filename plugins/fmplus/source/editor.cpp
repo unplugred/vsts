@@ -603,9 +603,9 @@ void FMPlusAudioProcessorEditor::calcvis(int curveupdated) {
 		int x = boxes[box].x;
 		int y = height-h-boxes[box].y;
 		linewritepos = curvemesh[0];
-		beginline(x,y+(oscillator(-1,knobs[generalcount+3].valuesmoothed)*-.5f+.5f)*h);
+		beginline(x,y+(osccalc(-1,knobs[generalcount+3].valuesmoothed)*-.5f+.5f)*h);
 		for(int i = 0; i < (h+1); ++i)
-			nextpoint(x+i+1,y+(oscillator((((float)i+1)/h)*2-1,knobs[generalcount+3].valuesmoothed)*.5f+.5f)*h);
+			nextpoint(x+i+1,y+(osccalc((((float)i+1)/h)*2-1,knobs[generalcount+3].valuesmoothed)*.5f+.5f)*h);
 		endline();
 		curvemesh[1] = linewritepos;
 		return;
