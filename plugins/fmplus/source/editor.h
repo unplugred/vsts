@@ -182,8 +182,6 @@ private:
 	void addtext(float x, float y, String txt, float color = 0);
 	void replacetext(int id, String txt, int length = -1);
 
-	float rms = 0;
-
 	// light theme
 	//*/
 	float col_bg			[3] = {	 .894f	,.894f	,.894f	};

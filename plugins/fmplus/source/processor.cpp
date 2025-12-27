@@ -181,9 +181,6 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 	for(auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
 		buffer.clear(i, 0, buffer.getNumSamples());
 
-	float prmsadd = rmsadd.get();
-	int prmscount = rmscount.get();
-
 	if(updatedcurve.get() > 0) {
 		int uc = updatedcurve.get();
 		updatedcurve = 0;
@@ -274,9 +271,6 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 	// ---- TODO VIS ----
 
 	if(osindex > 0) os[osindex-1]->processSamplesDown(block);
-
-	rmsadd = prmsadd;
-	rmscount = prmscount;
 }
 
 void FMPlusAudioProcessor::setoversampling() {

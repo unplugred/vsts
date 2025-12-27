@@ -1217,13 +1217,6 @@ void FMPlusAudioProcessorEditor::timerCallback() {
 
 	if(updatedadsr) calcvis(2);
 
-	// calculate rms
-	if(audio_processor.rmscount.get() > 0) {
-		rms = sqrt(audio_processor.rmsadd.get()/audio_processor.rmscount.get());
-		audio_processor.rmsadd = 0;
-		audio_processor.rmscount = 0;
-	} else rms *= .9f;
-
 	update();
 }
 

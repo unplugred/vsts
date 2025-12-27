@@ -140,9 +140,6 @@ public:
 	AudioProcessorValueTreeState::ParameterLayout create_parameters();
 	AudioProcessorValueTreeState apvts;
 
-	Atomic<float> rmsadd = 0;
-	Atomic<int> rmscount = 0;
-
 	int version = 0;
 	const int generalcount = 15;
 	const int paramcount = 19;
