@@ -175,7 +175,7 @@ private:
 	std::shared_ptr<OpenGLShaderProgram> indicatorshader;
 
 	int prevtextindex[4];
-	float textmesh[287*6*4]; // X Y COL CHAR
+	float textmesh[289*6*4]; // X Y COL CHAR
 	int textlength = -1;
 	OpenGLTexture texttex;
 	std::shared_ptr<OpenGLShaderProgram> textshader;

@@ -213,15 +213,17 @@ static String get_string(int param, float value, int tab) {
 				return (String)value+"ST";
 		} else if(param ==  6) {
 			     if(value == 0)
-				return "Up";
+				return "Sequen";
 			else if(value == 1)
-				return "Down";
+				return "Up";
 			else if(value == 2)
-				return "U&D";
+				return "Down";
 			else if(value == 3)
-				return "D&U";
+				return "U&D";
 			else if(value == 4)
-				return "Rand";
+				return "D&U";
+			else if(value == 5)
+				return "Random";
 		} else if(param ==  7) {
 			return (String)round(value*100)+'%';
 		} else if(param ==  8) {

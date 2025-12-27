@@ -761,7 +761,7 @@ void FMPlusAudioProcessorEditor::rebuildtab(int tab) {
 		boxes[boxnum++] = box(              4,114, 70, 37, 11,0, 4,true);
 
 		boxes[boxnum++] = box(              5, 31, 91,  8,  8,3);
-		boxes[boxnum++] = box(              6,107,101, 44, 11,0, 4);
+		boxes[boxnum++] = box(              6,107,101, 44, 11,0, 6);
 		boxes[boxnum++] = box(              7,107,113, 44, 11,0, 4);
 		boxes[boxnum++] = box(              8,107,125, 44, 11,0, 6,true);
 		knobs[ 9].box = boxnum-1;

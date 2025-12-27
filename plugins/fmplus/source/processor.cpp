@@ -31,7 +31,7 @@ FMPlusAudioProcessor::FMPlusAudioProcessor() :
 	params.general[ 3] = potentiometer("LFO Sync"					,"lfosync"			,0		,presets[0].general  [ 4]	,0	,3	,potentiometer::inttype		);
 	params.general[ 4] = potentiometer("Pitch Bend"					,"pitchbend"		,.001f	,presets[0].general  [ 3]	,0	,24	,potentiometer::inttype		);
 	params.general[ 5] = potentiometer("Arp On"						,"arpon"			,0		,presets[0].general  [ 5]	,0	,1	,potentiometer::booltype	);
-	params.general[ 6] = potentiometer("Arp Direction"				,"arpdirection"		,0		,presets[0].general  [ 6]	,0	,4	,potentiometer::inttype		);
+	params.general[ 6] = potentiometer("Arp Direction"				,"arpdirection"		,0		,presets[0].general  [ 6]	,0	,5	,potentiometer::inttype		);
 	params.general[ 7] = potentiometer("Arp Length"					,"arplength"		,0		,presets[0].general  [ 7]	);
 	params.general[ 8] = potentiometer("Arp Speed"					,"arpspeed"			,0		,presets[0].general  [ 8]	);
 	params.general[ 9] = potentiometer("Arp Speed (BPM sync)"		,"arpbpm"			,0		,presets[0].general  [ 9]	,0	,10	,potentiometer::inttype		);
@@ -493,7 +493,7 @@ AudioProcessorValueTreeState::ParameterLayout FMPlusAudioProcessor::create_param
 	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"lfosync"					,1},"LFO Sync"																	 ,0		,3		 ,0		,AudioParameterIntAttributes()	.withStringFromValueFunction(tolfosync			).withValueFromStringFunction(fromlfosync		))); // NOTE, RANDOM, UNISON, TRIGGER
 	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"pitchbend"				,1},"Pitch Bend"																 ,0		,24		 ,2		,AudioParameterIntAttributes()	.withStringFromValueFunction(topitchbend		).withValueFromStringFunction(frompitchbend		)));
 	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"arpon"					,1},"Arp On"																	 				 ,false	,AudioParameterBoolAttributes()	.withStringFromValueFunction(tobool				).withValueFromStringFunction(frombool			)));
-	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"arpdirection"			,1},"Arp Direction"																 ,0		,4		 ,0		,AudioParameterIntAttributes()	.withStringFromValueFunction(toarpdirection		).withValueFromStringFunction(fromarpdirection	))); // UP, DOWN, U&D, D&U, RANDOM
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"arpdirection"			,1},"Arp Direction"																 ,0		,5		 ,0		,AudioParameterIntAttributes()	.withStringFromValueFunction(toarpdirection		).withValueFromStringFunction(fromarpdirection	))); // SEQUENCE, UP, DOWN, U&D, D&U, RANDOM
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"arpspeed"				,1},"Arp Speed"									,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.5f	,AudioParameterFloatAttributes().withStringFromValueFunction(toarpspeed			).withValueFromStringFunction(fromarpspeed		)));
 	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"arpbpm"					,1},"Arp Speed (BPM sync)"														 ,0		,10		 ,0		,AudioParameterIntAttributes()	.withStringFromValueFunction(toarpbpm			).withValueFromStringFunction(fromarpbpm		)));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"arplength"				,1},"Arp Length"								,juce::NormalisableRange<float	>(0.0f	,1.0f	),1.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(toarplength		).withValueFromStringFunction(fromarplength		)));
