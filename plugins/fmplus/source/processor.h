@@ -203,7 +203,7 @@ static String get_string(int param, float value, int tab) {
 			else if(value == 1)
 				return "Rand";
 			else if(value == 2)
-				return "Uni";
+				return "Free";
 			else if(value == 3)
 				return "Trig";
 		} else if(param ==  4) {
@@ -396,10 +396,10 @@ static std::function<String(float v, int max)> tovelocity = [](float v, int max)
 static std::function<float(const String& s)> fromvelocity = [](const String& s) { // TODO
 	return jlimit(0.f,1.f,s.getFloatValue());
 };
-static std::function<String(float v, int max)> toaftertouch = [](float v, int max) {
+static std::function<String(float v, int max)> tomodat = [](float v, int max) {
 	return get_string(5,v,3);
 };
-static std::function<float(const String& s)> fromaftertouch = [](const String& s) { // TODO
+static std::function<float(const String& s)> frommodat = [](const String& s) { // TODO
 	return jlimit(0.f,1.f,s.getFloatValue());
 };
 static std::function<String(bool v, int max)> tofreqmode = [](bool v, int max) {
