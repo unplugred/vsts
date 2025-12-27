@@ -880,15 +880,17 @@ void FMPlusAudioProcessorEditor::rebuildtab(int tab) {
 		boxes[knobs[10+generalcount].box].textmesh = boxes[knobs[12+generalcount].box].textmesh;
 		boxes[knobs[11+generalcount].box].textmesh = boxes[knobs[12+generalcount].box].textmesh;
 	}
-	for(int i = (selectedtab>=3?generalcount:-3); i < (selectedtab>=3?(paramcount+generalcount):generalcount); ++i) {
-		if(i >= (10+generalcount) && i <= (12+generalcount)) continue;
-		if(i == 9 || i == 12 || i == (16+generalcount)) continue;
-		if(i == (3+generalcount)) continue;
-		if(i >= 0) {
-			knobs[i].valuesmoothed = boxes[knobs[i].box].type==1?.5f:0;
-			knobs[i].velocity = 0;
+	if(selectedtab == 0 || selectedtab >= 3) {
+		for(int i = (selectedtab>=3?generalcount:-3); i < (selectedtab>=3?(paramcount+generalcount):generalcount); ++i) {
+			if(i >= (10+generalcount) && i <= (12+generalcount)) continue;
+			if(i == 9 || i == 12 || i == (16+generalcount)) continue;
+			if(i == (3+generalcount)) continue;
+			if(i >= 0) {
+				knobs[i].valuesmoothed = boxes[knobs[i].box].type==1?.5f:0;
+				knobs[i].velocity = 0;
+			}
+			updatevalue(i);
 		}
-		updatevalue(i);
 	}
 	prevtextindex[0] = 365; // animation sections
 	if(selectedtab == 0) {
@@ -913,6 +915,7 @@ void FMPlusAudioProcessorEditor::rebuildtab(int tab) {
 	for(int i = 366; i < (1+textlength  ); ++i) if(textmesh  [2+i*4] >= 0) textmesh  [2+i*4] -= 10;
 
 	if(selectedtab >= 3) for(int i = 0; i < 4; ++i) calcvis(i);
+	else calcvis(0);
 	linelength = curvemesh[selectedtab>=3?3:0];
 }
 void FMPlusAudioProcessorEditor::addsquare(float x, float y, float w, float h, float color, bool corner) {
