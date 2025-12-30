@@ -2,7 +2,8 @@ project(FMPlus VERSION 1.0.0)
 set(BaseTargetName FMPlus)
 
 juce_add_plugin("${BaseTargetName}"
-	PRODUCT_NAME "FM+"
+	PRODUCT_NAME "FMPlus"
+	PLUGIN_NAME "FM+"
 	COMPANY_NAME "unplugred"
 	COMPANY_WEBSITE "https://vst.unplug.red"
 	COMPANY_EMAIL "melody@unplug.red"
