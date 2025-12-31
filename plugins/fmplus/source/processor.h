@@ -77,6 +77,7 @@ struct oscillator {
 	std::vector<float> a ; // amplitude len = c*s
 	std::vector<float> f ; // frequency len =   s
 	std::vector<float> w ; // waveform  len =   s
+	float vellerp = 0;
 };
 static float osccalc(float x, float shape) { // TODO object
 	if(shape < .5f) {
@@ -164,10 +165,14 @@ private:
 	int channelnum = 0;
 	int samplesperblock = 0;
 	int samplerate = 44100;
+	double bpm = 120;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(FMPlusAudioProcessor)
 };
 
+static float calcarp(float value) {
+	return value*value*(MAXARP-MINARP)+MINARP;
+}
 static float freqaddinflate(float value) {
 	return (mapToLog10((float)fabs(value*2-1),1.f,10000.f)-1)*(round(value)*2-1);
 };
@@ -175,123 +180,117 @@ static float freqaddnormalize(float value) {
 	return mapFromLog10((float)fabs(value)+1,1.f,10000.f)*(value>=0?.5f:-.5f)+.5f;
 };
 static String format_time(float value, bool ms = false) {
-	if(time) {
-		     if(value <= .00005f)
-			return "0ms";
-		else if(value < .00995f)
-			return String(value*1000,1)+"ms";
-		else if(value < .9995f || ms)
-			return (String)round(value*1000)+"ms";
-		else if(value < 9.995f)
-			return String(value,2)+"s";
-		else if(value < 99.95f)
-			return String(value,1)+"s";
-		else
-			return (String)round(value)+"s";
-	}
-	return "meow";
+	if(value <= .00005f)
+		return "0ms";
+	if(value < .00995f)
+		return String(value*1000,1)+"ms";
+	if(value < .9995f || ms)
+		return (String)round(value*1000)+"ms";
+	if(value < 9.995f)
+		return String(value,2)+"s";
+	if(value < 99.95f)
+		return String(value,1)+"s";
+	return (String)round(value)+"s";
 };
-//                            0      1        2       3        4      5       6      7      8      9      10     11     12     13     14     15     16     17      18
-const String bpmsyncs_s[19] { "Off",  "1/32", "1/16",  "3/32", "1/8", "3/16", "1/4", "3/8", "1/2", "3/4", "1/1", "3/2", "2/1", "3/1", "4/1", "6/1", "8/1", "12/1", "16/1" };
-const float  bpmsyncs_f[19] {     0, .03125f, .0625f, .09375f, .125f, .1875f,  .25f, .375f,   .5f,  .75f,     1,  1.5f,     2,     3,     4,     6,     8,     12,     16 };
+//                           0      1     2      3      4     5      6     7     8     9     10    11    12    13    14    15    16    17     18
+const String bpmsyncs_s[19] {"Off","1/32","1/16","3/32","1/8","3/16","1/4","3/8","1/2","3/4","1/1","3/2","2/1","3/1","4/1","6/1","8/1","12/1","16/1"};
+const float  bpmsyncs_f[19] {    0, .125f,  .25f, .375f,  .5f,  .75f,    1, 1.5f,    2,    3,    4,    6,    8,   12,   16,   24,   32,    48,    64};
 static String get_string(int param, float value, int tab) {
-	if(tab == 0) {
-		       if(param ==  0) {
+	  if(tab == 0) {
+		  if(param ==  0) {
 			if(value == 1)
 				return "Mono";
-			else
-				return (String)value;
-		} else if(param ==  1) {
-			return format_time(value*value*MAXPORT);
-		} else if(param ==  2) {
-			return value>.5?"On":"Off";
-		} else if(param ==  3) {
-			     if(value == 0)
-				return "Note";
-			else if(value == 1)
-				return "Rand";
-			else if(value == 2)
-				return "Free";
-			else if(value == 3)
-				return "Trig";
-		} else if(param ==  4) {
+			return (String)value;
+		} if(param ==  1) {
 			if(value == 0)
 				return "Off";
-			else
-				return (String)value+"ST";
-		} else if(param ==  6) {
-			     if(value == 0)
+			return format_time(value*value*MAXPORT);
+		} if(param ==  2) {
+			return value>.5?"On":"Off";
+		} if(param ==  3) {
+			if(value == 0)
+				return "Note";
+			if(value == 1)
+				return "Rand";
+			if(value == 2)
+				return "Free";
+			if(value == 3)
+				return "Trig";
+		} if(param ==  4) {
+			if(value == 0)
+				return "Off";
+			return (String)value+"ST";
+		} if(param ==  6) {
+			if(value == 0)
 				return "Sequen";
-			else if(value == 1)
+			if(value == 1)
 				return "Up";
-			else if(value == 2)
+			if(value == 2)
 				return "Down";
-			else if(value == 3)
+			if(value == 3)
 				return "U&D";
-			else if(value == 4)
+			if(value == 4)
 				return "D&U";
-			else if(value == 5)
+			if(value == 5)
 				return "Random";
-		} else if(param ==  7) {
+		} if(param ==  7) {
 			return (String)round(value*100)+'%';
-		} else if(param ==  8) {
-			return format_time(value*value*MAXARP,true);
-		} else if(param ==  9 || param == 12) {
+		} if(param ==  8) {
+			return format_time(calcarp(value),true);
+		} if(param ==  9 || param == 12) {
 			return bpmsyncs_s[(int)round(value)];
-		} else if(param == 11) {
+		} if(param == 11) {
 			return format_time(value*value*MAXVIB,true);
-		} else if(param == 13) {
+		} if(param == 13) {
 			return (String)round(pow(value,2)*100)+'C';
-		} else if(param == 14) {
+		} if(param == 14) {
 			return format_time(value*value*MAXVIBATT);
-		} else if(param == 15) {
+		} if(param == 15) {
 			if(value < .5)
 				return (String)floor(value*200)+'%';
-			else
-				return (String)pow(2,fmin(3,fmax(0,floor(value*8-4))))+'x';
+			return (String)pow(2,fmin(3,fmax(0,floor(value*8-4))))+'x';
 		}
-	} else if(tab >= 3) {
-		       if(param ==  1) {
+	} if(tab >= 3) {
+		  if(param ==  1) {
 			if(round(value*200) == 100)
 				return "0\%C";
-			else
-				return (String)round(fabs(value*200-100))+'%'+(value<.5?'L':'R');
-		} else if(param ==  2) {
+			return (String)round(fabs(value*200-100))+'%'+(value<.5?'L':'R');
+		} if(param ==  2) {
 			return (String)round(value*200)+'%';
-		} else if(param ==  4 || param ==  5) {
+		} if(param ==  4 || param ==  5) {
 			return (String)round(value*100)+'%';
-		} else if(param ==  6) {
+		} if(param ==  6) {
 			return value>.5?"*":"/";
-		} else if(param ==  7) {
+		} if(param ==  7) {
 			return String(value,2).substring(0,4);
-		} else if(param ==  8) {
+		} if(param ==  8) {
 			String s = String(fabs(freqaddinflate(value)),2).substring(0,4);
 			if(value < .5) s = "-"+s;
 			return s;
-		} else if(param ==  9) {
+		} if(param ==  9) {
 			return format_time(value*value*MAXA);
-		} else if(param == 10) {
+		} if(param == 10) {
 			return format_time(value*value*MAXD);
-		} else if(param == 11) {
+		} if(param == 11) {
 			return String(value,2);
-		} else if(param == 12) {
+		} if(param == 12) {
 			return format_time(value*value*MAXR);
-		} else if(param == 14) {
-			     if(value == 0)
+		} if(param == 14) {
+			if(value == 0)
 				return "Amp";
-			else if(value == 1)
+			if(value == 1)
 				return "Pitch";
-			else if(value == 2)
+			if(value == 2)
 				return "Pan";
-			else if(value == 3)
+			if(value == 3)
 				return "Tone";
-		} else if(param == 15) {
+		} if(param == 15) {
 			return format_time(value*value*MAXLFO);
-		} else if(param == 16) {
+		} if(param == 16) {
 			return bpmsyncs_s[value==0?0:(value==1?4:((int)round(value)+4))];
-		} else if(param == 17) {
+		} if(param == 17) {
 			return (String)round(value*100)+'%';
-		} else if(param == 18) {
+		} if(param == 18) {
 			return format_time(value*value*MAXLFOATT);
 		}
 	}

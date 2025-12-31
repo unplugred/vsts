@@ -4,16 +4,24 @@
 class midihandler {
 	public:
 	struct note {
-		int noteid = -1;
-		float velocity = -1;
-		float aftertouch = -1;
+		float pitch;
+		float velocity = 0;
+		float aftertouch = 0;
 		int voice = -1;
 		bool sustained = false;
-		note() {}
-		note(int notei, float notevel, int notevoice) {
-			noteid = notei;
+		void on(int notevoice, float notevel) {
 			velocity = notevel;
-			aftertouch = 0; // TODO
+			voice = notevoice;
+			sustained = false;
+		}
+		void off() {
+			voice = -1;
+			sustained = false;
+		}
+		void steal() {
+			voice = -1;
+		}
+		void unsteal(int notevoice) {
 			voice = notevoice;
 		}
 	};
@@ -23,7 +31,7 @@ class midihandler {
 		void noteoff();
 		void tick();
 
-		int noteindex = -1;
+		int noteid = -1;
 		float freq[3] { 1000, 1000, 1000 };
 
 		int eventindex = 0;
@@ -32,31 +40,47 @@ class midihandler {
 	};
 
 	float* params;
+	int samplerate;
 
 	bool sustain = false;
 	float pitchval = 0;
 	float modval = 0;
 
-	float pitches[128];
-
 	note notes[128];
-	int notessize = 0;
-
 	voice voices[24];
+
+	int voicessize = 0;
+	int activenotes[128];
+	int activenotessize = 0;
 	int activevoices[24];
 	int activevoicessize = 0;
 	int inactivevoices[24];
 	int inactivevoicessize = 0;
 
-	void reset(int samplesperblock);
-	void setvoices(int samplesperblock, int count);
+	bool arpon = false;
+	float arpprogress = 1;
+	int arpindex = -1;
+	int arplastnote = -1;
+	bool arpdirection = false;
+	bool arpdirty = false;
+	int arporder[48];
+	float arpspeed = 0;
+	Random random;
+
+	void reset(int samplesperblock, int sr);
+	void setvoices(int samplesperblock);
 	void newbuffer();
 	void processmessage(MidiMessage message);
+
 	void noteon(int noteid, float notevel);
 	void noteoff(int noteid, bool sustained);
 	void allsoundoff();
 	void sustainpedal(bool on);
 	void pitchwheel();
 	void modwheel();
+
+	void arpset();
+	void arpupdate();
+
 	void tick();
 };
