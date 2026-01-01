@@ -1352,12 +1352,30 @@ void FMPlusAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 			if(selectedtab == 0) {
 				       if(initialdrag ==  0) { // preset
 					// TODO preset select
-				} else if(initialdrag == 15 || initialdrag == 17) { // file select
-					// TODO file select
+				} else if(initialdrag == 15) { // tuning select
+					File tuningdir = audio_processor.params.tuningdir;
+					if(!tuningdir.exists()) tuningdir = File();
+					tuningchooser = std::make_unique<FileChooser>("Open tuning...",tuningdir,"*.scl;*.kbm");
+					int folderChooserFlags = FileBrowserComponent::openMode | FileBrowserComponent::canSelectFiles;
+					tuningchooser->launchAsync(folderChooserFlags,[this](const FileChooser& chooser) {
+						tuningfile = audio_processor.updatetuning(chooser.getResult());
+						updatevalue(-2);
+					});
+				} else if(initialdrag == 17) { // theme select
+					File themedir = audio_processor.params.themedir;
+					if(!themedir.exists()) themedir = File();
+					themechooser = std::make_unique<FileChooser>("Open theme...",themedir,"*.txt");
+					int folderChooserFlags = FileBrowserComponent::openMode | FileBrowserComponent::canSelectFiles;
+					themechooser->launchAsync(folderChooserFlags,[this](const FileChooser& chooser) {
+						themefile = audio_processor.updatetheme(chooser.getResult());
+						updatevalue(-1);
+					});
 				} else if(initialdrag == 16) { // default tuning
+					audio_processor.resettuning();
 					tuningfile = "Standard";
 					updatevalue(-2);
 				} else if(initialdrag == 18) { // default theme
+					audio_processor.resettheme();
 					themefile = "Default";
 					updatevalue(-1);
 				}

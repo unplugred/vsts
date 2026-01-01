@@ -44,6 +44,8 @@ struct pluginparams {
 	bool presetunsaved = false;
 	String tuningfile = "Standard";
 	String themefile = "Default";
+	File tuningdir = File();
+	File themedir = File();
 	float theme[9*3];
 };
 
@@ -137,6 +139,11 @@ public:
 	void resetcurve();
 	Atomic<bool> updatevis = false;
 	Atomic<int> updatedcurve = 1+2+4+8+16+32+64+128;
+
+	void resettuning();
+	String updatetuning(File file);
+	void resettheme();
+	String updatetheme(File file);
 
 	AudioProcessorValueTreeState::ParameterLayout create_parameters();
 	AudioProcessorValueTreeState apvts;

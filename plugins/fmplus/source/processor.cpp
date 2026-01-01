@@ -7,6 +7,15 @@ FMPlusAudioProcessor::FMPlusAudioProcessor() :
 
 	init();
 
+	PropertiesFile* user_settings = props.getUserSettings();
+	if(user_settings->containsKey("tuningdir"))
+		params.tuningdir = File(user_settings->getValue("tuningdir"));
+	if(user_settings->containsKey("themedir"))
+		params.themedir = File(user_settings->getValue("themedir"));
+	if(user_settings->containsKey("themefile"))
+		params.themefile = user_settings->getValue("themefile");
+	// TODO store theme
+
 	presets[0] = pluginpreset("Init"); // TODO stringify default preset
 	for(int i = 0; i < generalcount; ++i)
 		presets[0].general[i] = 0;
@@ -77,8 +86,7 @@ FMPlusAudioProcessor::FMPlusAudioProcessor() :
 	add_listener("antialias");
 
 	midihandle.params = state.general;
-	for(int n = 0; n < 128; ++n)
-		midihandle.notes[n].pitch = (440.f/32.f)*pow(2.f,((n-9.f)/12.f));
+	resettuning();
 
 	updatedcurve = 1+2+4+8+16+32+64+128;
 	updatevis = true;
@@ -341,7 +349,7 @@ void FMPlusAudioProcessor::getStateInformation(MemoryBlock& destData) {
 		<< (params.presetunsaved?1:0) << delimiter
 		<< params.antialiasing << delimiter
 		<< params.selectedtab.get() << delimiter
-		<< params.tuningfile << delimiter;
+		<< params.tuningfile.replace(",","/") << delimiter;
 
 	for(int n = 0; n < 128; ++n)
 		data << midihandle.notes[n].pitch << delimiter;
@@ -376,7 +384,7 @@ void FMPlusAudioProcessor::setStateInformation(const void* data, int sizeInBytes
 		params.selectedtab = std::stoi(token);
 
 		std::getline(ss, token, delimiter);
-		params.tuningfile = (String)token;
+		params.tuningfile = ((String)token).replace("/",",");
 
 		for(int n = 0; n < 128; ++n) {
 			std::getline(ss, token, delimiter);
@@ -405,7 +413,7 @@ const String FMPlusAudioProcessor::get_preset(int preset_id, const char delimite
 	std::ostringstream data;
 
 	data << version << delimiter
-		<< presets[preset_id].name.replace(",","ñ") << delimiter;
+		<< presets[preset_id].name.replace(",","*") << delimiter;
 
 	for(int i = 0; i < generalcount; i++)
 		data << presets[preset_id].general[i] << delimiter;
@@ -439,7 +447,7 @@ void FMPlusAudioProcessor::set_preset(const String& preset, int preset_id, const
 		int save_version = std::stoi(token);
 
 		std::getline(ss, token, delimiter);
-		presets[preset_id].name = ((String)token).replace("ñ",",");
+		presets[preset_id].name = ((String)token).replace("*",",");
 
 		for(int i = 0; i < generalcount; i++) {
 			std::getline(ss, token, delimiter);
@@ -583,6 +591,70 @@ void FMPlusAudioProcessor::resetcurve() {
 	presets[currentpreset].curves[i] = curve("3,0,0,0.5,0.5,1,0.5,1,0,0.5");
 	updatevis = true;
 	updatedcurve = updatedcurve.get()|(1<<i);
+}
+
+void FMPlusAudioProcessor::resettuning() {
+	for(int n = 0; n < 128; ++n)
+		midihandle.notes[n].pitch = (440.f/32.f)*pow(2.f,((n-9.f)/12.f));
+	params.tuningfile = "Standard";
+}
+String FMPlusAudioProcessor::updatetuning(File file) {
+	if(file.getFullPathName() == "") return params.tuningfile;
+	params.tuningdir = file.getParentDirectory();
+	props.getUserSettings()->setValue("tuningdir",params.tuningdir.getFullPathName());
+
+	File scl;
+	File kbm;
+	       if(file.hasFileExtension("scl") || file.hasFileExtension("ascl")) {
+		scl = file;
+		kbm = file.withFileExtension("kbm");
+	} else if(file.hasFileExtension("kbm")) {
+		kbm = file;
+		scl = file.withFileExtension("scl");
+	} else return params.tuningfile;
+
+	try {
+		if(scl.existsAsFile()) {
+			Tunings::Scale s = Tunings::readSCLFile(scl.getFullPathName().toStdString());
+			if(kbm.existsAsFile()) {
+				Tunings::KeyboardMapping k = Tunings::readKBMFile(kbm.getFullPathName().toStdString());
+				Tunings::Tuning t(s,k);
+				for(int n = 0; n < 128; ++n)
+					midihandle.notes[n].pitch = t.frequencyForMidiNote(n);
+			} else {
+				Tunings::Tuning t(s);
+				for(int n = 0; n < 128; ++n)
+					midihandle.notes[n].pitch = t.frequencyForMidiNote(n);
+			}
+		} else if(kbm.existsAsFile()) {
+			Tunings::KeyboardMapping k = Tunings::readKBMFile(kbm.getFullPathName().toStdString());
+			Tunings::Tuning t(k);
+			for(int n = 0; n < 128; ++n)
+				midihandle.notes[n].pitch = t.frequencyForMidiNote(n);
+		}
+		params.tuningfile = scl.getFileNameWithoutExtension();
+	} catch(...) {}
+
+	return params.tuningfile;
+}
+void FMPlusAudioProcessor::resettheme() {
+	params.themefile = "Default";
+	props.getUserSettings()->setValue("themefile",params.themefile);
+
+	// TODO
+}
+String FMPlusAudioProcessor::updatetheme(File file) {
+	if(file.getFullPathName() == "") return params.themefile;
+	PropertiesFile* user_settings = props.getUserSettings();
+
+	params.themedir = file.getParentDirectory();
+	user_settings->setValue("themedir",params.themedir.getFullPathName());
+
+	// TODO
+
+	params.themefile = file.getFileNameWithoutExtension();
+	user_settings->setValue("themefile",params.themefile);
+	return params.themefile;
 }
 
 AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new FMPlusAudioProcessor(); }

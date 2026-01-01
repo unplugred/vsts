@@ -1,3 +1,4 @@
 juce_add_modules(
 	plugmachine
-	ea_soundtouch)
+	ea_soundtouch
+	tuning-library)

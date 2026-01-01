@@ -66,6 +66,7 @@ set_target_properties("${BaseTargetName}BinaryData" PROPERTIES POSITION_INDEPEND
 
 target_link_libraries("${BaseTargetName}" PRIVATE
 	plugmachine
+	tuning-library
 	#juce::juce_audio_basics
 	#juce::juce_audio_devices
 	#juce::juce_audio_formats
