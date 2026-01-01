@@ -130,6 +130,7 @@ plugins = [{
 	"name": "FMPlus",
 	"code": "Fmpl",
 	"standalone": True,
+	"au_type": "aumu",
 	"in_bundle": False
 }]
 for i in range(len(plugins)):
