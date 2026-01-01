@@ -19,7 +19,7 @@ codes = {
 systems = [{
 	"name": "Mac",
 	"code": "mac",
-	"image": "macos-13",
+	"image": "macos-14",
 	"compiler": "Xcode",
 	"executable": ".app"
 },{
@@ -377,7 +377,7 @@ def product_build(plugin):
 	<title>'''+plugin+''' Install</title>
 	<domains enable_anywhere="false" enable_currentUserHome="false" enable_localSystem="true"/>
 	<allowed-os-versions>
-		<os-version min="10.13"/>
+		<os-version min="11"/>
 	</allowed-os-versions>
 	<options customize="always" require-scripts="false" rootVolumeOnly="true"/>
 	<welcome file="pages/welcome.html" mime-type="text/html"/>
