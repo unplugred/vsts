@@ -11,11 +11,6 @@
 //#include <juce_data_structures/juce_data_structures.h>
 #include <juce_dsp/juce_dsp.h>
 //#include <juce_events/juce_events.h>
-//#include <juce_graphics/juce_graphics.h>
-//#include <juce_gui_basics/juce_gui_basics.h>
-//#include <juce_gui_extra/juce_gui_extra.h>
-//#include <juce_opengl/juce_opengl.h>
-//#include <juce_video/juce_video.h>
 #include "BinaryData.h"
 using namespace juce;
 
@@ -23,7 +18,7 @@ using namespace juce;
 #define MAXA 8
 #define MAXD 8
 #define MAXR 8
-#define MAXPORT 4
+#define MAXGLIDE 2
 #define MINARP .01
 #define MAXARP 1
 #define MAXVIB 1

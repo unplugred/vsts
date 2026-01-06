@@ -10,10 +10,10 @@ void curveiterator::reset(curve inputcurve, int wwidth) {
 	pointhit = true;
 	while(!points[nextpoint].enabled) ++nextpoint;
 }
-double curveiterator::next() {
-	double xx = ((double)++x)/(width-1);
+float curveiterator::next() {
+	float xx = ((float)++x)/(width-1);
 	if(xx >= 1) {
-		if((((double)x-1)/(width-1)) < 1) pointhit = true;
+		if((((float)x-1)/(width-1)) < 1) pointhit = true;
 		return points[points.size()-1].y;
 	}
 	if(xx >= points[nextpoint].x || (width-x) <= (points.size()-nextpoint)) {
@@ -23,10 +23,10 @@ double curveiterator::next() {
 		while(!points[nextpoint].enabled) ++nextpoint;
 		return points[currentpoint].y;
 	}
-	double interp = curve::calctension((xx-points[currentpoint].x)/(points[nextpoint].x-points[currentpoint].x),points[currentpoint].tension);
+	float interp = curve::calctension((xx-points[currentpoint].x)/(points[nextpoint].x-points[currentpoint].x),points[currentpoint].tension);
 	return points[currentpoint].y*(1-interp)+points[nextpoint].y*interp;
 }
-double curve::process(double input, int channel) {
+float curve::process(float input, int channel) {
 	if(input <= 0) return points[0].y;
 	if(input >= 1) return points[points.size()-1].y;
 	
@@ -40,7 +40,7 @@ double curve::process(double input, int channel) {
 	while(input >= points[nextpoint[channel]].x)
 		currentpoint[channel] = nextpoint[channel]++;
 
-	double interp = .5f;
+	float interp = .5f;
 	if((points[nextpoint[channel]].x-points[currentpoint[channel]].x) >= .0001f)
 		interp = curve::calctension((input-points[currentpoint[channel]].x)/(points[nextpoint[channel]].x-points[currentpoint[channel]].x),points[currentpoint[channel]].tension);
 	return points[currentpoint[channel]].y*(1-interp)+points[nextpoint[channel]].y*interp;
@@ -93,7 +93,7 @@ String curve::tostring(const char delimiter) {
 		data << points[p].x << delimiter << points[p].y << delimiter << points[p].tension << delimiter;
 	return (String)data.str();
 }
-double curve::calctension(double interp, double tension) {
+float curve::calctension(float interp, float tension) {
 	if(tension == .5)
 		return interp;
 	else {

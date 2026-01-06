@@ -19,8 +19,8 @@ struct curve {
 	void resizechannels(int channelnum);
 	String tostring(const char delimiter = ',');
 	static bool isvalidcurvestring(String str, const char delimiter = ',');
-	static double calctension(double interp, double tension);
-	double process(double input, int channel);
+	static float calctension(float interp, float tension);
+	float process(float input, int channel);
 
 	std::vector<point> points;
 	std::vector<int> nextpoint;
@@ -30,7 +30,7 @@ class curveiterator {
 public:
 	curveiterator() { }
 	void reset(curve inputcurve, int wwidth);
-	double next();
+	float next();
 	bool pointhit = true;
 	int width = 284;
 	int x = 99999;

@@ -53,7 +53,6 @@ struct op {
 struct knob {
 	float value[MC];
 	float valuesmoothed = 0;
-	double velocity = 0;
 	String id;
 	String name;
 	potentiometer::ptype ttype = potentiometer::ptype::floattype;
@@ -100,6 +99,7 @@ public:
 	int prevx = 0;
 	int prevy = 0;
 	knob knobs[16+19];
+	dampenedvalue knobsmooth;
 	int knobcount = 0;
 	int generalcount = 0;
 	int paramcount = 0;
@@ -133,7 +133,8 @@ private:
 
 	box boxes[24];
 	int boxnum = 0;
-	double adsr[4*2*3]; // [a,d,s,r],[t,b],[c, t, v]
+	float adsr[4*2*2]; // [a,d,s,r],[t,b],[c,t]
+	dampenedvalue dampadsr;
 	int tabanimation = 100;
 	int opanimation = 100;
 

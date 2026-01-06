@@ -1,5 +1,6 @@
 #pragma once
 #include "includes.h"
+#include "functions.h"
 
 class midihandler {
 	public:
@@ -33,6 +34,7 @@ class midihandler {
 
 		int noteid = -1;
 		float freq[3] { 1000, 1000, 1000 };
+		float freqsmooth[3] { 1000, 1000, 1000 };
 
 		int eventindex = 0;
 		std::vector<int> events;
@@ -57,6 +59,9 @@ class midihandler {
 	int inactivevoices[24];
 	int inactivevoicessize = 0;
 
+	int lastchordsize = 0;
+	int currentchordsize = 0;
+
 	bool arpon = false;
 	float arpprogress = 1;
 	int arpindex = -1;
@@ -66,6 +71,8 @@ class midihandler {
 	int arporder[48];
 	float arpspeed = 0;
 	Random random;
+
+	onepolevalue glide;
 
 	void reset(int samplesperblock, int sr);
 	void setvoices(int samplesperblock);

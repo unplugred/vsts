@@ -32,18 +32,18 @@ FMPlusAudioProcessor::FMPlusAudioProcessor() :
 	}
 
 	params.general[ 0] = potentiometer("Voices"						,"voices"			,0		,presets[0].general  [ 0]	,1	,24	,potentiometer::inttype		);
-	params.general[ 1] = potentiometer("Portamento"					,"portamento"		,.001f	,presets[0].general  [ 1]	);
-	params.general[ 2] = potentiometer("Legato"						,"legato"			,0		,presets[0].general  [ 2]	,0	,1	,potentiometer::booltype	);
-	params.general[ 3] = potentiometer("LFO Sync"					,"lfosync"			,0		,presets[0].general  [ 4]	,0	,3	,potentiometer::inttype		);
-	params.general[ 4] = potentiometer("Pitch Bend"					,"pitchbend"		,.001f	,presets[0].general  [ 3]	,0	,24	,potentiometer::inttype		);
+	params.general[ 1] = potentiometer("Pitch Bend"					,"pitchbend"		,.001f	,presets[0].general  [ 1]	,0	,24	,potentiometer::inttype		);
+	params.general[ 2] = potentiometer("Glide"						,"glide"			,0		,presets[0].general  [ 2]	);
+	params.general[ 3] = potentiometer("Legato"						,"legato"			,0		,presets[0].general  [ 3]	,0	,1	,potentiometer::booltype	);
+	params.general[ 4] = potentiometer("LFO Sync"					,"lfosync"			,0		,presets[0].general  [ 4]	,0	,3	,potentiometer::inttype		);
 	params.general[ 5] = potentiometer("Arp On"						,"arpon"			,0		,presets[0].general  [ 5]	,0	,1	,potentiometer::booltype	);
 	params.general[ 6] = potentiometer("Arp Direction"				,"arpdirection"		,0		,presets[0].general  [ 6]	,0	,5	,potentiometer::inttype		);
 	params.general[ 7] = potentiometer("Arp Length"					,"arplength"		,0		,presets[0].general  [ 7]	);
 	params.general[ 8] = potentiometer("Arp Speed"					,"arpspeed"			,0		,presets[0].general  [ 8]	);
-	params.general[ 9] = potentiometer("Arp Speed (BPM sync)"		,"arpbpm"			,0		,presets[0].general  [ 9]	,0	,10	,potentiometer::inttype		);
+	params.general[ 9] = potentiometer("Arp Speed (BPM sync)"		,"arpbpm"			,0		,presets[0].general  [ 9]	,0	,12	,potentiometer::inttype		);
 	params.general[10] = potentiometer("Vibrato On"					,"vibratoon"		,.001f	,presets[0].general  [10]	,0	,1	,potentiometer::booltype	);
 	params.general[11] = potentiometer("Vibrato Rate"				,"vibratorate"		,.001f	,presets[0].general  [11]	);
-	params.general[12] = potentiometer("Vibrato Rate (BPM sync)"	,"vibratobpm"		,.001f	,presets[0].general  [12]	,0	,10	,potentiometer::inttype		);
+	params.general[12] = potentiometer("Vibrato Rate (BPM sync)"	,"vibratobpm"		,.001f	,presets[0].general  [12]	,0	,12	,potentiometer::inttype		);
 	params.general[13] = potentiometer("Vibrato Amount"				,"vibratoamount"	,.001f	,presets[0].general  [13]	);
 	params.general[14] = potentiometer("Vibrato Attack"				,"vibratoattack"	,0		,presets[0].general  [14]	);
 	// TODO per op defaults
@@ -51,7 +51,7 @@ FMPlusAudioProcessor::FMPlusAudioProcessor() :
 	params.values [ 1] = potentiometer("Pan"						,"pan"				,0		,presets[0].values[0][ 1]	);
 	params.values [ 2] = potentiometer("Amplitude"					,"amp"				,0		,presets[0].values[0][ 2]	);
 	params.values [ 3] = potentiometer("Tone"						,"tone"				,.001f	,presets[0].values[0][ 3]	);
-	params.values [ 4] = potentiometer("Velocity"					,"velocity"			,0		,presets[0].values[0][ 4]	);
+	params.values [ 4] = potentiometer("Velocity"					,"velocity"			,.001f	,presets[0].values[0][ 4]	);
 	params.values [ 5] = potentiometer("Mod W/Aft.T"				,"modat"			,.001f	,presets[0].values[0][ 5]	);
 	params.values [ 6] = potentiometer("Frequency Mode"				,"freqmode"			,0		,presets[0].values[0][ 6]	,0	,1	,potentiometer::booltype	);
 	params.values [ 7] = potentiometer("Frequency Multiplier"		,"freqmult"			,.001f	,presets[0].values[0][ 7]	,0	,24	);
@@ -63,7 +63,7 @@ FMPlusAudioProcessor::FMPlusAudioProcessor() :
 	params.values [13] = potentiometer("LFO On"						,"lfoon"			,.001f	,presets[0].values[0][13]	,0	,1	,potentiometer::booltype	);
 	params.values [14] = potentiometer("LFO Target"					,"lfotarget"		,0		,presets[0].values[0][14]	,0	,3	,potentiometer::inttype		);
 	params.values [15] = potentiometer("LFO Rate"					,"lforate"			,.001f	,presets[0].values[0][15]	);
-	params.values [16] = potentiometer("LFO Rate (BPM sync)"		,"lfobpm"			,.001f	,presets[0].values[0][16]	,0	,12	,potentiometer::inttype		);
+	params.values [16] = potentiometer("LFO Rate (BPM sync)"		,"lfobpm"			,.001f	,presets[0].values[0][16]	,0	,15	,potentiometer::inttype		);
 	params.values [17] = potentiometer("LFO Amount"					,"lfoamount"		,.001f	,presets[0].values[0][17]	);
 	params.values [18] = potentiometer("LFO Attack"					,"lfoattack"		,.001f	,presets[0].values[0][18]	);
 	// TODO FX
@@ -186,9 +186,11 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 		changechannelnum(buffer.getNumChannels());
 	saved = true;
 
-	for(auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
+	// clear buffer
+	for(int i = 0; i < getTotalNumOutputChannels(); ++i)
 		buffer.clear(i, 0, buffer.getNumSamples());
 
+	// update curve
 	if(updatedcurve.get() > 0) {
 		int uc = updatedcurve.get();
 		updatedcurve = 0;
@@ -196,18 +198,12 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 			state.curves[o].points = presets[currentpreset].curves[o].points;
 	}
 
-	juce::AudioPlayHead* playHead = getPlayHead();
-	if(playHead != nullptr) {
-		juce::AudioPlayHead::CurrentPositionInfo* info = new juce::AudioPlayHead::CurrentPositionInfo();
-		if(playHead->getCurrentPosition(*info))
-			bpm = info->bpm;
-	}
-
+	// upsample ??
 	int numsamples = buffer.getNumSamples();
 	dsp::AudioBlock<float> block(buffer);
 	int oversampleamount = pow(2,osindex);
 	int ossamplerate = samplerate*oversampleamount;
-	if(osindex > 0) {
+	if(osindex > 0) { // TODO only process down
 		dsp::AudioBlock<float> osblock = os[osindex-1]->processSamplesUp(block);
 		for(int i = 0; i < channelnum; ++i)
 			ospointerarray[i] = osblock.getChannelPointer(i);
@@ -215,12 +211,13 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 		numsamples = osbuffer.getNumSamples();
 	}
 
+	// get write pointers
 	float* const* channelData;
 	if(osindex > 0) channelData = osbuffer.getArrayOfWritePointers();
 	else channelData = buffer.getArrayOfWritePointers();
-	int voicenum = state.general[0];
 
-	// ---- MIDI PASS ----
+	// update voice count
+	int voicenum = state.general[0];
 	if(midihandle.voicessize != voicenum) {
 		int osblock = samplesperblock*pow(2,osindex);
 		if(midihandle.voicessize < voicenum) {
@@ -235,17 +232,30 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 		midihandle.setvoices(osblock);
 	}
 
-	midihandle.newbuffer();
-	if(state.general[9] > 0)
-		midihandle.arpspeed = bpm/(bpmsyncs_f[(int)state.general[9]]*ossamplerate*60);
-	else
-		midihandle.arpspeed = 1.f/(calcarp(state.general[8])*ossamplerate);
+	opcount = 0; // TODO factor connections
+	for(int o = 0; o < MC; ++o)
+		if(state.values[o][0] > .5)
+			oporder[opcount++] = o;
 
+	// get bpm
+	AudioPlayHead* playhead = getPlayHead();
+	if(playHead != nullptr)
+		if(auto positioninfo = playhead->getPosition())
+			if(auto bpmfromhost = positioninfo->getBpm())
+				if((*bpmfromhost) != bpm) {
+					bpm = *bpmfromhost;
+					updatearpspeed();
+	}
+
+	// prepare variables
+	midihandle.newbuffer();
+
+	// ---- TODO MIDI ----
 	MidiBufferIterator midiiterator = midiMessages.begin();
 	for(int s = 0; s < numsamples; ++s) {
 		for(int i = 0; i < generalcount; ++i) if(params.general[i].smoothtime > 0)
 			state.general[i] = params.general[i].smooth[0].getNextValue();
-		// TODO smooth velocity + aftertouch
+		// TODO smooth pitchbend, velocity, aftertouch
 
 		while(midiiterator != midiMessages.end() && ((*midiiterator).samplePosition*oversampleamount) <= s) {
 			midihandle.processmessage((*midiiterator).getMessage());
@@ -253,22 +263,64 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 		}
 		midihandle.tick();
 
-		for(int c = 0; c < channelnum; ++c)
-			channelData[c][s] = 0;
-		for(int v = 0; v < voicenum; ++v) {
-			if(midihandle.voices[v].noteid == -1) continue;
-			float target = midihandle.notes[midihandle.voices[v].noteid].velocity*(midihandle.voices[v].ison?1:0);
-			osc[0][v].vellerp = fmax(target,osc[0][v].vellerp)*.99997f+target*.00003f;
-			for(int c = 0; c < channelnum; ++c) {
-				osc[0][v].p[c] = fmod(osc[0][v].p[c]+(midihandle.voices[v].freq[1]/ossamplerate),1);
-				channelData[c][s] += sin(osc[0][v].p[c]*MathConstants<double>::twoPi)*osc[0][v].vellerp;
+		for(int v = 0; v < voicenum; ++v)
+			osc[0][v].f[s] = midihandle.voices[v].freqsmooth[1];
+		for(int o = 0; o < opcount; ++o) { // TODO velocity + aftertouch
+			int op = oporder[o];
+			for(int v = 0; v < voicenum; ++v) {
+				if(midihandle.voices[v].noteid == -1) osc[op][v].a[s*channelnum] = 0;
+				else osc[op][v].a[s*channelnum] = midihandle.notes[midihandle.voices[v].noteid].velocity*(midihandle.voices[v].ison?.125f:0);
 			}
 		}
 	}
 	//for(int i = 0; i < paramcount; ++i) if(params.values[i].smoothtime > 0) for(int o = 0; o < MC; ++o)
 	//	state.values[o][i] = params.values[i].smooth[o].getNextValue(); TODO
-	// ---- TODO ADSR PASS ----
-	for(int o = 0; o < MC; ++o) {
+
+	// ---- TODO VIBRATO ----
+	for(int s = 0; s < numsamples; ++s) {
+		//vibphase += .1f;
+		for(int v = 0; v < voicenum; ++v) {
+		}
+	}
+
+	// ---- TODO ADSR ----
+	for(int o = 0; o < opcount; ++o) {
+		int op = oporder[o];
+		for(int s = 0; s < numsamples; ++s) {
+			// smooth
+			for(int v = 0; v < voicenum; ++v) {
+				osc[op][v].vellerp = fmax(osc[op][v].a[s*channelnum],osc[op][v].vellerp)*.99997f+osc[op][v].a[s*channelnum]*.00003f;
+				osc[op][v].a[s*channelnum] = osc[op][v].vellerp;
+			}
+		}
+	}
+
+	// ---- COPY DATA ----
+	for(int o = 0; o < opcount; ++o) {
+		int op = oporder[o];
+		for(int v = 0; v < voicenum; ++v)
+			for(int s = 0; s < numsamples; ++s)
+				for(int c = 1; c < channelnum; ++c)
+					osc[op][v].a[s*channelnum+c] = osc[op][v].a[s*channelnum];
+
+		if(op == 0) continue;
+		for(int v = 0; v < voicenum; ++v)
+			for(int s = 0; s < numsamples; ++s)
+				osc[op][v].f[s] = osc[0][v].f[s];
+	}
+
+	// ---- TODO LFO ----
+	for(int o = 0; o < opcount; ++o) {
+		int op = oporder[o];
+		for(int s = 0; s < numsamples; ++s) {
+			for(int v = 0; v < voicenum; ++v) {
+			}
+		}
+	}
+
+	// ---- TODO PARAMS ----
+	for(int o = 0; o < opcount; ++o) {
+		int op = oporder[o];
 		for(int s = 0; s < numsamples; ++s) {
 			// smooth
 			for(int v = 0; v < voicenum; ++v) {
@@ -277,36 +329,37 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 			}
 		}
 	}
-	// ---- TODO LFO+PARAM PASS ----
-	for(int o = 0; o < MC; ++o) {
-		for(int s = 0; s < numsamples; ++s) {
-			// smooth
-			for(int v = 0; v < voicenum; ++v) {
-				for(int c = 0; c < channelnum; ++c) {
-				}
-			}
-		}
-	}
+
 	// ---- TODO BLOCK VIS ----
-	for(int o = 0; o < MC; ++o) {
+	for(int o = 0; o < opcount; ++o) {
+		int op = oporder[o];
 		for(int v = 0; v < voicenum; ++v) {
 			for(int c = 0; c < channelnum; ++c) {
 			}
 		}
 	}
-	// ---- TODO OSC PASS ----
+
+	// ---- TODO OSC ----
 	for(int v = 0; v < voicenum; ++v) {
 		for(int s = 0; s < numsamples; ++s) {
-			for(int o = 0; o < MC; ++o) {
+			for(int o = 0; o < opcount; ++o) {
+				int op = oporder[o];
 				for(int c = 0; c < channelnum; ++c) {
+					osc[op][v].p[c] = fmod(osc[op][v].p[c]+(osc[op][v].f[s]/ossamplerate),1);
+					osc[op][v].a[s*channelnum+c] *= sin(osc[op][v].p[c]*MathConstants<float>::twoPi);
+					osc[op][v].fb[c] = osc[op][v].a[s*channelnum+c];
+					channelData[c][s] += osc[op][v].a[s*channelnum+c];
 				}
 			}
 		}
 	}
+
 	// ---- TODO OP VIS ----
-	for(int o = 0; o < MC; ++o) {
+	for(int o = 0; o < opcount; ++o) {
 	}
-	// ---- TODO FX PASS ----
+
+	// ---- TODO FX ----
+
 	// ---- TODO VIS ----
 
 	if(osindex > 0) os[osindex-1]->processSamplesDown(block);
@@ -330,6 +383,7 @@ void FMPlusAudioProcessor::setoversampling() {
 		params.values[i].smooth[o].reset(samplerate*oversampleamount,params.values[i].smoothtime);
 
 	midihandle.reset(samplesperblock*oversampleamount,samplerate*oversampleamount);
+	updatearpspeed();
 	for(int v = 0; v < state.general[0]; ++v)
 		for(int o = 0; o < MC; ++o)
 			osc[o][v].reset(channelnum,samplesperblock*oversampleamount);
@@ -529,6 +583,12 @@ void FMPlusAudioProcessor::parameterChanged(const String& parameterID, float new
 	}
 
 	for(int i = 0; i < generalcount; ++i) if(parameterID == params.general[i].id) {
+		if(parameterID == "glide" && midihandle.glide.current.size() > 0) {
+			if(state.general[i] == 0)
+				midihandle.glide.current[0] = -666;
+			midihandle.glide.setsmoothtime(newValue*newValue*MAXGLIDE);
+		}
+
 		if(params.general[i].smoothtime > 0) params.general[i].smooth[0].setTargetValue(newValue);
 		else state.general[i] = newValue;
 		presets[currentpreset].general[i] = newValue;
@@ -536,8 +596,10 @@ void FMPlusAudioProcessor::parameterChanged(const String& parameterID, float new
 
 		if(parameterID == "arpon")
 			midihandle.arpset();
-		if(parameterID == "arpdirection")
+		else if(parameterID == "arpdirection")
 			midihandle.arpupdate();
+		else if(parameterID == "arpspeed" || parameterID == "arpbpm")
+			updatearpspeed();
 
 		return;
 	}
@@ -548,6 +610,12 @@ void FMPlusAudioProcessor::parameterChanged(const String& parameterID, float new
 		params.presetunsaved = true;
 		return;
 	}
+}
+void FMPlusAudioProcessor::updatearpspeed() {
+	if(state.general[9] > 0)
+		midihandle.arpspeed = bpm/(bpmsyncs_f[(int)state.general[9]]*samplerate*pow(2,osindex)*60);
+	else
+		midihandle.arpspeed = 1.f/(calcarp(state.general[8])*samplerate*pow(2,osindex));
 }
 
 void FMPlusAudioProcessor::movepoint(int index, float x, float y) {
@@ -659,21 +727,21 @@ String FMPlusAudioProcessor::updatetheme(File file) {
 
 AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new FMPlusAudioProcessor(); }
 
-AudioProcessorValueTreeState::ParameterLayout FMPlusAudioProcessor::create_parameters() {
+AudioProcessorValueTreeState::ParameterLayout FMPlusAudioProcessor::create_parameters() { // TODO group
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
 	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"voices"					,1},"Voices"																	 ,1		,24		 ,12	));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"portamento"				,1},"Portamento"								,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(toportamento		).withValueFromStringFunction(fromportamento	)));
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"pitchbend"				,1},"Pitch Bend"																 ,0		,24		 ,2		,AudioParameterIntAttributes()	.withStringFromValueFunction(topitchbend		).withValueFromStringFunction(frompitchbend		)));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"glide"					,1},"Glide"										,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(toglide			).withValueFromStringFunction(fromglide			)));
 	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"legato"					,1},"Legato"																	 				 ,false	,AudioParameterBoolAttributes()	.withStringFromValueFunction(tobool				).withValueFromStringFunction(frombool			)));
 	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"lfosync"					,1},"LFO Sync"																	 ,0		,3		 ,0		,AudioParameterIntAttributes()	.withStringFromValueFunction(tolfosync			).withValueFromStringFunction(fromlfosync		))); // NOTE, RANDOM, FREE, TRIGGER
-	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"pitchbend"				,1},"Pitch Bend"																 ,0		,24		 ,2		,AudioParameterIntAttributes()	.withStringFromValueFunction(topitchbend		).withValueFromStringFunction(frompitchbend		)));
 	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"arpon"					,1},"Arp On"																	 				 ,false	,AudioParameterBoolAttributes()	.withStringFromValueFunction(tobool				).withValueFromStringFunction(frombool			)));
 	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"arpdirection"			,1},"Arp Direction"																 ,0		,5		 ,0		,AudioParameterIntAttributes()	.withStringFromValueFunction(toarpdirection		).withValueFromStringFunction(fromarpdirection	))); // SEQUENCE, UP, DOWN, U&D, D&U, RANDOM
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"arpspeed"				,1},"Arp Speed"									,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.5f	,AudioParameterFloatAttributes().withStringFromValueFunction(toarpspeed			).withValueFromStringFunction(fromarpspeed		)));
-	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"arpbpm"					,1},"Arp Speed (BPM sync)"														 ,0		,10		 ,0		,AudioParameterIntAttributes()	.withStringFromValueFunction(toarpbpm			).withValueFromStringFunction(fromarpbpm		)));
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"arpbpm"					,1},"Arp Speed (BPM sync)"														 ,0		,12		 ,0		,AudioParameterIntAttributes()	.withStringFromValueFunction(toarpbpm			).withValueFromStringFunction(fromarpbpm		)));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"arplength"				,1},"Arp Length"								,juce::NormalisableRange<float	>(0.0f	,1.0f	),1.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(toarplength		).withValueFromStringFunction(fromarplength		)));
 	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"vibratoon"				,1},"Vibrato On"																 				 ,false	,AudioParameterBoolAttributes()	.withStringFromValueFunction(tobool				).withValueFromStringFunction(frombool			)));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"vibratorate"				,1},"Vibrato Rate"								,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.5f	,AudioParameterFloatAttributes().withStringFromValueFunction(tovibratorate		).withValueFromStringFunction(fromvibratorate	)));
-	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"vibratobpm"				,1},"Vibrato Rate (BPM sync)"													 ,0		,10		 ,0		,AudioParameterIntAttributes()	.withStringFromValueFunction(tovibratobpm		).withValueFromStringFunction(fromvibratobpm	)));
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"vibratobpm"				,1},"Vibrato Rate (BPM sync)"													 ,0		,12		 ,0		,AudioParameterIntAttributes()	.withStringFromValueFunction(tovibratobpm		).withValueFromStringFunction(fromvibratobpm	)));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"vibratoamount"			,1},"Vibrato Amount"							,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.5f	,AudioParameterFloatAttributes().withStringFromValueFunction(tovibratoamount	).withValueFromStringFunction(fromvibratoamount	)));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"vibratoattack"			,1},"Vibrato Attack"							,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(tovibratoattack	).withValueFromStringFunction(fromvibratoattack	)));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"antialias"				,1},"Anti-Alias"								,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.7f	,AudioParameterFloatAttributes().withStringFromValueFunction(toantialias		).withValueFromStringFunction(fromantialias		)));
@@ -694,7 +762,7 @@ AudioProcessorValueTreeState::ParameterLayout FMPlusAudioProcessor::create_param
 	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"o"+(String)o+"lfoon"		,1},"OP"+(String)(o+1)+" LFO On"												 				 ,false	,AudioParameterBoolAttributes()	.withStringFromValueFunction(tobool				).withValueFromStringFunction(frombool			)));
 	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"o"+(String)o+"lfotarget"	,1},"OP"+(String)(o+1)+" LFO Target"											 ,0		,3		 ,0		,AudioParameterIntAttributes()	.withStringFromValueFunction(tolfotarget		).withValueFromStringFunction(fromlfotarget		))); // AMPLITUDE, PITCH, PAN, TONE
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"o"+(String)o+"lforate"	,1},"OP"+(String)(o+1)+" LFO Rate"				,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.5f	,AudioParameterFloatAttributes().withStringFromValueFunction(tolforate			).withValueFromStringFunction(fromlforate		)));
-	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"o"+(String)o+"lfobpm"	,1},"OP"+(String)(o+1)+" LFO Rate (BPM sync)"									 ,0		,12		 ,0		,AudioParameterIntAttributes()	.withStringFromValueFunction(tolfobpm			).withValueFromStringFunction(fromlfobpm		)));
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"o"+(String)o+"lfobpm"	,1},"OP"+(String)(o+1)+" LFO Rate (BPM sync)"									 ,0		,15		 ,0		,AudioParameterIntAttributes()	.withStringFromValueFunction(tolfobpm			).withValueFromStringFunction(fromlfobpm		)));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"o"+(String)o+"lfoamount"	,1},"OP"+(String)(o+1)+" LFO Amount"			,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(tolfoamount		).withValueFromStringFunction(fromlfoamount		)));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"o"+(String)o+"lfoattack"	,1},"OP"+(String)(o+1)+" LFO Attack"			,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(tolfoattack		).withValueFromStringFunction(fromlfoattack		)));
 	}

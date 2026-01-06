@@ -74,6 +74,9 @@ FMPlusAudioProcessorEditor::FMPlusAudioProcessorEditor(FMPlusAudioProcessor& p, 
 	knobs[generalcount+17].name = "Amount";
 	knobs[generalcount+18].name = "Attack";
 
+	knobsmooth.reset(.05f,30,paramcount+generalcount);
+	dampadsr.reset(.05f,30,8);
+
 	for(int i = 0; i < 8; i++)
 		curves[i] = state.curves[i];
 
@@ -484,7 +487,7 @@ void FMPlusAudioProcessorEditor::renderOpenGL() {
 			float x = (curves[selectedtab-3].points[i].x+curves[selectedtab-3].points[nextpoint].x)*.5f;
 			if((tabanimation*.0833333f-x-1) < 0) continue;
 
-			double interp = curve::calctension(.5,curves[selectedtab-3].points[i].tension);
+			float interp = curve::calctension(.5,curves[selectedtab-3].points[i].tension);
 			      x = x                                                                                                  *120.f+31.f-1.25f-.5f*inverse_dpi;
 			float y = (curves[selectedtab-3].points[i].y*(1-interp)+curves[selectedtab-3].points[nextpoint].y*interp)    *40.f +92.f-1.25f-.5f*inverse_dpi;
 			circleshader->setUniform("pos",x/width,y/height,(2.5f+inverse_dpi)/width,(2.5f+inverse_dpi)/height);
@@ -621,9 +624,9 @@ void FMPlusAudioProcessorEditor::calcvis(int curveupdated) {
 		linewritepos = curvemesh[1];
 		beginline(x,y-h+11);
 		nextpoint(x+currentx,y);
-		currentx += adsr[6]+1.f;
+		currentx += adsr[4]+1.f;
 		nextpoint(x+currentx,y-(1-knobs[generalcount+11].valuesmoothed)*(h-11),true);
-		currentx += adsr[12]+1.f;
+		currentx += adsr[8]+1.f;
 		nextpoint(x+currentx,y-(1-knobs[generalcount+11].valuesmoothed)*(h-11),true);
 		nextpoint(x+w,y-h+11,true);
 		nextpoint(x+w,y-h+11);
@@ -755,9 +758,9 @@ void FMPlusAudioProcessorEditor::rebuildtab(int tab) {
 		boxes[boxnum++] = box(             -1, 31,  2,120, 10,2,15,true);
 
 		boxes[boxnum++] = box(              0,114, 22, 37, 11,0, 4);
-		boxes[boxnum++] = box(              1,114, 34, 37, 11,0, 5);
-		boxes[boxnum++] = box(              2,114, 46, 37, 11,0, 3);
-		boxes[boxnum++] = box(              3,114, 58, 37, 11,0, 4);
+		boxes[boxnum++] = box(              1,114, 34, 37, 11,0, 4);
+		boxes[boxnum++] = box(              2,114, 46, 37, 11,0, 5);
+		boxes[boxnum++] = box(              3,114, 58, 37, 11,0, 3);
 		boxes[boxnum++] = box(              4,114, 70, 37, 11,0, 4,true);
 
 		boxes[boxnum++] = box(              5, 31, 91,  8,  8,3);
@@ -885,10 +888,8 @@ void FMPlusAudioProcessorEditor::rebuildtab(int tab) {
 			if(i >= (10+generalcount) && i <= (12+generalcount)) continue;
 			if(i == 9 || i == 12 || i == (16+generalcount)) continue;
 			if(i == (3+generalcount)) continue;
-			if(i >= 0) {
-				knobs[i].valuesmoothed = boxes[knobs[i].box].type==1?.5f:0;
-				knobs[i].velocity = 0;
-			}
+			if(i >= 0)
+				knobs[i].valuesmoothed = knobsmooth.setto(boxes[knobs[i].box].type==1?.5f:0,i);
 			updatevalue(i);
 		}
 	}
@@ -904,10 +905,8 @@ void FMPlusAudioProcessorEditor::rebuildtab(int tab) {
 
 		// operator title
 		replacetext(boxes[knobs[generalcount].box].textmesh-6,(String)(selectedtab-2));
-		for(int p = 0; p < 8; ++p) { // reset adsr animation
-			adsr[p*3] = adsr[p*3+1]+.0001f;
-			adsr[p*3+2] = 0;
-		}
+		for(int p = 0; p < 8; ++p) // reset adsr animation
+			adsr[p*2] = dampadsr.setto(adsr[p*2+1]+.0001f,p);
 		updatehighlight(true);
 	}
 	// make invisible pre animation
@@ -1073,13 +1072,13 @@ void FMPlusAudioProcessorEditor::updatevalue(int param) {
 				prevovershoot = overshoot;
 			}
 
-			for(int p = 0; p < 4; ++p) adsr[p*6+s*3+1] = padsr[p];
+			for(int p = 0; p < 4; ++p) adsr[p*4+s*2+1] = padsr[p];
 		}
 		float currentx = boxes[knobs[generalcount+9].box].x;
 		for(int p = 0; p < 4; ++p) {
 			boxes[knobs[generalcount+9+p].box].x = round(              currentx);
-			boxes[knobs[generalcount+9+p].box].w = round(adsr[p*6+3+1]+currentx)-round(currentx);
-			currentx += adsr[p*6+3+1]+1;
+			boxes[knobs[generalcount+9+p].box].w = round(adsr[p*4+2+1]+currentx)-round(currentx);
+			currentx += adsr[p*4+2+1]+1;
 		}
 	}
 }
@@ -1144,22 +1143,20 @@ void FMPlusAudioProcessorEditor::timerCallback() {
 		if(i >= (9+generalcount) && i <= (12+generalcount) && i != (11+generalcount)) { // interpolate adsr
 			bool updated = false;
 			for(int p = 0; p < 8; ++p) {
-				if(adsr[p*3] == adsr[p*3+1]) continue;
+				if(adsr[p*2] == adsr[p*2+1]) continue;
 				updated = true;
-				if(fabs(adsr[p*3]-adsr[p*3+1]) <= .0005f) {
-					adsr[p*3] = adsr[p*3+1];
-					adsr[p*3+2] = 0;
-				} else adsr[p*3] = functions::smoothdamp(adsr[p*3],adsr[p*3+1],&adsr[p*3+2],.05f,-1,30);
+				if(fabs(adsr[p*2]-adsr[p*2+1]) <= .0005f)
+					adsr[p*2] = dampadsr.setto(adsr[p*2+1],p);
+				else
+					adsr[p*2] = dampadsr.nextvalue(adsr[p*2+1],p);
 			}
 			if(!updated) continue;
 		} else { // clamp to 0
 			if(current == target) continue;
-			if(fabs(current-target) <= .0005f) {
-				current = target;
-				knobs[i].velocity = 0;
-			}
+			if(fabs(current-target) <= .0005f)
+				current = knobsmooth.setto(target,i);
 		}
-		knobs[i].valuesmoothed = functions::smoothdamp(current,target,&knobs[i].velocity,boxes[knobs[i].box].type==3?.05f:.05f,-1,30); // interpolate
+		knobs[i].valuesmoothed = knobsmooth.nextvalue(target,i); // interpolate
 
 		if(knobs[i].box != -1 && (boxes[knobs[i].box].type == 0 || boxes[knobs[i].box].type == 1)) {
 			int roundedvalue = 0;
@@ -1182,17 +1179,17 @@ void FMPlusAudioProcessorEditor::timerCallback() {
 						if(fmod(fmax(1,fmin(4,t)),2) == 1)
 							squaremesh[(boxes[box].mesh+s*6          +t)*4] = ((float)round(currentx                  )  )/width;
 						else
-							squaremesh[(boxes[box].mesh+s*6          +t)*4] = ((float)round(currentx+adsr[p*6+s*3]    )  )/width;
+							squaremesh[(boxes[box].mesh+s*6          +t)*4] = ((float)round(currentx+adsr[p*4+s*2]    )  )/width;
 					}
 					if(s == 1) for(int t = 0; t < 6; ++t) {
 						if(fmod(fmax(1,fmin(4,t)),2) == 1)
-							textmesh  [(boxes[box].textmesh-(4-p)*6+1+t)*4] = ((float)round(currentx+adsr[p*6+  3]*.5f)-4)/width;
+							textmesh  [(boxes[box].textmesh-(4-p)*6+1+t)*4] = ((float)round(currentx+adsr[p*4+  2]*.5f)-4)/width;
 						else
-							textmesh  [(boxes[box].textmesh-(4-p)*6+1+t)*4] = ((float)round(currentx+adsr[p*6+  3]*.5f)+4)/width;
+							textmesh  [(boxes[box].textmesh-(4-p)*6+1+t)*4] = ((float)round(currentx+adsr[p*4+  2]*.5f)+4)/width;
 					}
 					if(p == 3 && s == 1)
-						squaremesh[boxes[box].mesh*4+39] = round(currentx+adsr[21])-currentx;
-					currentx += adsr[p*6+s*3]+1;
+						squaremesh[boxes[box].mesh*4+39] = round(currentx+adsr[14])-currentx;
+					currentx += adsr[p*4+s*2]+1;
 				}
 			}
 			updatedadsr = true;

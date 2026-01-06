@@ -74,11 +74,11 @@ struct pluginpreset {
 
 struct oscillator {
 	void reset(int channelnum, int samplesperblock);
-	std::vector<float> fb; // feedback  len = c
-	std::vector<float> p ; // phase     len = c
-	std::vector<float> a ; // amplitude len = c*s
-	std::vector<float> f ; // frequency len =   s
-	std::vector<float> w ; // waveform  len =   s
+	std::vector<float> fb; // feedback  len =   c
+	std::vector<float> p ; // phase     len =   c
+	std::vector<float> a ; // amplitude len = s*c
+	std::vector<float> f ; // frequency len = s
+	std::vector<float> w ; // waveform  len = s
 	float vellerp = 0;
 };
 static float osccalc(float x, float shape) { // TODO object
@@ -167,7 +167,10 @@ private:
 	std::vector<float*> ospointerarray;
 
 	midihandler midihandle;
+	void updatearpspeed();
 	oscillator osc[MC][24];
+	int oporder[8];
+	int opcount = 0;
 
 	int channelnum = 0;
 	int samplesperblock = 0;
@@ -199,9 +202,11 @@ static String format_time(float value, bool ms = false) {
 		return String(value,1)+"s";
 	return (String)round(value)+"s";
 };
-//                           0      1     2      3      4     5      6     7     8     9     10    11    12    13    14    15    16    17     18
-const String bpmsyncs_s[19] {"Off","1/32","1/16","3/32","1/8","3/16","1/4","3/8","1/2","3/4","1/1","3/2","2/1","3/1","4/1","6/1","8/1","12/1","16/1"};
-const float  bpmsyncs_f[19] {    0, .125f,  .25f, .375f,  .5f,  .75f,    1, 1.5f,    2,    3,    4,    6,    8,   12,   16,   24,   32,    48,    64};
+//                             0     1      2      3       4      5      6      7     8      9      10    11     12    13    14     15
+const String bpmsyncs_s  [13] {"Off","1/32","1/16","1/16d", "1/8","1/8t","1/8d","1/4","1/4t","1/4d","1/2","1/2d","1/1"};
+const float  bpmsyncs_f  [13] {    0, .125f,  .25f,  .375f,   .5f, 2/3.f,  .75f,    1, 4/3.f,  1.5f,    2,     3,    4};
+const String bpmsynclfo_s[16] {"Off", "1/8", "1/4", "1/4t","1/4d", "1/2","1/2d","1/1","1/1d", "2/1","3/1", "4/1","6/1","8/1","12/1","16/1"};
+const float  bpmsynclfo_f[16] {    0,   .5f,     1,  4/3.f,  1.5f,     2,     3,    4,     6,     8,   12,    16,   24,   32,    48,    64};
 static String get_string(int param, float value, int tab) {
 	  if(tab == 0) {
 		  if(param ==  0) {
@@ -211,10 +216,14 @@ static String get_string(int param, float value, int tab) {
 		} if(param ==  1) {
 			if(value == 0)
 				return "Off";
-			return format_time(value*value*MAXPORT);
+			return (String)value+"ST";
 		} if(param ==  2) {
-			return value>.5?"On":"Off";
+			if(value == 0)
+				return "Off";
+			return format_time(value*value*MAXGLIDE);
 		} if(param ==  3) {
+			return value>.5?"On":"Off";
+		} if(param ==  4) {
 			if(value == 0)
 				return "Note";
 			if(value == 1)
@@ -223,10 +232,6 @@ static String get_string(int param, float value, int tab) {
 				return "Free";
 			if(value == 3)
 				return "Trig";
-		} if(param ==  4) {
-			if(value == 0)
-				return "Off";
-			return (String)value+"ST";
 		} if(param ==  6) {
 			if(value == 0)
 				return "Sequen";
@@ -294,7 +299,7 @@ static String get_string(int param, float value, int tab) {
 		} if(param == 15) {
 			return format_time(value*value*MAXLFO);
 		} if(param == 16) {
-			return bpmsyncs_s[value==0?0:(value==1?4:((int)round(value)+4))];
+			return bpmsynclfo_s[(int)round(value)];
 		} if(param == 17) {
 			return (String)round(value*100)+'%';
 		} if(param == 18) {
@@ -320,22 +325,22 @@ static std::function<bool(const String& s)> frombool = [](const String& s) {
 	if(s.containsIgnoreCase("0")) return false;
 	return false;
 };
-static std::function<String(float v, int max)> toportamento = [](float v, int max) {
+static std::function<String(int v, int max)> topitchbend = [](int v, int max) {
 	return get_string(1,v,0);
 };
-static std::function<float(const String& s)> fromportamento = [](const String& s) { // TODO
+static std::function<int(const String& s)> frompitchbend = [](const String& s) { // TODO
+	return jlimit(0.f,1.f,s.getFloatValue());
+};
+static std::function<String(float v, int max)> toglide = [](float v, int max) {
+	return get_string(2,v,0);
+};
+static std::function<float(const String& s)> fromglide = [](const String& s) { // TODO
 	return jlimit(0.f,1.f,s.getFloatValue());
 };
 static std::function<String(int v, int max)> tolfosync = [](int v, int max) {
-	return get_string(3,v,0);
-};
-static std::function<int(const String& s)> fromlfosync = [](const String& s) { // TODO
-	return jlimit(0.f,1.f,s.getFloatValue());
-};
-static std::function<String(int v, int max)> topitchbend = [](int v, int max) {
 	return get_string(4,v,0);
 };
-static std::function<int(const String& s)> frompitchbend = [](const String& s) { // TODO
+static std::function<int(const String& s)> fromlfosync = [](const String& s) { // TODO
 	return jlimit(0.f,1.f,s.getFloatValue());
 };
 static std::function<String(int v, int max)> toarpdirection = [](int v, int max) {

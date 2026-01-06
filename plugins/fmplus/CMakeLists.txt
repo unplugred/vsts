@@ -77,11 +77,6 @@ target_link_libraries("${BaseTargetName}" PRIVATE
 	#juce::juce_data_structures
 	juce::juce_dsp
 	#juce::juce_events
-	#juce::juce_graphics
-	#juce::juce_gui_basics
-	#juce::juce_gui_extra
-	#juce::juce_opengl
-	#juce::juce_video
 	"${BaseTargetName}BinaryData"
 	PUBLIC
 	#juce::juce_recommended_warning_flags
