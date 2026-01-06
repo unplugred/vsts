@@ -60,9 +60,9 @@ void midihandler::setvoices(int samplesperblock) {
 				notes[activenotes[noteindex]].unsteal(v);
 				if(params[5] < .5f) voices[v].noteon();
 				voices[v].noteid = activenotes[noteindex];
-				voices[v].freq[0] = notes[(int)fmax(activenotes[noteindex]-1,  0)].pitch;
-				voices[v].freq[1] = notes[          activenotes[noteindex]       ].pitch;
-				voices[v].freq[2] = notes[(int)fmin(activenotes[noteindex]+1,127)].pitch;
+				voices[v].freq[0] = notes[(int)fmax(activenotes[noteindex]-params[1],  0)].pitch;
+				voices[v].freq[1] = notes[          activenotes[noteindex]               ].pitch;
+				voices[v].freq[2] = notes[(int)fmin(activenotes[noteindex]+params[1],127)].pitch;
 				if(params[2] == 0) for(int i = 0; i < 3; ++i)
 					voices[v].freqsmooth[i] = voices[v].freq[i];
 				activevoices[activevoicessize++] = v;
@@ -127,9 +127,13 @@ void midihandler::processmessage(MidiMessage message) {
 	} else if(message.isSustainPedalOff()) {
 		sustainpedal(false);
 	} else if(message.isPitchWheel()) {
-		pitchwheel();
-	} else if(message.isAftertouch() || message.isChannelPressure() || message.isController()) {
-		modwheel();
+		pitchwheel(message.getPitchWheelValue()/16383.f);
+	} else if(message.isAftertouch()) {
+		modwheel(message.getNoteNumber(),.5f);
+	} else if(message.isChannelPressure()) {
+		modwheel(-1,.5f);
+	} else if(message.isController()) {
+		modwheel(-1,.5f);
 	}
 }
 void midihandler::noteon(int noteid, float notevel) {
@@ -199,9 +203,9 @@ void midihandler::noteon(int noteid, float notevel) {
 	currentchordsize = activevoicessize;
 
 	voices[voicenum].noteid = noteid;
-	voices[voicenum].freq[0] = notes[(int)fmax(noteid-1,  0)].pitch;
-	voices[voicenum].freq[1] = notes[          noteid       ].pitch;
-	voices[voicenum].freq[2] = notes[(int)fmin(noteid+1,127)].pitch;
+	voices[voicenum].freq[0] = notes[(int)fmax(noteid-params[1],  0)].pitch;
+	voices[voicenum].freq[1] = notes[          noteid               ].pitch;
+	voices[voicenum].freq[2] = notes[(int)fmin(noteid+params[1],127)].pitch;
 	if(params[2] == 0) for(int i = 0; i < 3; ++i)
 		voices[voicenum].freqsmooth[i] = voices[voicenum].freq[i];
 	if(params[3] < .5 && inactivevoicessize >= 0)
@@ -229,9 +233,9 @@ void midihandler::noteoff(int noteid, bool sustained) {
 					notes[activenotes[noteindex]].unsteal(voiceindex);
 					if(params[5] < .5f && params[3] < .5f) voices[voiceindex].noteon();
 					voices[voiceindex].noteid = activenotes[noteindex];
-					voices[voiceindex].freq[0] = notes[(int)fmax(activenotes[noteindex]-1,  0)].pitch;
-					voices[voiceindex].freq[1] = notes[          activenotes[noteindex]       ].pitch;
-					voices[voiceindex].freq[2] = notes[(int)fmin(activenotes[noteindex]+1,127)].pitch;
+					voices[voiceindex].freq[0] = notes[(int)fmax(activenotes[noteindex]-params[1],  0)].pitch;
+					voices[voiceindex].freq[1] = notes[          activenotes[noteindex]               ].pitch;
+					voices[voiceindex].freq[2] = notes[(int)fmin(activenotes[noteindex]+params[1],127)].pitch;
 					if(params[2] == 0) for(int i = 0; i < 3; ++i)
 						voices[voiceindex].freqsmooth[i] = voices[voiceindex].freq[i];
 
@@ -299,10 +303,12 @@ void midihandler::sustainpedal(bool on) {
 	if(!on) noteoff(-9,false);
 	sustain = on;
 }
-void midihandler::pitchwheel() {
-	// TODO
+void midihandler::pitchwheel(float val) {
+	pitchindex = val>=.5f?1:0;
+	pitchval = val*2-pitchindex;
 }
-void midihandler::modwheel() {
+void midihandler::modwheel(int noteid, float val) {
+	modval = .5f;
 	// TODO
 }
 
@@ -362,6 +368,14 @@ void midihandler::arpupdate() {
 		arpdirection = params[6]==1||params[6]==3;
 	}
 	arpdirty = true;
+}
+void midihandler::pitchesupdate() {
+	for(int v = 0; v < voicessize; ++v) {
+		if(voices[v].noteid == -1) continue;
+		voices[v].freq[0] = notes[(int)fmax(voices[v].noteid-params[1],  0)].pitch;
+		voices[v].freq[1] = notes[          voices[v].noteid               ].pitch;
+		voices[v].freq[2] = notes[(int)fmin(voices[v].noteid+params[1],127)].pitch;
+	}
 }
 
 void midihandler::tick() {
@@ -431,7 +445,8 @@ void midihandler::tick() {
 				voices[v].freqsmooth[i] = glide.nextvalue(voices[v].freq[i],v*3+i);
 	}
 
-	// ---- TODO PITCH WHEEL ----
-
 	// TODO move on off to timestamps
+}
+float midihandler::getpitch(int v) {
+	return voices[v].freqsmooth[pitchindex]*(1-pitchval)+voices[v].freqsmooth[pitchindex+1]*pitchval;
 }

@@ -45,6 +45,7 @@ class midihandler {
 	int samplerate;
 
 	bool sustain = false;
+	int pitchindex = 1;
 	float pitchval = 0;
 	float modval = 0;
 
@@ -83,11 +84,13 @@ class midihandler {
 	void noteoff(int noteid, bool sustained);
 	void allsoundoff();
 	void sustainpedal(bool on);
-	void pitchwheel();
-	void modwheel();
+	void pitchwheel(float val);
+	void modwheel(int noteid, float val);
 
 	void arpset();
 	void arpupdate();
+	void pitchesupdate();
 
 	void tick();
+	float getpitch(int v);
 };

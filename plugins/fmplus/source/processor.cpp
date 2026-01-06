@@ -32,7 +32,7 @@ FMPlusAudioProcessor::FMPlusAudioProcessor() :
 	}
 
 	params.general[ 0] = potentiometer("Voices"						,"voices"			,0		,presets[0].general  [ 0]	,1	,24	,potentiometer::inttype		);
-	params.general[ 1] = potentiometer("Pitch Bend"					,"pitchbend"		,.001f	,presets[0].general  [ 1]	,0	,24	,potentiometer::inttype		);
+	params.general[ 1] = potentiometer("Pitch Bend"					,"pitchbend"		,0		,presets[0].general  [ 1]	,0	,24	,potentiometer::inttype		);
 	params.general[ 2] = potentiometer("Glide"						,"glide"			,0		,presets[0].general  [ 2]	);
 	params.general[ 3] = potentiometer("Legato"						,"legato"			,0		,presets[0].general  [ 3]	,0	,1	,potentiometer::booltype	);
 	params.general[ 4] = potentiometer("LFO Sync"					,"lfosync"			,0		,presets[0].general  [ 4]	,0	,3	,potentiometer::inttype		);
@@ -255,7 +255,7 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 	for(int s = 0; s < numsamples; ++s) {
 		for(int i = 0; i < generalcount; ++i) if(params.general[i].smoothtime > 0)
 			state.general[i] = params.general[i].smooth[0].getNextValue();
-		// TODO smooth pitchbend, velocity, aftertouch
+		// TODO smooth velocity, aftertouch
 
 		while(midiiterator != midiMessages.end() && ((*midiiterator).samplePosition*oversampleamount) <= s) {
 			midihandle.processmessage((*midiiterator).getMessage());
@@ -264,7 +264,7 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 		midihandle.tick();
 
 		for(int v = 0; v < voicenum; ++v)
-			osc[0][v].f[s] = midihandle.voices[v].freqsmooth[1];
+			osc[0][v].f[s] = midihandle.getpitch(v);
 		for(int o = 0; o < opcount; ++o) { // TODO velocity + aftertouch
 			int op = oporder[o];
 			for(int v = 0; v < voicenum; ++v) {
@@ -273,6 +273,7 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 			}
 		}
 	}
+
 	//for(int i = 0; i < paramcount; ++i) if(params.values[i].smoothtime > 0) for(int o = 0; o < MC; ++o)
 	//	state.values[o][i] = params.values[i].smooth[o].getNextValue(); TODO
 
@@ -600,6 +601,8 @@ void FMPlusAudioProcessor::parameterChanged(const String& parameterID, float new
 			midihandle.arpupdate();
 		else if(parameterID == "arpspeed" || parameterID == "arpbpm")
 			updatearpspeed();
+		else if(parameterID == "pitchbend")
+			midihandle.pitchesupdate();
 
 		return;
 	}
@@ -665,6 +668,7 @@ void FMPlusAudioProcessor::resettuning() {
 	for(int n = 0; n < 128; ++n)
 		midihandle.notes[n].pitch = (440.f/32.f)*pow(2.f,((n-9.f)/12.f));
 	params.tuningfile = "Standard";
+	midihandle.pitchesupdate();
 }
 String FMPlusAudioProcessor::updatetuning(File file) {
 	if(file.getFullPathName() == "") return params.tuningfile;
@@ -703,6 +707,7 @@ String FMPlusAudioProcessor::updatetuning(File file) {
 		params.tuningfile = scl.getFileNameWithoutExtension();
 	} catch(...) {}
 
+	midihandle.pitchesupdate();
 	return params.tuningfile;
 }
 void FMPlusAudioProcessor::resettheme() {
