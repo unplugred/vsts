@@ -601,14 +601,16 @@ void FMPlusAudioProcessorEditor::calcvis(int curveupdated) {
 	if(selectedtab < 3) return;
 
 	if(curveupdated == 1) {
+		morphosc osc;
+		osc.update(knobs[generalcount+3].valuesmoothed);
 		int box = knobs[generalcount+3].box;
 		int h = boxes[box].h;
 		int x = boxes[box].x;
 		int y = height-h-boxes[box].y;
 		linewritepos = curvemesh[0];
-		beginline(x,y+(osccalc(-1,knobs[generalcount+3].valuesmoothed)*-.5f+.5f)*h);
+		beginline(x,y+(osc.calc(-1)*-.5f+.5f)*h);
 		for(int i = 0; i < (h+1); ++i)
-			nextpoint(x+i+1,y+(osccalc((((float)i+1)/h)*2-1,knobs[generalcount+3].valuesmoothed)*.5f+.5f)*h);
+			nextpoint(x+i+1,y+(osc.calc((((float)i+1)/h)*2-1)*.5f+.5f)*h);
 		endline();
 		curvemesh[1] = linewritepos;
 		return;

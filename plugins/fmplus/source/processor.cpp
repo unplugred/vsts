@@ -345,10 +345,11 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 	for(int o = 0; o < opcount; ++o) {
 		int op = oporder[o];
 		for(int s = 0; s < numsamples; ++s) {
-			// smooth
+			state.values[o][3] = params.values[3].smooth[o].getNextValue();
 			for(int v = 0; v < voicenum; ++v) {
 				for(int c = 0; c < channelnum; ++c) {
 				}
+				osc[op][v].w[s] = state.values[o][3];
 			}
 		}
 	}
@@ -362,14 +363,15 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 		}
 	}
 
-	// ---- TODO OSC ----
+	// ---- OSC ----
 	for(int v = 0; v < voicenum; ++v) {
 		for(int s = 0; s < numsamples; ++s) {
 			for(int o = 0; o < opcount; ++o) {
 				int op = oporder[o];
+				generator[op].update(osc[op][v].w[s]);
 				for(int c = 0; c < channelnum; ++c) {
 					osc[op][v].p[c] = fmod(osc[op][v].p[c]+(osc[op][v].f[s]/ossamplerate),1);
-					osc[op][v].a[s*channelnum+c] *= sin(osc[op][v].p[c]*MathConstants<float>::twoPi);
+					osc[op][v].a[s*channelnum+c] *= generator[op].calc(osc[op][v].p[c]*2-1);
 					osc[op][v].fb[c] = osc[op][v].a[s*channelnum+c];
 					channelData[c][s] += osc[op][v].a[s*channelnum+c];
 				}

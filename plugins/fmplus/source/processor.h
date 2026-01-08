@@ -2,6 +2,7 @@
 #include "includes.h"
 #include "curves.h"
 #include "midihandler.h"
+#include "oscillator.h"
 
 struct potentiometer {
 public:
@@ -81,16 +82,6 @@ struct oscillator {
 	std::vector<float> w ; // waveform  len = s
 	float vellerp = 0;
 };
-static float osccalc(float x, float shape) { // TODO object
-	if(shape < .5f) {
-		shape = 1-shape*2;
-		float gc = (1-powf(1-pow(shape,1.74f),1.34f))*1.79f-3.04f;
-		float val = .5f-3.f*shape*shape;
-		return (x+x*x*x*(val*x*x-1.f-val))*gc;
-	}
-	float osc = x+x*x*x*(.5f*x*x-1.5f);
-	return (1-pow(1-fabs(osc*-3.04f),shape*2))*(osc>0?-1:1);
-}
 
 class FMPlusAudioProcessor : public plugmachine_dsp {
 public:
@@ -174,6 +165,7 @@ private:
 	float vibrate = 0;
 	float vibattack[24];
 
+	morphosc generator[MC];
 	oscillator osc[MC][24];
 
 	int oporder[8];
