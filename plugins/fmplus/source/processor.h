@@ -168,10 +168,16 @@ private:
 
 	midihandler midihandle;
 	void updatearpspeed();
+
+	void updatevibspeed();
+	float vibphase = 0;
+	float vibrate = 0;
+	float vibattack[24];
+
 	oscillator osc[MC][24];
+
 	int oporder[8];
 	int opcount = 0;
-
 	int channelnum = 0;
 	int samplesperblock = 0;
 	int samplerate = 44100;
@@ -182,6 +188,9 @@ private:
 
 static float calcarp(float value) {
 	return value*value*(MAXARP-MINARP)+MINARP;
+}
+static float calcvib(float value) {
+	return value*value*(MAXVIB-MINVIB)+MINVIB;
 }
 static float freqaddinflate(float value) {
 	return (mapToLog10((float)fabs(value*2-1),1.f,10000.f)-1)*(round(value)*2-1);
@@ -249,12 +258,12 @@ static String get_string(int param, float value, int tab) {
 			return (String)round(value*100)+'%';
 		} if(param ==  8) {
 			return format_time(calcarp(value),true);
+		} if(param == 11) {
+			return format_time(calcvib(value),true);
 		} if(param ==  9 || param == 12) {
 			return bpmsyncs_s[(int)round(value)];
-		} if(param == 11) {
-			return format_time(value*value*MAXVIB,true);
 		} if(param == 13) {
-			return (String)round(pow(value,2)*100)+'C';
+			return (String)round(value*value*100)+'C';
 		} if(param == 14) {
 			return format_time(value*value*MAXVIBATT);
 		} if(param == 15) {

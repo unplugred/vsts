@@ -21,7 +21,8 @@ using namespace juce;
 #define MAXGLIDE 2
 #define MINARP .01
 #define MAXARP 1
-#define MAXVIB 1
-#define MAXVIBATT 4
+#define MINVIB .05
+#define MAXVIB 4
+#define MAXVIBATT 2
 #define MAXLFO 24
 #define MAXLFOATT 4

@@ -42,8 +42,8 @@ FMPlusAudioProcessor::FMPlusAudioProcessor() :
 	params.general[ 8] = potentiometer("Arp Speed"					,"arpspeed"			,0		,presets[0].general  [ 8]	);
 	params.general[ 9] = potentiometer("Arp Speed (BPM sync)"		,"arpbpm"			,0		,presets[0].general  [ 9]	,0	,12	,potentiometer::inttype		);
 	params.general[10] = potentiometer("Vibrato On"					,"vibratoon"		,.001f	,presets[0].general  [10]	,0	,1	,potentiometer::booltype	);
-	params.general[11] = potentiometer("Vibrato Rate"				,"vibratorate"		,.001f	,presets[0].general  [11]	);
-	params.general[12] = potentiometer("Vibrato Rate (BPM sync)"	,"vibratobpm"		,.001f	,presets[0].general  [12]	,0	,12	,potentiometer::inttype		);
+	params.general[11] = potentiometer("Vibrato Rate"				,"vibratorate"		,0		,presets[0].general  [11]	);
+	params.general[12] = potentiometer("Vibrato Rate (BPM sync)"	,"vibratobpm"		,0		,presets[0].general  [12]	,0	,12	,potentiometer::inttype		);
 	params.general[13] = potentiometer("Vibrato Amount"				,"vibratoamount"	,.001f	,presets[0].general  [13]	);
 	params.general[14] = potentiometer("Vibrato Attack"				,"vibratoattack"	,0		,presets[0].general  [14]	);
 	// TODO per op defaults
@@ -87,6 +87,9 @@ FMPlusAudioProcessor::FMPlusAudioProcessor() :
 
 	midihandle.params = state.general;
 	resettuning();
+
+	for(int v = 0; v < 24; ++v)
+		vibattack[v] = 0;
 
 	updatedcurve = 1+2+4+8+16+32+64+128;
 	updatevis = true;
@@ -219,17 +222,17 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 	// update voice count
 	int voicenum = state.general[0];
 	if(midihandle.voicessize != voicenum) {
-		int osblock = samplesperblock*pow(2,osindex);
+		int osblocksize = samplesperblock*pow(2,osindex);
 		if(midihandle.voicessize < voicenum) {
 			for(int v = midihandle.voicessize; v < voicenum; ++v)
 				for(int o = 0; o < MC; ++o)
-					osc[o][v].reset(channelnum,osblock);
+					osc[o][v].reset(channelnum,osblocksize);
 		} else {
 			for(int v = voicenum; v < midihandle.voicessize; ++v)
 				for(int o = 0; o < MC; ++o)
 					osc[o][v].reset(0,0);
 		}
-		midihandle.setvoices(osblock);
+		midihandle.setvoices(osblocksize);
 	}
 
 	opcount = 0; // TODO factor connections
@@ -237,7 +240,7 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 		if(state.values[o][0] > .5)
 			oporder[opcount++] = o;
 
-	// get bpm
+	// update bpm
 	AudioPlayHead* playhead = getPlayHead();
 	if(playHead != nullptr)
 		if(auto positioninfo = playhead->getPosition())
@@ -245,6 +248,7 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 				if((*bpmfromhost) != bpm) {
 					bpm = *bpmfromhost;
 					updatearpspeed();
+					updatevibspeed();
 	}
 
 	// prepare variables
@@ -253,9 +257,10 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 	// ---- TODO MIDI ----
 	MidiBufferIterator midiiterator = midiMessages.begin();
 	for(int s = 0; s < numsamples; ++s) {
-		for(int i = 0; i < generalcount; ++i) if(params.general[i].smoothtime > 0)
-			state.general[i] = params.general[i].smooth[0].getNextValue();
-		// TODO smooth velocity, aftertouch
+		for(int o = 0; o < opcount; ++o) {
+			state.values[o][4] = params.values[4].smooth[o].getNextValue();
+			state.values[o][5] = params.values[5].smooth[o].getNextValue();
+		}
 
 		while(midiiterator != midiMessages.end() && ((*midiiterator).samplePosition*oversampleamount) <= s) {
 			midihandle.processmessage((*midiiterator).getMessage());
@@ -274,13 +279,30 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 		}
 	}
 
-	//for(int i = 0; i < paramcount; ++i) if(params.values[i].smoothtime > 0) for(int o = 0; o < MC; ++o)
-	//	state.values[o][i] = params.values[i].smooth[o].getNextValue(); TODO
+	// ---- VIBRATO ----
+	if((state.general[10] > 0 || presets[currentpreset].general[10] > 0) && (state.general[13] > 0 || presets[currentpreset].general[13] > 0)) {
+		float attackdelta = 1;
+		if(state.general[14] > .0001f)
+			attackdelta = 1.f/(state.general[14]*state.general[14]*MAXVIBATT*ossamplerate);
+		for(int v = 0; v < voicenum; ++v)
+			midihandle.voices[v].eventindex = 0;
+		for(int s = 0; s < numsamples; ++s) {
+			for(int i = 10; i < 15; ++i) if(params.general[i].smoothtime > 0)
+				state.general[i] = params.general[i].smooth[0].getNextValue();
+			float amt = state.general[10]*state.general[13];
+			vibphase = fmod(vibphase+vibrate,1.f);
+			float vib = vibphase*2-1;
+			vib = (vib+vib*vib*vib*(.5f*vib*vib-1.5f))*3.04f*amt*amt/12;
 
-	// ---- TODO VIBRATO ----
-	for(int s = 0; s < numsamples; ++s) {
-		//vibphase += .1f;
-		for(int v = 0; v < voicenum; ++v) {
+			for(int v = 0; v < voicenum; ++v) {
+				vibattack[v] = fmin(1.f,vibattack[v]+attackdelta);
+				int nextevent = midihandle.voices[v].events[midihandle.voices[v].eventindex];
+				if(nextevent != 0 && nextevent <= s) {
+					if(nextevent > 0) vibattack[v] = 0;
+					++midihandle.voices[v].eventindex;
+				}
+				osc[0][v].f[s] *= pow(2.f,vib*vibattack[v]);
+			}
 		}
 	}
 
@@ -385,6 +407,7 @@ void FMPlusAudioProcessor::setoversampling() {
 
 	midihandle.reset(samplesperblock*oversampleamount,samplerate*oversampleamount);
 	updatearpspeed();
+	updatevibspeed();
 	for(int v = 0; v < state.general[0]; ++v)
 		for(int o = 0; o < MC; ++o)
 			osc[o][v].reset(channelnum,samplesperblock*oversampleamount);
@@ -595,14 +618,16 @@ void FMPlusAudioProcessor::parameterChanged(const String& parameterID, float new
 		presets[currentpreset].general[i] = newValue;
 		params.presetunsaved = true;
 
-		if(parameterID == "arpon")
+		if(parameterID == "pitchbend")
+			midihandle.pitchesupdate();
+		else if(parameterID == "arpon")
 			midihandle.arpset();
 		else if(parameterID == "arpdirection")
 			midihandle.arpupdate();
 		else if(parameterID == "arpspeed" || parameterID == "arpbpm")
 			updatearpspeed();
-		else if(parameterID == "pitchbend")
-			midihandle.pitchesupdate();
+		else if(parameterID == "vibratorate" || parameterID == "vibratobpm")
+			updatevibspeed();
 
 		return;
 	}
@@ -619,6 +644,12 @@ void FMPlusAudioProcessor::updatearpspeed() {
 		midihandle.arpspeed = bpm/(bpmsyncs_f[(int)state.general[9]]*samplerate*pow(2,osindex)*60);
 	else
 		midihandle.arpspeed = 1.f/(calcarp(state.general[8])*samplerate*pow(2,osindex));
+}
+void FMPlusAudioProcessor::updatevibspeed() {
+	if(state.general[12] > 0)
+		vibrate = bpm/(bpmsyncs_f[(int)state.general[12]]*samplerate*pow(2,osindex)*60);
+	else
+		vibrate = 1.f/(calcvib(state.general[11])*samplerate*pow(2,osindex));
 }
 
 void FMPlusAudioProcessor::movepoint(int index, float x, float y) {

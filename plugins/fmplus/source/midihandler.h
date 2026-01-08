@@ -28,9 +28,8 @@ class midihandler {
 	};
 	struct voice {
 		void reset(int samplesperblock);
-		void noteon();
-		void noteoff();
-		void tick();
+		void noteon(int sample);
+		void noteoff(int sample);
 
 		int noteid = -1;
 		float freq[3] { 1000, 1000, 1000 };
@@ -43,6 +42,7 @@ class midihandler {
 
 	float* params;
 	int samplerate;
+	int sample = 1;
 
 	bool sustain = false;
 	int pitchindex = 1;
