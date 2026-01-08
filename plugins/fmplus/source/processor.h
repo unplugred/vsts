@@ -131,6 +131,9 @@ public:
 	Atomic<bool> updatevis = false;
 	Atomic<int> updatedcurve = 1+2+4+8+16+32+64+128;
 
+	float indicators[MC+1];
+	Atomic<bool> getframe = false;
+
 	void resettuning();
 	String updatetuning(File file);
 	void resettheme();
@@ -152,6 +155,13 @@ private:
 	bool preparedtoplay = false;
 	bool saved = false;
 
+	int oporder[8];
+	int opcount = 0;
+	int channelnum = 0;
+	int samplesperblock = 0;
+	int samplerate = 44100;
+	double bpm = 120;
+
 	int osindex = 0;
 	std::unique_ptr<dsp::Oversampling<float>> os[3]; // 2 4 8
 	AudioBuffer<float> osbuffer;
@@ -167,13 +177,6 @@ private:
 
 	morphosc generator[MC];
 	oscillator osc[MC][24];
-
-	int oporder[8];
-	int opcount = 0;
-	int channelnum = 0;
-	int samplesperblock = 0;
-	int samplerate = 44100;
-	double bpm = 120;
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(FMPlusAudioProcessor)
 };

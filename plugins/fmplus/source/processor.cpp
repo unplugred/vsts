@@ -21,9 +21,9 @@ FMPlusAudioProcessor::FMPlusAudioProcessor() :
 		presets[0].general[i] = 0;
 	for(int i = 0; i < paramcount; ++i) for(int o = 0; o < MC; ++o)
 		presets[0].values[o][i] = 0;
-	for(int i = 0; i < (MC+1); ++i) {
-		presets[0].oppos[i*2  ] = 56;
-		presets[0].oppos[i*2+1] = 180-i*20;
+	for(int o = 0; o < (MC+1); ++o) {
+		presets[0].oppos[o*2  ] = 56;
+		presets[0].oppos[o*2+1] = 180-o*20;
 	}
 
 	for(int i = 1; i < getNumPrograms(); ++i) {
@@ -47,7 +47,7 @@ FMPlusAudioProcessor::FMPlusAudioProcessor() :
 	params.general[13] = potentiometer("Vibrato Amount"				,"vibratoamount"	,.001f	,presets[0].general  [13]	);
 	params.general[14] = potentiometer("Vibrato Attack"				,"vibratoattack"	,0		,presets[0].general  [14]	);
 	// TODO per op defaults
-	params.values [ 0] = potentiometer("On"							,"on"		 		,0		,presets[0].values[0][ 0]	,0	,1	,potentiometer::booltype	);
+	params.values [ 0] = potentiometer("On"							,"on"		 		,.001f	,presets[0].values[0][ 0]	,0	,1	,potentiometer::booltype	);
 	params.values [ 1] = potentiometer("Pan"						,"pan"				,0		,presets[0].values[0][ 1]	);
 	params.values [ 2] = potentiometer("Amplitude"					,"amp"				,0		,presets[0].values[0][ 2]	);
 	params.values [ 3] = potentiometer("Tone"						,"tone"				,.001f	,presets[0].values[0][ 3]	);
@@ -90,6 +90,8 @@ FMPlusAudioProcessor::FMPlusAudioProcessor() :
 
 	for(int v = 0; v < 24; ++v)
 		vibattack[v] = 0;
+	for(int o = 0; o < (MC+1); ++o)
+		indicators[o] = 0;
 
 	updatedcurve = 1+2+4+8+16+32+64+128;
 	updatevis = true;
@@ -237,7 +239,7 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 
 	opcount = 0; // TODO factor connections
 	for(int o = 0; o < MC; ++o)
-		if(state.values[o][0] > .5)
+		if(state.values[o][0] > .5 || presets[currentpreset].values[o][0] > .5)
 			oporder[opcount++] = o;
 
 	// update bpm
@@ -274,7 +276,7 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 			int op = oporder[o];
 			for(int v = 0; v < voicenum; ++v) {
 				if(midihandle.voices[v].noteid == -1) osc[op][v].a[s*channelnum] = 0;
-				else osc[op][v].a[s*channelnum] = midihandle.notes[midihandle.voices[v].noteid].velocity*(midihandle.voices[v].ison?.125f:0);
+				else osc[op][v].a[s*channelnum] = midihandle.notes[midihandle.voices[v].noteid].velocity*(midihandle.voices[v].ison?1:0);
 			}
 		}
 	}
@@ -345,7 +347,10 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 	for(int o = 0; o < opcount; ++o) {
 		int op = oporder[o];
 		for(int s = 0; s < numsamples; ++s) {
-			state.values[o][3] = params.values[3].smooth[o].getNextValue();
+			for(int i = 0; i < 4; ++i)
+				state.values[o][i] = params.values[i].smooth[o].getNextValue();
+			for(int i = 6; i < 9; ++i)
+				state.values[o][i] = params.values[i].smooth[o].getNextValue();
 			for(int v = 0; v < voicenum; ++v) {
 				for(int c = 0; c < channelnum; ++c) {
 				}
@@ -354,13 +359,22 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 		}
 	}
 
-	// ---- TODO BLOCK VIS ----
-	for(int o = 0; o < opcount; ++o) {
-		int op = oporder[o];
-		for(int v = 0; v < voicenum; ++v) {
-			for(int c = 0; c < channelnum; ++c) {
+	// ---- INDICATOR VIS ----
+	if(getframe.get()) {
+		indicators[0] = 0;
+		for(int o = 0; o < opcount; ++o) {
+			int op = oporder[o];
+			float rms = 0;
+			for(int v = 0; v < voicenum; ++v) {
+				for(int c = 0; c < channelnum; ++c) {
+					float a = osc[op][v].a[(numsamples-1)*channelnum+c];
+					rms += a*a;
+				}
 			}
+			indicators[op+1] = sqrt(rms/channelnum);
+			indicators[0] += rms;
 		}
+		indicators[0] = sqrt(indicators[0]/channelnum);
 	}
 
 	// ---- OSC ----
@@ -373,19 +387,21 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 					osc[op][v].p[c] = fmod(osc[op][v].p[c]+(osc[op][v].f[s]/ossamplerate),1);
 					osc[op][v].a[s*channelnum+c] *= generator[op].calc(osc[op][v].p[c]*2-1);
 					osc[op][v].fb[c] = osc[op][v].a[s*channelnum+c];
-					channelData[c][s] += osc[op][v].a[s*channelnum+c];
+					channelData[c][s] += osc[op][v].a[s*channelnum+c]*.125f;
 				}
 			}
 		}
 	}
 
-	// ---- TODO OP VIS ----
-	for(int o = 0; o < opcount; ++o) {
-	}
-
 	// ---- TODO FX ----
 
 	// ---- TODO VIS ----
+	if(getframe.get()) {
+		for(int o = 0; o < opcount; ++o) {
+			int op = oporder[o];
+		}
+		getframe = false;
+	}
 
 	if(osindex > 0) os[osindex-1]->processSamplesDown(block);
 }
@@ -504,8 +520,8 @@ const String FMPlusAudioProcessor::get_preset(int preset_id, const char delimite
 		for(int p = 0; p < presets[preset_id].curves[o].points.size(); ++p)
 			data << presets[preset_id].curves[o].points[p].x << delimiter << presets[preset_id].curves[o].points[p].y << delimiter << presets[preset_id].curves[o].points[p].tension << delimiter;
 	}
-	for(int i = 0; i < (MC+1)*2; ++i)
-		data << presets[preset_id].oppos[i] << delimiter;
+	for(int o = 0; o < (MC+1)*2; ++o)
+		data << presets[preset_id].oppos[o] << delimiter;
 	for(int o = 0; o < (MC+1); ++o) {
 		data << presets[preset_id].opconnections[o].size() << delimiter;
 		for(int i = 0; i < presets[preset_id].opconnections[o].size(); ++i) {
@@ -558,9 +574,9 @@ void FMPlusAudioProcessor::set_preset(const String& preset, int preset_id, const
 			}
 		}
 
-		for(int i = 0; i < (MC+1)*2; ++i) {
+		for(int o = 0; o < (MC+1)*2; ++o) {
 			std::getline(ss, token, delimiter);
-			presets[preset_id].oppos[i] = std::stoi(token);
+			presets[preset_id].oppos[o] = std::stoi(token);
 		}
 		for(int o = 0; o < (MC+1); ++o) {
 			std::getline(ss, token, delimiter);
@@ -638,6 +654,9 @@ void FMPlusAudioProcessor::parameterChanged(const String& parameterID, float new
 		else state.values[o][i] = newValue;
 		presets[currentpreset].values[o][i] = newValue;
 		params.presetunsaved = true;
+
+		if(i == 0 && newValue < .5) indicators[o+1] = 0;
+
 		return;
 	}
 }

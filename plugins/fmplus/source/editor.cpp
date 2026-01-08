@@ -51,12 +51,12 @@ FMPlusAudioProcessorEditor::FMPlusAudioProcessorEditor(FMPlusAudioProcessor& p, 
 		addtext(5,11*(o+3),"OP"+(String)(o+1));
 	for(int o = 0; o < (MC+1); ++o) {
 		ops[o].connections = state.opconnections[o];
-		ops[o].indicator = (o==0||o==5)?1.f:0.f;
 		ops[o].pos[0] = state.oppos[o*2  ];
 		ops[o].pos[1] = state.oppos[o*2+1];
 		ops[o].textmesh = textlength;
 		addtext(ops[o].pos[0]+162,ops[o].pos[1]+30,o==0?"Out":(knobs[generalcount].value[o-1]>.5f?("OP"+(String)o):"   "));
 	}
+	audio_processor.getframe = true;
 
 	knobs[              5].name = "Arp";
 	knobs[              6].name = "Direction";
@@ -1201,8 +1201,8 @@ void FMPlusAudioProcessorEditor::timerCallback() {
 	}
 
 	if(audio_processor.updatevis.get()) {
-		for(int i = 0; i < MC; i++)
-			curves[i] = audio_processor.presets[audio_processor.currentpreset].curves[i];
+		for(int o = 0; o < MC; o++)
+			curves[o] = audio_processor.presets[audio_processor.currentpreset].curves[o];
 		calcvis(3);
 		audio_processor.updatevis = false;
 	}
@@ -1215,6 +1215,13 @@ void FMPlusAudioProcessorEditor::timerCallback() {
 	}
 
 	if(updatedadsr) calcvis(2);
+
+	if(!audio_processor.getframe.get()) {
+		for(int o = 0; o < (MC+1); o++)
+			ops[o].indicator = fmin(1,audio_processor.indicators[o]);
+		// TODO get vis
+		audio_processor.getframe = true;
+	}
 
 	update();
 }
