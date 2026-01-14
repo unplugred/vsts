@@ -1430,7 +1430,7 @@ int ModManAudioProcessorEditor::recalc_hover(float x, float y) {
 		}
 
 		// curve bg
-		if(x >= 6 && y >= 6 && x <= (180-6) && y <= (163-6))
+		if(x >= 0 && y >= 0 && x <= 180 && y <= 163)
 			return -13;
 	}
 
