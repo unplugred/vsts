@@ -1417,15 +1417,15 @@ int ModManAudioProcessorEditor::recalc_hover(float x, float y) {
 		for(int i = 0; i < curves[selectedmodulator].points.size(); ++i) {
 			float xx = x-curves[selectedmodulator].points[i].x*180;
 			float yy = y-(1-curves[selectedmodulator].points[i].y)*163;
-			//dot
-			if((xx*xx+yy*yy)<=37.1) return i*2+knobcount;
+			// dot
+			if((xx*xx+yy*yy) <= 37.1) return i*2+knobcount;
 
 			if(i < (curves[selectedmodulator].points.size()-1)) {
 				float interp = curve::calctension(.5,curves[selectedmodulator].points[i].tension);
 				xx = x-(curves[selectedmodulator].points[i].x+curves[selectedmodulator].points[i+1].x)*.5f*180.f;
 				yy = y-(1-(curves[selectedmodulator].points[i].y*(1-interp)+curves[selectedmodulator].points[i+1].y*interp))*163.f;
-				//tension
-				if((xx*xx+yy*yy)<=37.1) return i*2+1+knobcount;
+				// tension
+				if((xx*xx+yy*yy) <= 37.1) return i*2+1+knobcount;
 			}
 		}
 

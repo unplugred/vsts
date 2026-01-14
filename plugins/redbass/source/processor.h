@@ -97,7 +97,7 @@ public:
 	double calculatelowpass(double value);
 	double calculatefrequency(double value);
 	double calculatethreshold(double value);
- 
+
 	AudioProcessorValueTreeState::ParameterLayout create_parameters();
 	AudioProcessorValueTreeState apvts;
 

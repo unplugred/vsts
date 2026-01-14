@@ -875,8 +875,8 @@ void SunBurntAudioProcessorEditor::calcvis() {
 			else
 				angle = angle2;
 		}
-		visline[i*6  ] = (i*.5+12+cos(angle)*2.3f)/width;
-		visline[i*6+3] = (i*.5+12-cos(angle)*2.3f)/width;
+		visline[i*6  ] = (i*.5+12 +cos(angle)*2.3f)/width ;
+		visline[i*6+3] = (i*.5+12 -cos(angle)*2.3f)/width ;
 		visline[i*6+1] = (currenty+sin(angle)*2.3f)/height;
 		visline[i*6+4] = (currenty-sin(angle)*2.3f)/height;
 		visline[i*6+2] = 0.f;
