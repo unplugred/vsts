@@ -48,14 +48,14 @@ FMPlusAudioProcessor::FMPlusAudioProcessor() :
 	params.general[14] = potentiometer("Vibrato Attack"				,"vibratoattack"	,0		,presets[0].general  [14]	);
 	// TODO per op defaults
 	params.values [ 0] = potentiometer("On"							,"on"		 		,.001f	,presets[0].values[0][ 0]	,0	,1	,potentiometer::booltype	);
-	params.values [ 1] = potentiometer("Pan"						,"pan"				,0		,presets[0].values[0][ 1]	);
-	params.values [ 2] = potentiometer("Amplitude"					,"amp"				,0		,presets[0].values[0][ 2]	);
+	params.values [ 1] = potentiometer("Pan"						,"pan"				,.001f	,presets[0].values[0][ 1]	);
+	params.values [ 2] = potentiometer("Amplitude"					,"amp"				,.001f	,presets[0].values[0][ 2]	);
 	params.values [ 3] = potentiometer("Tone"						,"tone"				,.001f	,presets[0].values[0][ 3]	);
 	params.values [ 4] = potentiometer("Velocity"					,"velocity"			,.001f	,presets[0].values[0][ 4]	);
 	params.values [ 5] = potentiometer("Mod W/Aft.T"				,"modat"			,.001f	,presets[0].values[0][ 5]	);
 	params.values [ 6] = potentiometer("Frequency Mode"				,"freqmode"			,0		,presets[0].values[0][ 6]	,0	,1	,potentiometer::booltype	);
-	params.values [ 7] = potentiometer("Frequency Multiplier"		,"freqmult"			,.001f	,presets[0].values[0][ 7]	,0	,24	);
-	params.values [ 8] = potentiometer("Frequency Offset"			,"freqadd"			,.001f	,presets[0].values[0][ 8]	);
+	params.values [ 7] = potentiometer("Frequency Multiplier"		,"freqmult"			,0		,presets[0].values[0][ 7]	,0	,24	);
+	params.values [ 8] = potentiometer("Frequency Offset"			,"freqadd"			,0		,presets[0].values[0][ 8]	);
 	params.values [ 9] = potentiometer("Attack"						,"attack"			,.001f	,presets[0].values[0][ 9]	);
 	params.values [10] = potentiometer("Decay"						,"decay"			,.001f	,presets[0].values[0][10]	);
 	params.values [11] = potentiometer("Sustain"					,"sustain"			,.001f	,presets[0].values[0][11]	);
@@ -256,7 +256,7 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 	// prepare variables
 	midihandle.newbuffer();
 
-	// ---- TODO MIDI ----
+	// ---- MIDI ----
 	MidiBufferIterator midiiterator = midiMessages.begin();
 	for(int s = 0; s < numsamples; ++s) {
 		for(int o = 0; o < opcount; ++o) {
@@ -272,11 +272,15 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 
 		for(int v = 0; v < voicenum; ++v)
 			osc[0][v].f[s] = midihandle.getpitch(v);
-		for(int o = 0; o < opcount; ++o) { // TODO velocity + aftertouch
+		for(int o = 0; o < opcount; ++o) {
 			int op = oporder[o];
 			for(int v = 0; v < voicenum; ++v) {
-				if(midihandle.voices[v].noteid == -1) osc[op][v].a[s*channelnum] = 0;
-				else osc[op][v].a[s*channelnum] = midihandle.notes[midihandle.voices[v].noteid].velocity*(midihandle.voices[v].ison?1:0);
+				if(midihandle.voices[v].noteid == -1)
+					osc[op][v].a[s*channelnum] = 0;
+				else
+					osc[op][v].a[s*channelnum] =
+						(midihandle.notes[midihandle.voices[v].noteid].velocity*state.values[o][4]+(1-state.values[o][4]))*
+						(midihandle.voices[v].aftertouchsmooth                 *state.values[o][5]+(1-state.values[o][5]));
 			}
 		}
 	}
@@ -293,13 +297,12 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 				state.general[i] = params.general[i].smooth[0].getNextValue();
 			float amt = state.general[10]*state.general[13];
 			vibphase = fmod(vibphase+vibrate,1.f);
-			float vib = vibphase*2-1;
-			vib = (vib+vib*vib*vib*(.5f*vib*vib-1.5f))*3.04f*amt*amt/12;
+			float vib = sinapprox(vibphase*2-1)*amt*amt/12;
 
 			for(int v = 0; v < voicenum; ++v) {
 				vibattack[v] = fmin(1.f,vibattack[v]+attackdelta);
 				int nextevent = midihandle.voices[v].events[midihandle.voices[v].eventindex];
-				if(nextevent != 0 && nextevent <= s) {
+				if(nextevent != 0 && nextevent <= (s-1)) {
 					if(nextevent > 0) vibattack[v] = 0;
 					++midihandle.voices[v].eventindex;
 				}
@@ -311,23 +314,25 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 	// ---- TODO ADSR ----
 	for(int o = 0; o < opcount; ++o) {
 		int op = oporder[o];
+		for(int v = 0; v < voicenum; ++v)
+			midihandle.voices[v].eventindex = 0;
 		for(int s = 0; s < numsamples; ++s) {
 			// smooth
 			for(int v = 0; v < voicenum; ++v) {
-				osc[op][v].vellerp = fmax(osc[op][v].a[s*channelnum],osc[op][v].vellerp)*.99997f+osc[op][v].a[s*channelnum]*.00003f;
-				osc[op][v].a[s*channelnum] = osc[op][v].vellerp;
+				int nextevent = midihandle.voices[v].events[midihandle.voices[v].eventindex];
+				if(nextevent != 0 && nextevent <= (s-1)) {
+					egstage[o*24+v] = sgn(nextevent)*.5f+.5f;
+					++midihandle.voices[v].eventindex;
+				}
+				egprog[o*24+v] = fmax(egstage[o*24+v],egprog[o*24+v])*.99997f+egstage[o*24+v]*.00003f;
+				osc[op][v].a[s*channelnum] *= egprog[o*24+v];
 			}
 		}
 	}
 
-	// ---- COPY DATA ----
+	// ---- COPY DATA ---- TODO memcopy?
 	for(int o = 0; o < opcount; ++o) {
 		int op = oporder[o];
-		for(int v = 0; v < voicenum; ++v)
-			for(int s = 0; s < numsamples; ++s)
-				for(int c = 1; c < channelnum; ++c)
-					osc[op][v].a[s*channelnum+c] = osc[op][v].a[s*channelnum];
-
 		if(op == 0) continue;
 		for(int v = 0; v < voicenum; ++v)
 			for(int s = 0; s < numsamples; ++s)
@@ -343,18 +348,45 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 		}
 	}
 
-	// ---- TODO PARAMS ----
+	// ---- PARAMS ----
 	for(int o = 0; o < opcount; ++o) {
 		int op = oporder[o];
+
+		float freqmult = state.values[o][7];
+		if(state.values[o][6] < .5 && freqmult > .00005f) freqmult = 1.f/freqmult;
+		float freqadd = freqaddinflate(state.values[o][8]);
+		float freqlfo = 1;
 		for(int s = 0; s < numsamples; ++s) {
-			for(int i = 0; i < 4; ++i)
-				state.values[o][i] = params.values[i].smooth[o].getNextValue();
-			for(int i = 6; i < 9; ++i)
-				state.values[o][i] = params.values[i].smooth[o].getNextValue();
+			state.values[o][0] = params.values[0].smooth[o].getNextValue();
+			state.values[o][2] = params.values[2].smooth[o].getNextValue();
+			state.values[o][3] = params.values[3].smooth[o].getNextValue();
+			float amp  = state.values[o][2];
+			float tone = state.values[o][3];
+			// TODO LFO
 			for(int v = 0; v < voicenum; ++v) {
-				for(int c = 0; c < channelnum; ++c) {
+				osc[op][v].a[s*channelnum] *= state.values[o][0]*amp*amp*4;
+				osc[op][v].f[s] = (osc[op][v].f[s]*freqmult+freqadd)*freqlfo;
+				osc[op][v].w[s] = tone;
+			}
+		}
+
+		float mute = 0;
+		for(int s = 0; s < numsamples; ++s) {
+			state.values[o][1] = params.values[1].smooth[o].getNextValue();
+			float pan  = state.values[o][1];
+			// TODO LFO
+			for(int v = 0; v < voicenum; ++v) {
+				if(osc[op][v].f[s] >= 20 && osc[op][v].f[s] <= 20000) {
+					mute = mutedamp.nextvalue(1.f,o*24+v);
+				} else {
+					mute = mutedamp.nextvalue(0.f,o*24+v);
+					osc[op][v].f[s] = fmin(osc[op][v].f[s],20000);
 				}
-				osc[op][v].w[s] = state.values[o][3];
+				osc[op][v].a[s*channelnum] *= mute;
+				for(int c = channelnum-1; c >= 0; --c) {
+					float linearpan = (((float)c)/(channelnum-1))*(pan*2-1)+(1-pan);
+					osc[op][v].a[s*channelnum+c] = osc[op][v].a[s*channelnum]*(sinapprox(linearpan*.5f)*.7071067812+linearpan);
+				}
 			}
 		}
 	}
@@ -424,6 +456,7 @@ void FMPlusAudioProcessor::setoversampling() {
 		params.values[i].smooth[o].reset(samplerate*oversampleamount,params.values[i].smoothtime);
 
 	midihandle.reset(samplesperblock*oversampleamount,samplerate*oversampleamount);
+	mutedamp.reset(.01f,samplerate*oversampleamount,MC*24,1);
 	updatearpspeed();
 	updatevibspeed();
 	for(int v = 0; v < state.general[0]; ++v)

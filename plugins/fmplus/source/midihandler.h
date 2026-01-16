@@ -6,7 +6,7 @@ class midihandler {
 	public:
 	struct note {
 		float pitch;
-		float velocity = 0;
+		float velocity = 1;
 		float aftertouch = 0;
 		int voice = -1;
 		bool sustained = false;
@@ -32,8 +32,10 @@ class midihandler {
 		void noteoff(int sample);
 
 		int noteid = -1;
-		float freq[3] { 1000, 1000, 1000 };
+		float freq      [3] { 1000, 1000, 1000 };
 		float freqsmooth[3] { 1000, 1000, 1000 };
+
+		float aftertouchsmooth = 0;
 
 		int eventindex = 0;
 		std::vector<int> events;
@@ -47,7 +49,7 @@ class midihandler {
 	bool sustain = false;
 	int pitchindex = 1;
 	float pitchval = 0;
-	float modval = 0;
+	float pitchwheelval = .5f;
 
 	note notes[128];
 	voice voices[24];
@@ -74,6 +76,8 @@ class midihandler {
 	Random random;
 
 	onepolevalue glide;
+	onepolevalue pitchdamp;
+	onepolevalue aftertouchdamp;
 
 	void reset(int samplesperblock, int sr);
 	void setvoices(int samplesperblock);

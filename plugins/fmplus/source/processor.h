@@ -80,7 +80,6 @@ struct oscillator {
 	std::vector<float> a ; // amplitude len = s*c
 	std::vector<float> f ; // frequency len = s
 	std::vector<float> w ; // waveform  len = s
-	float vellerp = 0;
 };
 
 class FMPlusAudioProcessor : public plugmachine_dsp {
@@ -175,12 +174,20 @@ private:
 	float vibrate = 0;
 	float vibattack[24];
 
+	float egstage[MC*24];
+	float egprog[MC*24];
+
+	onepolevalue mutedamp;
+
 	morphosc generator[MC];
 	oscillator osc[MC][24];
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(FMPlusAudioProcessor)
 };
 
+static float sinapprox(float x) {
+	return (x+x*x*x*(.5f*x*x-1.5f))*3.04f;
+}
 static float calcarp(float value) {
 	return value*value*(MAXARP-MINARP)+MINARP;
 }
