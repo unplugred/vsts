@@ -305,7 +305,7 @@ static String get_string(int param, float value, int tab) {
 		} if(param == 16) {
 			return bpmsynclfo_s[(int)round(value)];
 		} if(param == 17) {
-			return (String)round(value*100)+'%';
+			return (String)round(value*200-100)+'%';
 		} if(param == 18) {
 			return format_time(value*value*MAXLFOATT);
 		}
@@ -479,10 +479,10 @@ static std::function<String(int v, int max)> tolfobpm = [](int v, int max) {
 static std::function<int(const String& s)> fromlfobpm = [](const String& s) { // TODO
 	return jlimit(0.f,1.f,s.getFloatValue());
 };
-static std::function<String(float v, int max)> tolfoamount = [](float v, int max) {
+static std::function<String(float v, int max)> tolfoinfluence = [](float v, int max) {
 	return get_string(17,v,3);
 };
-static std::function<float(const String& s)> fromlfoamount = [](const String& s) { // TODO
+static std::function<float(const String& s)> fromlfoinfluence = [](const String& s) { // TODO
 	return jlimit(0.f,1.f,s.getFloatValue());
 };
 static std::function<String(float v, int max)> tolfoattack = [](float v, int max) {

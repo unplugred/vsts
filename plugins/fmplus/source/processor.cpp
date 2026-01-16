@@ -64,7 +64,7 @@ FMPlusAudioProcessor::FMPlusAudioProcessor() :
 	params.values [14] = potentiometer("LFO Target"					,"lfotarget"		,0		,presets[0].values[0][14]	,0	,3	,potentiometer::inttype		);
 	params.values [15] = potentiometer("LFO Rate"					,"lforate"			,.001f	,presets[0].values[0][15]	);
 	params.values [16] = potentiometer("LFO Rate (BPM sync)"		,"lfobpm"			,.001f	,presets[0].values[0][16]	,0	,15	,potentiometer::inttype		);
-	params.values [17] = potentiometer("LFO Amount"					,"lfoamount"		,.001f	,presets[0].values[0][17]	);
+	params.values [17] = potentiometer("LFO Influence"				,"lfoinfluence"		,.001f	,presets[0].values[0][17]	);
 	params.values [18] = potentiometer("LFO Attack"					,"lfoattack"		,.001f	,presets[0].values[0][18]	);
 	// TODO FX
 
@@ -820,7 +820,7 @@ AudioProcessorValueTreeState::ParameterLayout FMPlusAudioProcessor::create_param
 	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"o"+(String)o+"lfotarget"	,1},"OP"+(String)(o+1)+" LFO Target"											 ,0		,3		 ,0		,AudioParameterIntAttributes()	.withStringFromValueFunction(tolfotarget		).withValueFromStringFunction(fromlfotarget		))); // AMPLITUDE, PITCH, PAN, TONE
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"o"+(String)o+"lforate"	,1},"OP"+(String)(o+1)+" LFO Rate"				,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.5f	,AudioParameterFloatAttributes().withStringFromValueFunction(tolforate			).withValueFromStringFunction(fromlforate		)));
 	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"o"+(String)o+"lfobpm"	,1},"OP"+(String)(o+1)+" LFO Rate (BPM sync)"									 ,0		,15		 ,0		,AudioParameterIntAttributes()	.withStringFromValueFunction(tolfobpm			).withValueFromStringFunction(fromlfobpm		)));
-	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"o"+(String)o+"lfoamount"	,1},"OP"+(String)(o+1)+" LFO Amount"			,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(tolfoamount		).withValueFromStringFunction(fromlfoamount		)));
+	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"o"+(String)o+"lfoinfluence"	,1},"OP"+(String)(o+1)+" LFO Influence"			,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(tolfoinfluence		).withValueFromStringFunction(fromlfoinfluence		)));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"o"+(String)o+"lfoattack"	,1},"OP"+(String)(o+1)+" LFO Attack"			,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(tolfoattack		).withValueFromStringFunction(fromlfoattack		)));
 	}
 	// TODO FX

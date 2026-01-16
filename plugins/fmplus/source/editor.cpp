@@ -71,7 +71,7 @@ FMPlusAudioProcessorEditor::FMPlusAudioProcessorEditor(FMPlusAudioProcessor& p, 
 	knobs[generalcount+13].name = "LFO";
 	knobs[generalcount+14].name = "Target";
 	knobs[generalcount+15].name = "Rate";
-	knobs[generalcount+17].name = "Amount";
+	knobs[generalcount+17].name = "Influence";
 	knobs[generalcount+18].name = "Attack";
 
 	knobsmooth.reset(.05f,30,paramcount+generalcount);
@@ -807,11 +807,11 @@ void FMPlusAudioProcessorEditor::rebuildtab(int tab) {
 
 		boxes[boxnum++] = box(generalcount+13, 31,159,  8,  8,3);
 		boxes[boxnum++] = box(             -1, 31,168,120, 40,2);
-		boxes[boxnum++] = box(generalcount+14, 86,209, 65, 11,0, 5);
-		boxes[boxnum++] = box(generalcount+15, 86,221, 65, 11,0, 5);
+		boxes[boxnum++] = box(generalcount+14,107,209, 44, 11,0, 5);
+		boxes[boxnum++] = box(generalcount+15,107,221, 44, 11,0, 5);
 		knobs[generalcount+16].box = boxnum-1;
-		boxes[boxnum++] = box(generalcount+17, 86,233, 65, 11,0, 4);
-		boxes[boxnum++] = box(generalcount+18, 86,245, 65, 11,0, 5,true);
+		boxes[boxnum++] = box(generalcount+17,107,233, 44, 11,1, 5);
+		boxes[boxnum++] = box(generalcount+18,107,245, 44, 11,0, 5,true);
 	}
 
 	squarelength = -1;
