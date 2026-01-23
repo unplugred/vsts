@@ -15,13 +15,17 @@
 using namespace juce;
 
 #define MC 8
+#define VC 24
+#define MINA 0
 #define MAXA 8
+#define MIND .005f
 #define MAXD 8
+#define MINR .005f
 #define MAXR 8
 #define MAXGLIDE 2
-#define MINARP .01
+#define MINARP .01f
 #define MAXARP 1
-#define MINVIB .05
+#define MINVIB .05f
 #define MAXVIB 4
 #define MAXVIBATT 2
 #define MAXLFO 24

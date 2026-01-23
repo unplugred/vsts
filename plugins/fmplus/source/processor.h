@@ -132,6 +132,9 @@ public:
 
 	float indicators[MC+1];
 	Atomic<bool> getframe = false;
+	Atomic<float> adsrht = -1;
+	float sustain[MC*VC];
+	Atomic<float> lfoht = -1;
 
 	void resettuning();
 	String updatetuning(File file);
@@ -154,7 +157,8 @@ private:
 	bool preparedtoplay = false;
 	bool saved = false;
 
-	int oporder[8];
+	int oporder[MC];
+	int voiceorder[VC];
 	int opcount = 0;
 	int channelnum = 0;
 	int samplesperblock = 0;
@@ -172,15 +176,21 @@ private:
 	void updatevibspeed();
 	float vibphase = 0;
 	float vibrate = 0;
-	float vibattack[24];
+	float vibattack[VC];
 
-	float egstage[MC*24];
-	float egprog[MC*24];
+	void updatea(int o);
+	void updated(int o);
+	void updater(int o);
+	char egstage[MC*VC];
+	float egprog[MC*VC];
+	float eglast[MC*VC];
+	float egd[MC*5];
+	float ega[MC*5];
 
 	onepolevalue mutedamp;
 
 	morphosc generator[MC];
-	oscillator osc[MC][24];
+	oscillator osc[MC][VC];
 
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(FMPlusAudioProcessor)
 };
@@ -291,13 +301,13 @@ static String get_string(int param, float value, int tab) {
 			if(value < .5) s = "-"+s;
 			return s;
 		} if(param ==  9) {
-			return format_time(value*value*MAXA);
+			return format_time(value*value*(MAXA-MINA)+MINA);
 		} if(param == 10) {
-			return format_time(value*value*MAXD);
+			return format_time(value*value*(MAXD-MIND)+MIND);
 		} if(param == 11) {
 			return String(value,2);
 		} if(param == 12) {
-			return format_time(value*value*MAXR);
+			return format_time(value*value*(MAXR-MINR)+MINR);
 		} if(param == 14) {
 			if(value == 0)
 				return "Amp";

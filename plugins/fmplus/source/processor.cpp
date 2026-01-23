@@ -31,7 +31,7 @@ FMPlusAudioProcessor::FMPlusAudioProcessor() :
 		presets[i].name = "Program " + (String)i;
 	}
 
-	params.general[ 0] = potentiometer("Voices"						,"voices"			,0		,presets[0].general  [ 0]	,1	,24	,potentiometer::inttype		);
+	params.general[ 0] = potentiometer("Voices"						,"voices"			,0		,presets[0].general  [ 0]	,1	,VC	,potentiometer::inttype		);
 	params.general[ 1] = potentiometer("Pitch Bend"					,"pitchbend"		,0		,presets[0].general  [ 1]	,0	,24	,potentiometer::inttype		);
 	params.general[ 2] = potentiometer("Glide"						,"glide"			,0		,presets[0].general  [ 2]	);
 	params.general[ 3] = potentiometer("Legato"						,"legato"			,0		,presets[0].general  [ 3]	,0	,1	,potentiometer::booltype	);
@@ -56,10 +56,10 @@ FMPlusAudioProcessor::FMPlusAudioProcessor() :
 	params.values [ 6] = potentiometer("Frequency Mode"				,"freqmode"			,0		,presets[0].values[0][ 6]	,0	,1	,potentiometer::booltype	);
 	params.values [ 7] = potentiometer("Frequency Multiplier"		,"freqmult"			,0		,presets[0].values[0][ 7]	,0	,24	);
 	params.values [ 8] = potentiometer("Frequency Offset"			,"freqadd"			,0		,presets[0].values[0][ 8]	);
-	params.values [ 9] = potentiometer("Attack"						,"attack"			,.001f	,presets[0].values[0][ 9]	);
-	params.values [10] = potentiometer("Decay"						,"decay"			,.001f	,presets[0].values[0][10]	);
+	params.values [ 9] = potentiometer("Attack"						,"attack"			,0		,presets[0].values[0][ 9]	);
+	params.values [10] = potentiometer("Decay"						,"decay"			,0		,presets[0].values[0][10]	);
 	params.values [11] = potentiometer("Sustain"					,"sustain"			,.001f	,presets[0].values[0][11]	);
-	params.values [12] = potentiometer("Release"					,"release"			,.001f	,presets[0].values[0][12]	);
+	params.values [12] = potentiometer("Release"					,"release"			,0		,presets[0].values[0][12]	);
 	params.values [13] = potentiometer("LFO On"						,"lfoon"			,.001f	,presets[0].values[0][13]	,0	,1	,potentiometer::booltype	);
 	params.values [14] = potentiometer("LFO Target"					,"lfotarget"		,0		,presets[0].values[0][14]	,0	,3	,potentiometer::inttype		);
 	params.values [15] = potentiometer("LFO Rate"					,"lforate"			,.001f	,presets[0].values[0][15]	);
@@ -88,8 +88,22 @@ FMPlusAudioProcessor::FMPlusAudioProcessor() :
 	midihandle.params = state.general;
 	resettuning();
 
-	for(int v = 0; v < 24; ++v)
+	for(int v = 0; v < VC; ++v)
 		vibattack[v] = 0;
+
+	for(int o = 0; o < (MC*5); ++o)
+		egd[o] = 0;
+	for(int o = 0; o < MC; ++o) {
+		ega[o*5  ] = 1;
+		ega[o*5+3] = 0;
+		ega[o*5+4] = 0;
+	}
+	for(int v = 0; v < (MC*VC); ++v) {
+		egstage[v] = 4;
+		egprog [v] = 0;
+		eglast [v] = 0;
+	}
+
 	for(int o = 0; o < (MC+1); ++o)
 		indicators[o] = 0;
 
@@ -259,167 +273,257 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 	// ---- MIDI ----
 	MidiBufferIterator midiiterator = midiMessages.begin();
 	for(int s = 0; s < numsamples; ++s) {
-		for(int o = 0; o < opcount; ++o) {
-			state.values[o][4] = params.values[4].smooth[o].getNextValue();
-			state.values[o][5] = params.values[5].smooth[o].getNextValue();
-		}
-
 		while(midiiterator != midiMessages.end() && ((*midiiterator).samplePosition*oversampleamount) <= s) {
 			midihandle.processmessage((*midiiterator).getMessage());
 			++midiiterator;
 		}
 		midihandle.tick();
 
-		for(int v = 0; v < voicenum; ++v)
-			osc[0][v].f[s] = midihandle.getpitch(v);
-		for(int o = 0; o < opcount; ++o) {
-			int op = oporder[o];
-			for(int v = 0; v < voicenum; ++v) {
-				if(midihandle.voices[v].noteid == -1)
-					osc[op][v].a[s*channelnum] = 0;
-				else
-					osc[op][v].a[s*channelnum] =
-						(midihandle.notes[midihandle.voices[v].noteid].velocity*state.values[o][4]+(1-state.values[o][4]))*
-						(midihandle.voices[v].aftertouchsmooth                 *state.values[o][5]+(1-state.values[o][5]));
+		for(int v = 0; v < voicenum; ++v) {
+			if(midihandle.voices[v].noteid == -1) {
+				osc[0][v].f[s] = 0;
+				osc[0][v].w[s] = 0;
+				osc[1][v].w[s] = 0;
+			} else {
+				osc[0][v].f[s] = midihandle.getpitch(v);
+				osc[0][v].w[s] = midihandle.notes[midihandle.voices[v].noteid].velocity;
+				osc[1][v].w[s] = midihandle.voices[v].aftertouchsmooth;
 			}
 		}
 	}
-
-	// ---- VIBRATO ----
-	if((state.general[10] > 0 || presets[currentpreset].general[10] > 0) && (state.general[13] > 0 || presets[currentpreset].general[13] > 0)) {
-		float attackdelta = 1;
-		if(state.general[14] > .0001f)
-			attackdelta = 1.f/(state.general[14]*state.general[14]*MAXVIBATT*ossamplerate);
-		for(int v = 0; v < voicenum; ++v)
-			midihandle.voices[v].eventindex = 0;
-		for(int s = 0; s < numsamples; ++s) {
-			for(int i = 10; i < 15; ++i) if(params.general[i].smoothtime > 0)
-				state.general[i] = params.general[i].smooth[0].getNextValue();
-			float amt = state.general[10]*state.general[13];
-			vibphase = fmod(vibphase+vibrate,1.f);
-			float vib = sinapprox(vibphase*2-1)*amt*amt/12;
-
-			for(int v = 0; v < voicenum; ++v) {
-				vibattack[v] = fmin(1.f,vibattack[v]+attackdelta);
-				int nextevent = midihandle.voices[v].events[midihandle.voices[v].eventindex];
-				if(nextevent != 0 && nextevent <= (s-1)) {
-					if(nextevent > 0) vibattack[v] = 0;
-					++midihandle.voices[v].eventindex;
-				}
-				osc[0][v].f[s] *= pow(2.f,vib*vibattack[v]);
-			}
-		}
-	}
-
-	// ---- TODO ADSR ----
-	for(int o = 0; o < opcount; ++o) {
-		int op = oporder[o];
-		for(int v = 0; v < voicenum; ++v)
-			midihandle.voices[v].eventindex = 0;
-		for(int s = 0; s < numsamples; ++s) {
-			// smooth
-			for(int v = 0; v < voicenum; ++v) {
-				int nextevent = midihandle.voices[v].events[midihandle.voices[v].eventindex];
-				if(nextevent != 0 && nextevent <= (s-1)) {
-					egstage[o*24+v] = sgn(nextevent)*.5f+.5f;
-					++midihandle.voices[v].eventindex;
-				}
-				egprog[o*24+v] = fmax(egstage[o*24+v],egprog[o*24+v])*.99997f+egstage[o*24+v]*.00003f;
-				osc[op][v].a[s*channelnum] *= egprog[o*24+v];
-			}
-		}
-	}
-
-	// ---- COPY DATA ---- TODO memcopy?
-	for(int o = 0; o < opcount; ++o) {
-		int op = oporder[o];
-		if(op == 0) continue;
-		for(int v = 0; v < voicenum; ++v)
-			for(int s = 0; s < numsamples; ++s)
-				osc[op][v].f[s] = osc[0][v].f[s];
-	}
-
-	// ---- TODO LFO ----
-	for(int o = 0; o < opcount; ++o) {
-		int op = oporder[o];
-		for(int s = 0; s < numsamples; ++s) {
-			for(int v = 0; v < voicenum; ++v) {
-			}
-		}
-	}
-
-	// ---- PARAMS ----
-	for(int o = 0; o < opcount; ++o) {
-		int op = oporder[o];
-
-		float freqmult = state.values[o][7];
-		if(state.values[o][6] < .5 && freqmult > .00005f) freqmult = 1.f/freqmult;
-		float freqadd = freqaddinflate(state.values[o][8]);
-		float freqlfo = 1;
-		for(int s = 0; s < numsamples; ++s) {
-			state.values[o][0] = params.values[0].smooth[o].getNextValue();
-			state.values[o][2] = params.values[2].smooth[o].getNextValue();
-			state.values[o][3] = params.values[3].smooth[o].getNextValue();
-			float amp  = state.values[o][2];
-			float tone = state.values[o][3];
-			// TODO LFO
-			for(int v = 0; v < voicenum; ++v) {
-				osc[op][v].a[s*channelnum] *= state.values[o][0]*amp*amp*4;
-				osc[op][v].f[s] = (osc[op][v].f[s]*freqmult+freqadd)*freqlfo;
-				osc[op][v].w[s] = tone;
-			}
-		}
-
-		float mute = 0;
-		for(int s = 0; s < numsamples; ++s) {
-			state.values[o][1] = params.values[1].smooth[o].getNextValue();
-			float pan  = state.values[o][1];
-			// TODO LFO
-			for(int v = 0; v < voicenum; ++v) {
-				if(osc[op][v].f[s] >= 20 && osc[op][v].f[s] <= 20000) {
-					mute = mutedamp.nextvalue(1.f,o*24+v);
-				} else {
-					mute = mutedamp.nextvalue(0.f,o*24+v);
-					osc[op][v].f[s] = fmin(osc[op][v].f[s],20000);
-				}
-				osc[op][v].a[s*channelnum] *= mute;
-				for(int c = channelnum-1; c >= 0; --c) {
-					float linearpan = (((float)c)/(channelnum-1))*(pan*2-1)+(1-pan);
-					osc[op][v].a[s*channelnum+c] = osc[op][v].a[s*channelnum]*(sinapprox(linearpan*.5f)*.7071067812+linearpan);
-				}
-			}
-		}
-	}
-
-	// ---- INDICATOR VIS ----
-	if(getframe.get()) {
-		indicators[0] = 0;
-		for(int o = 0; o < opcount; ++o) {
-			int op = oporder[o];
-			float rms = 0;
-			for(int v = 0; v < voicenum; ++v) {
-				for(int c = 0; c < channelnum; ++c) {
-					float a = osc[op][v].a[(numsamples-1)*channelnum+c];
-					rms += a*a;
-				}
-			}
-			indicators[op+1] = sqrt(rms/channelnum);
-			indicators[0] += rms;
-		}
-		indicators[0] = sqrt(indicators[0]/channelnum);
-	}
-
-	// ---- OSC ----
+	float maxrls = 1;
+	for(int o = 0; o < opcount; ++o)
+		maxrls = fmin(maxrls,egd[oporder[o]*5+3]);
+	int voicecount = 0;
 	for(int v = 0; v < voicenum; ++v) {
-		for(int s = 0; s < numsamples; ++s) {
+		if(midihandle.voices[v].age <= 1) {
+			voiceorder[voicecount++] = v;
+			if(!midihandle.voices[v].ison)
+				midihandle.voices[v].age += maxrls*numsamples;
+		}
+	}
+	if(voicecount == 0) {
+		if(getframe.get()) {
+			for(int o = 0; o < (MC+1); ++o)
+				indicators[o] = 0;
+			adsrht = -1;
+			lfoht = -1;
+		}
+	} else {
+
+		// ---- VIBRATO ----
+		if((state.general[10] > 0 || presets[currentpreset].general[10] > 0) && (state.general[13] > 0 || presets[currentpreset].general[13] > 0)) {
+			float attackdelta = 1;
+			if(state.general[14] > .0001f)
+				attackdelta = 1.f/(state.general[14]*state.general[14]*MAXVIBATT*ossamplerate);
+			for(int v = 0; v < voicecount; ++v)
+				midihandle.voices[voiceorder[v]].eventindex = 0;
+			for(int s = 0; s < numsamples; ++s) {
+				for(int i = 10; i < 15; ++i) if(params.general[i].smoothtime > 0)
+					state.general[i] = params.general[i].smooth[0].getNextValue();
+				float amt = state.general[10]*state.general[13];
+				vibphase = fmod(vibphase+vibrate,1.f);
+				float vib = sinapprox(vibphase*2-1)*amt*amt/12;
+
+				for(int v = 0; v < voicecount; ++v) {
+					int vi = voiceorder[v];
+					vibattack[vi] = fmin(1.f,vibattack[vi]+attackdelta);
+					int nextevent = midihandle.voices[vi].events[midihandle.voices[vi].eventindex];
+					if(nextevent != 0 && nextevent <= (s+1)) {
+						if(nextevent > 0) vibattack[vi] = 0;
+						++midihandle.voices[vi].eventindex;
+					}
+					osc[0][vi].f[s] *= pow(2.f,vib*vibattack[vi]);
+				}
+			}
+		}
+
+		// ---- VELOCITY ----
+		for(int o = 0; o < opcount; ++o) {
+			int op = oporder[o];
+			for(int s = 0; s < numsamples; ++s) {
+				state.values[op][4] = params.values[4].smooth[op].getNextValue();
+				state.values[op][5] = params.values[5].smooth[op].getNextValue();
+				for(int v = 0; v < voicecount; ++v) {
+					int vi = voiceorder[v];
+					osc[op][vi].a[s*channelnum] =
+						(osc[0][vi].w[s]*state.values[op][4]+(1-state.values[op][4]))*
+						(osc[1][vi].w[s]*state.values[op][5]+(1-state.values[op][5]));
+				}
+			}
+		}
+
+		// ---- ADSR ----
+		for(int o = 0; o < opcount; ++o) {
+			int op = oporder[o];
+			for(int v = 0; v < voicecount; ++v)
+				midihandle.voices[voiceorder[v]].eventindex = 0;
+			for(int s = 0; s < numsamples; ++s) {
+				state.values[op][11] = params.values[11].smooth[op].getNextValue();
+				ega[op*5+1] = state.values[op][11];
+				ega[op*5+2] = state.values[op][11];
+				for(int v = 0; v < voicecount; ++v) {
+					int vi = voiceorder[v];
+					int nextevent = midihandle.voices[vi].events[midihandle.voices[vi].eventindex];
+					if(nextevent != 0 && nextevent <= (s+1)) {
+						float exp = 1-egprog[op*VC+vi];
+						exp = 1-exp*exp;
+						eglast[op*VC+vi] =
+							eglast          [op*VC+vi] *(1-exp)+
+							ega[op*5+egstage[op*VC+vi]]*   exp;
+						egstage[op*VC+vi] = (sgn(nextevent)-1)*-1.5f;
+						egprog[op*VC+vi] = 0;
+						++midihandle.voices[vi].eventindex;
+					}
+					egprog[op*VC+vi] += egd[op*5+egstage[op*VC+vi]];
+					if(egprog[op*VC+vi] >= 1) {
+						eglast[op*VC+vi] = ega[op*5+egstage[op*VC+vi]];
+						egprog[op*VC+vi] = 0;
+						++egstage[op*VC+vi];
+					}
+					float exp = 1-egprog[op*VC+vi];
+					exp = 1-exp*exp;
+					osc[op][vi].a[s*channelnum] *=
+						eglast          [op*VC+vi] *(1-exp)+
+						ega[op*5+egstage[op*VC+vi]]*   exp;
+				}
+			}
+		}
+
+		// ---- TODO LFO ----
+		for(int o = 0; o < opcount; ++o) {
+			int op = oporder[o];
+			for(int s = 0; s < numsamples; ++s) {
+				for(int v = 0; v < voicecount; ++v) {
+					int vi = voiceorder[v];
+				}
+			}
+		}
+
+		// ---- COPY DATA ----
+		for(int o = 0; o < opcount; ++o) {
+			int op = oporder[o];
+			if(op == 0) continue;
+			for(int v = 0; v < voicecount; ++v)
+				memcpy(&osc[op][voiceorder[v]].f[0],&osc[0][voiceorder[v]].f[0],sizeof(float)*numsamples);
+		}
+
+		// ---- PARAMS ----
+		for(int o = 0; o < opcount; ++o) {
+			int op = oporder[o];
+
+			float freqmult = state.values[op][7];
+			if(state.values[op][6] < .5 && freqmult > .00005f) freqmult = 1.f/freqmult;
+			float freqadd = freqaddinflate(state.values[op][8]);
+			float freqlfo = 1;
+			for(int s = 0; s < numsamples; ++s) {
+				state.values[op][0] = params.values[0].smooth[op].getNextValue();
+				state.values[op][2] = params.values[2].smooth[op].getNextValue();
+				state.values[op][3] = params.values[3].smooth[op].getNextValue();
+				float amp  = state.values[op][2];
+				float tone = state.values[op][3];
+				// TODO LFO
+				for(int v = 0; v < voicecount; ++v) {
+					int vi = voiceorder[v];
+					osc[op][vi].a[s*channelnum] *= state.values[op][0]*amp*amp*4;
+					osc[op][vi].f[s] = (osc[op][vi].f[s]*freqmult+freqadd)*freqlfo;
+					osc[op][vi].w[s] = tone;
+				}
+			}
+
+			float mute = 0;
+			for(int s = 0; s < numsamples; ++s) {
+				state.values[op][1] = params.values[1].smooth[op].getNextValue();
+				float pan  = state.values[op][1];
+				// TODO LFO
+				for(int v = 0; v < voicecount; ++v) {
+					int vi = voiceorder[v];
+					if(osc[op][vi].f[s] >= 20 && osc[op][vi].f[s] <= 20000) {
+						mute = mutedamp.nextvalue(1.f,op*VC+vi);
+					} else {
+						mute = mutedamp.nextvalue(0.f,op*VC+vi);
+						osc[op][vi].f[s] = fmin(osc[op][vi].f[s],20000);
+					}
+					osc[op][vi].a[s*channelnum] *= mute;
+
+					for(int c = channelnum-1; c >= 0; --c) {
+						float linearpan = (((float)c)/(channelnum-1))*(pan*2-1)+(1-pan);
+						osc[op][vi].a[s*channelnum+c] = osc[op][vi].a[s*channelnum]*(sinapprox(linearpan*.5f)*.7071067812+linearpan);
+					}
+				}
+			}
+		}
+
+		// ---- INDICATOR VIS ----
+		for(int o = 0; o < opcount; ++o) {
+			int op = oporder[o];
+			for(int v = 0; v < voicecount; ++v) {
+				int vi = voiceorder[v];
+				if(egstage[op*VC+vi] == 2)
+					sustain[op*VC+vi] = fmin(1,sustain[op*VC+vi]+numsamples/((float)ossamplerate));
+				else
+					sustain[op*VC+vi] = 0;
+			}
+		}
+		if(getframe.get()) {
+			indicators[0] = 0;
 			for(int o = 0; o < opcount; ++o) {
 				int op = oporder[o];
-				generator[op].update(osc[op][v].w[s]);
-				for(int c = 0; c < channelnum; ++c) {
-					osc[op][v].p[c] = fmod(osc[op][v].p[c]+(osc[op][v].f[s]/ossamplerate),1);
-					osc[op][v].a[s*channelnum+c] *= generator[op].calc(osc[op][v].p[c]*2-1);
-					osc[op][v].fb[c] = osc[op][v].a[s*channelnum+c];
-					channelData[c][s] += osc[op][v].a[s*channelnum+c]*.125f;
+				float rms = 0;
+				for(int v = 0; v < voicecount; ++v) {
+					for(int c = 0; c < channelnum; ++c) {
+						float a = osc[op][voiceorder[v]].a[(numsamples-1)*channelnum+c];
+						rms += a*a;
+					}
+				}
+				indicators[op+1] = sqrt(rms/channelnum);
+				indicators[0] += rms;
+			}
+			indicators[0] = sqrt(indicators[0]/channelnum);
+			// TODO lfo indicator
+			if(params.selectedtab.get() >= 3) {
+				int latestvoice = -1;
+				if(midihandle.activevoicessize > 0)
+					latestvoice = midihandle.  activevoices[midihandle.  activevoicessize-1];
+				else
+					latestvoice = midihandle.inactivevoices[midihandle.inactivevoicessize-1];
+				latestvoice = (params.selectedtab.get()-3)*VC+latestvoice;
+				adsrht = egstage[latestvoice]+egprog[latestvoice];
+				if(egstage[latestvoice] == 2)
+					adsrht = adsrht.get()+sustain[latestvoice];
+			}
+		}
+
+		// ---- OSC ----
+		for(int v = 0; v < voicecount; ++v) {
+			int vi = voiceorder[v];
+			midihandle.voices[vi].eventindex = 0;
+			for(int s = 0; s < numsamples; ++s) {
+				int nextevent = midihandle.voices[vi].events[midihandle.voices[vi].eventindex];
+				if(nextevent != 0 && nextevent <= (s+2)) {
+					if(nextevent > 0) {
+						for(int o = 0; o < opcount; ++o) {
+							int op = oporder[o];
+							float amp = 0;
+							for(int c = 0; c < channelnum; ++c)
+								amp += osc[op][vi].a[s*channelnum+c];
+							// .035 ~= sqrt(.01/MINR)
+							if(amp == 0 || state.values[op][9] <= .035f)
+								for(int c = 0; c < channelnum; ++c)
+									osc[op][vi].p[c] = 0;
+						}
+					}
+					++midihandle.voices[vi].eventindex;
+				}
+				for(int o = 0; o < opcount; ++o) {
+					int op = oporder[o];
+					generator[op].update(osc[op][vi].w[s]);
+					for(int c = 0; c < channelnum; ++c) {
+						osc[op][vi].p[c] = fmod(osc[op][vi].p[c]+(osc[op][vi].f[s]/ossamplerate),1);
+						osc[op][vi].a[s*channelnum+c] *= generator[op].calc(osc[op][vi].p[c]*2-1);
+						osc[op][vi].fb[c] = osc[op][vi].a[s*channelnum+c];
+						channelData[c][s] += osc[op][vi].a[s*channelnum+c]*.125f;
+					}
 				}
 			}
 		}
@@ -456,12 +560,16 @@ void FMPlusAudioProcessor::setoversampling() {
 		params.values[i].smooth[o].reset(samplerate*oversampleamount,params.values[i].smoothtime);
 
 	midihandle.reset(samplesperblock*oversampleamount,samplerate*oversampleamount);
-	mutedamp.reset(.01f,samplerate*oversampleamount,MC*24,1);
+	mutedamp.reset(.01f,samplerate*oversampleamount,MC*VC,1);
 	updatearpspeed();
 	updatevibspeed();
-	for(int v = 0; v < state.general[0]; ++v)
-		for(int o = 0; o < MC; ++o)
+	for(int o = 0; o < MC; ++o) {
+		updatea(o);
+		updated(o);
+		updater(o);
+		for(int v = 0; v < state.general[0]; ++v)
 			osc[o][v].reset(channelnum,samplesperblock*oversampleamount);
+	}
 }
 
 bool FMPlusAudioProcessor::hasEditor() const { return true; }
@@ -688,22 +796,39 @@ void FMPlusAudioProcessor::parameterChanged(const String& parameterID, float new
 		presets[currentpreset].values[o][i] = newValue;
 		params.presetunsaved = true;
 
-		if(i == 0 && newValue < .5) indicators[o+1] = 0;
+		if(i == 0 && newValue < .5) {
+			indicators[o+1] = 0;
+		} else if(i == 9) {
+			updatea(o);
+		} else if(i == 10) {
+			updated(o);
+		} else if(i == 12) {
+			updater(o);
+		}
 
 		return;
 	}
 }
 void FMPlusAudioProcessor::updatearpspeed() {
-	if(state.general[9] > 0)
-		midihandle.arpspeed = bpm/(bpmsyncs_f[(int)state.general[9]]*samplerate*pow(2,osindex)*60);
+	if(state.general[ 9] > 0)
+		midihandle.arpspeed = bpm/(bpmsyncs_f[(int)state.general[ 9]]*samplerate*pow(2,osindex)*60);
 	else
-		midihandle.arpspeed = 1.f/(calcarp(state.general[8])*samplerate*pow(2,osindex));
+		midihandle.arpspeed = 1.f/(calcarp(state.general[ 8])*samplerate*pow(2,osindex));
 }
 void FMPlusAudioProcessor::updatevibspeed() {
 	if(state.general[12] > 0)
-		vibrate = bpm/(bpmsyncs_f[(int)state.general[12]]*samplerate*pow(2,osindex)*60);
+		vibrate             = bpm/(bpmsyncs_f[(int)state.general[12]]*samplerate*pow(2,osindex)*60);
 	else
-		vibrate = 1.f/(calcvib(state.general[11])*samplerate*pow(2,osindex));
+		vibrate             = 1.f/(calcvib(state.general[11])*samplerate*pow(2,osindex));
+}
+void FMPlusAudioProcessor::updatea(int o) {
+	egd[o*5  ] = 1.f/((state.values[o][ 9]*state.values[o][ 9]*(MAXA-MINA)+MINA)*samplerate*pow(2,osindex));
+}
+void FMPlusAudioProcessor::updated(int o) {
+	egd[o*5+1] = 1.f/((state.values[o][10]*state.values[o][10]*(MAXD-MIND)+MIND)*samplerate*pow(2,osindex));
+}
+void FMPlusAudioProcessor::updater(int o) {
+	egd[o*5+3] = 1.f/((state.values[o][12]*state.values[o][12]*(MAXR-MINR)+MINR)*samplerate*pow(2,osindex));
 }
 
 void FMPlusAudioProcessor::movepoint(int index, float x, float y) {
@@ -819,7 +944,7 @@ AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new FMPlusAudioProce
 
 AudioProcessorValueTreeState::ParameterLayout FMPlusAudioProcessor::create_parameters() { // TODO group
 	std::vector<std::unique_ptr<RangedAudioParameter>> parameters;
-	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"voices"					,1},"Voices"																	 ,1		,24		 ,12	));
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"voices"					,1},"Voices"																	 ,1		,VC		 ,12	));
 	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"pitchbend"				,1},"Pitch Bend"																 ,0		,24		 ,2		,AudioParameterIntAttributes()	.withStringFromValueFunction(topitchbend		).withValueFromStringFunction(frompitchbend		)));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"glide"					,1},"Glide"										,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(toglide			).withValueFromStringFunction(fromglide			)));
 	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"legato"					,1},"Legato"																	 				 ,false	,AudioParameterBoolAttributes()	.withStringFromValueFunction(tobool				).withValueFromStringFunction(frombool			)));

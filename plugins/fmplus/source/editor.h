@@ -151,6 +151,8 @@ private:
 	curve curves[MC];
 	int lfohover = -1;
 
+	float adsrht = -1;
+	float lfoht = -1;
 	int linewritepos = -1;
 	float prevdpi = -1;
 	int curvemesh[4];
@@ -188,15 +190,11 @@ private:
 
 	// light theme
 	//*/
-	float col_bg			[3] = {	 .894f	,.894f	,.894f	};
-	float col_bg_mod		[3] = {	 1.f	,1.f	,1.f	};
-	float col_conf			[3] = {	 1.f	,1.f	,1.f	};
-	float col_conf_mod		[3] = {	 .894f	,.894f	,.894f	};
-	float col_outline		[3] = {	 0.f	,0.f	,0.f	};
-	float col_outline_mod	[3] = {	 .384f	,.384f	,.384f	};
-	float col_vis			[3] = {	 .894f	,.894f	,.894f	};
-	float col_vis_mod		[3] = {	 .949f	,.949f	,.949f	};
-	float col_highlight		[3] = {	 1.f	,.761f	,.996f	};
+	float col_mod	[3] = {	 .85f	,.85f	,.85f	};
+	float col_bg	[3] = {	 1.f	,1.f	,1.f	};
+	float col_fg	[3] = {	 0.f	,0.f	,0.f	};
+	float col_off	[3] = {	 .384f	,.384f	,.384f	};
+	float col_ht	[3] = {	 1.f	,.761f	,.996f	};
 	//*/
 
 	// dark theme

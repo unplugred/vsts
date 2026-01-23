@@ -29,7 +29,7 @@ class midihandler {
 	struct voice {
 		void reset(int samplesperblock);
 		void noteon(int sample);
-		void noteoff(int sample);
+		void noteoff(int sample, int sr);
 
 		int noteid = -1;
 		float freq      [3] { 1000, 1000, 1000 };
@@ -40,6 +40,7 @@ class midihandler {
 		int eventindex = 0;
 		std::vector<int> events;
 		bool ison = false;
+		float age = 2;
 	};
 
 	float* params;
@@ -52,14 +53,14 @@ class midihandler {
 	float pitchwheelval = .5f;
 
 	note notes[128];
-	voice voices[24];
+	voice voices[VC];
 
 	int voicessize = 0;
 	int activenotes[128];
 	int activenotessize = 0;
-	int activevoices[24];
+	int activevoices[VC];
 	int activevoicessize = 0;
-	int inactivevoices[24];
+	int inactivevoices[VC];
 	int inactivevoicessize = 0;
 
 	int lastchordsize = 0;

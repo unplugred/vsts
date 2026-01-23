@@ -9,9 +9,11 @@ void midihandler::voice::reset(int samplesperblock) {
 	eventindex = -1;
 	noteid = -1;
 	ison = false;
+	age = 2;
 }
 void midihandler::voice::noteon(int sample) {
 	ison = true;
+	age = 0;
 	if(eventindex == (events.size()-1)) {
 		if(events[eventindex] < 0) events[eventindex] *= -1;
 		return;
@@ -21,9 +23,10 @@ void midihandler::voice::noteon(int sample) {
 	else if((events[eventindex]*-1) == sample)
 		events[eventindex] *= -1;
 }
-void midihandler::voice::noteoff(int sample) {
+void midihandler::voice::noteoff(int sample, int sr) {
 	if(!ison) return;
 	ison = false;
+	age = (sample*-1.f)/sr;
 	if(eventindex == (events.size()-1)) {
 		if(events[eventindex] > 0) events[eventindex] *= -1;
 		return;
@@ -51,7 +54,7 @@ void midihandler::reset(int samplesperblock, int sr) {
 		voices[v].reset(samplesperblock);
 	glide.reset(params[2]*params[2]*MAXGLIDE,samplerate,voicessize*3,-666);
 	pitchdamp     .reset( .1f,samplerate, 1,0);
-	aftertouchdamp.reset(.01f,samplerate,24,0);
+	aftertouchdamp.reset(.01f,samplerate,VC,0);
 	allsoundoff();
 }
 void midihandler::setvoices(int samplesperblock) {
@@ -259,7 +262,7 @@ void midihandler::noteoff(int noteid, bool sustained) {
 					activevoices[0] = voiceindex;
 				} else { //note off
 					int voiceindex = notes[activenotes[n+offset]].voice;
-					if(params[5] < .5f) voices[voiceindex].noteoff(sample);
+					if(params[5] < .5f) voices[voiceindex].noteoff(sample,samplerate);
 					bool found = false;
 					for(int v = 0; v < (activevoicessize-1); ++v) {
 						if(!found) {
@@ -290,7 +293,7 @@ void midihandler::noteoff(int noteid, bool sustained) {
 }
 void midihandler::allsoundoff() {
 	for(int v = 0; v < activevoicessize; ++v)
-		voices[activevoices[v]].noteoff(sample);
+		voices[activevoices[v]].noteoff(sample,samplerate);
 	activenotessize = 0;
 	activevoicessize = 0;
 	inactivevoicessize = voicessize;
@@ -326,7 +329,7 @@ void midihandler::arpset() {
 	if(params[5] > .5f) {
 		arplastnote = -1;
 		for(int v = 0; v < activevoicessize; ++v)
-			voices[activevoices[v]].noteoff(sample);
+			voices[activevoices[v]].noteoff(sample,samplerate);
 		arpupdate();
 	} else {
 		for(int v = 0; v < activevoicessize; ++v)
@@ -396,18 +399,18 @@ void midihandler::tick() {
 			if(arpdirty) {
 				for(int v = 0; v < inactivevoicessize; ++v)
 					if(voices[inactivevoices[v]].ison)
-						voices[inactivevoices[v]].noteoff(sample);
+						voices[inactivevoices[v]].noteoff(sample,samplerate);
 				for(int v = 0; v < activevoicessize; ++v)
 					if(voices[activevoices[v]].ison)
-						voices[activevoices[v]].noteoff(sample);
-			} else voices[arporder[arpindex]].noteoff(sample);
+						voices[activevoices[v]].noteoff(sample,samplerate);
+			} else voices[arporder[arpindex]].noteoff(sample,samplerate);
 			arpon = false;
 		}
 		if(arpprogress >= 1) { // next note
 			if(arpdirty)
 				for(int v = 0; v < inactivevoicessize; ++v)
 					if(voices[inactivevoices[v]].ison)
-						voices[inactivevoices[v]].noteoff(sample);
+						voices[inactivevoices[v]].noteoff(sample,samplerate);
 			if(arporder[0] == -1) { // termination
 				arplastnote = -1;
 			} else { // find closest note
