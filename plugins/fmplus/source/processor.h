@@ -47,7 +47,7 @@ struct pluginparams {
 	String themefile = "Default";
 	File tuningdir = File();
 	File themedir = File();
-	float theme[9*3];
+	unsigned char theme[14] = "             ";
 };
 
 struct connection {

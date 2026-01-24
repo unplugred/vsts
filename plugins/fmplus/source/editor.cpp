@@ -5,6 +5,15 @@ FMPlusAudioProcessorEditor::FMPlusAudioProcessorEditor(FMPlusAudioProcessor& p, 
 
 	tuningfile = params.tuningfile;
 	themefile = params.themefile;
+	opacity_ht = params.theme[0]/255.f;
+	for(int i = 0; i < 3; ++i) {
+		col_bg [i] = params.theme[i+ 1]/255.f;
+		col_fg [i] = params.theme[i+ 4]/255.f;
+		col_off[i] = params.theme[i+ 7]/255.f;
+		col_on [i] = params.theme[i+10]/255.f;
+		col_ht [i] = col_fg[i]*(1-opacity_ht)+col_bg[i]*opacity_ht;
+	}
+
 	presetunsaved = params.presetunsaved;
 	generalcount = pgeneralcount+1;
 	paramcount = pparamcount;
@@ -118,9 +127,9 @@ uniform float dpi;
 uniform float showheader;
 uniform float tabid;
 uniform vec3 col_bg;
-uniform vec3 col_mod;
-uniform vec3 col_fg;
 uniform vec3 col_ht;
+uniform vec3 col_fg;
+uniform vec3 col_on;
 out vec4 fragColor;
 void main() {
 	if(tabuv.x <= 1 && tabuv.y >= .03125 && ((tabuv.y <= .96875 && tabuv.x > .5) || tabuv.y <= .84375)) {
@@ -128,17 +137,17 @@ void main() {
 		fragColor = vec4(col,1);
 		if(col.g > 0) {
 			if(tabid < 3) col.b = 0;
-			col = col_bg *(1-col.r-col.g)+col_fg*(col.r+col.b)+col_ht *(col.g-col.b);
+			col = col_bg*(1-col.r-col.g)+col_fg*(col.r+col.b)+ col_on        *(col.g-col.b);
 		} else if(tabid == 10 && tabuv.x < .95 && tabuv.y < .09375) {
-			col = col_mod*(1-col.r      )+col_fg* col.r                             ;
+			col = col_ht*(1-col.r      )+col_fg* col.r                                     ;
 		} else {
-			col = col_bg *(1-col.r-col.b)+col_fg* col.r       +col_mod*       col.b ;
+			col = col_bg*(1-col.r-col.b)+col_fg* col.r       +        col_ht * col.b       ;
 		}
 		fragColor = vec4(col,1);
 	} else if(headeruv.x > 0 && headeruv.x < 1 && headeruv.y > 0 && headeruv.y < 1) {
 		if(showheader > .5) {
 			vec3 col = max(min((texture(headertex,vec2(headeruv.x,(headeruv.y+(10-tabid))/11)).rgb-.5)*dpi+.5,1),0);
-			fragColor = vec4(col_bg*(1-col)+col_mod*col,1);
+			fragColor = vec4(col_bg*(1-col)+col_ht*col,1);
 		} else {
 			fragColor = vec4(col_bg,1);
 		}
@@ -146,12 +155,12 @@ void main() {
 		vec3 col = max(min((texture(basetex,uv).rgb-.5)*dpi+.5,1),0);
 		if(col.g > 0) {
 		if(col.r > 0) {
-			col = col_fg*(1-col.g)+col_mod*(col.g-col.b)+(col_bg+col_mod)*.5*col.b;
+			col = col_fg*(1-      col.g)+col_ht*(col.g-col.b)+(col_bg+col_ht)* col.b*.5    ;
 		} else {
-			col = col_fg*(1-col.g)+col_bg *(col.g-col.b)+col_mod*col.b;
+			col = col_fg*(1-      col.g)+col_bg*(col.g-col.b)+        col_ht * col.b       ;
 		}
 		} else {
-			col = col_fg*(1-col.r)+col_mod*(col.r-col.b)+col_bg *col.b;
+			col = col_fg*(1-col.r      )+col_ht*(col.r-col.b)+ col_bg        * col.b       ;
 		}
 		fragColor = vec4(col,1);
 	}
@@ -178,7 +187,7 @@ uniform sampler2D creditstex;
 uniform float shineprog;
 uniform float dpi;
 uniform vec3 col_bg;
-uniform vec3 col_mod;
+uniform vec3 col_ht;
 uniform vec3 col_fg;
 out vec4 fragColor;
 void main() {
@@ -186,7 +195,7 @@ void main() {
 	float shine = 0;
 	if(xpos+shineprog < .65 && xpos+shineprog > 0)
 		shine = max(min((texture(creditstex,uv+vec2(shineprog,0)).g-.5)*dpi+.5,1),0);
-	fragColor = vec4(col_bg*(1-col)+(col_fg*(1-shine)+col_mod*shine)*col,1);
+	fragColor = vec4(col_bg*(1-col)+(col_fg*(1-shine)+col_ht*shine)*col,1);
 })");
 
 	squareshader = add_shader(
@@ -206,15 +215,15 @@ in vec2 col;
 uniform float dpi;
 uniform vec3 col_fg;
 uniform vec3 col_off;
+uniform vec3 col_on;
 uniform vec3 col_ht;
-uniform vec3 col_mod;
 out vec4 fragColor;
 void main() {
 	if(col.x < -1) {
 		fragColor = vec4(0,0,0,0);
 		return;
 	}
-	fragColor = vec4(col_fg*max(0,1-col.x)+col_off*max(0,1-abs(col.x-1))+col_ht*max(0,1-abs(col.x-2))+col_mod*max(0,col.x-2),min(1,max(0,(col.y-2.5)*dpi+.5)));
+	fragColor = vec4(col_fg*max(0,1-col.x)+col_off*max(0,1-abs(col.x-1))+col_on*max(0,1-abs(col.x-2))+col_ht*max(0,col.x-2),min(1,max(0,(col.y-2.5)*dpi+.5)));
 })");
 
 	circleshader = add_shader(
@@ -268,11 +277,11 @@ in float linepos;
 in float lineopacity;
 uniform float dpi;
 uniform vec3 col_fg;
-uniform vec3 col_ht;
+uniform vec3 col_on;
 out vec4 fragColor;
 void main() {
 	float mix = min(1,max(0,(1-abs(highlight))*dpi+.5));
-	fragColor = vec4(col_fg*(1-mix)+col_ht*mix,min((1-abs(linepos*2-1))*dpi,1)*lineopacity*floor(anim));
+	fragColor = vec4(col_fg*(1-mix)+col_on*mix,min((1-abs(linepos*2-1))*dpi,1)*lineopacity*floor(anim));
 })");
 
 	operatorshader = add_shader(
@@ -292,7 +301,7 @@ in vec2 uv;
 uniform sampler2D operatortex;
 uniform float dpi;
 uniform vec3 col_bg;
-uniform vec3 col_mod;
+uniform vec3 col_ht;
 uniform vec3 col_fg;
 uniform float selected;
 out vec4 fragColor;
@@ -308,7 +317,7 @@ void main() {
 	} else if(col.g >= 1 && col.r > 0) {
 		col.g -= col.r;
 	}
-	col.rgb = col_bg*(col.g-col.b)+col_mod*col.b+col_fg*col.r;
+	col.rgb = col_bg*(col.g-col.b)+col_ht*col.b+col_fg*col.r;
 	fragColor = col;
 })");
 
@@ -324,11 +333,11 @@ void main() {
 //INDICATOR FRAG
 R"(#version 150 core
 uniform vec3 col_off;
-uniform vec3 col_ht;
+uniform vec3 col_on;
 uniform float light;
 out vec4 fragColor;
 void main() {
-	fragColor = vec4(col_off*(1-light)+col_ht*light,1);
+	fragColor = vec4(col_off*(1-light)+col_on*light,1);
 })");
 
 	textshader = add_shader(
@@ -352,14 +361,14 @@ uniform float dpi;
 uniform sampler2D texttex;
 uniform vec3 col_fg;
 uniform vec3 col_bg;
+uniform vec3 col_on;
 uniform vec3 col_ht;
-uniform vec3 col_mod;
 out vec4 fragColor;
 void main() {
 	if(col < -1)
 		fragColor = vec4(0,0,0,0);
 	else
-		fragColor = vec4(col_fg*max(0,1-col)+col_bg*max(0,1-abs(col-1))+col_ht*max(0,1-abs(col-2))+col_mod*max(0,col-2),max(min((texture(texttex,uv).r-.5)*dpi+.5,1),0));
+		fragColor = vec4(col_fg*max(0,1-col)+col_bg*max(0,1-abs(col-1))+col_on*max(0,1-abs(col-2))+col_ht*max(0,col-2),max(min((texture(texttex,uv).r-.5)*dpi+.5,1),0));
 })");
 
 	add_texture(&basetex, BinaryData::base_png, BinaryData::base_pngSize);
@@ -399,10 +408,10 @@ void FMPlusAudioProcessorEditor::renderOpenGL() {
 	baseshader->setUniform("tabid",(float)selectedtab);
 	baseshader->setUniform("banner",banner_offset);
 	baseshader->setUniform("dpi",(float)fmax(scaled_dpi*.5f,1));
-	baseshader->setUniform("col_bg"		,col_bg[0]	,col_bg[1]	,col_bg[2]	);
-	baseshader->setUniform("col_mod"	,col_mod[0]	,col_mod[1]	,col_mod[2]	);
-	baseshader->setUniform("col_fg"		,col_fg[0]	,col_fg[1]	,col_fg[2]	);
-	baseshader->setUniform("col_ht"		,col_ht[0]	,col_ht[1]	,col_ht[2]	);
+	baseshader->setUniform("col_bg",col_bg[0],col_bg[1],col_bg[2]);
+	baseshader->setUniform("col_ht",col_ht[0],col_ht[1],col_ht[2]);
+	baseshader->setUniform("col_fg",col_fg[0],col_fg[1],col_fg[2]);
+	baseshader->setUniform("col_on",col_on[0],col_on[1],col_on[2]);
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
@@ -417,9 +426,9 @@ void FMPlusAudioProcessorEditor::renderOpenGL() {
 	creditsshader->setUniform("dpi",(float)fmax(scaled_dpi*.5f,1));
 	creditsshader->setUniform("shineprog",websiteht);
 	creditsshader->setUniform("pos",149.f/width,251.f/height,148.f/width,46.f/height);
-	creditsshader->setUniform("col_bg"	,col_bg[0]	,col_bg[1]	,col_bg[2]	);
-	creditsshader->setUniform("col_mod"	,col_mod[0]	,col_mod[1]	,col_mod[2]	);
-	creditsshader->setUniform("col_fg"	,col_fg[0]	,col_fg[1]	,col_fg[2]	);
+	creditsshader->setUniform("col_bg",col_bg[0],col_bg[1],col_bg[2]);
+	creditsshader->setUniform("col_ht",col_ht[0],col_ht[1],col_ht[2]);
+	creditsshader->setUniform("col_fg",col_fg[0],col_fg[1],col_fg[2]);
 	coord = context.extensions.glGetAttribLocation(creditsshader->getProgramID(),"coords");
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
@@ -435,10 +444,10 @@ void FMPlusAudioProcessorEditor::renderOpenGL() {
 		squareshader->use();
 		squareshader->setUniform("banner",banner_offset);
 		squareshader->setUniform("dpi",scaled_dpi);
-		squareshader->setUniform("col_fg"	,col_fg[0]	,col_fg[1]	,col_fg[2]	);
-		squareshader->setUniform("col_off"	,col_off[0]	,col_off[1]	,col_off[2]	);
-		squareshader->setUniform("col_ht"	,col_ht[0]	,col_ht[1]	,col_ht[2]	);
-		squareshader->setUniform("col_mod"	,col_mod[0]	,col_mod[1]	,col_mod[2]	);
+		squareshader->setUniform("col_fg" ,col_fg [0],col_fg [1],col_fg [2]);
+		squareshader->setUniform("col_off",col_off[0],col_off[1],col_off[2]);
+		squareshader->setUniform("col_on" ,col_on [0],col_on [1],col_on [2]);
+		squareshader->setUniform("col_ht" ,col_ht [0],col_ht [1],col_ht [2]);
 		coord = context.extensions.glGetAttribLocation(squareshader->getProgramID(),"coords");
 		context.extensions.glEnableVertexAttribArray(coord);
 		context.extensions.glVertexAttribPointer(coord,4,GL_FLOAT,GL_FALSE,0,0);
@@ -456,8 +465,8 @@ void FMPlusAudioProcessorEditor::renderOpenGL() {
 	lineshader->setUniform("banner",banner_offset);
 	lineshader->setUniform("dpi",scaled_dpi);
 	lineshader->setUniform("animation",tabanimation/30.f);
-	lineshader->setUniform("col_fg"	,col_fg[0]	,col_fg[1]	,col_fg[2]	);
-	lineshader->setUniform("col_ht"	,col_ht[0]	,col_ht[1]	,col_ht[2]	);
+	lineshader->setUniform("col_fg",col_fg[0],col_fg[1],col_fg[2]);
+	lineshader->setUniform("col_on",col_on[0],col_on[1],col_on[2]);
 	lineshader->setUniform("htpos",adsrht,lfoht);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,linelength+1);
 	context.extensions.glDisableVertexAttribArray(coord);
@@ -467,7 +476,7 @@ void FMPlusAudioProcessorEditor::renderOpenGL() {
 	circleshader->use();
 	circleshader->setUniform("banner",banner_offset);
 	circleshader->setUniform("dpi",scaled_dpi);
-	circleshader->setUniform("col"		,col_fg[0]	,col_fg[1]	,col_fg[2]	);
+	circleshader->setUniform("col",col_fg[0],col_fg[1],col_fg[2]);
 	coord = context.extensions.glGetAttribLocation(circleshader->getProgramID(),"coords");
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
@@ -518,20 +527,20 @@ void FMPlusAudioProcessorEditor::renderOpenGL() {
 	coord = context.extensions.glGetAttribLocation(operatorshader->getProgramID(),"coords");
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
-	operatorshader->setUniform("col_fg"		,col_fg[0]	,col_fg[1]	,col_fg[2]	);
-	operatorshader->setUniform("col_bg"		,col_bg[0]	,col_bg[1]	,col_bg[2]	);
-	operatorshader->setUniform("col_mod"	,col_mod[0]	,col_mod[1]	,col_mod[2]	);
+	operatorshader->setUniform("col_fg",col_fg[0],col_fg[1],col_fg[2]);
+	operatorshader->setUniform("col_bg",col_bg[0],col_bg[1],col_bg[2]);
+	operatorshader->setUniform("col_ht",col_ht[0],col_ht[1],col_ht[2]);
 	operatorshader->setUniform("selected",0.f);
 	for(int o = MC; o >= 0; --o) {
 		if(o != 0 && knobs[generalcount].value[o==0?0:(o-1)] < .5) continue;
 		operatorshader->setUniform("pos",(153.f+ops[o].pos[0])/width,(256.f-ops[o].pos[1])/height,36.f/width,18.f/height);
 		if(selectedtab == (o==0?0:(o+2))) {
-			operatorshader->setUniform("col_bg"		,col_ht[0]	,col_ht[1]	,col_ht[2]	);
-			operatorshader->setUniform("col_mod"	,col_ht[0]	,col_ht[1]	,col_ht[2]	);
+			operatorshader->setUniform("col_bg",col_on[0],col_on[1],col_on[2]);
+			operatorshader->setUniform("col_ht",col_on[0],col_on[1],col_on[2]);
 			operatorshader->setUniform("selected",(opanimation<1||(opanimation>=3&&opanimation<4)||opanimation>=6)?1.f:0.f);
 			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
-			operatorshader->setUniform("col_bg"		,col_bg[0]	,col_bg[1]	,col_bg[2]	);
-			operatorshader->setUniform("col_mod"	,col_mod[0]	,col_mod[1]	,col_mod[2]	);
+			operatorshader->setUniform("col_bg",col_bg[0],col_bg[1],col_bg[2]);
+			operatorshader->setUniform("col_ht",col_ht[0],col_ht[1],col_ht[2]);
 			operatorshader->setUniform("selected",0.f);
 		} else {
 			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
@@ -542,8 +551,8 @@ void FMPlusAudioProcessorEditor::renderOpenGL() {
 	// INDICATOR
 	indicatorshader->use();
 	indicatorshader->setUniform("banner",banner_offset);
-	indicatorshader->setUniform("col_off"	,col_off[0]	,col_off[1]	,col_off[2]	);
-	indicatorshader->setUniform("col_ht"	,col_ht[0]	,col_ht[1]	,col_ht[2]	);
+	indicatorshader->setUniform("col_off",col_off[0],col_off[1],col_off[2]);
+	indicatorshader->setUniform("col_on" ,col_on [0],col_on [1],col_on [2]);
 	coord = context.extensions.glGetAttribLocation(indicatorshader->getProgramID(),"coords");
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
@@ -571,10 +580,10 @@ void FMPlusAudioProcessorEditor::renderOpenGL() {
 		textshader->setUniform("texttex",0);
 		textshader->setUniform("banner",banner_offset);
 		textshader->setUniform("dpi",(float)fmax(scaled_dpi*.5f,1));
-		textshader->setUniform("col_fg"		,col_fg[0]	,col_fg[1]	,col_fg[2]	);
-		textshader->setUniform("col_bg"		,col_bg[0]	,col_bg[1]	,col_bg[2]	);
-		textshader->setUniform("col_ht"		,col_ht[0]	,col_ht[1]	,col_ht[2]	);
-		textshader->setUniform("col_mod"	,col_mod[0]	,col_mod[1]	,col_mod[2]	);
+		textshader->setUniform("col_fg",col_fg[0],col_fg[1],col_fg[2]);
+		textshader->setUniform("col_bg",col_bg[0],col_bg[1],col_bg[2]);
+		textshader->setUniform("col_on",col_on[0],col_on[1],col_on[2]);
+		textshader->setUniform("col_ht",col_ht[0],col_ht[1],col_ht[2]);
 		coord = context.extensions.glGetAttribLocation(textshader->getProgramID(),"coords");
 		context.extensions.glEnableVertexAttribArray(coord);
 		context.extensions.glVertexAttribPointer(coord,4,GL_FLOAT,GL_FALSE,0,0);
@@ -1387,11 +1396,19 @@ void FMPlusAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 				} else if(initialdrag == 17) { // theme select
 					File themedir = audio_processor.params.themedir;
 					if(!themedir.exists()) themedir = File();
-					themechooser = std::make_unique<FileChooser>("Open theme...",themedir,"*.txt");
+					themechooser = std::make_unique<FileChooser>("Open theme...",themedir,"*.txt;*.ini");
 					int folderChooserFlags = FileBrowserComponent::openMode | FileBrowserComponent::canSelectFiles;
 					themechooser->launchAsync(folderChooserFlags,[this](const FileChooser& chooser) {
 						themefile = audio_processor.updatetheme(chooser.getResult());
 						updatevalue(-1);
+						opacity_ht = audio_processor.params.theme[0]/255.f;
+						for(int i = 0; i < 3; ++i) {
+							col_bg [i] = audio_processor.params.theme[i+ 1]/255.f;
+							col_fg [i] = audio_processor.params.theme[i+ 4]/255.f;
+							col_off[i] = audio_processor.params.theme[i+ 7]/255.f;
+							col_on [i] = audio_processor.params.theme[i+10]/255.f;
+							col_ht [i] = col_fg[i]*(1-opacity_ht)+col_bg[i]*opacity_ht;
+						}
 					});
 				} else if(initialdrag == 16) { // default tuning
 					audio_processor.resettuning();
@@ -1401,6 +1418,14 @@ void FMPlusAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 					audio_processor.resettheme();
 					themefile = "Default";
 					updatevalue(-1);
+					opacity_ht = audio_processor.params.theme[0]/255.f;
+					for(int i = 0; i < 3; ++i) {
+						col_bg [i] = audio_processor.params.theme[i+ 1]/255.f;
+						col_fg [i] = audio_processor.params.theme[i+ 4]/255.f;
+						col_off[i] = audio_processor.params.theme[i+ 7]/255.f;
+						col_on [i] = audio_processor.params.theme[i+10]/255.f;
+						col_ht [i] = col_fg[i]*(1-opacity_ht)+col_bg[i]*opacity_ht;
+					}
 				}
 			} else if(selectedtab >= 3) {
 				       if(initialdrag ==  7 || initialdrag ==  9) { // up down freq mult

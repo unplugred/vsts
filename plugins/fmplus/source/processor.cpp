@@ -7,14 +7,17 @@ FMPlusAudioProcessor::FMPlusAudioProcessor() :
 
 	init();
 
+	resettheme();
 	PropertiesFile* user_settings = props.getUserSettings();
 	if(user_settings->containsKey("tuningdir"))
 		params.tuningdir = File(user_settings->getValue("tuningdir"));
-	if(user_settings->containsKey("themedir"))
-		params.themedir = File(user_settings->getValue("themedir"));
+	if(user_settings->containsKey("themedir" ))
+		params.themedir  = File(user_settings->getValue("themedir" ));
 	if(user_settings->containsKey("themefile"))
-		params.themefile = user_settings->getValue("themefile");
-	// TODO store theme
+		params.themefile =      user_settings->getValue("themefile") ;
+	for(int i = 0; i < 13; ++i)
+		if(user_settings->containsKey("theme"+((String)i)))
+			params.theme[i] = (unsigned char)user_settings->getIntValue("theme"+((String)i));
 
 	presets[0] = pluginpreset("Init"); // TODO stringify default preset
 	for(int i = 0; i < generalcount; ++i)
@@ -602,7 +605,7 @@ void FMPlusAudioProcessor::setStateInformation(const void* data, int sizeInBytes
 	const char delimiter = '\n';
 	saved = true;
 	try {
-		std::stringstream ss(String::createStringFromData(data, sizeInBytes).toRawUTF8());
+		std::istringstream ss(String::createStringFromData(data, sizeInBytes).toRawUTF8());
 		std::string token;
 
 		std::getline(ss, token, delimiter);
@@ -677,7 +680,7 @@ void FMPlusAudioProcessor::set_preset(const String& preset, int preset_id, const
 	String error = "";
 	String revert = get_preset(preset_id);
 	try {
-		std::stringstream ss(preset.trim().toRawUTF8());
+		std::istringstream ss(preset.trim().toRawUTF8());
 		std::string token;
 
 		std::getline(ss, token, delimiter);
@@ -915,16 +918,34 @@ String FMPlusAudioProcessor::updatetuning(File file) {
 				midihandle.notes[n].pitch = t.frequencyForMidiNote(n);
 		}
 		params.tuningfile = scl.getFileNameWithoutExtension();
-	} catch(...) {}
+	} catch(...) {
+		resettuning();
+		return params.tuningfile;
+	}
 
 	midihandle.pitchesupdate();
 	return params.tuningfile;
 }
 void FMPlusAudioProcessor::resettheme() {
 	params.themefile = "Default";
-	props.getUserSettings()->setValue("themefile",params.themefile);
+	params.theme[ 0] = 212;
+	params.theme[ 1] = 255;
+	params.theme[ 2] = 255;
+	params.theme[ 3] = 255;
+	params.theme[ 4] =   0;
+	params.theme[ 5] =   0;
+	params.theme[ 6] =   0;
+	params.theme[ 7] =  79;
+	params.theme[ 8] =  79;
+	params.theme[ 9] =  79;
+	params.theme[10] = 255;
+	params.theme[11] = 170;
+	params.theme[12] = 255;
 
-	// TODO
+	PropertiesFile* user_settings = props.getUserSettings();
+	user_settings->setValue("themefile",params.themefile);
+	for(int i = 0; i < 13; ++i)
+		user_settings->setValue("theme"+((String)i),(int)params.theme[i]);
 }
 String FMPlusAudioProcessor::updatetheme(File file) {
 	if(file.getFullPathName() == "") return params.themefile;
@@ -933,9 +954,47 @@ String FMPlusAudioProcessor::updatetheme(File file) {
 	params.themedir = file.getParentDirectory();
 	user_settings->setValue("themedir",params.themedir.getFullPathName());
 
-	// TODO
-
 	params.themefile = file.getFileNameWithoutExtension();
+	const char delimiter = '\n';
+	try {
+		std::ifstream ss(file.getFullPathName().toStdString());
+		std::string token;
+
+		while(std::getline(ss, token, delimiter)) {
+			String param = (String)token;
+			if(!param.containsChar('=')) continue;
+			       param =          param .upToFirstOccurrenceOf("=",false,false).trim().toLowerCase();
+			String value = ((String)token).fromFirstOccurrenceOf("=",false,false).trim().unquoted();
+
+			       if(param == "name"      ) {
+				params.themefile = value;
+			} else if(param == "opacity_ht") {
+				params.theme[0] = (unsigned char)round(value.getFloatValue()*255);
+			} else if(value.startsWithChar('#')) {
+
+				int val = 0;
+				     if(param == "col_bg" ) val =  1;
+				else if(param == "col_fg" ) val =  4;
+				else if(param == "col_off") val =  7;
+				else if(param == "col_on" ) val = 10;
+				else continue;
+
+				     if(value.length() == 4)
+					value = ((String)"#")+value[1]+value[1]+value[2]+value[2]+value[3]+value[3];
+				else if(value.length() != 7)
+					continue;
+
+				for(int i = 0; i < 3; ++i)
+					params.theme[val+i] = (unsigned char)value.substring(1+i*2,3+i*2).getHexValue32();
+			}
+		}
+	} catch(...) {
+		resettheme();
+		return params.themefile;
+	}
+
+	for(int i = 0; i < 13; ++i)
+		user_settings->setValue("theme"+((String)i),(int)params.theme[i]);
 	user_settings->setValue("themefile",params.themefile);
 	return params.themefile;
 }

@@ -131,6 +131,12 @@ plugins = [{
 	"code": "Fmpl",
 	"standalone": True,
 	"au_type": "aumu",
+	"additional_files": [{
+		"path": "themes",
+		"output": "FMPlus themes",
+		"versions": ["mac_free","win_free","linux_free","mac_paid","win_paid","linux_paid"],
+		"copy": True
+	}],
 	"in_bundle": False
 }]
 for i in range(len(plugins)):
