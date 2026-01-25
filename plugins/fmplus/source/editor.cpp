@@ -5,14 +5,6 @@ FMPlusAudioProcessorEditor::FMPlusAudioProcessorEditor(FMPlusAudioProcessor& p, 
 
 	tuningfile = params.tuningfile;
 	themefile = params.themefile;
-	opacity_ht = params.theme[0]/255.f;
-	for(int i = 0; i < 3; ++i) {
-		col_bg [i] = params.theme[i+ 1]/255.f;
-		col_fg [i] = params.theme[i+ 4]/255.f;
-		col_off[i] = params.theme[i+ 7]/255.f;
-		col_on [i] = params.theme[i+10]/255.f;
-		col_ht [i] = col_fg[i]*(1-opacity_ht)+col_bg[i]*opacity_ht;
-	}
 
 	presetunsaved = params.presetunsaved;
 	generalcount = pgeneralcount+1;
@@ -94,6 +86,7 @@ FMPlusAudioProcessorEditor::FMPlusAudioProcessorEditor(FMPlusAudioProcessor& p, 
 	setResizable(false,false);
 	setWantsKeyboardFocus(true);
 	init(&look_n_feel);
+	updatetheme();
 }
 FMPlusAudioProcessorEditor::~FMPlusAudioProcessorEditor() {
 	close();
@@ -599,6 +592,19 @@ void FMPlusAudioProcessorEditor::openGLContextClosing() {
 	draw_close();
 }
 
+void FMPlusAudioProcessorEditor::updatetheme() {
+	opacity_ht = audio_processor.params.theme[0]/255.f;
+	for(int i = 0; i < 3; ++i) {
+		col_bg [i] = audio_processor.params.theme[i+ 1]/255.f;
+		col_fg [i] = audio_processor.params.theme[i+ 4]/255.f;
+		col_off[i] = audio_processor.params.theme[i+ 7]/255.f;
+		col_on [i] = audio_processor.params.theme[i+10]/255.f;
+		col_ht [i] = col_fg[i]*(1-opacity_ht)+col_bg[i]*opacity_ht;
+	}
+	look_n_feel.bg = Colour::fromFloatRGBA(col_bg[0],col_bg[1],col_bg[2],1.f);
+	look_n_feel.fg = Colour::fromFloatRGBA(col_fg[0],col_fg[1],col_fg[2],1.f);
+	look_n_feel.on = Colour::fromFloatRGBA(col_on[0],col_on[1],col_on[2],1.f);
+}
 void FMPlusAudioProcessorEditor::calcvis(int curveupdated) {
 	if(curveupdated == 0) {
 		linewritepos = -1;
@@ -1401,14 +1407,7 @@ void FMPlusAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 					themechooser->launchAsync(folderChooserFlags,[this](const FileChooser& chooser) {
 						themefile = audio_processor.updatetheme(chooser.getResult());
 						updatevalue(-1);
-						opacity_ht = audio_processor.params.theme[0]/255.f;
-						for(int i = 0; i < 3; ++i) {
-							col_bg [i] = audio_processor.params.theme[i+ 1]/255.f;
-							col_fg [i] = audio_processor.params.theme[i+ 4]/255.f;
-							col_off[i] = audio_processor.params.theme[i+ 7]/255.f;
-							col_on [i] = audio_processor.params.theme[i+10]/255.f;
-							col_ht [i] = col_fg[i]*(1-opacity_ht)+col_bg[i]*opacity_ht;
-						}
+						updatetheme();
 					});
 				} else if(initialdrag == 16) { // default tuning
 					audio_processor.resettuning();
@@ -1418,14 +1417,7 @@ void FMPlusAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 					audio_processor.resettheme();
 					themefile = "Default";
 					updatevalue(-1);
-					opacity_ht = audio_processor.params.theme[0]/255.f;
-					for(int i = 0; i < 3; ++i) {
-						col_bg [i] = audio_processor.params.theme[i+ 1]/255.f;
-						col_fg [i] = audio_processor.params.theme[i+ 4]/255.f;
-						col_off[i] = audio_processor.params.theme[i+ 7]/255.f;
-						col_on [i] = audio_processor.params.theme[i+10]/255.f;
-						col_ht [i] = col_fg[i]*(1-opacity_ht)+col_bg[i]*opacity_ht;
-					}
+					updatetheme();
 				}
 			} else if(selectedtab >= 3) {
 				       if(initialdrag ==  7 || initialdrag ==  9) { // up down freq mult
@@ -2240,31 +2232,27 @@ LookNFeel::~LookNFeel() { }
 Font LookNFeel::getPopupMenuFont() {
 	if(font == "None")
 		return Font(18.f*scale,Font::plain);
-	return Font(font,"Regular",18.f*scale);
+	return Font(font,"Regular",14.f*scale);
 }
 void LookNFeel::drawPopupMenuBackground(Graphics &g, int width, int height) {
-	g.setColour(fg1);
+	g.setColour(fg);
 	g.fillRect(0,0,width,height);
-	g.setColour(bg1);
+	g.setColour(bg);
 	g.fillRect(scale,scale,width-2*scale,height-2*scale);
 }
 void LookNFeel::drawPopupMenuItem(Graphics &g, const Rectangle<int> &area, bool isSeparator, bool isActive, bool isHighlighted, bool isTicked, bool hasSubMenu, const String &text, const String &shortcutKeyText, const Drawable *icon, const Colour *textColour) {
 	if(isSeparator) {
-		g.setColour(fg1);
+		g.setColour(fg);
 		g.fillRect(0,0,area.getWidth(),area.getHeight());
 		return;
 	}
 
 	bool removeleft = text.startsWith("'");
 	if(isHighlighted && isActive) {
-		g.setColour(fg2);
-		g.fillRect(0,0,area.getWidth(),area.getHeight());
-		g.setColour(bg2);
+		g.setColour(on);
 		g.fillRect(scale,0.f,area.getWidth()-2*scale,(float)area.getHeight());
-		g.setColour(fg2);
-	} else {
-		g.setColour(fg1);
 	}
+	g.setColour(fg);
 	if(textColour != nullptr)
 		g.setColour(*textColour);
 

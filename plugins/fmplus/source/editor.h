@@ -13,10 +13,9 @@ public:
 	void drawPopupMenuItem(Graphics &g, const Rectangle<int> &area, bool isSeparator, bool isActive, bool isHighlighted, bool isTicked, bool hasSubMenu, const String &text, const String &shortcutKeyText, const Drawable *icon, const Colour *textColour) override; //biggest function ive seen ever
 	void getIdealPopupMenuItemSize(const String& text, const bool isSeparator, int standardMenuItemHeight, int& idealWidth, int& idealHeight) override;
 	int getPopupMenuBorderSize() override;
-	Colour bg1 = Colour::fromFloatRGBA(0.f,0.f,0.f,1.f);
-	Colour fg1 = Colour::fromFloatRGBA(1.f,1.f,0.f,1.f);
-	Colour bg2 = Colour::fromFloatRGBA(0.f,0.f,1.f,1.f);
-	Colour fg2 = Colour::fromFloatRGBA(1.f,1.f,1.f,1.f);
+	Colour bg;
+	Colour fg;
+	Colour on;
 	String font = "n";
 };
 
@@ -187,6 +186,7 @@ private:
 
 	std::unique_ptr<FileChooser> tuningchooser;
 	std::unique_ptr<FileChooser> themechooser;
+	void updatetheme();
 
 	float opacity_ht =  .85f;
 	float col_bg [3];
