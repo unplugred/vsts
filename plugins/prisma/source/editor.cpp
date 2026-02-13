@@ -1716,7 +1716,7 @@ void PrismaAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 	if(hoverknob) {
 		if(finemode != (event.mods.isShiftDown() || event.mods.isAltDown())) {
 			finemode = !finemode;
-			if(modules[state[0].modulesvalues[hover].id].xy) {
+			if(hover >= 0 && modules[state[0].modulesvalues[hover].id].xy) {
 				initialvalue  += event.getDistanceFromDragStartX()*(finemode?.0045f:-.0045f);
 				initialvaluey -= event.getDistanceFromDragStartY()*(finemode?.0045f:-.0045f);
 			} else {
