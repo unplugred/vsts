@@ -616,12 +616,12 @@ def build_installer(plugin, system_i, zip_result=True):
 				remove(identifier+"-"+target["code"].lower()+".pkg")
 
 	elif get_system(system_i)["code"] == "win":
-		imagemissing = not os.path.exists(join(["setup","assets","image",plugin+".bmp"]))
-		smallimagemissing = not os.path.exists(join(["setup","assets","smallimage",plugin+".bmp"]))
+		imagemissing = not os.path.exists(join(["setup","assets","image",plugin+".png"]))
+		smallimagemissing = not os.path.exists(join(["setup","assets","smallimage",plugin+".png"]))
 		if imagemissing:
-			copy(join(["setup","assets","image","Proto.bmp"]),join(["setup","assets","image",plugin+".bmp"]))
+			copy(join(["setup","assets","image","Proto.png"]),join(["setup","assets","image",plugin+".png"]))
 		if smallimagemissing:
-			copy(join(["setup","assets","smallimage","Proto.bmp"]),join(["setup","assets","smallimage",plugin+".bmp"]))
+			copy(join(["setup","assets","smallimage","Proto.png"]),join(["setup","assets","smallimage",plugin+".png"]))
 		cmd = "iscc \""+join(["setup","innosetup.iss"])+"\" \"/DPluginName="+plugin+"\" \"/DVersion="+free+"\""
 		if not get_plugin(plugin)["paid"]:
 			cmd += " \"/DNoPaid\""
@@ -633,9 +633,9 @@ def build_installer(plugin, system_i, zip_result=True):
 			cmd += " \"/DBundle="+'_'.join(bundle_out)+"\""
 		run_command(cmd)
 		if imagemissing:
-			remove(join(["setup","assets","image",plugin+".bmp"]))
+			remove(join(["setup","assets","image",plugin+".png"]))
 		if smallimagemissing:
-			remove(join(["setup","assets","smallimage",plugin+".bmp"]))
+			remove(join(["setup","assets","smallimage",plugin+".png"]))
 		for target in targets:
 			if target["name"] == "Audio Unit":
 				continue

@@ -2,7 +2,10 @@
 
 [Setup]
 DisableDirPage=yes
-ArchitecturesInstallIn64BitMode=x64
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
+PrivilegesRequired=admin
+UsedUserAreasWarning=no
 AppName={#PluginName}
 AppPublisherURL=https://vst.unplug.red/
 AppSupportURL=https://vst.unplug.red/
@@ -30,9 +33,9 @@ VersionInfoDescription={#PluginName}
 VersionInfoProductName={#PluginName}
 VersionInfoProductVersion=1.0
 VersionInfoVersion=1.0
-WizardImageFile=assets\image\{#PluginName}.bmp
-WizardImageStretch=false
-WizardSmallImageFile=assets\smallimage\{#PluginName}.bmp
+WizardImageFile=assets\image\{#PluginName}.png
+WizardImageStretch=true
+WizardSmallImageFile=assets\smallimage\{#PluginName}.png
 
 [Files]
 Source: "build_win\{#Version}\{#PluginName}.vst3"; DestDir: "{commoncf64}\VST3\UnplugRed\"; Components: VST3; Flags: ignoreversion
