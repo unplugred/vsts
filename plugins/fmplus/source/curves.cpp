@@ -26,10 +26,17 @@ float curveiterator::next() {
 	float interp = curve::calctension((xx-points[currentpoint].x)/(points[nextpoint].x-points[currentpoint].x),points[currentpoint].tension);
 	return points[currentpoint].y*(1-interp)+points[nextpoint].y*interp;
 }
-float curve::process(float input, int channel) {
-	if(input <= 0) return points[0].y;
-	if(input >= 1) return points[points.size()-1].y;
-	
+
+void curve::resizechannels(int channelnum) {
+	currentpoint.resize(channelnum);
+	nextpoint   .resize(channelnum);
+
+	for(int c = 0; c < channelnum; ++c) {
+		currentpoint[c] = 0;
+		nextpoint   [c] = 1;
+	}
+}
+void curve::bufferstart(float input, int channel) {
 	if(nextpoint[channel] >= points.size()) {
 		nextpoint[channel] = points.size()-1;
 		currentpoint[channel] = nextpoint[channel]-1;
@@ -37,7 +44,13 @@ float curve::process(float input, int channel) {
 
 	while(input < points[currentpoint[channel]].x)
 		nextpoint[channel] = currentpoint[channel]--;
-	while(input >= points[nextpoint[channel]].x)
+}
+void curve::wrap(int channel) {
+	currentpoint[channel] = 0;
+	nextpoint   [channel] = 1;
+}
+float curve::process(float input, int channel) {
+	while(input > points[nextpoint[channel]].x)
 		currentpoint[channel] = nextpoint[channel]++;
 
 	float interp = .5f;
@@ -45,18 +58,18 @@ float curve::process(float input, int channel) {
 		interp = curve::calctension((input-points[currentpoint[channel]].x)/(points[nextpoint[channel]].x-points[currentpoint[channel]].x),points[currentpoint[channel]].tension);
 	return points[currentpoint[channel]].y*(1-interp)+points[nextpoint[channel]].y*interp;
 }
-void curve::resizechannels(int channelnum) {
-	currentpoint.resize(channelnum);
-	nextpoint.resize(channelnum);
-
-	currentpoint[0] = 0;
-	nextpoint[0] = 1;
-
-	for(int i = 1; i < channelnum; ++i) {
-		currentpoint[i] = currentpoint[0];
-		nextpoint[i] = nextpoint[0];
+float curve::calctension(float interp, float tension) {
+	if(tension == .5)
+		return interp;
+	else {
+		tension = tension*.99+.005;
+		if(tension < .5)
+			return pow(interp,.5 /tension)*(1-tension)+(1-pow(1-interp,2 *   tension ))*tension;
+		else
+			return pow(interp,2-2*tension)*(1-tension)+(1-pow(1-interp,.5/(1-tension)))*tension;
 	}
 }
+
 curve::curve(String str, const char delimiter, int channelnum) {
 	if(channelnum > 0) {
 		currentpoint.resize(channelnum);
@@ -92,17 +105,6 @@ String curve::tostring(const char delimiter) {
 	for(int p = 0; p < points.size(); ++p)
 		data << points[p].x << delimiter << points[p].y << delimiter << points[p].tension << delimiter;
 	return (String)data.str();
-}
-float curve::calctension(float interp, float tension) {
-	if(tension == .5)
-		return interp;
-	else {
-		tension = tension*.99+.005;
-		if(tension < .5)
-			return pow(interp,.5/tension)*(1-tension)+(1-pow(1-interp,2*tension))*tension;
-		else
-			return pow(interp,2-2*tension)*(1-tension)+(1-pow(1-interp,.5/(1-tension)))*tension;
-	}
 }
 bool curve::isvalidcurvestring(String str, const char delimiter) {
 	String trimstring = str.trim();

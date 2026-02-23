@@ -133,7 +133,6 @@ public:
 	float indicators[MC+1];
 	Atomic<bool> getframe = false;
 	Atomic<float> adsrht = -1;
-	float sustain[MC*VC];
 	Atomic<float> lfoht = -1;
 
 	void resettuning();
@@ -175,7 +174,7 @@ private:
 
 	void updatevibspeed();
 	float vibphase = 0;
-	float vibrate = 0;
+	float vibdelta = 0;
 	float vibattack[VC];
 
 	void updatea(int o);
@@ -184,8 +183,18 @@ private:
 	char egstage[MC*VC];
 	float egprog[MC*VC];
 	float eglast[MC*VC];
+	float egsustain[MC*VC];
 	float egd[MC*5];
 	float ega[MC*5];
+
+	void updatelfospeed(int o);
+	void updatelfoattackspeed(int o);
+	Random random;
+	float lfoattack[MC*VC];
+	float lfoattackdelta[MC];
+	float lfophase[MC*VC];
+	float lfophasedelta[MC];
+	onepolevalue lfodamp;
 
 	onepolevalue mutedamp;
 
@@ -197,12 +206,6 @@ private:
 
 static float sinapprox(float x) {
 	return (x+x*x*x*(.5f*x*x-1.5f))*3.04f;
-}
-static float calcarp(float value) {
-	return value*value*(MAXARP-MINARP)+MINARP;
-}
-static float calcvib(float value) {
-	return value*value*(MAXVIB-MINVIB)+MINVIB;
 }
 static float freqaddinflate(float value) {
 	return (mapToLog10((float)fabs(value*2-1),1.f,10000.f)-1)*(round(value)*2-1);
@@ -269,9 +272,9 @@ static String get_string(int param, float value, int tab) {
 		} if(param ==  7) {
 			return (String)round(value*100)+'%';
 		} if(param ==  8) {
-			return format_time(calcarp(value),true);
+			return format_time(value*value*(MAXARP-MINARP)+MINARP,true);
 		} if(param == 11) {
-			return format_time(calcvib(value),true);
+			return format_time(value*value*(MAXVIB-MINVIB)+MINVIB,true);
 		} if(param ==  9 || param == 12) {
 			return bpmsyncs_s[(int)round(value)];
 		} if(param == 13) {
@@ -318,7 +321,9 @@ static String get_string(int param, float value, int tab) {
 			if(value == 3)
 				return "Tone";
 		} if(param == 15) {
-			return format_time(value*value*MAXLFO);
+			if(value >= 1)
+				return "Fixed";
+			return format_time(value*value*(MAXLFO-MINLFO)+MINLFO);
 		} if(param == 16) {
 			return bpmsynclfo_s[(int)round(value)];
 		} if(param == 17) {

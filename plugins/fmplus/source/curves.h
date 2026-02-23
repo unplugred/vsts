@@ -15,12 +15,14 @@ struct point {
 };
 struct curve {
 	curve() {}
-	curve(String str, const char delimiter = ',', int channelnum = 0);
 	void resizechannels(int channelnum);
+	void bufferstart(float input, int channel);
+	void wrap(int channel);
+	float process(float input, int channel);
+	static float calctension(float interp, float tension);
+	curve(String str, const char delimiter = ',', int channelnum = 0);
 	String tostring(const char delimiter = ',');
 	static bool isvalidcurvestring(String str, const char delimiter = ',');
-	static float calctension(float interp, float tension);
-	float process(float input, int channel);
 
 	std::vector<point> points;
 	std::vector<int> nextpoint;
