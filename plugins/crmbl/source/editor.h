@@ -107,6 +107,8 @@ private:
 	std::shared_ptr<OpenGLShaderProgram> feedbackshader;
 
 	OpenGLFrameBuffer mainbuffer;
+	OpenGLTexture noisetex;
+	Random random;
 	std::shared_ptr<OpenGLShaderProgram> buffershader;
 
 	LookNFeel look_n_feel;

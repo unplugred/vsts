@@ -158,7 +158,7 @@ uniform float dpi;
 out vec4 fragColor;
 void main(){
 	vec4 col = texture(basetex,uv);
-	col.r /= col.a;
+	col.rgb /= col.a;
 	col.gba = max(min((col.gba-.5)*dpi+.5,1),0);
 	fragColor = vec4(0);
 	if(col.r <= (r+.033)) {
@@ -219,6 +219,7 @@ uniform float thickness;
 uniform float lineheight;
 uniform vec2 knobscale;
 uniform float circle;
+uniform float dpi;
 uniform float bright;
 uniform int dark;
 out vec4 fragColor;
@@ -229,13 +230,13 @@ void main(){
 		if((1-d) > (d-thickness)) {
 			float y = uv.y;
 			if(y > 0) y = max(y-lineheight,0);
-			d = max(d-thickness,0)*100*knobscale.y+max(1-sqrt(y*y+uv.x*uv.x)*2/(1-thickness),0)*2.5;
+			d = max(d-thickness,0)*100*dpi*knobscale.y+max(1-sqrt(y*y+uv.x*uv.x)*2/(1-thickness),0)*2*dpi;
 			fragColor = vec4(min(d,1),1,1,1);
-		} else fragColor = vec4(1,1,1,min((1-d)*100*knobscale.y,1));
+		} else fragColor = vec4(1,1,1,min((1-d)*100*dpi*knobscale.y,1));
 	} else {
 		float y = uv.y;
 		if(y > 0) y = max(y-lineheight,0);
-		fragColor = vec4(1,1,1,min(max(1-sqrt(y*y+uv.x*uv.x)*2/(1-thickness),0)*2.5,1));
+		fragColor = vec4(1,1,1,min(max(1-sqrt(y*y+uv.x*uv.x)*2/(1-thickness),0)*2*dpi,1));
 	}
 	fragColor.r = 1-(1-fragColor.r)*bright;
 	if(dark > .5) fragColor = vec4(fragColor.r,fragColor.r,fragColor.r,fragColor.a);
@@ -285,23 +286,31 @@ float noise(in vec2 p){
 			   mix(dot(hash(i + vec2(0.0,1.0)), f - vec2(0.0,1.0)),
 				   dot(hash(i + vec2(1.0,1.0)), f - vec2(1.0,1.0)), u.x), u.y);
 }
-vec4 sample(in sampler2D tex, in vec2 puv) {
-	if(puv.x < 0 || puv.x > 1 || puv.y < 0 || puv.y > 1) return vec4(0,0,0,1);
-	else return texture(tex,puv)*min(puv.x*res.x,1)*min(puv.y*res.y,1)*min((1-puv.x)*res.x,1)*min((1-puv.y)*res.y,1);
+vec3 sample(in sampler2D tex, in vec2 puv) {
+	if(puv.x < 0 || puv.x > 1 || puv.y < 0 || puv.y > 1) return vec3(0,0,0);
+	else return texture(tex,puv).rgb*min(puv.x*res.x,1)*min(puv.y*res.y,1)*min((1-puv.x)*res.x,1)*min((1-puv.y)*res.y,1);
+}
+vec3 hueshift(vec3 color, float shift) {
+	vec3 P = vec3(.55735)*dot(vec3(.55735),color);
+	vec3 U = color-P;
+	vec3 V = cross(vec3(.55735),U);
+	color = U*cos(shift*6.2832)+V*sin(shift*6.2832)+P;
+	return color;
 }
 void main(){
 	vec2 nuv = uv;
 	if(chew > 0) nuv += vec2(noise(ruv*4),noise((ruv+2)*4))*chew;
 	vec2 col1 = sample(maintex,nuv+vec2(time.x*ratio,time.x)).rg;
 	vec2 col2 = sample(maintex,nuv+vec2(time.y*ratio,time.y)).rg;
-	fragColor   = sample(feedbacktex,nuv+vec2(time.z*ratio,time.z));
-	fragColor.g = sample(feedbacktex,nuv+vec2((time.w-.004*lowpass)*ratio,time.w)).g;
+	fragColor.rb = sample(feedbacktex,nuv+vec2( time.z              *ratio,time.z)).rb;
+	fragColor.g  = sample(feedbacktex,nuv+vec2((time.w-.004*lowpass)*ratio,time.w)).g ;
 	if(lowpass > 0) {
 		fragColor.r = fragColor.r*.5+sample(feedbacktex,nuv+vec2((time.z+.008*lowpass)*ratio,time.z)).r*.5;
 		fragColor.g = fragColor.g*.5+sample(feedbacktex,nuv+vec2((time.w+.004*lowpass)*ratio,time.w)).g*.5;
 		fragColor.b = fragColor.b*.5+sample(feedbacktex,nuv+vec2((time.z-.008*lowpass)*ratio,time.z)).b*.5;
 	}
-	fragColor   = vec4(vec3(col1.r,col2.r,col1.r)*vec3(col1.g,col2.g,col1.g)+(1-vec3(col1.g,col2.g,col1.g))*feedback*fragColor.rgb,1);
+	fragColor = vec4(vec3(col1.r,col2.r,col1.r)*vec3(col1.g,col2.g,col1.g)+(1-vec3(col1.g,col2.g,col1.g))*feedback*fragColor.rgb,1);
+	fragColor.rgb = hueshift(vec3(fragColor.r,pow(fragColor.g,1.01),pow(fragColor.b,0.99)),(fragColor.r+fragColor.g+fragColor.b)*.012-.009);
 })");
 
 	buffershader = add_shader(
@@ -309,25 +318,39 @@ void main(){
 R"(#version 150 core
 in vec2 aPos;
 uniform float banner;
+uniform vec4 noisepos;
 out vec2 uv;
+out vec2 noiseuv;
 void main(){
 	gl_Position = vec4(vec2(aPos.x,aPos.y*(1-banner)+banner)*2-1,0,1);
 	uv = aPos;
+	noiseuv = aPos*noisepos.xy+noisepos.zw;
 })",
 //BUFFER FRAG
 R"(#version 150 core
 in vec2 uv;
+in vec2 noiseuv;
 uniform sampler2D feedbacktex;
 uniform sampler2D maintex;
+uniform sampler2D noisetex;
 uniform float wet;
 uniform float reverse;
 out vec4 fragColor;
+vec3 hueshift(vec3 color, float shift) {
+	vec3 P = vec3(.55735)*dot(vec3(.55735),color);
+	vec3 U = color-P;
+	vec3 V = cross(vec3(.55735),U);
+	color = U*cos(shift*6.2832)+V*sin(shift*6.2832)+P;
+	return color;
+}
 void main(){
 	vec4 col = texture(maintex,uv);
 	fragColor = vec4(vec3(col.r),1);
 	if(col.g < 1)
 		fragColor = fragColor*col.b+texture(feedbacktex,uv)*vec4(vec3(wet),1)*(1-col.b);
-	fragColor = vec4(abs(fragColor.rgb*fragColor.a-vec3(pow(reverse,.5),reverse,pow(reverse,2.))),1);
+	fragColor.rgb = abs(fragColor.rgb*fragColor.a-vec3(pow(reverse,.5),reverse,pow(reverse,2.)));
+	fragColor.rgb += (texture(noisetex,noiseuv).rgb-.5)*.3*(.5-abs(0.5-fragColor.rgb));
+	fragColor.rgb = hueshift(vec3(pow(fragColor.r,0.98),fragColor.g,pow(fragColor.b,0.9)),(fragColor.r+fragColor.g+fragColor.b)*.2-.2);
 })");
 
 	numbershader = add_shader(
@@ -354,8 +377,9 @@ void main(){
 	fragColor = vec4(texture(numbertex,uv).r)*vec4(col,1);
 })");
 
-	add_texture(&basetex, BinaryData::map_png, BinaryData::map_pngSize);
-	add_texture(&numbertex, BinaryData::numbers_png, BinaryData::numbers_pngSize, GL_NEAREST, GL_NEAREST);
+	add_texture(&basetex  ,BinaryData::map_png    ,BinaryData::map_pngSize    );
+	add_texture(&numbertex,BinaryData::numbers_png,BinaryData::numbers_pngSize,GL_NEAREST,GL_NEAREST);
+	add_texture(&noisetex ,BinaryData::noise_png  ,BinaryData::noise_pngSize  ,GL_NEAREST,GL_NEAREST,GL_REPEAT,GL_REPEAT);
 
 	add_frame_buffer(&feedbackbuffer, width, height);
 	add_frame_buffer(&mainbuffer, width, height);
@@ -385,7 +409,7 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 	baseshader->setUniform("basetex",0);
 	baseshader->setUniform("banner",banner_offset);
 	baseshader->setUniform("gb",postfb?1.f:0.f);
-	baseshader->setUniform("dpi",(float)fmax(scaled_dpi,1));
+	baseshader->setUniform("dpi",(float)fmax(scaled_dpi*.5f,1));
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	for(int i = 0; i < knobcount; i++) {
@@ -412,7 +436,7 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 	logoshader->setUniform("basetex",0);
 	logoshader->setUniform("banner",banner_offset);
 	logoshader->setUniform("websiteht",websiteht);
-	logoshader->setUniform("dpi",(float)fmax(scaled_dpi,1));
+	logoshader->setUniform("dpi",(float)fmax(scaled_dpi*.5f,1));
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
@@ -426,6 +450,7 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 	knobshader->setUniform("banner",banner_offset);
 	knobshader->setUniform("circle",1.f);
 	knobshader->setUniform("dark",0);
+	knobshader->setUniform("dpi",scaled_dpi);
 	for(int i = 0; i < knobcount; i++) {
 		if(i == 1 || i == 3) {
 			context.extensions.glDisableVertexAttribArray(coord);
@@ -435,7 +460,7 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 			context.extensions.glActiveTexture(GL_TEXTURE0);
 			basetex.bind();
 			baseshader->setUniform("basetex",0);
-			baseshader->setUniform("dpi",(float)fmax(scaled_dpi,1));
+			baseshader->setUniform("dpi",(float)fmax(scaled_dpi*.5f,1));
 			context.extensions.glEnableVertexAttribArray(coord);
 			context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 			if(i == 1) {
@@ -458,7 +483,7 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 			context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 			knobshader->setUniform("circle",1.f);
 		}
-		knobshader->setUniform("thickness",1-knobs[i].linewidth*2.8f);
+		knobshader->setUniform("thickness",1-knobs[i].linewidth*1.8f);
 		knobshader->setUniform("lineheight",knobs[i].lineheight);
 		knobshader->setUniform("knobscale",knobs[i].radius*ratio*2.f,knobs[i].radius*2.f);
 		knobshader->setUniform("bright",1-knobs[i].yoffset*4);
@@ -507,22 +532,23 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 			time = 1;
 		}
 	} else time = knobs[2].value*knobs[2].value;
-	float time1 = (time*(1-dampmodamp)+osc)*.25f+.005f;
+	time = (time*(1-dampmodamp)+osc)*.2f;
+	float time1 = time+.005f;
 	float time2 = time1;
 	float time3 = time1;
 	float time4 = time1;
-	if(knobs[6].value > .5)
-		time2 = (time+osc)*(2-knobs[6].value*2)*(1-dampmodamp)*.25f+.0025f;
+	     if(knobs[6].value > .5)
+		time2 = time*(2-knobs[6].value*2)+.005f;
 	else if(knobs[6].value < .5)
-		time1 = (time+osc)*(  knobs[6].value*2)*(1-dampmodamp)*.25f+.0025f;
+		time1 = time*(  knobs[6].value*2)+.005f;
 	if(!postfb) {
 		time3 = time1;
 		time4 = time2;
 	}
 	feedbackshader->setUniform("time",time1,time2,time3,time4);//mod + modfreq
-	feedbackshader->setUniform("pitch",(knobs[7].value-.5f)*3.13f);
+	feedbackshader->setUniform("pitch",(knobs[7].value-.5f)*.5f*3.13f);
 	feedbackshader->setUniform("chew",knobs[8].value*knobs[8].value);
-	feedbackshader->setUniform("feedback",knobs[1].value);
+	feedbackshader->setUniform("feedback",(float)powf(knobs[1].value,.8f));
 	feedbackshader->setUniform("lowpass",knobs[10].value);
 	feedbackshader->setUniform("ratio",ratio);
 	feedbackshader->setUniform("res",(float)height,(float)width);
@@ -541,7 +567,11 @@ void CRMBLAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, mainbuffer.getTextureID());
 	buffershader->setUniform("maintex",1);
+	context.extensions.glActiveTexture(GL_TEXTURE2);
+	noisetex.bind();
+	buffershader->setUniform("noisetex",2);
 	buffershader->setUniform("banner",banner_offset);
+	buffershader->setUniform("noisepos",(width*scaled_dpi)/470.f,(height*scaled_dpi)/470.f,random.nextFloat(),random.nextFloat());
 	buffershader->setUniform("wet",knobs[5].value);
 	buffershader->setUniform("reverse",knobs[9].value);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
