@@ -201,11 +201,15 @@ void CRMBLAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& m
 
 	double bpm = 120;
 	if(state.values[1] > 0) {
-		if(auto bpmfromhost = *getPlayHead()->getPosition()->getBpm()) {
-			if(bpmfromhost != lastbpm.get())
-				lastbpm = bpmfromhost;
-			bpm = bpmfromhost;
-		} else bpm = lastbpm.get();
+		bpm = lastbpm.get();
+		AudioPlayHead* playhead = getPlayHead();
+		if(playHead != nullptr)
+			if(auto positioninfo = playhead->getPosition())
+				if(auto bpmfromhost = positioninfo->getBpm())
+					if((*bpmfromhost) != bpm) {
+						lastbpm = *bpmfromhost;
+						bpm = *bpmfromhost;
+		}
 	}
 
 	int pitchlatency = 0;

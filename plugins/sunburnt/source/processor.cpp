@@ -274,13 +274,16 @@ void SunBurntAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer
 	//get bpm
 	double bpm = 120;
 	if(state.values[4] > 0) {
-		if(auto bpmfromhost = *getPlayHead()->getPosition()->getBpm()) {
-			if(bpmfromhost != lastbpm) {
-				lastbpm = bpmfromhost;
-				updatedcurvebpmcooldown = .5f;
-			}
-			bpm = bpmfromhost;
-		} else bpm = lastbpm;
+		bpm = lastbpm;
+		AudioPlayHead* playhead = getPlayHead();
+		if(playHead != nullptr)
+			if(auto positioninfo = playhead->getPosition())
+				if(auto bpmfromhost = positioninfo->getBpm())
+					if((*bpmfromhost) != bpm) {
+						lastbpm = *bpmfromhost;
+						bpm = *bpmfromhost;
+						updatedcurvebpmcooldown = .5f;
+		}
 	}
 
 	//update impulse
