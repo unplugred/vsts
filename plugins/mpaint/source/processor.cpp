@@ -195,7 +195,7 @@ void MPaintAudioProcessor::getStateInformation(MemoryBlock& destData) {
 void MPaintAudioProcessor::setStateInformation(const void* data, int sizeInBytes) {
 	const char delimiter = '\n';
 	try {
-		std::stringstream ss(String::createStringFromData(data, sizeInBytes).toRawUTF8());
+		std::istringstream ss(String::createStringFromData(data, sizeInBytes).toRawUTF8());
 		std::string token;
 
 		std::getline(ss, token, delimiter);

@@ -482,7 +482,7 @@ void CRMBLAudioProcessor::setStateInformation(const void* data, int sizeInBytes)
 	const char delimiter = '\n';
 	saved = true;
 	try {
-		std::stringstream ss(String::createStringFromData(data, sizeInBytes).toRawUTF8());
+		std::istringstream ss(String::createStringFromData(data, sizeInBytes).toRawUTF8());
 		std::string token;
 
 		std::getline(ss, token, delimiter);
@@ -561,7 +561,7 @@ void CRMBLAudioProcessor::set_preset(const String& preset, int preset_id, const 
 	String error = "";
 	String revert = get_preset(preset_id);
 	try {
-		std::stringstream ss(preset.trim().toRawUTF8());
+		std::istringstream ss(preset.trim().toRawUTF8());
 		std::string token;
 
 		std::getline(ss, token, delimiter);

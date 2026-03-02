@@ -234,7 +234,7 @@ void DietAudioAudioProcessor::setStateInformation(const void* data, int sizeInBy
 	const char delimiter = '\n';
 	saved = true;
 	try {
-		std::stringstream ss(String::createStringFromData(data, sizeInBytes).toRawUTF8());
+		std::istringstream ss(String::createStringFromData(data, sizeInBytes).toRawUTF8());
 		std::string token;
 
 		std::getline(ss, token, delimiter);
@@ -273,7 +273,7 @@ void DietAudioAudioProcessor::set_preset(const String& preset, int preset_id, co
 	String error = "";
 	String revert = get_preset(preset_id);
 	try {
-		std::stringstream ss(preset.trim().toRawUTF8());
+		std::istringstream ss(preset.trim().toRawUTF8());
 		std::string token;
 
 		std::getline(ss, token, delimiter);

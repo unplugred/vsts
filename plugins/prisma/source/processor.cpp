@@ -887,7 +887,7 @@ void PrismaAudioProcessor::setStateInformation(const void* data, int sizeInBytes
 	saved = true;
 	int saveversion = version;
 	try {
-		std::stringstream ss(String::createStringFromData(data, sizeInBytes).toRawUTF8());
+		std::istringstream ss(String::createStringFromData(data, sizeInBytes).toRawUTF8());
 		std::string token;
 
 		std::getline(ss, token, delimiter);
@@ -1040,7 +1040,7 @@ void PrismaAudioProcessor::set_preset(const String& preset, int preset_id, const
 	String revert = get_preset(preset_id);
 	int saveversion = version;
 	try {
-		std::stringstream ss(preset.trim().toRawUTF8());
+		std::istringstream ss(preset.trim().toRawUTF8());
 		std::string token;
 
 		std::getline(ss, token, delimiter);

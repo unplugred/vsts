@@ -181,7 +181,7 @@ void PNCHAudioProcessor::setStateInformation(const void* data, int sizeInBytes) 
 	const char delimiter = '\n';
 	saved = true;
 	try {
-		std::stringstream ss(String::createStringFromData(data, sizeInBytes).toRawUTF8());
+		std::istringstream ss(String::createStringFromData(data, sizeInBytes).toRawUTF8());
 		std::string token;
 
 		std::getline(ss, token, delimiter);
@@ -218,7 +218,7 @@ void PNCHAudioProcessor::set_preset(const String& preset, int preset_id, const c
 	String error = "";
 	String revert = get_preset(0);
 	try {
-		std::stringstream ss(preset.trim().toRawUTF8());
+		std::istringstream ss(preset.trim().toRawUTF8());
 		std::string token;
 
 		std::getline(ss, token, delimiter);
