@@ -68,6 +68,8 @@ private:
 
 	float credits = 0;
 	OpenGLTexture basetex;
+	bool rumode = false;
+	bool prevrumode = false;
 	std::shared_ptr<OpenGLShaderProgram> baseshader;
 
 	int hover = -1;
@@ -81,7 +83,7 @@ private:
 	std::shared_ptr<OpenGLShaderProgram> toggleshader;
 
 	OpenGLTexture texttex;
-	char textindex[21] = { '0','1','2','3','4','5','6','7','8','9','k','H','z','O','f','f','m','s','d','B','-' };
+	char textindex[22] = { '0','1','2','3','4','5','6','7','8','9','k','H','z','O','a','b','c','m','s','d','B','-' };
 	std::shared_ptr<OpenGLShaderProgram> textshader;
 
 	LookNFeel look_n_feel;

@@ -51,8 +51,10 @@ target_compile_definitions("${BaseTargetName}" PUBLIC
 	JUCE_USE_CAMERA=0)
 
 juce_add_binary_data("${BaseTargetName}BinaryData" HEADER_NAME BinaryData.h NAMESPACE BinaryData SOURCES
-	resources/base.png
-	resources/txt.png)
+	resources/base_en.png
+	resources/base_ru.png
+	resources/txt_en.png
+	resources/txt_ru.png)
 set_target_properties("${BaseTargetName}BinaryData" PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 
 target_link_libraries("${BaseTargetName}" PRIVATE

@@ -2,6 +2,10 @@
 #include "editor.h"
 
 RedBassAudioProcessorEditor::RedBassAudioProcessorEditor(RedBassAudioProcessor& p, int paramcount, pluginpreset state, pluginparams params) : audio_processor(p), AudioProcessorEditor(&p), plugmachine_gui(*this, p, 322, 408, 1.f, .5f) {
+
+	rumode = params.rumode;
+	prevrumode = rumode;
+
 	for(int x = 0; x < 2; x++) {
 		for(int y = 0; y < 4; y++) {
 			int i = x+y*2;
@@ -51,7 +55,7 @@ void RedBassAudioProcessorEditor::newOpenGLContextCreated() {
 R"(#version 150 core
 in vec2 aPos;
 out vec2 uv;
-void main(){
+void main() {
 	gl_Position = vec4(aPos*2-1,0,1);
 	uv = aPos*2.1+.003;
 })",
@@ -61,7 +65,7 @@ in vec2 uv;
 uniform sampler2D buffertex;
 uniform float vis;
 out vec4 fragColor;
-void main(){
+void main() {
 	if(uv.x > 1) fragColor = vec4(vis,vis,vis,1);
 	else fragColor = texture(buffertex,uv);
 })");
@@ -73,7 +77,7 @@ in vec2 aPos;
 uniform float banner;
 out vec2 texuv;
 out vec2 uv;
-void main(){
+void main() {
 	gl_Position = vec4(vec2(aPos.x,aPos.y*(1-banner)+banner)*2-1,0,1);
 	texuv = aPos;
 	uv = vec2(aPos.x,(aPos.y-0.0318627)*1.0652742);
@@ -85,26 +89,24 @@ in vec2 uv;
 uniform sampler2D basetex;
 uniform sampler2D buffertex;
 uniform float hover;
+uniform float dpi;
 uniform float vis;
 out vec4 fragColor;
-void main(){
+void main() {
 	vec3 c = texture(basetex,texuv).rgb;
 	if(c.r > .5) {
 		if(uv.x > .2 && uv.x < .8) {
-			if((hover > ((uv.x-.42236024844720496894409937888199)*4.5352112676056338028169014084507) && c.b > .5) || vis > uv.y) {
+			if((hover > uv.x && c.b > .5) || vis > uv.y)
 				fragColor = vec4(1,1,1,1);
-			} else {
-				fragColor = vec4(vec3((mod(uv.x*322,2)+mod(uv.y*383,2))>2.9?0.2:0.0),1);
-			}
+			else
+				fragColor = vec4(vec3((mod(uv.x*dpi*322,2)+mod(uv.y*dpi*383,2))>2.1?0.2:0.0),1);
 		} else {
 			fragColor = vec4(vec3(min(.75,vis)),1);
 		}
-	} else if(c.g > .5) {
-		fragColor = vec4(1,1,1,1);
 	} else if(c.b > .5) {
-		fragColor = vec4(0,0,0,1);
+		fragColor = vec4(vec3(c.g),1);
 	} else {
-		fragColor = texture(buffertex,vec2((uv.x>.5?(1-uv.x):(uv.x))*2,uv.y))*vec4(.5,.5,.5,1);
+		fragColor = texture(buffertex,vec2((uv.x>.5?(1-uv.x):uv.x)*2,uv.y))*vec4(.5,.5,.5,1);
 	}
 })");
 
@@ -118,7 +120,7 @@ uniform vec2 knobpos;
 uniform vec2 knobscale;
 uniform float banner;
 uniform float ext;
-void main(){
+void main() {
 	vec2 pos = (vec2(aPos.x,1-(1-aPos.y)*ext)*2*knobscale-vec2(knobscale.x,0))/vec2(ratio,1);
 	gl_Position = vec4(
 		(pos.x*cos(knobrot)-pos.y*sin(knobrot))*ratio-1+knobpos.x,
@@ -127,7 +129,7 @@ void main(){
 //KNOB FRAG
 R"(#version 150 core
 out vec4 fragColor;
-void main(){
+void main() {
 	fragColor = vec4(1);
 })");
 
@@ -139,7 +141,7 @@ uniform float banner;
 uniform vec2 knobpos;
 uniform vec2 knobscale;
 out vec2 basecoord;
-void main(){
+void main() {
 	gl_Position = vec4(aPos*2*knobscale-knobscale-1+knobpos,0,1);
 	basecoord = gl_Position.xy*.5+.5;
 	gl_Position.y = gl_Position.y*(1-banner)+banner;
@@ -150,7 +152,7 @@ in vec2 basecoord;
 uniform sampler2D basetex;
 uniform float toggle;
 out vec4 fragColor;
-void main(){
+void main() {
 	vec2 c = texture(basetex,basecoord).rb;
 	if(toggle > .5)
 		c.r *= (1-c.g);
@@ -168,23 +170,23 @@ uniform vec2 pos;
 uniform int letter;
 uniform float banner;
 out vec2 uv;
-void main(){
+void main() {
 	gl_Position = vec4(vec2(aPos.x*size.x+pos.x,(aPos.y*size.y+pos.y)*(1-banner)+banner)*2-1,0,1);
-	uv = vec2((aPos.x+letter)/21,aPos.y);
+	uv = vec2((aPos.x+letter)/22,aPos.y);
 })",
 //TEXT FRAG
 R"(#version 150 core
 in vec2 uv;
 uniform sampler2D tex;
 out vec4 fragColor;
-void main(){
+void main() {
 	fragColor = vec4(1,1,1,texture(tex,uv).r);
 })");
 
-	add_texture(&basetex, BinaryData::base_png, BinaryData::base_pngSize, GL_NEAREST, GL_NEAREST);
-	add_texture(&texttex, BinaryData::txt_png, BinaryData::txt_pngSize, GL_NEAREST, GL_NEAREST);
+	add_texture(&basetex,rumode?BinaryData::base_ru_png:BinaryData::base_en_png,rumode?BinaryData::base_ru_pngSize:BinaryData::base_en_pngSize,GL_NEAREST,GL_NEAREST);
+	add_texture(&texttex,rumode?BinaryData::txt_ru_png :BinaryData::txt_en_png ,rumode?BinaryData::txt_ru_pngSize :BinaryData::txt_en_pngSize ,GL_NEAREST,GL_NEAREST);
 
-	add_frame_buffer(&framebuffer, (int)(width*.5), 1, true, false, GL_NEAREST, GL_NEAREST);
+	add_frame_buffer(&framebuffer,(int)(width*.5),1,true,false,GL_NEAREST,GL_NEAREST);
 
 	draw_init();
 }
@@ -197,6 +199,14 @@ void RedBassAudioProcessorEditor::renderOpenGL() {
 	glDisable(GL_DEPTH_TEST);
 	glEnable(GL_LINE_SMOOTH);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	if(rumode != prevrumode) {
+		prevrumode = rumode;
+		remove_texture(&basetex);
+		remove_texture(&texttex);
+		add_texture(&basetex,rumode?BinaryData::base_ru_png:BinaryData::base_en_png,rumode?BinaryData::base_ru_pngSize:BinaryData::base_en_pngSize,GL_NEAREST,GL_NEAREST);
+		add_texture(&texttex,rumode?BinaryData::txt_ru_png :BinaryData::txt_en_png ,rumode?BinaryData::txt_ru_pngSize :BinaryData::txt_en_pngSize ,GL_NEAREST,GL_NEAREST);
+	}
 
 	context.extensions.glBindBuffer(GL_ARRAY_BUFFER, array_buffer);
 	auto coord = context.extensions.glGetAttribLocation(baseshader->getProgramID(),"aPos");
@@ -225,7 +235,8 @@ void RedBassAudioProcessorEditor::renderOpenGL() {
 	baseshader->setUniform("buffertex",1);
 	baseshader->setUniform("banner",banner_offset);
 	baseshader->setUniform("vis",vis);
-	baseshader->setUniform("hover",credits<0.5?4*credits*credits*credits:1-(float)pow(-2*credits+2,3)/2);
+	baseshader->setUniform("dpi",scaled_dpi);
+	baseshader->setUniform("hover",(credits<0.5?4*credits*credits*credits:1-(float)pow(-2*credits+2,3)/2)/(rumode?3.1262f:4.5352f)+(rumode?.3882f:.4224f));
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
@@ -318,7 +329,7 @@ void RedBassAudioProcessorEditor::recalclabels() {
 
 	int val = round(Decibels::gainToDecibels(fmax(.000001f,audio_processor.calculatethreshold(knobs[1].value))));
 	if(val <= -96)
-		knobs[1].interpolatedvalue = "Off";
+		knobs[1].interpolatedvalue = "Oabc";
 	else
 		knobs[1].interpolatedvalue = (String)val+"dB";
 
@@ -327,7 +338,7 @@ void RedBassAudioProcessorEditor::recalclabels() {
 	knobs[3].interpolatedvalue = (String)round(audio_processor.calculaterelease(knobs[3].value))+"ms";
 
 	if(knobs[4].value >= 1) {
-		knobs[4].interpolatedvalue = "Off";
+		knobs[4].interpolatedvalue = "Oabc";
 	} else {
 		val = audio_processor.calculatelowpass(knobs[4].value);
 		if(val >= 10000)
@@ -349,16 +360,21 @@ void RedBassAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		hover = recalc_hover(event.x,event.y);
 		std::unique_ptr<PopupMenu> rightclickmenu(new PopupMenu());
 		std::unique_ptr<PopupMenu> scalemenu(new PopupMenu());
+		std::unique_ptr<PopupMenu> langmenu(new PopupMenu());
 
 		int i = 20;
 		while(++i < (ui_scales.size()+21))
 			scalemenu->addItem(i,(String)round(ui_scales[i-21]*100)+"%",true,(i-21)==ui_scale_index);
+
+		langmenu->addItem(11,"English",true,!rumode);
+		langmenu->addItem(12,String::fromUTF8("Pусский"),true,rumode);
 
 		rightclickmenu->setLookAndFeel(&look_n_feel);
 		rightclickmenu->addItem(1,"'Copy preset",true);
 		rightclickmenu->addItem(2,"'Paste preset",audio_processor.is_valid_preset_string(SystemClipboard::getTextFromClipboard()));
 		rightclickmenu->addSeparator();
 		rightclickmenu->addSubMenu("'Scale",*scalemenu);
+		rightclickmenu->addSubMenu("'Language",*langmenu);
 
 		String description = "";
 		if(hover > -1)
@@ -372,8 +388,11 @@ void RedBassAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 
 		rightclickmenu->showMenuAsync(PopupMenu::Options(),[this](int result){
 			if(result <= 0) return;
-			else if(result >= 20) {
+			else if(result >= 20) { //size
 				set_ui_scale(result-21);
+			} else if(result >= 10) { //lang
+				rumode = result==12;
+				audio_processor.setLang(result==12);
 			} else if(result == 1) { //copy preset
 				SystemClipboard::copyTextToClipboard(audio_processor.get_preset(audio_processor.currentpreset));
 			} else if(result == 2) { //paste preset

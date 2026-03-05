@@ -7,6 +7,10 @@ RedBassAudioProcessor::RedBassAudioProcessor() :
 
 	init();
 
+	PropertiesFile* user_settings = props.getUserSettings();
+	if(user_settings->containsKey("Language"))
+		params.rumode = (user_settings->getIntValue("Language")%2) == 0;
+
 	for(int i = 0; i < getNumPrograms(); i++)
 		presets[i].name = "Program " + (String)(i+1);
 
@@ -197,6 +201,10 @@ double RedBassAudioProcessor::calculatethreshold(double value) {
 bool RedBassAudioProcessor::hasEditor() const { return true; }
 AudioProcessorEditor* RedBassAudioProcessor::createEditor() {
 	return new RedBassAudioProcessorEditor(*this,paramcount,state,params);
+}
+void RedBassAudioProcessor::setLang(bool isru) {
+	params.rumode = isru;
+	props.getUserSettings()->setValue("Language",isru?2:1);
 }
 
 void RedBassAudioProcessor::getStateInformation(MemoryBlock& destData) {

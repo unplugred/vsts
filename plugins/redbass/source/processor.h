@@ -53,6 +53,7 @@ struct pluginparams {
 	potentiometer pots[7];
 	float monitor = 0;
 	SmoothedValue<float,ValueSmoothingTypes::Linear> monitorsmooth;
+	bool rumode = false;
 };
 
 class RedBassAudioProcessor : public plugmachine_dsp, private Timer {
@@ -71,6 +72,7 @@ public:
 
 	AudioProcessorEditor* createEditor() override;
 	bool hasEditor() const override;
+	void setLang(bool isru);
 
 	const String getName() const override;
 
