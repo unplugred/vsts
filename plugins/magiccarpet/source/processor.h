@@ -172,5 +172,5 @@ static std::function<float(const String& s)> fromspeed = [](const String& s) {
 	float val = s.getFloatValue();
 	if(!s.containsIgnoreCase("hz") && val <= 1)
 		return jlimit(0.f,1.f,val);
-	return jlimit(0.f,1.f,((float)sqrt(val)-.15f)*1.4f);
+	return jlimit(0.f,1.f,((float)sqrt(val)-.15f)/1.4f);
 };
