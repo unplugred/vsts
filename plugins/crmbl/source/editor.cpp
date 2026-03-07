@@ -349,7 +349,7 @@ void main(){
 	if(col.g < 1)
 		fragColor = fragColor*col.b+texture(feedbacktex,uv)*vec4(vec3(wet),1)*(1-col.b);
 	fragColor.rgb = abs(fragColor.rgb*fragColor.a-vec3(pow(reverse,.5),reverse,pow(reverse,2.)));
-	fragColor.rgb += (texture(noisetex,noiseuv).rgb-.5)*.3*(.5-abs(0.5-fragColor.rgb));
+	fragColor.rgb += (texture(noisetex,noiseuv).rgb-.5)*.5*(.25-pow(abs(.5-fragColor.rgb),vec3(2)));
 	fragColor.rgb = hueshift(vec3(pow(fragColor.r,0.98),fragColor.g,pow(fragColor.b,0.9)),(fragColor.r+fragColor.g+fragColor.b)*.2-.2);
 })");
 
