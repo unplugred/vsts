@@ -1630,7 +1630,7 @@ void PrismaAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 			else if(hover <= -2 && hover >= -4)
 				description = "Changes the crossover frequency of the band";
 			else if(hover <= -5 && hover >= -8)
-				description = "Changes the gain of the band's output";
+				description = "Changes the gain of the band's output.\nHold shift to move all band gains at once.";
 			else if(hover == -9)
 				description = "Blends between the original and processed signal";
 			else if(hover == -10)
@@ -1691,6 +1691,13 @@ void PrismaAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 			audio_processor.apvts.getParameter("b"+(String)(b+1)+"cross")->beginChangeGesture();
 		} else if(hover >= -8 && hover <= -5) {
 			initialvalue = state[0].gain[hover+8];
+			for(int b = 0; b < BAND_COUNT; ++b) {
+				gaininits[b] = state[0].gain[b];
+				if(initialvalue <= .00001f)
+					gainsratio[b] = 0;
+				else
+					gainsratio[b] = gaininits[b]/initialvalue;
+			}
 			audio_processor.apvts.getParameter("b"+(String)(hover+8)+"gain")->beginChangeGesture();
 		} else if(hover == -9) {
 			initialvalue = state[0].wet;
@@ -1714,7 +1721,7 @@ void PrismaAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 void PrismaAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 	if(initialdrag == -1) return;
 	if(hoverknob) {
-		if(finemode != (event.mods.isShiftDown() || event.mods.isAltDown())) {
+		if(finemode != ((event.mods.isShiftDown() && (BAND_COUNT == 1 || hover < -8 || hover > -5)) || event.mods.isAltDown())) {
 			finemode = !finemode;
 			if(hover >= 0 && modules[state[0].modulesvalues[hover].id].xy) {
 				initialvalue  += event.getDistanceFromDragStartX()*(finemode?.0045f:-.0045f);
@@ -1744,6 +1751,19 @@ void PrismaAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 			audio_processor.apvts.getParameter("b"+(String)(b+1)+"cross")->setValueNotifyingHost(fmin(fmax(value-valueoffset,b>0?(state[0].crossover[b-1]+.02f):.02f),b<(BAND_COUNT-2)?(state[0].crossover[b+1]-.02f):.98f));
 		} else if(hover >= -8 && hover <= -5) {
 			audio_processor.apvts.getParameter("b"+(String)(hover+8)+"gain")->setValueNotifyingHost(value-valueoffset);
+			if(event.mods.isShiftDown() && BAND_COUNT > 1) {
+				for(int b = 0; b < BAND_COUNT; ++b) {
+					if(b == (hover+8)) continue;
+					audio_processor.apvts.getParameter("b"+(String)b+"gain")->setValueNotifyingHost(fmin(1,fmax(0,value-valueoffset))*gainsratio[b]);
+				}
+				gainsync = true;
+			} else if(gainsync) {
+				for(int b = 0; b < BAND_COUNT; ++b) {
+					if(b == (hover+8)) continue;
+					audio_processor.apvts.getParameter("b"+(String)b+"gain")->setValueNotifyingHost(gaininits[b]);
+				}
+				gainsync = false;
+			}
 		} else if(hover == -9) {
 			audio_processor.apvts.getParameter("wet")->setValueNotifyingHost(value-valueoffset);
 		}
@@ -1914,8 +1934,13 @@ void PrismaAudioProcessorEditor::mouseWheelMove(const MouseEvent& event, const M
 			state[0].crossover[hover+4]+wheel.deltaY*((event.mods.isShiftDown() || event.mods.isAltDown())?.03f:.2f)
 			,hover>-4?(state[0].crossover[hover+3]+.02f):.02f),hover<(BAND_COUNT-6)?(state[0].crossover[hover+5]-.02f):.98f));
 	} else if(hover >= -8 && hover <= -5) {
-		audio_processor.apvts.getParameter("b"+(String)(hover+8)+"gain")->setValueNotifyingHost(
-			state[0].gain[hover+8]+wheel.deltaY*((event.mods.isShiftDown() || event.mods.isAltDown())?.03f:.2f));
+		float init = state[0].gain[hover+8];
+		float val = init+wheel.deltaY*(event.mods.isAltDown()?.03f:.2f);
+		audio_processor.apvts.getParameter("b"+(String)(hover+8)+"gain")->setValueNotifyingHost(val);
+		if(event.mods.isShiftDown() && init > .00001f) for(int b = 0; b < BAND_COUNT; ++b) {
+			if(b == (hover+8)) continue;
+			audio_processor.apvts.getParameter("b"+(String)b+"gain")->setValueNotifyingHost(fmin(1,fmax(0,val))*(state[0].gain[b]/init));
+		}
 	} else if(hover == -9) {
 		audio_processor.apvts.getParameter("wet")->setValueNotifyingHost(
 			state[0].wet+wheel.deltaY*((event.mods.isShiftDown() || event.mods.isAltDown())?.03f:.2f));
