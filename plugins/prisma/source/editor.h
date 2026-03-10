@@ -141,6 +141,9 @@ private:
 	int initialdrag = -1;
 	float initialvalue = 0;
 	float initialvaluey = 0;
+	float gaininits[BAND_COUNT];
+	float gainsratio[BAND_COUNT];
+	bool gainsync = false;
 	bool finemode = false;
 	float valueoffset = 0;
 	float valueyoffset = 0;
