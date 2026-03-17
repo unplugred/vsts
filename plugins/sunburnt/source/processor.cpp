@@ -196,8 +196,8 @@ void SunBurntAudioProcessor::reseteverything() {
 		impulsethread.impulseeffectbuffer.resize(1);
 		convolver.resize(1);
 		convolvereffect.resize(1);
-		convolver[0].reset(new dsp::Convolution{dsp::Convolution::NonUniform{fmax(512,samplesperblock*4)}});
-		convolvereffect[0].reset(new dsp::Convolution{dsp::Convolution::NonUniform{fmax(512,samplesperblock*4)}});
+		convolver[0].reset(new dsp::Convolution{dsp::Convolution::NonUniform{(int)fmax(512,samplesperblock*4)}});
+		convolvereffect[0].reset(new dsp::Convolution{dsp::Convolution::NonUniform{(int)fmax(512,samplesperblock*4)}});
 	}
 
 	dsp::ProcessSpec spec;
@@ -212,8 +212,8 @@ void SunBurntAudioProcessor::reseteverything() {
 	impulsethread.lowpassfilter.setType(dsp::StateVariableTPTFilterType::lowpass);
 
 	if(channelnum > 2) for(int c = 0; c < channelnum; ++c) {
-		convolver[c].reset(new dsp::Convolution{dsp::Convolution::NonUniform{fmax(512,samplesperblock*4)}});
-		convolvereffect[c].reset(new dsp::Convolution{dsp::Convolution::NonUniform{fmax(512,samplesperblock*4)}});
+		convolver[c].reset(new dsp::Convolution{dsp::Convolution::NonUniform{(int)fmax(512,samplesperblock*4)}});
+		convolvereffect[c].reset(new dsp::Convolution{dsp::Convolution::NonUniform{(int)fmax(512,samplesperblock*4)}});
 	}
 
 	pitchshift.setSampleRate(fmin(samplerate,192000));
