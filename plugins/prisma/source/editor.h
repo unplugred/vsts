@@ -43,6 +43,7 @@ struct module {
 	float defaultval = 0;
 	float defaultvaly = 0;
 	int clip = -1;
+	int res = 0;
 	bool xy = false;
 	String description = "";
 };
@@ -174,7 +175,7 @@ private:
 	float selectorscrolllerp[BAND_COUNT];
 	bool selectorstate[BAND_COUNT];
 	int selectorid = 0;
-	int selectormapping[MODULE_COUNT+1] = {0,1,2,3,4,5,6,7,8,9,10,21,11,13,12,14,18,15,16,17,19,20};
+	int selectormapping[MODULE_COUNT+1] = {0,1,2,3,4,5,6,7,8,9,10,21,11,13,12,14,18,22,15,16,17,19,20};
 
 	editorpreset state[2];
 	float presettransition = 0;

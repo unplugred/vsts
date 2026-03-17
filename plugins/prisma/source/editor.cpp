@@ -291,6 +291,24 @@ PrismaAudioProcessorEditor::PrismaAudioProcessorEditor(PrismaAudioProcessor& p, 
 	modules[21].subknobs.push_back(subknob(20,0,0,27,0.75f));
 	modules[21].subknobs.push_back(subknob(21,0,0,27,0.4f));
 	modules[21].subknobs.push_back(subknob(1));
+	modules[22].name = "Cabinet";
+	modules[22].description = "CABINET adds an impulse response of one of several amplifiers.\nMAY USE HIGH CPU.\nConsider setting quality to low / increasing buffer size."; // TODO
+	modules[22].colors[0] = .39453125f;
+	modules[22].colors[1] = .265625f;
+	modules[22].colors[2] = .3984375f;
+	modules[22].colors[3] = .9375f;
+	modules[22].colors[4] = .828125f;
+	modules[22].colors[5] = .73828125f;
+	modules[22].colors[6] = .89453125f;
+	modules[22].colors[7] = .296875f;
+	modules[22].colors[8] = .3046875f;
+	modules[22].clip = 7;
+	modules[22].res = IR_COUNT;
+	modules[22].subknobs.push_back(  subknob(31,     0,   0, -7,.85f, 4.8f));
+	modules[22].subknobs.push_back(  subknob(32, 8.3f, .9f, 20,.85f, 5.2f));
+	modules[22].subknobs.push_back(  subknob(32,-6.8f, .9f,-10,.85f,-6.2f));
+	modules[22].subknobs.push_back(  subknob(31,     0,   0, 17,.85f,-1.5f));
+	modules[22].subknobs.push_back(  subknob(30,     0,   0, 27, .7f));
 
 	for(int i = 0; i < (MODULE_COUNT+1); ++i)
 		modules[i].description = look_n_feel.add_line_breaks(modules[i].description);
@@ -343,9 +361,12 @@ PrismaAudioProcessorEditor::PrismaAudioProcessorEditor(PrismaAudioProcessor& p, 
 	for(int i = 0; i < (BAND_COUNT-1); ++i) crossoverlerp[i] = state[0].crossover[i];
 
 	for(int m = 0; m < (BAND_COUNT*MAX_MOD); ++m) {
+		float v = state[0].modulesvalues[m].value;
+		if(modules[state[0].modulesvalues[m].id].res > 0)
+			v = round(v*(modules[state[0].modulesvalues[m].id].res-1))/((float)modules[state[0].modulesvalues[m].id].res-1);
 		for(int e = 0; e < modules[state[0].modulesvalues[m].id].subknobs.size(); ++e) {
-			state[0].modulesvalues[m].lerps.push_back(state[0].modulesvalues[m].value);
-			state[0].modulesvalues[m].lerps.push_back(state[0].modulesvalues[m].value);
+			state[0].modulesvalues[m].lerps.push_back(v);
+			state[0].modulesvalues[m].lerps.push_back(v);
 			state[0].modulesvalues[m].lerps.push_back(state[0].modulesvalues[m].valuey);
 		}
 	}
@@ -1429,9 +1450,12 @@ void PrismaAudioProcessorEditor::timerCallback() {
 
 	for(int i = 0; i < (presettransition>0?2:1); ++i) {
 		for(int m = 0; m < (BAND_COUNT*MAX_MOD); ++m) {
+			float v = state[i].modulesvalues[m].value;
+			if(modules[state[i].modulesvalues[m].id].res > 0)
+				v = round(v*(modules[state[i].modulesvalues[m].id].res-1))/((float)modules[state[i].modulesvalues[m].id].res-1);
 			for(int e = 0; e < modules[state[i].modulesvalues[m].id].subknobs.size(); ++e) {
-				state[i].modulesvalues[m].lerps[e*3  ] = state[i].modulesvalues[m].lerps[e*3  ]*modules[state[i].modulesvalues[m].id].subknobs[e].lerprot +state[i].modulesvalues[m].value *(1-modules[state[i].modulesvalues[m].id].subknobs[e].lerprot );
-				state[i].modulesvalues[m].lerps[e*3+1] = state[i].modulesvalues[m].lerps[e*3+1]*modules[state[i].modulesvalues[m].id].subknobs[e].lerpmove+state[i].modulesvalues[m].value *(1-modules[state[i].modulesvalues[m].id].subknobs[e].lerpmove);
+				state[i].modulesvalues[m].lerps[e*3  ] = state[i].modulesvalues[m].lerps[e*3  ]*modules[state[i].modulesvalues[m].id].subknobs[e].lerprot +v                               *(1-modules[state[i].modulesvalues[m].id].subknobs[e].lerprot );
+				state[i].modulesvalues[m].lerps[e*3+1] = state[i].modulesvalues[m].lerps[e*3+1]*modules[state[i].modulesvalues[m].id].subknobs[e].lerpmove+v                               *(1-modules[state[i].modulesvalues[m].id].subknobs[e].lerpmove);
 				state[i].modulesvalues[m].lerps[e*3+2] = state[i].modulesvalues[m].lerps[e*3+2]*modules[state[i].modulesvalues[m].id].subknobs[e].lerpmove+state[i].modulesvalues[m].valuey*(1-modules[state[i].modulesvalues[m].id].subknobs[e].lerpmove);
 			}
 		}
@@ -1572,9 +1596,12 @@ void PrismaAudioProcessorEditor::parameterChanged(const String& parameterID, flo
 		state[0].modulesvalues[b*MAX_MOD+m].lerps.resize(modules[(int)newValue].subknobs.size()*3);
 		if(modules[(int)newValue].xy)
 			state[0].modulesvalues[b*MAX_MOD+m].valuey = audio_processor.valuesy_gui[b][m].get();
+		float v = state[0].modulesvalues[b*MAX_MOD+m].value;
+		if(modules[state[0].modulesvalues[b*MAX_MOD+m].id].res > 0)
+			v = round(v*(modules[state[0].modulesvalues[b*MAX_MOD+m].id].res-1))/((float)modules[state[0].modulesvalues[b*MAX_MOD+m].id].res-1);
 		for(int e = 0; e < modules[(int)newValue].subknobs.size(); ++e) {
-			state[0].modulesvalues[b*MAX_MOD+m].lerps[e*3  ] = state[0].modulesvalues[b*MAX_MOD+m].value;
-			state[0].modulesvalues[b*MAX_MOD+m].lerps[e*3+1] = state[0].modulesvalues[b*MAX_MOD+m].value;
+			state[0].modulesvalues[b*MAX_MOD+m].lerps[e*3  ] = v;
+			state[0].modulesvalues[b*MAX_MOD+m].lerps[e*3+1] = v;
 			state[0].modulesvalues[b*MAX_MOD+m].lerps[e*3+2] = state[0].modulesvalues[b*MAX_MOD+m].valuey;
 		}
 	}
@@ -1629,9 +1656,12 @@ void PrismaAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 				description = "Clair (mostly harmless)";
 			else if(hover <= -2 && hover >= -4)
 				description = "Changes the crossover frequency of the band";
-			else if(hover <= -5 && hover >= -8)
-				description = "Changes the gain of the band's output.\nHold shift to move all band gains at once.";
-			else if(hover == -9)
+			else if(hover <= -5 && hover >= -8) {
+				if(BAND_COUNT > 1)
+					description = "Changes the gain of the band's output.\nHold shift to move all band gains at once.";
+				else
+					description = "Changes the gain of the band's output";
+			} else if(hover == -9)
 				description = "Blends between the original and processed signal";
 			else if(hover == -10)
 				description = "Turns oversampling on/off";

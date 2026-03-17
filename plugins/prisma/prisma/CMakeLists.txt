@@ -54,7 +54,13 @@ juce_add_binary_data("${BaseTargetName}BinaryData" HEADER_NAME BinaryData.h NAME
 	../resources/base.png
 	../resources/elements.png
 	../resources/modules.png
-	../resources/selector.png)
+	../resources/selector.png
+	../impulses/t_5150.wav
+	../impulses/b_5150.wav
+	../impulses/t_boogera.wav
+	../impulses/b_boogera.wav
+	../impulses/b_boogera_click.wav
+	../impulses/bass.wav)
 set_target_properties("${BaseTargetName}BinaryData" PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 
 target_link_libraries("${BaseTargetName}" PRIVATE

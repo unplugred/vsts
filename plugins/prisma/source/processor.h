@@ -88,13 +88,14 @@ public:
 	void set_preset(const String& preset, int preset_id, const char delimiter = ',', bool print_errors = false) override;
 
 	virtual void parameterChanged(const String& parameterID, float newValue);
+	void loadimpulse(int b, int m);
 	void calccross(float* input, float* output);
 	double calcfilter(float val);
 
 	void switchpreset(bool isbb);
 	void copypreset(bool isbb);
 	bool transition = false;
-	
+
 	void recalcactivebands();
 
 	AudioProcessorValueTreeState::ParameterLayout create_parameters();
@@ -125,6 +126,7 @@ private:
 	std::unique_ptr<dsp::Oversampling<float>> os;
 	AudioBuffer<float> osbuffer;
 	std::vector<float*> ospointerarray;
+	int osfactor = 0;
 
 	int channelnum = 0;
 	int samplesperblock = 0;
@@ -140,6 +142,9 @@ private:
 
 	std::array<dsp::StateVariableTPTFilter<float>,BAND_COUNT*MAX_MOD> modulefilters;
 	std::vector<dsp::IIR::Filter<float>> modulepeaks;
+
+	std::vector<std::unique_ptr<dsp::Convolution>> convolver;
+	bool updateir[BAND_COUNT*MAX_MOD];
 
 	std::vector<float> sampleandhold;
 	float holdtime[BAND_COUNT*MAX_MOD];
@@ -210,6 +215,8 @@ static std::function<String(int v, int max)> toid = [](int v, int max) {
 			return (String)"Stereo DC";
 		case 21:
 			return (String)"Ring mod";
+		case 22:
+			return (String)"Cabinet";
 	}
 	return String(v);
 };
@@ -235,8 +242,11 @@ static std::function<String(int v, int max)> toid = [](int v, int max) {
 // STereorectify S+R!RUS
 // stereodc S+D
 // RIng  MOd/.M
+// CAbinet/.C
 static std::function<int(const String& s)> fromid = [](const String& s) {
 	String lower = s.toLowerCase();
+	if(lower.contains("ca") || lower.startsWith("c"))
+		return 22;
 	if(lower.contains("ri") || lower.contains("mo") || lower.startsWith("m"))
 		return 21;
 	if(lower.contains("s") && lower.contains("d") && !lower.contains("sa") && !lower.contains("di"))

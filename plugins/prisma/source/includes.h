@@ -4,10 +4,11 @@
 #include "BinaryData.h"
 using namespace juce;
 
-#define MODULE_COUNT 21
+#define MODULE_COUNT 22
 #define MIN_MOD 1
 #define MAX_MOD 8
 #define DEF_MOD 4
+#define IR_COUNT 6
 
 #ifdef PRISMON
 #define BAND_COUNT 1

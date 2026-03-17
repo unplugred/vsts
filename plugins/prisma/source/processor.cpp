@@ -170,16 +170,6 @@ void PrismaAudioProcessor::changechannelnum(int newchannelnum) {
 void PrismaAudioProcessor::reseteverything() {
 	if(channelnum <= 0 || samplesperblock <= 0) return;
 
-	dsp::ProcessSpec spec;
-	spec.sampleRate = samplerate*(pots.oversampling?2:1);
-	spec.maximumBlockSize = samplesperblock;
-	spec.numChannels = channelnum;
-
-	dsp::ProcessSpec monospec;
-	monospec.sampleRate = samplerate*(pots.oversampling?2:1);
-	monospec.maximumBlockSize = samplesperblock;
-	monospec.numChannels = 1;
-
 	if(BAND_COUNT > 1) {
 		//fft
 		nextFFTBlockReady = false;
@@ -188,43 +178,8 @@ void PrismaAudioProcessor::reseteverything() {
 		fifoIndex = 0;
 
 		//crossover filters
-		for(int i = 0; i < filtercount; ++i) {
+		for(int i = 0; i < filtercount; ++i)
 			crossover[i].reset();
-			crossover[i].prepare(spec);
-		}
-		int startindex = 0;
-		int currentfilter = 0;
-		for(int b = 0; b < BAND_COUNT; ++b) {
-			int index = startindex;
-			if(b >= 1) {
-				//STAGE 1 - HIGHPASS
-				//debug("HP BAND "+((String)b)+" CROSS "+((String)index));
-				crossover[currentfilter].setCutoffFrequency(calcfilter(state[pots.isb?1:0].crossover[index]));
-				crossover[currentfilter].setType(dsp::LinkwitzRileyFilterType::highpass);
-				++index;
-				++currentfilter;
-
-				//STAGE 2 - COPY
-				//if(index < (BAND_COUNT-1)) debug("COPY BAND "+((String)b)+" TO "+((String)(b+1)));
-				startindex = index;
-			}
-			if(index < (BAND_COUNT-1)) {
-				//STAGE 3 - LOWPASS
-				//debug("LP BAND "+((String)b)+" CROSS "+((String)index));
-				crossover[currentfilter].setCutoffFrequency(calcfilter(state[pots.isb?1:0].crossover[index]));
-				crossover[currentfilter].setType(dsp::LinkwitzRileyFilterType::lowpass);
-				++index;
-				++currentfilter;
-			}
-			while(index < (BAND_COUNT-1)) {
-				//STAGE 4 - ALLPASS
-				//debug("AP BAND "+((String)b)+" CROSS "+((String)index));
-				crossover[currentfilter].setCutoffFrequency(calcfilter(state[pots.isb?1:0].crossover[index]));
-				crossover[currentfilter].setType(dsp::LinkwitzRileyFilterType::allpass);
-				++index;
-				++currentfilter;
-			}
-		}
 	}
 
 	for(int b = 0; b < BAND_COUNT; ++b) {
@@ -234,10 +189,6 @@ void PrismaAudioProcessor::reseteverything() {
 
 			//sample divide
 			holdtime[b*MAX_MOD+m] = 0;
-
-			//parameter smoothing
-			pots.bands[b].modules[m].value.reset(samplerate*(pots.oversampling?2:1),.001f);
-			pots.bands[b].modules[m].valuey.reset(samplerate*(pots.oversampling?2:1),.001f);
 		}
 	}
 
@@ -247,11 +198,14 @@ void PrismaAudioProcessor::reseteverything() {
 	//peak
 	modulepeaks.resize(channelnum*BAND_COUNT*MAX_MOD);
 
-	//dc filter
-	dcfilter.init(samplerate*(pots.oversampling?2:1),BAND_COUNT*channelnum);
-
 	//declick
 	declick.resize(channelnum*BAND_COUNT);
+
+	//convolver
+	if(channelnum > 2)
+		convolver.resize(BAND_COUNT*MAX_MOD*channelnum);
+	else
+		convolver.resize(BAND_COUNT*MAX_MOD);
 
 	for(int b = 0; b < BAND_COUNT; ++b) {
 		for(int c = 0; c < channelnum; ++c) {
@@ -259,28 +213,26 @@ void PrismaAudioProcessor::reseteverything() {
 			for(int m = 0; m < MAX_MOD; ++m)
 				sampleandhold[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m] = 0;
 
-			//dc filter
-			dcfilter.reset(b*channelnum+c);
-
 			//declick
 			declick[c*BAND_COUNT+b] = 0;
 		}
 		declickprogress[b] = 0;
 
 		for(int m = 0; m < MAX_MOD; ++m) {
-			//lowpass+highpass+peak modules
+			//lowpass+highpass modules
 			if(state[pots.isb?1:0].id[b][m] == 15 || state[pots.isb?1:0].id[b][m] == 16) {
-				modulefilters[b*MAX_MOD+m].prepare(spec);
-				modulefilters[b*MAX_MOD+m].setType(state[pots.isb?1:0].id[b][m] == 15 ? dsp::StateVariableTPTFilterType::lowpass : dsp::StateVariableTPTFilterType::highpass);
-				modulefilters[b*MAX_MOD+m].setResonance(state[pots.isb?1:0].id[b][m] == 15 ? 1.2 : 1.1);
 				modulefilters[b*MAX_MOD+m].reset();
+			//peak modules
 			} else if(state[pots.isb?1:0].id[b][m] == 17) {
-				dsp::IIR::Coefficients<float>::Ptr coefficients = dsp::IIR::Coefficients<float>::makePeakFilter(samplerate*(pots.oversampling?2:1),calcfilter(state[pots.isb?1:0].values[b][m]),1.5f,Decibels::decibelsToGain(state[pots.isb?1:0].valuesy[b][m]*30.f));
-				for(int c = 0; c < channelnum; ++c) {
-					modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].prepare(monospec);
-					*modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].coefficients = *coefficients;
+				for(int c = 0; c < channelnum; ++c)
 					modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].reset();
-				}
+			//convolver modules
+			} else if(state[pots.isb?1:0].id[b][m] == 22) {
+				if(channelnum > 2)
+					for(int c = 0; c < channelnum; ++c)
+						convolver[(b*MAX_MOD+m)*channelnum+c].reset(new dsp::Convolution{dsp::Convolution::NonUniform{(int)fmax(512,samplesperblock*4)}});
+				else
+					convolver[b*MAX_MOD+m].reset(new dsp::Convolution{dsp::Convolution::NonUniform{(int)fmax(512,samplesperblock*4)}});
 			}
 		}
 	}
@@ -313,20 +265,56 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 	for(auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
 		buffer.clear(i, 0, buffer.getNumSamples());
 
-	bool isoversampling = pots.oversampling;
+	if(osfactor != (pots.oversampling?2:1)) {
+		osfactor = pots.oversampling?2:1;
+		for(int b = 0; b < BAND_COUNT; ++b) {
+			for(int m = 0; m < state[pots.isb?1:0].modulecount; ++m) {
+				if(state[pots.isb?1:0].id[b][m] == 22) {
+					if(channelnum > 2) {
+						dsp::ProcessSpec monospec;
+						monospec.sampleRate = samplerate*osfactor;
+						monospec.maximumBlockSize = samplesperblock*osfactor;
+						monospec.numChannels = 1;
+						for(int c = 0; c < channelnum; ++c) {
+							convolver[(b*MAX_MOD+m)*channelnum+c]->reset();
+							convolver[(b*MAX_MOD+m)*channelnum+c]->prepare(monospec);
+						}
+					} else {
+						dsp::ProcessSpec spec;
+						spec.sampleRate = samplerate*osfactor;
+						spec.maximumBlockSize = samplesperblock*osfactor;
+						spec.numChannels = channelnum;
+						convolver[b*MAX_MOD+m]->reset();
+						convolver[b*MAX_MOD+m]->prepare(spec);
+					}
+					updateir[b*MAX_MOD+m] = true;
+				}
+			}
+		}
+	}
 
 	int numsamples = buffer.getNumSamples();
 	dsp::AudioBlock<float> block(buffer);
-	if(isoversampling) {
+	if(osfactor > 1) {
 		dsp::AudioBlock<float> osblock = os->processSamplesUp(block);
-		for(int i = 0; i < channelnum; ++i)
-			ospointerarray[i] = osblock.getChannelPointer(i);
+		for(int c = 0; c < channelnum; ++c)
+			ospointerarray[c] = osblock.getChannelPointer(c);
 		osbuffer = AudioBuffer<float>(ospointerarray.data(), channelnum, static_cast<int>(osblock.getNumSamples()));
 		numsamples = osbuffer.getNumSamples();
 	}
 
 	for(int b = 0; b < BAND_COUNT; ++b) {
-		if(isoversampling) filterbuffers[b] = osbuffer;
+		for(int m = 0; m < state[pots.isb?1:0].modulecount; ++m) {
+			if(updateir[b*MAX_MOD+m] && state[pots.isb?1:0].id[b][m] == 22) {
+				updateir[b*MAX_MOD+m] = false;
+				state[pots.isb?1:0].values[b][m] = round(presets[currentpreset].values[b][m]*(IR_COUNT-1))/((float)IR_COUNT-1);
+				loadimpulse(b,m);
+			}
+		}
+	}
+
+	for(int b = 0; b < fmin(2,BAND_COUNT); ++b) {
+		if(osfactor > 1) filterbuffers[b] = osbuffer;
 		else filterbuffers[b] = buffer;
 	}
 	if(BAND_COUNT > 1) {
@@ -371,291 +359,318 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 		dryChannelData[b] = filterbuffers[b].getArrayOfWritePointers();
 	}
 
-
 	for(int b = 0; b < BAND_COUNT; ++b) {
 		bool newremovedc = false;
 		for(int m = 0; m < state[pots.isb?1:0].modulecount; ++m) {
-			if(state[pots.isb?1:0].id[b][m] != 0) { //NONE
 
-				//SOFT CLIP
-				if(state[pots.isb?1:0].id[b][m] == 1) {
-					for(int s = 0; s < numsamples; ++s) {
-						state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
-						if(state[pots.isb?1:0].values[b][m] > 0) {
-							double val = 1-(1-(pow(1-state[pots.isb?1:0].values[b][m],10)+(1-pow(state[pots.isb?1:0].values[b][m],.2)))*.5)*.99;
+			//NONE
+			if(state[pots.isb?1:0].id[b][m] == 0) {
+				continue;
+
+			//SOFT CLIP
+			} else if(state[pots.isb?1:0].id[b][m] == 1) {
+				for(int s = 0; s < numsamples; ++s) {
+					state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
+					if(state[pots.isb?1:0].values[b][m] > 0) {
+						double val = 1-(1-(pow(1-state[pots.isb?1:0].values[b][m],10)+(1-pow(state[pots.isb?1:0].values[b][m],.2)))*.5)*.99;
+						for(int c = 0; c < channelnum; ++c) {
+							wetChannelData[b][c][s] = (1-pow(1-fmin(fabs((double)wetChannelData[b][c][s]),1),1/val))*(wetChannelData[b][c][s]>0?1:-1)*(1-(1-val)*.92);
+						}
+					}
+				}
+
+			//HARD CLIP
+			} else if(state[pots.isb?1:0].id[b][m] == 2) {
+				for(int s = 0; s < numsamples; ++s) {
+					state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
+					if(state[pots.isb?1:0].values[b][m] > 0) {
+						double val = 1-(1-(pow(1-state[pots.isb?1:0].values[b][m],10)+(1-pow(state[pots.isb?1:0].values[b][m],.2)))*.5)*.99;
+						for(int c = 0; c < channelnum; ++c) {
+							wetChannelData[b][c][s] = fmax(fmin(wetChannelData[b][c][s],val),-val)*(.08/val+.92);
+						}
+					}
+				}
+
+			//HEAVY
+			} else if(state[pots.isb?1:0].id[b][m] == 3) {
+				for(int s = 0; s < numsamples; ++s) {
+					state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
+					if(state[pots.isb?1:0].values[b][m] > 0) {
+						double val = 1-state[pots.isb?1:0].values[b][m]*.99;
+						for(int c = 0; c < channelnum; ++c) {
+							wetChannelData[b][c][s] = pow(fabs((double)wetChannelData[b][c][s]),val)*(wetChannelData[b][c][s]>0?1:-1)*(1-(1-pow(val,2))*.92);
+						}
+					}
+				}
+
+			//ASYM
+			} else if(state[pots.isb?1:0].id[b][m] == 4) {
+				newremovedc = true;
+				for(int s = 0; s < numsamples; ++s) {
+					state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
+					if(state[pots.isb?1:0].values[b][m] > 0) {
+						double val = 1-state[pots.isb?1:0].values[b][m]*.99;
+						for(int c = 0; c < channelnum; ++c) {
+							if(wetChannelData[b][c][s] >= 0)
+								wetChannelData[b][c][s] = pow((double)wetChannelData[b][c][s],val);
+							else
+								wetChannelData[b][c][s] = abs(pow((double)wetChannelData[b][c][s]+1,val))*(wetChannelData[b][c][s]>-1?1:-1)-1;
+							wetChannelData[b][c][s] *= 1-(1-pow(val,1.5))*.86;
+						}
+					}
+				}
+
+			//RECTIFY
+			} else if(state[pots.isb?1:0].id[b][m] == 5) {
+				newremovedc = true;
+				for(int s = 0; s < numsamples; ++s) {
+					state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
+					if(state[pots.isb?1:0].values[b][m] > 0) {
+						for(int c = 0; c < channelnum; ++c) {
+							wetChannelData[b][c][s] = (wetChannelData[b][c][s]*(1-state[pots.isb?1:0].values[b][m])+fabs(wetChannelData[b][c][s])*state[pots.isb?1:0].values[b][m])*(state[pots.isb?1:0].values[b][m]+1);
+						}
+					}
+				}
+
+			//FOLD
+			} else if(state[pots.isb?1:0].id[b][m] == 6) {
+				for(int s = 0; s < numsamples; ++s) {
+					state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
+					if(state[pots.isb?1:0].values[b][m] > 0) {
+						double val = pow(state[pots.isb?1:0].values[b][m],2);
+						for(int c = 0; c < channelnum; ++c) {
+							double amped = fmod(fabs(wetChannelData[b][c][s]*(val*70+1)),4);
+							wetChannelData[b][c][s] = (amped>3?(amped-4):(amped>1?(2-amped):amped))*(wetChannelData[b][c][s]>0?1:-1)*(1-(1-(pow(1-val,40)+(1-pow(val,.2)))*.5)*.92);
+						}
+					}
+				}
+
+			//SINE FOLD
+			} else if(state[pots.isb?1:0].id[b][m] == 7) {
+				for(int s = 0; s < numsamples; ++s) {
+					state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
+					if(state[pots.isb?1:0].values[b][m] > 0) {
+						double val = pow(state[pots.isb?1:0].values[b][m],2);
+						for(int c = 0; c < channelnum; ++c) {
+							wetChannelData[b][c][s] = (sin(((double)wetChannelData[b][c][s])*(val*35+1)*3.14159234129)*fmin(val*5,1)+((double)wetChannelData[b][c][s])*fmax(1-val*5,0))*(1-(1-(pow(1-val,40)+(1-pow(val,.2)))*.5)*.92);
+						}
+					}
+				}
+
+			//ZERO CROSS
+			} else if(state[pots.isb?1:0].id[b][m] == 8) {
+				for(int s = 0; s < numsamples; ++s) {
+					state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
+					if(state[pots.isb?1:0].values[b][m] > 0) {
+						if(state[pots.isb?1:0].values[b][m] == 1) {
+							for(int c = 0; c < channelnum; ++c) wetChannelData[b][c][s] = 0;
+						} else {
+							double cropmount = pow((double)state[pots.isb?1:0].values[b][m],10);
 							for(int c = 0; c < channelnum; ++c) {
-								wetChannelData[b][c][s] = (1-pow(1-fmin(fabs((double)wetChannelData[b][c][s]),1),1/val))*(wetChannelData[b][c][s]>0?1:-1)*(1-(1-val)*.92);
+								wetChannelData[b][c][s] = ((double)wetChannelData[b][c][s]-fmin(fmax((double)wetChannelData[b][c][s],-cropmount),cropmount))/(1-cropmount);
+								if(wetChannelData[b][c][s] > -1 && wetChannelData[b][c][s] < 1)
+									wetChannelData[b][c][s] = wetChannelData[b][c][s]*pow(1-pow(1-abs(wetChannelData[b][c][s]),12.5),(3/(1-state[pots.isb?1:0].values[b][m]*.98))-3);
 							}
 						}
 					}
+				}
 
-				//HARD CLIP
-				} else if(state[pots.isb?1:0].id[b][m] == 2) {
+			//BIT CRUSH
+			} else if(state[pots.isb?1:0].id[b][m] == 9) {
+				for(int s = 0; s < numsamples; ++s) {
+					state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
+					if(state[pots.isb?1:0].values[b][m] > 0) {
+						double val = pow((double)state[pots.isb?1:0].values[b][m],5)*.99+.01;
+						for(int c = 0; c < channelnum; ++c) {
+							wetChannelData[b][c][s] = round(wetChannelData[b][c][s]/val)*val;
+						}
+					}
+				}
+
+			//SAMPLE DIVIDE
+			} else if(state[pots.isb?1:0].id[b][m] == 10) {
+				for(int s = 0; s < numsamples; ++s) {
+					state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
+					if(state[pots.isb?1:0].values[b][m] > 0) {
+						double time = (samplerate*osfactor)/mapToLog10(1-(double)state[pots.isb?1:0].values[b][m],40.0,40000.0);
+						double mix = fmin(fmax(holdtime[b*MAX_MOD+m],0),1);
+						bool isreplacing = ++holdtime[b*MAX_MOD+m] >= time;
+						for(int c = 0; c < channelnum; ++c) {
+							double dry = wetChannelData[b][c][s];
+							wetChannelData[b][c][s] = dry*(1-mix)+sampleandhold[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m]*mix;
+							if(isreplacing) sampleandhold[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m] = dry;
+						}
+						holdtime[b*MAX_MOD+m] = fmod(holdtime[b*MAX_MOD+m],time);
+					}
+				}
+
+			//DC
+			} else if(state[pots.isb?1:0].id[b][m] == 11) {
+				newremovedc = true;
+				for(int s = 0; s < numsamples; ++s) {
+					state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
+					if(state[pots.isb?1:0].values[b][m] != .5f) {
+						for(int c = 0; c < channelnum; ++c) {
+							wetChannelData[b][c][s] += pow((double)state[pots.isb?1:0].values[b][m]*2-1,5)*.5;
+						}
+					}
+				}
+
+			//WIDTH
+			} else if(state[pots.isb?1:0].id[b][m] == 12) {
+				if(channelnum > 1) {
 					for(int s = 0; s < numsamples; ++s) {
 						state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
-						if(state[pots.isb?1:0].values[b][m] > 0) {
-							double val = 1-(1-(pow(1-state[pots.isb?1:0].values[b][m],10)+(1-pow(state[pots.isb?1:0].values[b][m],.2)))*.5)*.99;
-							for(int c = 0; c < channelnum; ++c) {
-								wetChannelData[b][c][s] = fmax(fmin(wetChannelData[b][c][s],val),-val)*(.08/val+.92);
-							}
+						if(state[pots.isb?1:0].values[b][m] != .5f) {
+							double sum = 0;
+							for(int c = 0; c < channelnum; ++c) sum += wetChannelData[b][c][s];
+							sum /= channelnum;
+							for(int c = 0; c < channelnum; ++c)
+								wetChannelData[b][c][s] = sum+(wetChannelData[b][c][s]-sum)*state[pots.isb?1:0].values[b][m]*2;
 						}
 					}
+				}
 
-				//HEAVY
-				} else if(state[pots.isb?1:0].id[b][m] == 3) {
-					for(int s = 0; s < numsamples; ++s) {
-						state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
-						if(state[pots.isb?1:0].values[b][m] > 0) {
-							double val = 1-state[pots.isb?1:0].values[b][m]*.99;
-							for(int c = 0; c < channelnum; ++c) {
-								wetChannelData[b][c][s] = pow(fabs((double)wetChannelData[b][c][s]),val)*(wetChannelData[b][c][s]>0?1:-1)*(1-(1-pow(val,2))*.92);
-							}
+			//GAIN
+			//2,1,1,0.48,22,0.84,13,0,0,0,0,0,0,0,0,0,0,0.5,1,4,
+			} else if(state[pots.isb?1:0].id[b][m] == 13) {
+				for(int s = 0; s < numsamples; ++s) {
+					state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
+					if(state[pots.isb?1:0].values[b][m] != .35f) {
+						for(int c = 0; c < channelnum; ++c) {
+							wetChannelData[b][c][s] *= pow(state[pots.isb?1:0].values[b][m]/.35,2);
 						}
 					}
+				}
 
-				//ASYM
-				} else if(state[pots.isb?1:0].id[b][m] == 4) {
-					newremovedc = true;
-					for(int s = 0; s < numsamples; ++s) {
-						state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
-						if(state[pots.isb?1:0].values[b][m] > 0) {
-							double val = 1-state[pots.isb?1:0].values[b][m]*.99;
-							for(int c = 0; c < channelnum; ++c) {
-								if(wetChannelData[b][c][s] >= 0)
-									wetChannelData[b][c][s] = pow((double)wetChannelData[b][c][s],val);
-								else
-									wetChannelData[b][c][s] = abs(pow((double)wetChannelData[b][c][s]+1,val))*(wetChannelData[b][c][s]>-1?1:-1)-1;
-								wetChannelData[b][c][s] *= 1-(1-pow(val,1.5))*.86;
-							}
-						}
-					}
-
-				//RECTIFY
-				} else if(state[pots.isb?1:0].id[b][m] == 5) {
-					newremovedc = true;
-					for(int s = 0; s < numsamples; ++s) {
-						state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
-						if(state[pots.isb?1:0].values[b][m] > 0) {
-							for(int c = 0; c < channelnum; ++c) {
-								wetChannelData[b][c][s] = (wetChannelData[b][c][s]*(1-state[pots.isb?1:0].values[b][m])+fabs(wetChannelData[b][c][s])*state[pots.isb?1:0].values[b][m])*(state[pots.isb?1:0].values[b][m]+1);
-							}
-						}
-					}
-
-				//FOLD
-				} else if(state[pots.isb?1:0].id[b][m] == 6) {
-					for(int s = 0; s < numsamples; ++s) {
-						state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
-						if(state[pots.isb?1:0].values[b][m] > 0) {
-							double val = pow(state[pots.isb?1:0].values[b][m],2);
-							for(int c = 0; c < channelnum; ++c) {
-								double amped = fmod(fabs(wetChannelData[b][c][s]*(val*70+1)),4);
-								wetChannelData[b][c][s] = (amped>3?(amped-4):(amped>1?(2-amped):amped))*(wetChannelData[b][c][s]>0?1:-1)*(1-(1-(pow(1-val,40)+(1-pow(val,.2)))*.5)*.92);
-							}
-						}
-					}
-
-				//SINE FOLD
-				} else if(state[pots.isb?1:0].id[b][m] == 7) {
-					for(int s = 0; s < numsamples; ++s) {
-						state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
-						if(state[pots.isb?1:0].values[b][m] > 0) {
-							double val = pow(state[pots.isb?1:0].values[b][m],2);
-							for(int c = 0; c < channelnum; ++c) {
-								wetChannelData[b][c][s] = (sin(((double)wetChannelData[b][c][s])*(val*35+1)*3.14159234129)*fmin(val*5,1)+((double)wetChannelData[b][c][s])*fmax(1-val*5,0))*(1-(1-(pow(1-val,40)+(1-pow(val,.2)))*.5)*.92);
-							}
-						}
-					}
-
-				//ZERO CROSS
-				} else if(state[pots.isb?1:0].id[b][m] == 8) {
-					for(int s = 0; s < numsamples; ++s) {
-						state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
-						if(state[pots.isb?1:0].values[b][m] > 0) {
-							if(state[pots.isb?1:0].values[b][m] == 1) {
-								for(int c = 0; c < channelnum; ++c) wetChannelData[b][c][s] = 0;
-							} else {
-								double cropmount = pow((double)state[pots.isb?1:0].values[b][m],10);
-								for(int c = 0; c < channelnum; ++c) {
-									wetChannelData[b][c][s] = ((double)wetChannelData[b][c][s]-fmin(fmax((double)wetChannelData[b][c][s],-cropmount),cropmount))/(1-cropmount);
-									if(wetChannelData[b][c][s] > -1 && wetChannelData[b][c][s] < 1)
-										wetChannelData[b][c][s] = wetChannelData[b][c][s]*pow(1-pow(1-abs(wetChannelData[b][c][s]),12.5),(3/(1-state[pots.isb?1:0].values[b][m]*.98))-3);
-								}
-							}
-						}
-					}
-
-				//BIT CRUSH
-				} else if(state[pots.isb?1:0].id[b][m] == 9) {
-					for(int s = 0; s < numsamples; ++s) {
-						state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
-						if(state[pots.isb?1:0].values[b][m] > 0) {
-							double val = pow((double)state[pots.isb?1:0].values[b][m],5)*.99+.01;
-							for(int c = 0; c < channelnum; ++c) {
-								wetChannelData[b][c][s] = round(wetChannelData[b][c][s]/val)*val;
-							}
-						}
-					}
-
-				//SAMPLE DIVIDE
-				} else if(state[pots.isb?1:0].id[b][m] == 10) {
-					for(int s = 0; s < numsamples; ++s) {
-						state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
-						if(state[pots.isb?1:0].values[b][m] > 0) {
-							double time = (samplerate*(pots.oversampling?2:1))/mapToLog10(1-(double)state[pots.isb?1:0].values[b][m],40.0,40000.0);
-							double mix = fmin(fmax(holdtime[b*MAX_MOD+m],0),1);
-							bool isreplacing = ++holdtime[b*MAX_MOD+m] >= time;
-							for(int c = 0; c < channelnum; ++c) {
-								double dry = wetChannelData[b][c][s];
-								wetChannelData[b][c][s] = dry*(1-mix)+sampleandhold[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m]*mix;
-								if(isreplacing) sampleandhold[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m] = dry;
-							}
-							holdtime[b*MAX_MOD+m] = fmod(holdtime[b*MAX_MOD+m],time);
-						}
-					}
-
-				//DC
-				} else if(state[pots.isb?1:0].id[b][m] == 11) {
-					newremovedc = true;
+			//PAN
+			} else if(state[pots.isb?1:0].id[b][m] == 14) {
+				if(channelnum > 1) {
 					for(int s = 0; s < numsamples; ++s) {
 						state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
 						if(state[pots.isb?1:0].values[b][m] != .5f) {
 							for(int c = 0; c < channelnum; ++c) {
-								wetChannelData[b][c][s] += pow((double)state[pots.isb?1:0].values[b][m]*2-1,5)*.5;
+								double linearpan = (((double)c)/(channelnum-1))*(state[pots.isb?1:0].values[b][m]*2-1)+(1-state[pots.isb?1:0].values[b][m]);
+								wetChannelData[b][c][s] *= sin(linearpan*1.5707963268)*.7071067812+linearpan;
 							}
 						}
 					}
+				}
 
-				//WIDTH
-				} else if(state[pots.isb?1:0].id[b][m] == 12) {
-					if(channelnum > 1) {
-						for(int s = 0; s < numsamples; ++s) {
-							state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
-							if(state[pots.isb?1:0].values[b][m] != .5f) {
-								double sum = 0;
-								for(int c = 0; c < channelnum; ++c) sum += wetChannelData[b][c][s];
-								sum /= channelnum;
-								for(int c = 0; c < channelnum; ++c)
-									wetChannelData[b][c][s] = sum+(wetChannelData[b][c][s]-sum)*state[pots.isb?1:0].values[b][m]*2;
-							}
-						}
+			//LOW PASS + HIGH PASS
+			} else if(state[pots.isb?1:0].id[b][m] == 15 || state[pots.isb?1:0].id[b][m] == 16) {
+				for(int s = 0; s < numsamples; ++s) {
+					state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
+					if(state[pots.isb?1:0].id[b][m] == 15) //low pass
+						modulefilters[b*MAX_MOD+m].setCutoffFrequency(calcfilter(1-state[pots.isb?1:0].values[b][m]));
+					else //high pass
+						modulefilters[b*MAX_MOD+m].setCutoffFrequency(calcfilter(state[pots.isb?1:0].values[b][m]));
+					for(int c = 0; c < channelnum; ++c) {
+						if(std::isinf(wetChannelData[b][c][s]) || std::isnan(wetChannelData[b][c][s]))
+							wetChannelData[b][c][s] = 0;
+						wetChannelData[b][c][s] = modulefilters[b*MAX_MOD+m].processSample(c,wetChannelData[b][c][s]);
 					}
+				}
 
-				//GAIN
-				} else if(state[pots.isb?1:0].id[b][m] == 13) {
-					for(int s = 0; s < numsamples; ++s) {
-						state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
-						if(state[pots.isb?1:0].values[b][m] != .35f) {
-							for(int c = 0; c < channelnum; ++c) {
-								wetChannelData[b][c][s] *= pow(state[pots.isb?1:0].values[b][m]/.35,2);
-							}
-						}
+			//PEAK
+			} else if(state[pots.isb?1:0].id[b][m] == 17) {
+				if(valuesy_gui[b][m].get() != pots.bands[b].modules[m].valuey.getTargetValue()) {
+					presets[currentpreset].valuesy[b][m] = valuesy_gui[b][m].get();
+					pots.bands[b].modules[m].valuey.setTargetValue(presets[currentpreset].valuesy[b][m]);
+				}
+				for(int s = 0; s < numsamples; ++s) {
+					float prevvalx = state[pots.isb?1:0].values[b][m];
+					float prevvaly = state[pots.isb?1:0].valuesy[b][m];
+					state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
+					state[pots.isb?1:0].valuesy[b][m] = pots.bands[b].modules[m].valuey.getNextValue();
+					if(state[pots.isb?1:0].values[b][m] != prevvalx || state[pots.isb?1:0].valuesy[b][m] != prevvaly) {
+						dsp::IIR::Coefficients<float>::Ptr coefficients = dsp::IIR::Coefficients<float>::makePeakFilter(samplerate*osfactor,calcfilter(state[pots.isb?1:0].values[b][m]),1.5f,Decibels::decibelsToGain(state[pots.isb?1:0].valuesy[b][m]*30.f));
+						for(int c = 0; c < channelnum; ++c)
+							*modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].coefficients = *coefficients;
 					}
-
-				//PAN
-				} else if(state[pots.isb?1:0].id[b][m] == 14) {
-					if(channelnum > 1) {
-						for(int s = 0; s < numsamples; ++s) {
-							state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
-							if(state[pots.isb?1:0].values[b][m] != .5f) {
-								for(int c = 0; c < channelnum; ++c) {
-									double linearpan = (((double)c)/(channelnum-1))*(state[pots.isb?1:0].values[b][m]*2-1)+(1-state[pots.isb?1:0].values[b][m]);
-									wetChannelData[b][c][s] *= sin(linearpan*1.5707963268)*.7071067812+linearpan;
-								}
-							}
-						}
+					for(int c = 0; c < channelnum; ++c) {
+						if(std::isinf(wetChannelData[b][c][s]) || std::isnan(wetChannelData[b][c][s]))
+							wetChannelData[b][c][s] = 0;
+						wetChannelData[b][c][s] = modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].processSample(wetChannelData[b][c][s]);
 					}
+				}
 
-				//LOW PASS + HIGH PASS
-				} else if(state[pots.isb?1:0].id[b][m] == 15 || state[pots.isb?1:0].id[b][m] == 16) {
-					for(int s = 0; s < numsamples; ++s) {
-						state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
-						if(state[pots.isb?1:0].id[b][m] == 15) //low pass
-							modulefilters[b*MAX_MOD+m].setCutoffFrequency(calcfilter(1-state[pots.isb?1:0].values[b][m]));
-						else //high pass
-							modulefilters[b*MAX_MOD+m].setCutoffFrequency(calcfilter(state[pots.isb?1:0].values[b][m]));
+			//DRY WET
+			} else if(state[pots.isb?1:0].id[b][m] == 18) {
+				for(int s = 0; s < numsamples; ++s) {
+					state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
+					if(state[pots.isb?1:0].values[b][m] > 0) {
 						for(int c = 0; c < channelnum; ++c) {
-							if(std::isinf(wetChannelData[b][c][s]) || std::isnan(wetChannelData[b][c][s]))
-								wetChannelData[b][c][s] = 0;
-							wetChannelData[b][c][s] = modulefilters[b*MAX_MOD+m].processSample(c,wetChannelData[b][c][s]);
+							wetChannelData[b][c][s] = wetChannelData[b][c][s]*(1-state[pots.isb?1:0].values[b][m])+dryChannelData[b][c][s]*state[pots.isb?1:0].values[b][m];
 						}
 					}
+				}
 
-				//PEAK
-				} else if(state[pots.isb?1:0].id[b][m] == 17) {
-					if(valuesy_gui[b][m].get() != pots.bands[b].modules[m].valuey.getTargetValue()) {
-						presets[currentpreset].valuesy[b][m] = valuesy_gui[b][m].get();
-						pots.bands[b].modules[m].valuey.setTargetValue(presets[currentpreset].valuesy[b][m]);
-					}
-					for(int s = 0; s < numsamples; ++s) {
-						float prevvalx = state[pots.isb?1:0].values[b][m];
-						float prevvaly = state[pots.isb?1:0].valuesy[b][m];
-						state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
-						state[pots.isb?1:0].valuesy[b][m] = pots.bands[b].modules[m].valuey.getNextValue();
-						if(state[pots.isb?1:0].values[b][m] != prevvalx || state[pots.isb?1:0].valuesy[b][m] != prevvaly) {
-							dsp::IIR::Coefficients<float>::Ptr coefficients = dsp::IIR::Coefficients<float>::makePeakFilter(samplerate*(pots.oversampling?2:1),calcfilter(state[pots.isb?1:0].values[b][m]),1.5f,Decibels::decibelsToGain(state[pots.isb?1:0].valuesy[b][m]*30.f));
-							for(int c = 0; c < channelnum; ++c)
-								*modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].coefficients = *coefficients;
-						}
-						for(int c = 0; c < channelnum; ++c) {
-							if(std::isinf(wetChannelData[b][c][s]) || std::isnan(wetChannelData[b][c][s]))
-								wetChannelData[b][c][s] = 0;
-							wetChannelData[b][c][s] = modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].processSample(wetChannelData[b][c][s]);
-						}
-					}
-
-				//DRY WET
-				} else if(state[pots.isb?1:0].id[b][m] == 18) {
+			//STEREO RECTIFY
+			} else if(state[pots.isb?1:0].id[b][m] == 19) {
+				if(channelnum > 1) {
+					newremovedc = true;
+					double channeloffset = 0;
 					for(int s = 0; s < numsamples; ++s) {
 						state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
 						if(state[pots.isb?1:0].values[b][m] > 0) {
 							for(int c = 0; c < channelnum; ++c) {
-								wetChannelData[b][c][s] = wetChannelData[b][c][s]*(1-state[pots.isb?1:0].values[b][m])+dryChannelData[b][c][s]*state[pots.isb?1:0].values[b][m];
-							}
-						}
-					}
-
-				//STEREO RECTIFY
-				} else if(state[pots.isb?1:0].id[b][m] == 19) {
-					if(channelnum > 1) {
-						newremovedc = true;
-						double channeloffset = 0;
-						for(int s = 0; s < numsamples; ++s) {
-							state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
-							if(state[pots.isb?1:0].values[b][m] > 0) {
-								for(int c = 0; c < channelnum; ++c) {
-									channeloffset = (((double)c)/(channelnum-1))-.5;
-									wetChannelData[b][c][s] = wetChannelData[b][c][s]*(state[pots.isb?1:0].values[b][m]*channeloffset*2*(wetChannelData[b][c][s]>0?1:-1)+1);
-								}
-							}
-						}
-					}
-
-				//STEREO DC
-				} else if(state[pots.isb?1:0].id[b][m] == 20) {
-					if(channelnum > 1) {
-						newremovedc = true;
-						double channeloffset = 0;
-						for(int s = 0; s < numsamples; ++s) {
-							state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
-							for(int c = 0; c < channelnum; ++c) {
 								channeloffset = (((double)c)/(channelnum-1))-.5;
-								wetChannelData[b][c][s] += pow((double)state[pots.isb?1:0].values[b][m],5)*channeloffset;
+								wetChannelData[b][c][s] = wetChannelData[b][c][s]*(state[pots.isb?1:0].values[b][m]*channeloffset*2*(wetChannelData[b][c][s]>0?1:-1)+1);
 							}
-						}
-					}
-
-				//RING MOD
-				} else if(state[pots.isb?1:0].id[b][m] == 21) {
-					for(int s = 0; s < numsamples; ++s) {
-						state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
-						ringmod[b*MAX_MOD+m] = fmod(ringmod[b*MAX_MOD+m]+calcfilter(state[pots.isb?1:0].values[b][m])/(samplerate*(pots.oversampling?2:1)),1.f);
-						double mult = cos(ringmod[b*MAX_MOD+m]*MathConstants<double>::twoPi);
-						for(int c = 0; c < channelnum; ++c) {
-							wetChannelData[b][c][s] *= mult;
 						}
 					}
 				}
+
+			//STEREO DC
+			} else if(state[pots.isb?1:0].id[b][m] == 20) {
+				if(channelnum > 1) {
+					newremovedc = true;
+					double channeloffset = 0;
+					for(int s = 0; s < numsamples; ++s) {
+						state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
+						for(int c = 0; c < channelnum; ++c) {
+							channeloffset = (((double)c)/(channelnum-1))-.5;
+							wetChannelData[b][c][s] += pow((double)state[pots.isb?1:0].values[b][m],5)*channeloffset;
+						}
+					}
+				}
+
+			//RING MOD
+			} else if(state[pots.isb?1:0].id[b][m] == 21) {
+				for(int s = 0; s < numsamples; ++s) {
+					state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
+					ringmod[b*MAX_MOD+m] = fmod(ringmod[b*MAX_MOD+m]+calcfilter(state[pots.isb?1:0].values[b][m])/(samplerate*osfactor),1.f);
+					double mult = cos(ringmod[b*MAX_MOD+m]*MathConstants<double>::twoPi);
+					for(int c = 0; c < channelnum; ++c) {
+						wetChannelData[b][c][s] *= mult;
+					}
+				}
+
+			//CABINET
+			} else if(state[pots.isb?1:0].id[b][m] == 22) {
+				//if(osfactor > 1) {
+				//	TODO downsample
+				//}
+				dsp::AudioBlock<float> wetblock(wetbuffers[b]);
+				if(channelnum > 2) {
+					for(int c = 0; c < channelnum; ++c) {
+						dsp::AudioBlock<float> wetblocksinglechannel = wetblock.getSingleChannelBlock(c);
+						dsp::ProcessContextReplacing<float> context(wetblocksinglechannel);
+						convolver[(b*MAX_MOD+m)*channelnum+c]->process(context);
+					}
+				} else {
+					dsp::ProcessContextReplacing<float> context(wetblock);
+					convolver[b*MAX_MOD+m]->process(context);
+				}
+				for(int c = 0; c < channelnum; ++c) {
+					for(int s = 0; s < numsamples; ++s) {
+						wetChannelData[b][c][s] *= 6;
+					}
+				}
+				//if(osfactor > 1) {
+				//	TODO updsample
+				//}
 			}
 		}
 		for(int s = 0; s < numsamples; ++s) {
@@ -709,7 +724,7 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 		}
 	}
 
-	if(isoversampling) {
+	if(osfactor > 1) {
 		osbuffer.clear();
 		for(int b = 0; b < BAND_COUNT; ++b) for(int c = 0; c < channelnum; ++c)
 			osbuffer.addFrom(c,0,filterbuffers[b],c,0,numsamples);
@@ -730,16 +745,31 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 			else pushNextSampleIntoFifo(avg/channelnum);
 		}
 	}
+
+	for(int b = 0; b < BAND_COUNT; ++b) {
+		for(int m = 0; m < state[pots.isb?1:0].modulecount; ++m) {
+			if(updateir[b*MAX_MOD+m] && state[pots.isb?1:0].id[b][m] != 22) {
+				updateir[b*MAX_MOD+m] = false;
+				if(channelnum > 2)
+					for(int c = 0; c < channelnum; ++c)
+						convolver[(b*MAX_MOD+m)*channelnum+c].reset(nullptr);
+				else
+					convolver[b*MAX_MOD+m].reset(nullptr);
+			}
+		}
+	}
 }
 void PrismaAudioProcessor::setoversampling(bool toggle) {
 	if(!preparedtoplay) return;
 
 	int s = samplerate;
+	int b = samplesperblock;
 	if(toggle) {
 		if(channelnum <= 0) return;
 		os->reset();
 		setLatencySamples(os->getLatencyInSamples());
 		s *= 2;
+		b *= 2;
 	} else setLatencySamples(0);
 
 	for(int b = 0; b < BAND_COUNT; ++b) {
@@ -753,17 +783,52 @@ void PrismaAudioProcessor::setoversampling(bool toggle) {
 
 	dsp::ProcessSpec spec;
 	spec.sampleRate = s;
-	spec.maximumBlockSize = samplesperblock;
+	spec.maximumBlockSize = b;
 	spec.numChannels = channelnum;
 
 	dsp::ProcessSpec monospec;
 	monospec.sampleRate = s;
-	monospec.maximumBlockSize = samplesperblock;
+	monospec.maximumBlockSize = b;
 	monospec.numChannels = 1;
 
-	for(int i = 0; i < filtercount; ++i) crossover[i].prepare(spec);
+	if(BAND_COUNT > 1) {
+		for(int i = 0; i < filtercount; ++i)
+			crossover[i].prepare(spec);
 
-	for(int i = 0; i < filtercount; ++i) crossover[i].prepare(spec);
+		int startindex = 0;
+		int currentfilter = 0;
+		for(int b = 0; b < BAND_COUNT; ++b) {
+			int index = startindex;
+			if(b >= 1) {
+				//STAGE 1 - HIGHPASS
+				//debug("HP BAND "+((String)b)+" CROSS "+((String)index));
+				crossover[currentfilter].setCutoffFrequency(calcfilter(state[pots.isb?1:0].crossover[index]));
+				crossover[currentfilter].setType(dsp::LinkwitzRileyFilterType::highpass);
+				++index;
+				++currentfilter;
+
+				//STAGE 2 - COPY
+				//if(index < (BAND_COUNT-1)) debug("COPY BAND "+((String)b)+" TO "+((String)(b+1)));
+				startindex = index;
+			}
+			if(index < (BAND_COUNT-1)) {
+				//STAGE 3 - LOWPASS
+				//debug("LP BAND "+((String)b)+" CROSS "+((String)index));
+				crossover[currentfilter].setCutoffFrequency(calcfilter(state[pots.isb?1:0].crossover[index]));
+				crossover[currentfilter].setType(dsp::LinkwitzRileyFilterType::lowpass);
+				++index;
+				++currentfilter;
+			}
+			while(index < (BAND_COUNT-1)) {
+				//STAGE 4 - ALLPASS
+				//debug("AP BAND "+((String)b)+" CROSS "+((String)index));
+				crossover[currentfilter].setCutoffFrequency(calcfilter(state[pots.isb?1:0].crossover[index]));
+				crossover[currentfilter].setType(dsp::LinkwitzRileyFilterType::allpass);
+				++index;
+				++currentfilter;
+			}
+		}
+	}
 
 	for(int b = 0; b < BAND_COUNT; ++b) {
 		for(int m = 0; m < MAX_MOD; ++m) {
@@ -1117,27 +1182,52 @@ void PrismaAudioProcessor::parameterChanged(const String& parameterID, float new
 					if(state[pots.isb?1:0].id[b][m] == 10) {
 						holdtime[b*MAX_MOD+m] = 0;
 						for(int c = 0; c < channelnum; ++c) sampleandhold[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m] = 0;
-					} else if((state[pots.isb?1:0].id[b][m] == 15 || state[pots.isb?1:0].id[b][m] == 16) && channelnum > 0 && samplesperblock > 0) {
-						dsp::ProcessSpec spec;
-						spec.sampleRate = samplerate*(pots.oversampling?2:1);
-						spec.maximumBlockSize = samplesperblock;
-						spec.numChannels = channelnum;
-						modulefilters[b*MAX_MOD+m].prepare(spec);
-						modulefilters[b*MAX_MOD+m].setType(state[pots.isb?1:0].id[b][m] == 15 ? dsp::StateVariableTPTFilterType::lowpass : dsp::StateVariableTPTFilterType::highpass);
-						modulefilters[b*MAX_MOD+m].setResonance(state[pots.isb?1:0].id[b][m] == 15 ? 1.2 : 1.1);
-					} else if(state[pots.isb?1:0].id[b][m] == 17) {
-						dsp::ProcessSpec monospec;
-						monospec.sampleRate = samplerate*(pots.oversampling?2:1);
-						monospec.maximumBlockSize = samplesperblock;
-						monospec.numChannels = 1;
-						dsp::IIR::Coefficients<float>::Ptr coefficients = dsp::IIR::Coefficients<float>::makePeakFilter(samplerate*(pots.oversampling?2:1),calcfilter(state[pots.isb?1:0].values[b][m]),1.5f,Decibels::decibelsToGain(state[pots.isb?1:0].valuesy[b][m]*30.f));
-						for(int c = 0; c < channelnum; ++c) {
-							modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].prepare(monospec);
-							*modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].coefficients = *coefficients;
-						}
 					} else if(state[pots.isb?1:0].id[b][m] == 21) {
 						ringmod[b*MAX_MOD+m] = 0;
+					} else if(channelnum > 0 && samplesperblock > 0) {
+						if(state[pots.isb?1:0].id[b][m] == 15 || state[pots.isb?1:0].id[b][m] == 16) {
+							dsp::ProcessSpec spec;
+							spec.sampleRate = samplerate*(pots.oversampling?2:1);
+							spec.maximumBlockSize = samplesperblock*(pots.oversampling?2:1);
+							spec.numChannels = channelnum;
+							modulefilters[b*MAX_MOD+m].prepare(spec);
+							modulefilters[b*MAX_MOD+m].setType(state[pots.isb?1:0].id[b][m] == 15 ? dsp::StateVariableTPTFilterType::lowpass : dsp::StateVariableTPTFilterType::highpass);
+							modulefilters[b*MAX_MOD+m].setResonance(state[pots.isb?1:0].id[b][m] == 15 ? 1.2 : 1.1);
+						} else if(state[pots.isb?1:0].id[b][m] == 17) {
+							dsp::ProcessSpec monospec;
+							monospec.sampleRate = samplerate*(pots.oversampling?2:1);
+							monospec.maximumBlockSize = samplesperblock*(pots.oversampling?2:1);
+							monospec.numChannels = 1;
+							dsp::IIR::Coefficients<float>::Ptr coefficients = dsp::IIR::Coefficients<float>::makePeakFilter(samplerate*(pots.oversampling?2:1),calcfilter(state[pots.isb?1:0].values[b][m]),1.5f,Decibels::decibelsToGain(state[pots.isb?1:0].valuesy[b][m]*30.f));
+							for(int c = 0; c < channelnum; ++c) {
+								modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].prepare(monospec);
+								*modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].coefficients = *coefficients;
+							}
+						} else if(state[pots.isb?1:0].id[b][m] == 22) {
+							if(channelnum > 2) {
+								dsp::ProcessSpec monospec;
+								monospec.sampleRate = samplerate*(pots.oversampling?2:1);
+								monospec.maximumBlockSize = samplesperblock*(pots.oversampling?2:1);
+								monospec.numChannels = 1;
+								for(int c = 0; c < channelnum; ++c) {
+									convolver[(b*MAX_MOD+m)*channelnum+c].reset(new dsp::Convolution{dsp::Convolution::NonUniform{(int)fmax(512,samplesperblock*4)}});
+									convolver[(b*MAX_MOD+m)*channelnum+c]->reset();
+									convolver[(b*MAX_MOD+m)*channelnum+c]->prepare(monospec);
+								}
+							} else {
+								dsp::ProcessSpec spec;
+								spec.sampleRate = samplerate*(pots.oversampling?2:1);
+								spec.maximumBlockSize = samplesperblock*(pots.oversampling?2:1);
+								spec.numChannels = channelnum;
+								convolver[b*MAX_MOD+m].reset(new dsp::Convolution{dsp::Convolution::NonUniform{(int)fmax(512,samplesperblock*4)}});
+								convolver[b*MAX_MOD+m]->reset();
+								convolver[b*MAX_MOD+m]->prepare(spec);
+							}
+							updateir[b*MAX_MOD+m] = true;
+						}
 					}
+				} else if(channelnum > 0 && samplesperblock > 0) {
+					if(state[pots.isb?1:0].id[b][m] == 22) updateir[b*MAX_MOD+m] = true;
 				}
 			}
 		}
@@ -1220,6 +1310,8 @@ void PrismaAudioProcessor::parameterChanged(const String& parameterID, float new
 	}
 	int m = std::stoi(std::string(1,parameterID.toStdString()[3]));
 	if(parameterID.endsWith("val")) {
+		if(state[pots.isb?1:0].id[b][m] == 22 && round(state[pots.isb?1:0].values[b][m]*(IR_COUNT-1)) != round(newValue*(IR_COUNT-1)))
+			updateir[b*MAX_MOD+m] = true;
 		pots.bands[b].modules[m].value.setTargetValue(newValue);
 		presets[currentpreset].values[b][m] = newValue;
 		return;
@@ -1234,35 +1326,81 @@ void PrismaAudioProcessor::parameterChanged(const String& parameterID, float new
 			if(newValue == 10) {
 				holdtime[b*MAX_MOD+m] = 0;
 				for(int c = 0; c < channelnum; ++c) sampleandhold[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m] = 0;
-			} else if((newValue == 15 || newValue == 16) && channelnum > 0 && samplesperblock > 0) {
-				dsp::ProcessSpec spec;
-				spec.sampleRate = samplerate*(pots.oversampling?2:1);
-				spec.maximumBlockSize = samplesperblock;
-				spec.numChannels = channelnum;
-				modulefilters[b*MAX_MOD+m].prepare(spec);
-				modulefilters[b*MAX_MOD+m].setType(newValue == 15 ? dsp::StateVariableTPTFilterType::lowpass : dsp::StateVariableTPTFilterType::highpass);
-				modulefilters[b*MAX_MOD+m].setResonance(state[pots.isb?1:0].id[b][m] == 15 ? 1.2 : 1.1);
-			} else if(newValue == 17) {
-				state[pots.isb?1:0].valuesy[b][m] = valuesy_gui[b][m].get();
-				presets[currentpreset].valuesy[b][m] = state[pots.isb?1:0].valuesy[b][m];
-				pots.bands[b].modules[m].valuey.setCurrentAndTargetValue(state[pots.isb?1:0].valuesy[b][m]);
-				dsp::ProcessSpec monospec;
-				monospec.sampleRate = samplerate*(pots.oversampling?2:1);
-				monospec.maximumBlockSize = samplesperblock;
-				monospec.numChannels = 1;
-				dsp::IIR::Coefficients<float>::Ptr coefficients = dsp::IIR::Coefficients<float>::makePeakFilter(samplerate*(pots.oversampling?2:1),calcfilter(state[pots.isb?1:0].values[b][m]),1.5f,Decibels::decibelsToGain(state[pots.isb?1:0].valuesy[b][m]*30.f));
-				for(int c = 0; c < channelnum; ++c) {
-					modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].prepare(monospec);
-					*modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].coefficients = *coefficients;
-				}
 			} else if(newValue == 21) {
 				ringmod[b*MAX_MOD+m] = 0;
+			} else if(channelnum > 0 && samplesperblock > 0) {
+				if(newValue == 15 || newValue == 16) {
+					dsp::ProcessSpec spec;
+					spec.sampleRate = samplerate*(pots.oversampling?2:1);
+					spec.maximumBlockSize = samplesperblock*(pots.oversampling?2:1);
+					spec.numChannels = channelnum;
+					modulefilters[b*MAX_MOD+m].prepare(spec);
+					modulefilters[b*MAX_MOD+m].setType(newValue==15?dsp::StateVariableTPTFilterType::lowpass:dsp::StateVariableTPTFilterType::highpass);
+					modulefilters[b*MAX_MOD+m].setResonance(state[pots.isb?1:0].id[b][m]==15?1.2:1.1);
+				} else if(newValue == 17) {
+					state[pots.isb?1:0].valuesy[b][m] = valuesy_gui[b][m].get();
+					presets[currentpreset].valuesy[b][m] = state[pots.isb?1:0].valuesy[b][m];
+					pots.bands[b].modules[m].valuey.setCurrentAndTargetValue(state[pots.isb?1:0].valuesy[b][m]);
+					dsp::ProcessSpec monospec;
+					monospec.sampleRate = samplerate*(pots.oversampling?2:1);
+					monospec.maximumBlockSize = samplesperblock*(pots.oversampling?2:1);
+					monospec.numChannels = 1;
+					dsp::IIR::Coefficients<float>::Ptr coefficients = dsp::IIR::Coefficients<float>::makePeakFilter(samplerate*(pots.oversampling?2:1),calcfilter(state[pots.isb?1:0].values[b][m]),1.5f,Decibels::decibelsToGain(state[pots.isb?1:0].valuesy[b][m]*30.f));
+					for(int c = 0; c < channelnum; ++c) {
+						modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].prepare(monospec);
+						*modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].coefficients = *coefficients;
+					}
+				} else if(newValue == 22) {
+					if(channelnum > 2) {
+						dsp::ProcessSpec monospec;
+						monospec.sampleRate = samplerate*(pots.oversampling?2:1);
+						monospec.maximumBlockSize = samplesperblock*(pots.oversampling?2:1);
+						monospec.numChannels = 1;
+						for(int c = 0; c < channelnum; ++c) {
+							convolver[(b*MAX_MOD+m)*channelnum+c].reset(new dsp::Convolution{dsp::Convolution::NonUniform{(int)fmax(512,samplesperblock*4)}});
+							convolver[(b*MAX_MOD+m)*channelnum+c]->reset();
+							convolver[(b*MAX_MOD+m)*channelnum+c]->prepare(monospec);
+						}
+					} else {
+						dsp::ProcessSpec spec;
+						spec.sampleRate = samplerate*(pots.oversampling?2:1);
+						spec.maximumBlockSize = samplesperblock*(pots.oversampling?2:1);
+						spec.numChannels = channelnum;
+						convolver[b*MAX_MOD+m].reset(new dsp::Convolution{dsp::Convolution::NonUniform{(int)fmax(512,samplesperblock*4)}});
+						convolver[b*MAX_MOD+m]->reset();
+						convolver[b*MAX_MOD+m]->prepare(spec);
+					}
+					updateir[b*MAX_MOD+m] = true;
+				}
+
+				if(state[pots.isb?1:0].id[b][m] == 22) updateir[b*MAX_MOD+m] = true;
 			}
 		}
 
 		state[pots.isb?1:0].id[b][m] = newValue;
 		presets[currentpreset].id[b][m] = newValue;
 		return;
+	}
+}
+void PrismaAudioProcessor::loadimpulse(int b, int m) {
+	int impulse = round(state[pots.isb?1:0].values[b][m]*(IR_COUNT-1));
+	int id = b*MAX_MOD+m;
+	if(channelnum > 2) {
+		for(int c = 0; c < channelnum; ++c) {
+			     if(impulse == 0) convolver[id*channelnum+c]->loadImpulseResponse(BinaryData::b_boogera_wav      ,BinaryData::b_boogera_wavSize      ,dsp::Convolution::Stereo::no,dsp::Convolution::Trim::yes,0,dsp::Convolution::Normalise::yes);
+			else if(impulse == 1) convolver[id*channelnum+c]->loadImpulseResponse(BinaryData::bass_wav           ,BinaryData::bass_wavSize           ,dsp::Convolution::Stereo::no,dsp::Convolution::Trim::yes,0,dsp::Convolution::Normalise::yes);
+			else if(impulse == 2) convolver[id*channelnum+c]->loadImpulseResponse(BinaryData::t_boogera_wav      ,BinaryData::t_boogera_wavSize      ,dsp::Convolution::Stereo::no,dsp::Convolution::Trim::yes,0,dsp::Convolution::Normalise::yes);
+			else if(impulse == 3) convolver[id*channelnum+c]->loadImpulseResponse(BinaryData::b_boogera_click_wav,BinaryData::b_boogera_click_wavSize,dsp::Convolution::Stereo::no,dsp::Convolution::Trim::yes,0,dsp::Convolution::Normalise::yes);
+			else if(impulse == 4) convolver[id*channelnum+c]->loadImpulseResponse(BinaryData::b_5150_wav         ,BinaryData::b_5150_wavSize         ,dsp::Convolution::Stereo::no,dsp::Convolution::Trim::yes,0,dsp::Convolution::Normalise::yes);
+			else if(impulse == 5) convolver[id*channelnum+c]->loadImpulseResponse(BinaryData::t_5150_wav         ,BinaryData::t_5150_wavSize         ,dsp::Convolution::Stereo::no,dsp::Convolution::Trim::yes,0,dsp::Convolution::Normalise::yes);
+		}
+	} else {
+		     if(impulse == 0) convolver[id]->loadImpulseResponse(BinaryData::b_boogera_wav      ,BinaryData::b_boogera_wavSize      ,channelnum==2?dsp::Convolution::Stereo::yes:dsp::Convolution::Stereo::no,dsp::Convolution::Trim::yes,0,dsp::Convolution::Normalise::yes);
+		else if(impulse == 1) convolver[id]->loadImpulseResponse(BinaryData::bass_wav           ,BinaryData::bass_wavSize           ,channelnum==2?dsp::Convolution::Stereo::yes:dsp::Convolution::Stereo::no,dsp::Convolution::Trim::yes,0,dsp::Convolution::Normalise::yes);
+		else if(impulse == 2) convolver[id]->loadImpulseResponse(BinaryData::t_boogera_wav      ,BinaryData::t_boogera_wavSize      ,channelnum==2?dsp::Convolution::Stereo::yes:dsp::Convolution::Stereo::no,dsp::Convolution::Trim::yes,0,dsp::Convolution::Normalise::yes);
+		else if(impulse == 3) convolver[id]->loadImpulseResponse(BinaryData::b_boogera_click_wav,BinaryData::b_boogera_click_wavSize,channelnum==2?dsp::Convolution::Stereo::yes:dsp::Convolution::Stereo::no,dsp::Convolution::Trim::yes,0,dsp::Convolution::Normalise::yes);
+		else if(impulse == 4) convolver[id]->loadImpulseResponse(BinaryData::b_5150_wav         ,BinaryData::b_5150_wavSize         ,channelnum==2?dsp::Convolution::Stereo::yes:dsp::Convolution::Stereo::no,dsp::Convolution::Trim::yes,0,dsp::Convolution::Normalise::yes);
+		else if(impulse == 5) convolver[id]->loadImpulseResponse(BinaryData::t_5150_wav         ,BinaryData::t_5150_wavSize         ,channelnum==2?dsp::Convolution::Stereo::yes:dsp::Convolution::Stereo::no,dsp::Convolution::Trim::yes,0,dsp::Convolution::Normalise::yes);
 	}
 }
 void PrismaAudioProcessor::calccross(float* input, float* output) {
@@ -1299,6 +1437,8 @@ void PrismaAudioProcessor::switchpreset(bool isbb) {
 	for(int b = 0; b < BAND_COUNT; ++b) {
 		for(int m = 0; m < MAX_MOD; ++m) {
 			apvts.getParameter("b"+(String)b+"m"+(String)m+"val")->setValueNotifyingHost(newstate.values[b][m]);
+			if(prevstate.id[b][m] == 22 && newstate.id[b][m] == 22 && round(prevstate.values[b][m]*(IR_COUNT-1)) != round(newstate.values[b][m]*(IR_COUNT-1)))
+				updateir[b*MAX_MOD+m] = true;
 			valuesy_gui[b][m] = newstate.valuesy[b][m];
 			presets[currentpreset].valuesy[b][m] = newstate.valuesy[b][m];
 			apvts.getParameter("b"+(String)b+"m"+(String)m+"id")->setValueNotifyingHost(((float)newstate.id[b][m])/MODULE_COUNT);
