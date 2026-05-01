@@ -1,5 +1,6 @@
 #pragma once
 #include "includes.h"
+#include "oversampling.h"
 #include "dc_filter.h"
 
 struct pluginmodule {
@@ -123,9 +124,7 @@ private:
 	bool preparedtoplay = false;
 	bool saved = false;
 
-	std::unique_ptr<dsp::Oversampling<float>> os;
-	AudioBuffer<float> osbuffer;
-	std::vector<float*> ospointerarray;
+	std::unique_ptr<Oversampling<float>> os;
 	int osfactor = 0;
 
 	int channelnum = 0;
@@ -137,13 +136,15 @@ private:
 
 	int filtercount = 0;
 	std::vector<dsp::LinkwitzRileyFilter<float>> crossover;
-	std::array<juce::AudioBuffer<float>,BAND_COUNT> filterbuffers;
-	std::array<juce::AudioBuffer<float>,BAND_COUNT> wetbuffers;
+	std::array<AudioBuffer<float>,BAND_COUNT> filterbuffers;
+	std::array<AudioBuffer<float>,BAND_COUNT> wetbuffers;
 
 	std::array<dsp::StateVariableTPTFilter<float>,BAND_COUNT*MAX_MOD> modulefilters;
 	std::vector<dsp::IIR::Filter<float>> modulepeaks;
 
 	std::vector<std::unique_ptr<dsp::Convolution>> convolver;
+	std::vector<std::unique_ptr<Oversampling<float>>> convos;
+	AudioBuffer<float> tempbuffer;
 	bool updateir[BAND_COUNT*MAX_MOD];
 
 	std::vector<float> sampleandhold;

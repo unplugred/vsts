@@ -206,6 +206,7 @@ void PrismaAudioProcessor::reseteverything() {
 		convolver.resize(BAND_COUNT*MAX_MOD*channelnum);
 	else
 		convolver.resize(BAND_COUNT*MAX_MOD);
+	convos.resize(BAND_COUNT*MAX_MOD);
 
 	for(int b = 0; b < BAND_COUNT; ++b) {
 		for(int c = 0; c < channelnum; ++c) {
@@ -228,22 +229,46 @@ void PrismaAudioProcessor::reseteverything() {
 					modulepeaks[c*BAND_COUNT*MAX_MOD+b*MAX_MOD+m].reset();
 			//convolver modules
 			} else if(state[pots.isb?1:0].id[b][m] == 22) {
-				if(channelnum > 2)
-					for(int c = 0; c < channelnum; ++c)
+				if(channelnum > 2) {
+					dsp::ProcessSpec monospec;
+					monospec.sampleRate = samplerate;
+					monospec.maximumBlockSize = samplesperblock;
+					monospec.numChannels = 1;
+					for(int c = 0; c < channelnum; ++c) {
 						convolver[(b*MAX_MOD+m)*channelnum+c].reset(new dsp::Convolution{dsp::Convolution::NonUniform{(int)fmax(512,samplesperblock*4)}});
-				else
+						convolver[(b*MAX_MOD+m)*channelnum+c]->reset();
+						convolver[(b*MAX_MOD+m)*channelnum+c]->prepare(monospec);
+					}
+				} else {
+					dsp::ProcessSpec spec;
+					spec.sampleRate = samplerate;
+					spec.maximumBlockSize = samplesperblock;
+					spec.numChannels = channelnum;
 					convolver[b*MAX_MOD+m].reset(new dsp::Convolution{dsp::Convolution::NonUniform{(int)fmax(512,samplesperblock*4)}});
+					convolver[b*MAX_MOD+m]->reset();
+					convolver[b*MAX_MOD+m]->prepare(spec);
+				}
+				updateir[b*MAX_MOD+m] = true;
+				convos[b*MAX_MOD+m].reset(new Oversampling<float>(channelnum,1));
+				convos[b*MAX_MOD+m]->initProcessing(samplesperblock,1);
+				convos[b*MAX_MOD+m]->setUsingIntegerLatency(true);
 			}
 		}
 	}
 
 	//oversampling
 	preparedtoplay = true;
-	ospointerarray.resize(channelnum);
-	os.reset(new dsp::Oversampling<float>(channelnum,1,dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR));
-	os->initProcessing(samplesperblock);
+	os.reset(new Oversampling<float>(channelnum,1));
+	os->initProcessing(samplesperblock,1);
 	os->setUsingIntegerLatency(true);
 	setoversampling(pots.oversampling);
+
+	//buffers
+	for(int b = 0; b < BAND_COUNT; ++b) {
+		filterbuffers[b].setSize(channelnum,samplesperblock*2);
+		wetbuffers   [b].setSize(channelnum,samplesperblock*2);
+		tempbuffer      .setSize(channelnum,samplesperblock  );
+	}
 }
 void PrismaAudioProcessor::releaseResources() { }
 
@@ -265,42 +290,18 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 	for(auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
 		buffer.clear(i, 0, buffer.getNumSamples());
 
-	if(osfactor != (pots.oversampling?2:1)) {
+	if(osfactor != (pots.oversampling?2:1))
 		osfactor = pots.oversampling?2:1;
-		for(int b = 0; b < BAND_COUNT; ++b) {
-			for(int m = 0; m < state[pots.isb?1:0].modulecount; ++m) {
-				if(state[pots.isb?1:0].id[b][m] == 22) {
-					if(channelnum > 2) {
-						dsp::ProcessSpec monospec;
-						monospec.sampleRate = samplerate*osfactor;
-						monospec.maximumBlockSize = samplesperblock*osfactor;
-						monospec.numChannels = 1;
-						for(int c = 0; c < channelnum; ++c) {
-							convolver[(b*MAX_MOD+m)*channelnum+c]->reset();
-							convolver[(b*MAX_MOD+m)*channelnum+c]->prepare(monospec);
-						}
-					} else {
-						dsp::ProcessSpec spec;
-						spec.sampleRate = samplerate*osfactor;
-						spec.maximumBlockSize = samplesperblock*osfactor;
-						spec.numChannels = channelnum;
-						convolver[b*MAX_MOD+m]->reset();
-						convolver[b*MAX_MOD+m]->prepare(spec);
-					}
-					updateir[b*MAX_MOD+m] = true;
-				}
-			}
-		}
-	}
 
 	int numsamples = buffer.getNumSamples();
 	dsp::AudioBlock<float> block(buffer);
 	if(osfactor > 1) {
-		dsp::AudioBlock<float> osblock = os->processSamplesUp(block);
+		numsamples *= 2;
+		dsp::AudioBlock<float> osblock = dsp::AudioBlock<float>(filterbuffers[0]).getSubBlock(0,numsamples);
+		os->processSamplesUp(block,osblock);
+	} else {
 		for(int c = 0; c < channelnum; ++c)
-			ospointerarray[c] = osblock.getChannelPointer(c);
-		osbuffer = AudioBuffer<float>(ospointerarray.data(), channelnum, static_cast<int>(osblock.getNumSamples()));
-		numsamples = osbuffer.getNumSamples();
+			filterbuffers[0].copyFrom(c,0,buffer,c,0,numsamples);
 	}
 
 	for(int b = 0; b < BAND_COUNT; ++b) {
@@ -313,15 +314,13 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 		}
 	}
 
-	for(int b = 0; b < fmin(2,BAND_COUNT); ++b) {
-		if(osfactor > 1) filterbuffers[b] = osbuffer;
-		else filterbuffers[b] = buffer;
-	}
 	if(BAND_COUNT > 1) {
+		for(int c = 0; c < channelnum; ++c)
+			filterbuffers[1].copyFrom(c,0,filterbuffers[0],c,0,numsamples);
 		int startindex = 0;
 		int currentfilter = 0;
 		for(int b = 0; b < BAND_COUNT; ++b) {
-			dsp::AudioBlock<float> filterblock(filterbuffers[b]);
+			dsp::AudioBlock<float> filterblock = dsp::AudioBlock<float>(filterbuffers[b]).getSubBlock(0,numsamples);
 			dsp::ProcessContextReplacing<float> filtercontext(filterblock);
 			int index = startindex;
 			if(b >= 1) {
@@ -332,7 +331,8 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 
 				//STAGE 2 - COPY
 				if(index < (BAND_COUNT-1)) {
-					filterbuffers[b+1] = filterbuffers[b];
+					for(int c = 0; c < channelnum; ++c)
+						filterbuffers[b+1].copyFrom(c,0,filterbuffers[b],c,0,numsamples);
 					startindex = index;
 				}
 			}
@@ -353,10 +353,13 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 
 	float* const* wetChannelData[BAND_COUNT];
 	float* const* dryChannelData[BAND_COUNT];
+	int oversampled[BAND_COUNT];
 	for(int b = 0; b < BAND_COUNT; ++b) {
-		wetbuffers[b] = filterbuffers[b];
+		for(int c = 0; c < channelnum; ++c)
+			wetbuffers[b].copyFrom(c,0,filterbuffers[b],c,0,numsamples);
 		wetChannelData[b] = wetbuffers[b].getArrayOfWritePointers();
 		dryChannelData[b] = filterbuffers[b].getArrayOfWritePointers();
+		oversampled[b] = -1;
 	}
 
 	for(int b = 0; b < BAND_COUNT; ++b) {
@@ -364,11 +367,27 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 		for(int m = 0; m < state[pots.isb?1:0].modulecount; ++m) {
 
 			//NONE
-			if(state[pots.isb?1:0].id[b][m] == 0) {
+			if(state[pots.isb?1:0].id[b][m] == 0)
 				continue;
 
+			if(oversampled[b] >= 0
+					&& state[pots.isb?1:0].id[b][m] != 11 // DC
+					&& state[pots.isb?1:0].id[b][m] != 12 // WIDTH
+					&& state[pots.isb?1:0].id[b][m] != 13 // GAIN
+					&& state[pots.isb?1:0].id[b][m] != 14 // PAN
+					&& state[pots.isb?1:0].id[b][m] != 20 // STEREO DC
+					&& state[pots.isb?1:0].id[b][m] != 22) { // CABINET
+				for(int c = 0; c < channelnum; ++c)
+					tempbuffer.copyFrom(c,0,wetbuffers[b],c,0,numsamples);
+				dsp::AudioBlock<float> tempblock = dsp::AudioBlock<float>(tempbuffer   ).getSubBlock(0,numsamples);
+				numsamples = buffer.getNumSamples()*osfactor;
+				dsp::AudioBlock<float>  wetblock = dsp::AudioBlock<float>(wetbuffers[b]).getSubBlock(0,numsamples);
+				convos[oversampled[b]]->processSamplesUp(tempblock,wetblock);
+				oversampled[b] = -1;
+			}
+
 			//SOFT CLIP
-			} else if(state[pots.isb?1:0].id[b][m] == 1) {
+			       if(state[pots.isb?1:0].id[b][m] == 1) {
 				for(int s = 0; s < numsamples; ++s) {
 					state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
 					if(state[pots.isb?1:0].values[b][m] > 0) {
@@ -532,7 +551,6 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 				}
 
 			//GAIN
-			//2,1,1,0.48,22,0.84,13,0,0,0,0,0,0,0,0,0,0,0.5,1,4,
 			} else if(state[pots.isb?1:0].id[b][m] == 13) {
 				for(int s = 0; s < numsamples; ++s) {
 					state[pots.isb?1:0].values[b][m] = pots.bands[b].modules[m].value.getNextValue();
@@ -649,28 +667,29 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 
 			//CABINET
 			} else if(state[pots.isb?1:0].id[b][m] == 22) {
-				//if(osfactor > 1) {
-				//	TODO downsample
-				//}
-				dsp::AudioBlock<float> wetblock(wetbuffers[b]);
+				dsp::AudioBlock<float> wetblock = dsp::AudioBlock<float>(wetbuffers[b]).getSubBlock(0,numsamples);
+				if(osfactor > 1 && oversampled[b] < 0) {
+					numsamples = buffer.getNumSamples();
+					dsp::AudioBlock<float> tempblock = dsp::AudioBlock<float>(tempbuffer).getSubBlock(0,numsamples);
+					convos[b*MAX_MOD+m]->processSamplesDown(wetblock,tempblock);
+					oversampled[b] = b*MAX_MOD+m;
+					for(int c = 0; c < channelnum; ++c)
+						wetbuffers[b].copyFrom(c,0,tempbuffer,c,0,numsamples);
+				}
 				if(channelnum > 2) {
 					for(int c = 0; c < channelnum; ++c) {
-						dsp::AudioBlock<float> wetblocksinglechannel = wetblock.getSingleChannelBlock(c);
-						dsp::ProcessContextReplacing<float> context(wetblocksinglechannel);
+						dsp::AudioBlock<float> subwetblock = wetblock.getSingleChannelBlock(c).getSubBlock(0,numsamples);
+						dsp::ProcessContextReplacing<float> context(subwetblock);
 						convolver[(b*MAX_MOD+m)*channelnum+c]->process(context);
 					}
 				} else {
-					dsp::ProcessContextReplacing<float> context(wetblock);
+					dsp::AudioBlock<float> subwetblock = wetblock.getSubBlock(0,numsamples);
+					dsp::ProcessContextReplacing<float> context(subwetblock);
 					convolver[b*MAX_MOD+m]->process(context);
 				}
-				for(int c = 0; c < channelnum; ++c) {
-					for(int s = 0; s < numsamples; ++s) {
+				for(int c = 0; c < channelnum; ++c)
+					for(int s = 0; s < numsamples; ++s)
 						wetChannelData[b][c][s] *= 6;
-					}
-				}
-				//if(osfactor > 1) {
-				//	TODO updsample
-				//}
 			}
 		}
 		for(int s = 0; s < numsamples; ++s) {
@@ -684,13 +703,11 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 			removedc[b] = newremovedc;
 			for(int c = 0; c < channelnum; ++c) dcfilter.reset(b*channelnum+c);
 		}
-		if(removedc[b]) {
-			for(int s = 0; s < numsamples; ++s) {
-				for(int c = 0; c < channelnum; ++c) {
+		if(removedc[b])
+			for(int s = 0; s < numsamples; ++s)
+				for(int c = 0; c < channelnum; ++c)
 					wetChannelData[b][c][s] = dcfilter.process(wetChannelData[b][c][s],b*channelnum+c);
-				}
-			}
-		}
+		numsamples = buffer.getNumSamples()*osfactor;
 	}
 
 	for(int s = 0; s < numsamples; ++s) {
@@ -725,11 +742,20 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 	}
 
 	if(osfactor > 1) {
-		osbuffer.clear();
-		for(int b = 0; b < BAND_COUNT; ++b) for(int c = 0; c < channelnum; ++c)
-			osbuffer.addFrom(c,0,filterbuffers[b],c,0,numsamples);
-		os->processSamplesDown(block);
+		wetbuffers[0].clear();
+		for(int b = 0; b < BAND_COUNT; ++b)
+			if(oversampled[b] < 0)
+				for(int c = 0; c < channelnum; ++c)
+					wetbuffers[0].addFrom(c,0,filterbuffers[b],c,0,numsamples);
+
+		dsp::AudioBlock<float> osblock = dsp::AudioBlock<float>(wetbuffers[0]).getSubBlock(0,numsamples);
 		numsamples = buffer.getNumSamples();
+		os->processSamplesDown(osblock,block);
+
+		for(int b = 0; b < BAND_COUNT; ++b)
+			if(oversampled[b] >= 0)
+				for(int c = 0; c < channelnum; ++c)
+					buffer.addFrom(c,0,filterbuffers[b],c,0,numsamples);
 	} else {
 		buffer.clear();
 		for(int b = 0; b < BAND_COUNT; ++b) for(int c = 0; c < channelnum; ++c)
@@ -755,6 +781,7 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 						convolver[(b*MAX_MOD+m)*channelnum+c].reset(nullptr);
 				else
 					convolver[b*MAX_MOD+m].reset(nullptr);
+				convos[b*MAX_MOD+m].reset(nullptr);
 			}
 		}
 	}
@@ -1206,8 +1233,8 @@ void PrismaAudioProcessor::parameterChanged(const String& parameterID, float new
 						} else if(state[pots.isb?1:0].id[b][m] == 22) {
 							if(channelnum > 2) {
 								dsp::ProcessSpec monospec;
-								monospec.sampleRate = samplerate*(pots.oversampling?2:1);
-								monospec.maximumBlockSize = samplesperblock*(pots.oversampling?2:1);
+								monospec.sampleRate = samplerate;
+								monospec.maximumBlockSize = samplesperblock;
 								monospec.numChannels = 1;
 								for(int c = 0; c < channelnum; ++c) {
 									convolver[(b*MAX_MOD+m)*channelnum+c].reset(new dsp::Convolution{dsp::Convolution::NonUniform{(int)fmax(512,samplesperblock*4)}});
@@ -1216,14 +1243,17 @@ void PrismaAudioProcessor::parameterChanged(const String& parameterID, float new
 								}
 							} else {
 								dsp::ProcessSpec spec;
-								spec.sampleRate = samplerate*(pots.oversampling?2:1);
-								spec.maximumBlockSize = samplesperblock*(pots.oversampling?2:1);
+								spec.sampleRate = samplerate;
+								spec.maximumBlockSize = samplesperblock;
 								spec.numChannels = channelnum;
 								convolver[b*MAX_MOD+m].reset(new dsp::Convolution{dsp::Convolution::NonUniform{(int)fmax(512,samplesperblock*4)}});
 								convolver[b*MAX_MOD+m]->reset();
 								convolver[b*MAX_MOD+m]->prepare(spec);
 							}
 							updateir[b*MAX_MOD+m] = true;
+							convos[b*MAX_MOD+m].reset(new Oversampling<float>(channelnum,1));
+							convos[b*MAX_MOD+m]->initProcessing(samplesperblock,1);
+							convos[b*MAX_MOD+m]->setUsingIntegerLatency(true);
 						}
 					}
 				} else if(channelnum > 0 && samplesperblock > 0) {
@@ -1353,8 +1383,8 @@ void PrismaAudioProcessor::parameterChanged(const String& parameterID, float new
 				} else if(newValue == 22) {
 					if(channelnum > 2) {
 						dsp::ProcessSpec monospec;
-						monospec.sampleRate = samplerate*(pots.oversampling?2:1);
-						monospec.maximumBlockSize = samplesperblock*(pots.oversampling?2:1);
+						monospec.sampleRate = samplerate;
+						monospec.maximumBlockSize = samplesperblock;
 						monospec.numChannels = 1;
 						for(int c = 0; c < channelnum; ++c) {
 							convolver[(b*MAX_MOD+m)*channelnum+c].reset(new dsp::Convolution{dsp::Convolution::NonUniform{(int)fmax(512,samplesperblock*4)}});
@@ -1363,14 +1393,17 @@ void PrismaAudioProcessor::parameterChanged(const String& parameterID, float new
 						}
 					} else {
 						dsp::ProcessSpec spec;
-						spec.sampleRate = samplerate*(pots.oversampling?2:1);
-						spec.maximumBlockSize = samplesperblock*(pots.oversampling?2:1);
+						spec.sampleRate = samplerate;
+						spec.maximumBlockSize = samplesperblock;
 						spec.numChannels = channelnum;
 						convolver[b*MAX_MOD+m].reset(new dsp::Convolution{dsp::Convolution::NonUniform{(int)fmax(512,samplesperblock*4)}});
 						convolver[b*MAX_MOD+m]->reset();
 						convolver[b*MAX_MOD+m]->prepare(spec);
 					}
 					updateir[b*MAX_MOD+m] = true;
+					convos[b*MAX_MOD+m].reset(new Oversampling<float>(channelnum,1));
+					convos[b*MAX_MOD+m]->initProcessing(samplesperblock,1);
+					convos[b*MAX_MOD+m]->setUsingIntegerLatency(true);
 				}
 
 				if(state[pots.isb?1:0].id[b][m] == 22) updateir[b*MAX_MOD+m] = true;
@@ -1495,23 +1528,23 @@ AudioProcessorValueTreeState::ParameterLayout PrismaAudioProcessor::create_param
 			name = "High Mid ";
 		}
 		for(int m = 0; m < MAX_MOD; ++m) {
-			parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b"+((String)b)+"m"+((String)m)+"val"	,1},name+"Module "+((String)(m+1))+" Value"	,juce::NormalisableRange<float>( 0.0f	,1.0f			),0.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
-			parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"b"+((String)b)+"m"+((String)m)+"id"	,1},name+"Module "+((String)(m+1))+" Type"									,0		,MODULE_COUNT	 ,0		,""												,toid			,fromid			));
+			parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b"+((String)b)+"m"+((String)m)+"val"	,1},name+"Module "+((String)(m+1))+" Value"	,NormalisableRange<float>(	 0.0f	,1.0f			),0.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
+			parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"b"+((String)b)+"m"+((String)m)+"id"	,1},name+"Module "+((String)(m+1))+" Type"								,0		,MODULE_COUNT	 ,0		,""												,toid			,fromid			));
 		}
 		if(b >= 1) {
 			float def = ((float)b)/BAND_COUNT;
-			parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b"+((String)b)+"cross"				,1},name+"Crossover"						,juce::NormalisableRange<float>( 0.0f	,1.0f			),def	,"",AudioProcessorParameter::genericParameter	,tocross		,fromcross		));
+			parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"b"+((String)b)+"cross"				,1},name+"Crossover"						,NormalisableRange<float>(	 0.0f	,1.0f			),def	,"",AudioProcessorParameter::genericParameter	,tocross		,fromcross		));
 		}
-		parameters.push_back(	std::make_unique<AudioParameterFloat	>(ParameterID{"b"+((String)b)+"gain"				,1},name+"Gain"								,juce::NormalisableRange<float>( 0.0f	,1.0f			),0.5f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
+		parameters.push_back(	std::make_unique<AudioParameterFloat	>(ParameterID{"b"+((String)b)+"gain"				,1},name+"Gain"								,NormalisableRange<float>(	 0.0f	,1.0f			),0.5f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
 		if(BAND_COUNT > 1) {
-			parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"b"+((String)b)+"mute"				,1},name+"Mute"																						 ,false	,""												,tobool			,frombool		));
-			parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"b"+((String)b)+"solo"				,1},name+"Solo"																						 ,false	,""												,tobool			,frombool		));
-			parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"b"+((String)b)+"bypass"				,1},name+"Bypass"																					 ,false	,""												,tobool			,frombool		));
+			parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"b"+((String)b)+"mute"				,1},name+"Mute"																					 ,false	,""												,tobool			,frombool		));
+			parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"b"+((String)b)+"solo"				,1},name+"Solo"																					 ,false	,""												,tobool			,frombool		));
+			parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"b"+((String)b)+"bypass"				,1},name+"Bypass"																				 ,false	,""												,tobool			,frombool		));
 		}
 	}
-	parameters.push_back(		std::make_unique<AudioParameterFloat	>(ParameterID{"wet"									,1},"Wet"									,juce::NormalisableRange<float>( 0.0f	,1.0f			),1.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
-	parameters.push_back(		std::make_unique<AudioParameterBool		>(ParameterID{"oversampling"						,1},"Quality"																						 ,true	,""												,toquality		,fromquality	));
-	parameters.push_back(		std::make_unique<AudioParameterBool		>(ParameterID{"ab"									,1},"A/B"																							 ,false	,""												,toab			,fromab			));
-	parameters.push_back(		std::make_unique<AudioParameterInt		>(ParameterID{"modulecount"							,1},"Module Count"															,MIN_MOD,MAX_MOD		 ,DEF_MOD																				));
+	parameters.push_back(		std::make_unique<AudioParameterFloat	>(ParameterID{"wet"									,1},"Wet"									,NormalisableRange<float>(	 0.0f	,1.0f			),1.0f	,"",AudioProcessorParameter::genericParameter	,tonormalized	,fromnormalized	));
+	parameters.push_back(		std::make_unique<AudioParameterBool		>(ParameterID{"oversampling"						,1},"Quality"																					 ,true	,""												,toquality		,fromquality	));
+	parameters.push_back(		std::make_unique<AudioParameterBool		>(ParameterID{"ab"									,1},"A/B"																						 ,false	,""												,toab			,fromab			));
+	parameters.push_back(		std::make_unique<AudioParameterInt		>(ParameterID{"modulecount"							,1},"Module Count"														,MIN_MOD,MAX_MOD		 ,DEF_MOD																				));
 	return { parameters.begin(), parameters.end() };
 }

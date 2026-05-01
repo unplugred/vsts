@@ -33,6 +33,7 @@ clap_juce_extensions_plugin(TARGET "${BaseTargetName}"
 target_include_directories("${BaseTargetName}" PRIVATE ../source/)
 target_sources("${BaseTargetName}" PRIVATE
 	../source/dc_filter.cpp
+	../source/oversampling.cpp
 	../source/editor.cpp
 	../source/processor.cpp)
 
