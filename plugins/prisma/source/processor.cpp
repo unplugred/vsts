@@ -710,6 +710,9 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 		numsamples = buffer.getNumSamples()*osfactor;
 	}
 
+	tempbuffer.clear();
+	float* const* tempChannelData = tempbuffer.getArrayOfWritePointers();
+	int numsamplesds = buffer.getNumSamples();
 	for(int s = 0; s < numsamples; ++s) {
 		state[pots.isb?1:0].wet = pots.wet.getNextValue();
 		for(int b = 0; b < BAND_COUNT; ++b) {
@@ -725,10 +728,16 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 				if(declickease < .999f)
 					wetChannelData[b][c][s] = declick[c*BAND_COUNT+b]*(1-declickease)+wetChannelData[b][c][s]*declickease;
 
-				dryChannelData[b][c][s] = (
-					((double)dryChannelData[b][c][s])*(1-state[pots.isb?1:0].wet*(1-pots.bands[b].bypasssmooth))+
-					((double)wetChannelData[b][c][s])*state[pots.isb?1:0].wet*(1-pots.bands[b].bypasssmooth)*pow((double)state[pots.isb?1:0].gain[b]*2,2)
-					)*pots.bands[b].activesmooth;
+				if(oversampled[b] >= 0) {
+					if(s < numsamplesds)
+					tempChannelData  [c][s] += ((double)wetChannelData[b][c][s])*   state[pots.isb?1:0].wet*(1-pots.bands[b].bypasssmooth)*pow((double)state[pots.isb?1:0].gain[b]*2,2)*pots.bands[b].activesmooth;
+					dryChannelData[b][c][s]  = ((double)dryChannelData[b][c][s])*(1-state[pots.isb?1:0].wet*(1-pots.bands[b].bypasssmooth))                                            *pots.bands[b].activesmooth;
+				} else {
+					dryChannelData[b][c][s] = (
+						((double)dryChannelData[b][c][s])*(1-state[pots.isb?1:0].wet*(1-pots.bands[b].bypasssmooth))+
+						((double)wetChannelData[b][c][s])*   state[pots.isb?1:0].wet*(1-pots.bands[b].bypasssmooth)*pow((double)state[pots.isb?1:0].gain[b]*2,2)
+						)*pots.bands[b].activesmooth;
+				}
 			}
 		}
 	}
@@ -736,7 +745,7 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 	for(int b = 0; b < BAND_COUNT; ++b) {
 		if(declickprogress[b] >= .999f) {
 			for(int c = 0; c < channelnum; ++c) {
-				declick[c*BAND_COUNT+b] = wetChannelData[b][c][numsamples-1];
+				declick[c*BAND_COUNT+b] = wetChannelData[b][c][(oversampled[b]>=0?numsamplesds:numsamples)-1];
 			}
 		}
 	}
@@ -744,18 +753,15 @@ void PrismaAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 	if(osfactor > 1) {
 		wetbuffers[0].clear();
 		for(int b = 0; b < BAND_COUNT; ++b)
-			if(oversampled[b] < 0)
-				for(int c = 0; c < channelnum; ++c)
-					wetbuffers[0].addFrom(c,0,filterbuffers[b],c,0,numsamples);
+			for(int c = 0; c < channelnum; ++c)
+				wetbuffers[0].addFrom(c,0,filterbuffers[b],c,0,numsamples);
 
 		dsp::AudioBlock<float> osblock = dsp::AudioBlock<float>(wetbuffers[0]).getSubBlock(0,numsamples);
-		numsamples = buffer.getNumSamples();
+		numsamples = numsamplesds;
 		os->processSamplesDown(osblock,block);
 
-		for(int b = 0; b < BAND_COUNT; ++b)
-			if(oversampled[b] >= 0)
-				for(int c = 0; c < channelnum; ++c)
-					buffer.addFrom(c,0,filterbuffers[b],c,0,numsamples);
+		for(int c = 0; c < channelnum; ++c)
+			buffer.addFrom(c,0,tempbuffer,c,0,numsamples);
 	} else {
 		buffer.clear();
 		for(int b = 0; b < BAND_COUNT; ++b) for(int c = 0; c < channelnum; ++c)
