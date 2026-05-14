@@ -7,6 +7,7 @@ ScopeAudioProcessor::ScopeAudioProcessor() :
 
 	init();
 
+	presets[0] = pluginpreset("Default");
 	params.pots[0] = potentiometer("XY"			,"xy"			,0	,presets[0].values[0]	,0	,1	,potentiometer::ptype::booltype);
 	params.pots[1] = potentiometer("Time"		,"time"			,0	,presets[0].values[1]	,0	,1	,potentiometer::ptype::floattype);
 	params.pots[2] = potentiometer("Time"		,"timexy"		,0	,presets[0].values[2]	,0	,1	,potentiometer::ptype::floattype);
@@ -18,7 +19,6 @@ ScopeAudioProcessor::ScopeAudioProcessor() :
 	params.pots[8] = potentiometer("Saturation"	,"saturation"	,0	,presets[0].values[8]	,0	,1	,potentiometer::ptype::floattype);
 	params.pots[9] = potentiometer("Value"		,"value"		,0	,presets[0].values[9]	,0	,1	,potentiometer::ptype::floattype);
 
-	presets[0] = pluginpreset("Default");
 	PropertiesFile* user_settings = props.getUserSettings();
 	for(int i = 0; i < paramcount; ++i) {
 		if(user_settings->containsKey(params.pots[i].id)) {

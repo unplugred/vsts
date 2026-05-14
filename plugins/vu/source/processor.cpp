@@ -7,12 +7,12 @@ VUAudioProcessor::VUAudioProcessor() :
 
 	init();
 
+	presets[0] = pluginpreset("Default",-18,3,5,0);
 	pots[0] = potentiometer("Nominal"		,"nominal"	,presets[0].values[0]	,-24	,-6	,potentiometer::ptype::inttype);
 	pots[1] = potentiometer("Rise speed"	,"damping"	,presets[0].values[1]	,1		,10	,potentiometer::ptype::inttype);
 	pots[2] = potentiometer("Decay speed"	,"decay"	,presets[0].values[2]	,1		,10	,potentiometer::ptype::inttype);
 	pots[3] = potentiometer("Stereo"		,"stereo"	,presets[0].values[3]	,0		,1	,potentiometer::ptype::booltype);
 
-	presets[0] = pluginpreset("Default",-18,3,5,0);
 	PropertiesFile* user_settings = props.getUserSettings();
 	for(int i = 0; i < paramcount; ++i) {
 		if(user_settings->containsKey(pots[i].id)) {
