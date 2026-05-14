@@ -7,18 +7,19 @@ SucroseAudioProcessor::SucroseAudioProcessor() :
 
 	init();
 
-	presets[0] = pluginpreset("Default"				,0.f	,.5f	,0.f	,0.f	,0.f	,0.f	);
+	presets[0] = pluginpreset("Default"				,0.f	,.5f	,0.f	,0.f	,0.f	,0.f	,1		);
 	for(int i = 1; i < getNumPrograms(); i++) {
 		presets[i] = presets[0];
 		presets[i].name = "Program "+(String)i;
 	}
 
 	params.pots[0] = potentiometer("subharmonix"	,"sub"		,.001f	,presets[0].values[0]	);
-	params.pots[1] = potentiometer("fundemental"	,"dry"		,.001f	,presets[0].values[1]	,-20.f	,20.f	);
+	params.pots[1] = potentiometer("fundemental"	,"dry"		,.001f	,presets[0].values[1]	);
 	params.pots[2] = potentiometer("2nd harmonix"	,"second"	,.001f	,presets[0].values[2]	);
 	params.pots[3] = potentiometer("3rd harmonix"	,"third"	,.001f	,presets[0].values[3]	);
 	params.pots[4] = potentiometer("low cut"		,"lc"		,0.f	,presets[0].values[4]	);
 	params.pots[5] = potentiometer("high cut"		,"hc"		,0.f	,presets[0].values[5]	);
+	params.pots[6] = potentiometer("algorithm"		,"algo"		,0.f	,presets[0].values[6]	,0,2,potentiometer::inttype);
 
 	for(int i = 0; i < paramcount; i++) {
 		state.values[i] = params.pots[i].inflate(apvts.getParameter(params.pots[i].id)->getValue());
@@ -47,11 +48,16 @@ void SucroseAudioProcessor::setCurrentProgram(int index) {
 
 	undo_manager.beginNewTransaction((String)"Changed preset to " += presets[index].name);
 	for(int i = 0; i < paramcount; i++) {
-		if(lerpstage < .001 || lerpchanged[i])
-			lerptable[i] = params.pots[i].normalize(presets[currentpreset].values[i]);
+		if(params.pots[i].ttype != potentiometer::floattype) continue;
+		if(lerpstage >= .001 && !lerpchanged[i]) continue;
+		lerptable[i] = params.pots[i].normalize(presets[currentpreset].values[i]);
 		lerpchanged[i] = false;
 	}
 	currentpreset = index;
+	for(int i = 0; i < paramcount; i++) {
+		if(params.pots[i].ttype == potentiometer::floattype) continue;
+		apvts.getParameter(params.pots[i].id)->setValueNotifyingHost(params.pots[i].normalize(presets[index].values[i]));
+	}
 
 	if(lerpstage <= 0) {
 		lerpstage = 1;
@@ -61,14 +67,19 @@ void SucroseAudioProcessor::setCurrentProgram(int index) {
 void SucroseAudioProcessor::timerCallback() {
 	lerpstage *= .64f;
 	if(lerpstage < .001) {
-		for(int i = 0; i < paramcount; i++) if(!lerpchanged[i])
+		for(int i = 0; i < paramcount; i++) {
+			if(params.pots[i].ttype != potentiometer::floattype) continue;
+			if(lerpchanged[i]) continue;
 			apvts.getParameter(params.pots[i].id)->setValueNotifyingHost(params.pots[i].normalize(presets[currentpreset].values[i]));
+		}
 		lerpstage = 0;
 		undo_manager.beginNewTransaction();
 		stopTimer();
 		return;
 	}
-	for(int i = 0; i < paramcount; i++) if(!lerpchanged[i]) {
+	for(int i = 0; i < paramcount; i++) {
+		if(params.pots[i].ttype != potentiometer::floattype) continue;
+		if(lerpchanged[i]) continue;
 		lerptable[i] = (params.pots[i].normalize(presets[currentpreset].values[i])-lerptable[i])*.36f+lerptable[i];
 		apvts.getParameter(params.pots[i].id)->setValueNotifyingHost(lerptable[i]);
 	}
@@ -154,6 +165,7 @@ void SucroseAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer&
 		float third  = togain(state.values[3]);
 		float lc     = tolc  (state.values[4]);
 		float hc     = tohc  (state.values[5]);
+		int algo     =        state.values[6] ;
 		for(int channel = 0; channel < channelnum; ++channel) {
 			channelData[channel][sample] = 0; // TODO
 		}
@@ -287,9 +299,12 @@ void SucroseAudioProcessor::parameterChanged(const String& parameterID, float ne
 		return;
 	}
 	for(int i = 0; i < paramcount; i++) if(parameterID == params.pots[i].id) {
-		if(params.pots[i].smoothtime > 0) params.pots[i].smooth.setTargetValue(newValue);
-		else state.values[i] = newValue;
-		if(lerpstage < .001 || lerpchanged[i]) presets[currentpreset].values[i] = newValue;
+		if(params.pots[i].smoothtime > 0)
+			params.pots[i].smooth.setTargetValue(newValue);
+		else
+			state.values[i] = newValue;
+		if(params.pots[i].ttype != potentiometer::floattype || lerpstage < .001 || lerpchanged[i])
+			presets[currentpreset].values[i] = newValue;
 		return;
 	}
 }
@@ -304,6 +319,7 @@ AudioProcessorValueTreeState::ParameterLayout SucroseAudioProcessor::create_para
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"third"	,1},"3rd harmonix"	,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(stodb	).withValueFromStringFunction(sfromdb	)));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"lc"		,1},"low cut"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(stolc	).withValueFromStringFunction(sfromlc	)));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"hc"		,1},"high cut"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(stohc	).withValueFromStringFunction(sfromhc	)));
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"algo"	,1},"algorithm"										,0		,2		 ,1		,AudioParameterIntAttributes()	.withStringFromValueFunction(toalgo	).withValueFromStringFunction(fromalgo	)));
 	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"os"		,1},"oversampling"													 ,true	,AudioParameterBoolAttributes()	.withStringFromValueFunction(tobool	).withValueFromStringFunction(frombool	)));
 	return { parameters.begin(), parameters.end() };
 }

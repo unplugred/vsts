@@ -34,14 +34,14 @@ public:
 	}
 };
 struct pluginparams {
-	potentiometer pots[6];
+	potentiometer pots[7];
 	bool oversampling = true;
 };
 
 struct pluginpreset {
 	String name = "";
-	float values[6];
-	pluginpreset(String pname = "", float val1 = 0.f, float val2 = 0.f, float val3 = 0.f, float val4 = 0.f, float val5 = 0.f, float val6 = 0.f) {
+	float values[7];
+	pluginpreset(String pname = "", float val1 = 0.f, float val2 = .5f, float val3 = 0.f, float val4 = 0.f, float val5 = 0.f, float val6 = 0.f, int val7 = 1) {
 		name = pname;
 		values[0] = val1;
 		values[1] = val2;
@@ -49,6 +49,7 @@ struct pluginpreset {
 		values[3] = val4;
 		values[4] = val5;
 		values[5] = val6;
+		values[6] = val7;
 	}
 };
 
@@ -89,22 +90,22 @@ public:
 	void set_preset(const String& preset, int preset_id, const char delimiter = ',', bool print_errors = false) override;
 
 	virtual void parameterChanged(const String& parameterID, float newValue);
- 
+
 	AudioProcessorValueTreeState::ParameterLayout create_parameters();
 	AudioProcessorValueTreeState apvts;
 
 	int version = 0;
-	const int paramcount = 6;
+	const int paramcount = 7;
 
 	pluginpreset state;
 	pluginparams params;
-	bool lerpchanged[6];
+	bool lerpchanged[7];
 	int currentpreset = 0;
 
 private:
 	pluginpreset presets[20];
 	void timerCallback() override;
-	float lerptable[6];
+	float lerptable[7];
 	float lerpstage = 0;
 	bool preparedtoplay = false;
 	bool saved = false;
@@ -196,4 +197,15 @@ static std::function<bool(const String& s)> frombool = [](const String& s) {
 	if(s.containsIgnoreCase("1")) return true;
 	if(s.containsIgnoreCase("0")) return false;
 	return true;
+};
+static std::function<String(int v, int max)> toalgo = [](int v, int max) {
+	if(v == 0) return "dirty";
+	if(v == 1) return "clean8";
+	           return "clean16";
+};
+static std::function<int(const String& s)> fromalgo = [](const String& s) {
+	if(s.containsIgnoreCase("d")) return 0;
+	if(s.containsIgnoreCase("8")) return 1;
+	if(s.containsIgnoreCase("1")) return 2;
+	return 1;
 };

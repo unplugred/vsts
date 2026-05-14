@@ -1,9 +1,9 @@
 #include "processor.h"
 #include "editor.h"
 
-SucroseAudioProcessorEditor::SucroseAudioProcessorEditor(SucroseAudioProcessor& p, int paramcount, pluginpreset state, pluginparams params) : audio_processor(p), AudioProcessorEditor(&p), plugmachine_gui(*this, p, 30+106*2, 162+100*3) {
+SucroseAudioProcessorEditor::SucroseAudioProcessorEditor(SucroseAudioProcessor& p, int paramcount, pluginpreset state, pluginparams params) : audio_processor(p), AudioProcessorEditor(&p), plugmachine_gui(*this, p, 30+106*2, 162+100*4) {
 	for(int x = 0; x < 2; x++) {
-		for(int y = 0; y < 3; y++) {
+		for(int y = 0; y < 4; y++) {
 			int i = x+y*2;
 			if(i >= paramcount) break;
 			knobs[i].x = x*106+68;
@@ -20,7 +20,7 @@ SucroseAudioProcessorEditor::SucroseAudioProcessorEditor(SucroseAudioProcessor& 
 	}
 	oversampling = params.oversampling;
 	oversamplinglerped = oversampling;
-	add_listener("oversampling");
+	add_listener("os");
 
 	calcvis();
 
@@ -324,7 +324,7 @@ void SucroseAudioProcessorEditor::timerCallback() {
 }
 
 void SucroseAudioProcessorEditor::parameterChanged(const String& parameterID, float newValue) {
-	if(parameterID == "oversampling") {
+	if(parameterID == "os") {
 		oversampling = newValue>.5f;
 		needtoupdate = 2;
 		return;
@@ -390,7 +390,7 @@ void SucroseAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		event.source.enableUnboundedMouseMovement(true);
 	} else if(hover < -4) {
 		oversampling = hover == -6;
-		audio_processor.apvts.getParameter("oversampling")->setValueNotifyingHost(oversampling?1.f:0.f);
+		audio_processor.apvts.getParameter("os")->setValueNotifyingHost(oversampling?1.f:0.f);
 		audio_processor.undo_manager.setCurrentTransactionName(oversampling?"Turned oversampling on":"Turned oversampling off");
 		audio_processor.undo_manager.beginNewTransaction();
 	}

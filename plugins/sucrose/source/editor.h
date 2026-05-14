@@ -58,7 +58,7 @@ public:
 	void mouseWheelMove(const MouseEvent& event, const MouseWheelDetails& wheel) override;
 	int recalc_hover(float x, float y);
 
-	knob knobs[6];
+	knob knobs[7];
 	int knobcount = 0;
 	float visline[2][452];
 	bool is_stereo = false;
