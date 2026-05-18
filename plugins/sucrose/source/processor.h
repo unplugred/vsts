@@ -66,7 +66,6 @@ public:
 	bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
 
 	void processBlock(AudioBuffer<float>&, MidiBuffer&) override;
-	void setoversampling(bool toggle);
 
 	AudioProcessorEditor* createEditor() override;
 	bool hasEditor() const override;
@@ -107,12 +106,6 @@ private:
 	void timerCallback() override;
 	float lerptable[7];
 	float lerpstage = 0;
-	bool preparedtoplay = false;
-	bool saved = false;
-
-	std::unique_ptr<dsp::Oversampling<float>> os;
-	AudioBuffer<float> osbuffer;
-	std::vector<float*> ospointerarray;
 
 	int channelnum = 0;
 	int samplesperblock = 0;

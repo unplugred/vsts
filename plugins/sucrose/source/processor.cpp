@@ -27,8 +27,6 @@ SucroseAudioProcessor::SucroseAudioProcessor() :
 		if(params.pots[i].smoothtime > 0) params.pots[i].smooth.setCurrentAndTargetValue(state.values[i]);
 		add_listener(params.pots[i].id);
 	}
-	params.oversampling = apvts.getParameter("os")->getValue()>.5;
-	add_listener("os");
 }
 
 SucroseAudioProcessor::~SucroseAudioProcessor(){
@@ -92,10 +90,6 @@ void SucroseAudioProcessor::changeProgramName(int index, const String& newName) 
 }
 
 void SucroseAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
-	if(!saved && sampleRate > 60000) {
-		params.oversampling = false;
-		apvts.getParameter("os")->setValueNotifyingHost(0);
-	}
 	samplesperblock = samplesPerBlock;
 	samplerate = sampleRate;
 
@@ -111,14 +105,7 @@ void SucroseAudioProcessor::reseteverything() {
 	if(channelnum <= 0 || samplesperblock <= 0) return;
 
 	for(int i = 0; i < paramcount; i++) if(params.pots[i].smoothtime > 0)
-		params.pots[i].smooth.reset(samplerate*(params.oversampling?2:1), params.pots[i].smoothtime);
-
-	preparedtoplay = true;
-	ospointerarray.resize(channelnum);
-	os.reset(new dsp::Oversampling<float>(channelnum,1,dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR));
-	os->initProcessing(samplesperblock);
-	os->setUsingIntegerLatency(true);
-	setoversampling(params.oversampling);
+		params.pots[i].smooth.reset(samplerate,params.pots[i].smoothtime);
 }
 void SucroseAudioProcessor::releaseResources() { }
 
@@ -135,24 +122,13 @@ void SucroseAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer&
 	if(buffer.getNumChannels() == 0 || buffer.getNumSamples() == 0) return;
 	if(buffer.getNumChannels() != channelnum)
 		changechannelnum(buffer.getNumChannels());
-	saved = true;
 
 	for(auto i = getTotalNumInputChannels(); i < getTotalNumOutputChannels(); ++i)
 		buffer.clear(i, 0, buffer.getNumSamples());
 
 	int numsamples = buffer.getNumSamples();
-	dsp::AudioBlock<float> block(buffer);
-	if(params.oversampling) {
-		dsp::AudioBlock<float> osblock = os->processSamplesUp(block);
-		for(int i = 0; i < channelnum; i++)
-			ospointerarray[i] = osblock.getChannelPointer(i);
-		osbuffer = AudioBuffer<float>(ospointerarray.data(), channelnum, static_cast<int>(osblock.getNumSamples()));
-		numsamples = osbuffer.getNumSamples();
-	}
 
-	float* const* channelData;
-	if(params.oversampling) channelData = osbuffer.getArrayOfWritePointers();
-	else channelData = buffer.getArrayOfWritePointers();
+	float* const* channelData = buffer.getArrayOfWritePointers();
 
 	for(int sample = 0; sample < numsamples; ++sample) {
 		// parameter smoothing
@@ -170,23 +146,6 @@ void SucroseAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer&
 			channelData[channel][sample] = 0; // TODO
 		}
 	}
-
-	if(params.oversampling) os->processSamplesDown(block);
-}
-
-void SucroseAudioProcessor::setoversampling(bool toggle) {
-	if(!preparedtoplay) return;
-	if(toggle) {
-		if(channelnum <= 0) return;
-		os->reset();
-		setLatencySamples(os->getLatencyInSamples());
-		for(int i = 0; i < paramcount; i++) if(params.pots[i].smoothtime > 0)
-			params.pots[i].smooth.reset(samplerate*2, params.pots[i].smoothtime);
-	} else {
-		setLatencySamples(0);
-		for(int i = 0; i < paramcount; i++) if(params.pots[i].smoothtime > 0)
-			params.pots[i].smooth.reset(samplerate, params.pots[i].smoothtime);
-	}
 }
 
 bool SucroseAudioProcessor::hasEditor() const { return true; }
@@ -199,8 +158,7 @@ void SucroseAudioProcessor::getStateInformation(MemoryBlock& destData) {
 	std::ostringstream data;
 
 	data << version << delimiter
-		<< currentpreset << delimiter
-		<< (params.oversampling?1:0) << delimiter;
+		<< currentpreset << delimiter;
 
 	for(int i = 0; i < getNumPrograms(); i++) {
 		data << presets[i].name << delimiter;
@@ -212,7 +170,6 @@ void SucroseAudioProcessor::getStateInformation(MemoryBlock& destData) {
 }
 void SucroseAudioProcessor::setStateInformation(const void* data, int sizeInBytes) {
 	const char delimiter = '\n';
-	saved = true;
 	try {
 		std::istringstream ss(String::createStringFromData(data, sizeInBytes).toRawUTF8());
 		std::string token;
@@ -222,9 +179,6 @@ void SucroseAudioProcessor::setStateInformation(const void* data, int sizeInByte
 
 		std::getline(ss, token, delimiter);
 		currentpreset = std::stoi(token);
-
-		std::getline(ss, token, delimiter);
-		params.oversampling = std::stof(token) > .5;
 
 		for(int i = 0; i < getNumPrograms(); i++) {
 			std::getline(ss, token, delimiter);
@@ -242,8 +196,6 @@ void SucroseAudioProcessor::setStateInformation(const void* data, int sizeInByte
 	} catch(...) {
 		debug((String)"Error loading saved data");
 	}
-
-	apvts.getParameter("os")->setValueNotifyingHost(params.oversampling);
 }
 const String SucroseAudioProcessor::get_preset(int preset_id, const char delimiter) {
 	std::ostringstream data;
@@ -293,11 +245,6 @@ void SucroseAudioProcessor::set_preset(const String& preset, int preset_id, cons
 }
 
 void SucroseAudioProcessor::parameterChanged(const String& parameterID, float newValue) {
-	if(parameterID == "os") {
-		params.oversampling = newValue>.5;
-		setoversampling(newValue>.5);
-		return;
-	}
 	for(int i = 0; i < paramcount; i++) if(parameterID == params.pots[i].id) {
 		if(params.pots[i].smoothtime > 0)
 			params.pots[i].smooth.setTargetValue(newValue);
