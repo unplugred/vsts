@@ -24,6 +24,13 @@ SucroseAudioProcessorEditor::SucroseAudioProcessorEditor(SucroseAudioProcessor& 
 		knobs[i+4].y = 2*100+120;
 	}
 
+	for(int i = 0; i < 2; ++i) {
+		logopos[i*3  ] = random.nextFloat()*(i==0?.2f:.28f)+(i==0?.16f:.4f);
+		logopos[i*3+1] = random.nextFloat()*.09f;
+		logopos[i*3+2] = (random.nextFloat()+.2f)*(i==0?.08f:.06f)*(random.nextFloat()>.5f?1:-1);
+		offset[i] = .003f+random.nextFloat()*.003f;
+	}
+
 	calcvis();
 
 	setResizable(false,false);
@@ -39,18 +46,18 @@ void SucroseAudioProcessorEditor::newOpenGLContextCreated() {
 R"(#version 150 core
 in vec2 aPos;
 uniform float banner;
-uniform vec2 websiteht;
+uniform vec3 rota;
+uniform vec3 rotb;
 out vec2 uv;
 out vec4 webuv;
 void main() {
 	gl_Position = vec4(vec2(aPos.x,aPos.y*(1-banner))*2-1,0,1);
 	uv = aPos;
-	vec2 rot = websiteht*vec2(-.08,.05);
 	webuv = vec4(
-		 (uv.x-.28)*cos(rot.x)-(uv.y-.03)*.9319371728*sin(rot.x)             +.28,
-		((uv.x-.28)*sin(rot.x)+(uv.y-.03)*.9319371728*cos(rot.x))/.9319371728+.03,
-		 (uv.x-.5 )*cos(rot.y)-(uv.y-.1 )*.9319371728*sin(rot.y)             +.5 ,
-		((uv.x-.5 )*sin(rot.y)+(uv.y-.1 )*.9319371728*cos(rot.y))/.9319371728+.1 );
+		 (uv.x-rota.x)*cos(rota.z)-(uv.y-rota.y)*.9319371728*sin(rota.z)             +rota.x,
+		((uv.x-rota.x)*sin(rota.z)+(uv.y-rota.y)*.9319371728*cos(rota.z))/.9319371728+rota.y,
+		 (uv.x-rotb.x)*cos(rotb.z)-(uv.y-rotb.y)*.9319371728*sin(rotb.z)             +rotb.x,
+		((uv.x-rotb.x)*sin(rotb.z)+(uv.y-rotb.y)*.9319371728*cos(rotb.z))/.9319371728+rotb.y);
 })",
 //BASE FRAG
 R"(#version 150 core
@@ -153,7 +160,9 @@ void main(){
 	vec3 bgcol = texture(bgtex,uv).rgb;
 	if(algo > 1.5) bgcol.r = bgcol.b; else
 	if(algo < 0.5) bgcol.r = bgcol.g;
-	bgcol.r *= 1-min(1,fgcol.r+fgcol.g+fgcol.b);
+	vec3 fgoffset = texture(buffertex,uv+misalignment).rgb;
+	bgcol.r *= 1-min(1,fgcol   .r+fgcol   .g+fgcol   .b);
+	bgcol.r *= 1-min(1,fgoffset.r+fgoffset.g+fgoffset.b);
 	col += vec4(.8671875,.8984375,.99609375,1)*bgcol.r*(1-col.a);
 	// TODO bg offset
 
@@ -192,7 +201,8 @@ void SucroseAudioProcessorEditor::renderOpenGL() {
 	baseshader->setUniform("fgtex",0);
 	baseshader->setUniform("algo",knobs[6].value*3.f);
 	baseshader->setUniform("banner",banner_offset);
-	baseshader->setUniform("websiteht",1-powf(1-websiteht[1],2),1-powf(1-websiteht[0],2));
+	baseshader->setUniform("rota",logopos[0],logopos[1],logopos[2]*(1-powf(1-websiteht[0],2)));
+	baseshader->setUniform("rotb",logopos[3],logopos[4],logopos[5]*(1-powf(1-websiteht[1],2)));
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
@@ -221,7 +231,7 @@ void SucroseAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glActiveTexture(GL_TEXTURE1);
 	bgtex.bind();
 	ppshader->setUniform("bgtex",1);
-	ppshader->setUniform("misalignment",0.f,0.f);
+	ppshader->setUniform("misalignment",offset[0],offset[1]);
 	ppshader->setUniform("chromatic",.3f/(getWidth()*dpi));
 	ppshader->setUniform("algo",knobs[6].value*3.f);
 	ppshader->setUniform("banner",banner_offset);
@@ -246,8 +256,15 @@ void SucroseAudioProcessorEditor::timerCallback() {
 			knobs[i].hoverstate++;
 	if(held > 0) held--;
 
-	for(int i = 0; i < 2; ++i)
-		websiteht[i] = fmin(1,fmax(0,websiteht[i]+((hover+3)==i?.17f:-.17f)));
+	for(int i = 0; i < 2; ++i) {
+		bool prev = websiteht[i]<.00001f;
+		websiteht[i] = fmin(1,fmax(0,websiteht[i]+((-2-hover)==i?.3f:-.3f)));
+		if(prev && websiteht[i] > .00001f) {
+			logopos[i*3  ] = random.nextFloat()*(i==0?.2f:.28f)+(i==0?.16f:.4f);
+			logopos[i*3+1] = random.nextFloat()*.09f;
+			logopos[i*3+2] = (random.nextFloat()+.2f)*(i==0?.08f:.06f)*(random.nextFloat()>.5f?1:-1);
+		}
+	}
 
 	time = fmod(time+.0002f,1.f);
 
@@ -256,6 +273,10 @@ void SucroseAudioProcessorEditor::timerCallback() {
 
 void SucroseAudioProcessorEditor::parameterChanged(const String& parameterID, float newValue) {
 	for(int i = 0; i < knobcount; i++) if(knobs[i].id == parameterID) {
+		if(parameterID == "algo") {
+			offset[0] = .003f+random.nextFloat()*.003f;
+			offset[1] = .003f+random.nextFloat()*.003f;
+		}
 		knobs[i].value = knobs[i].normalize(newValue);
 		calcvis();
 		return;

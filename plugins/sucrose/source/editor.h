@@ -68,6 +68,7 @@ private:
 	OpenGLTexture bgtex;
 	OpenGLTexture fgtex;
 	float websiteht[2] {-1,-1};
+	float logopos[6];
 	std::shared_ptr<OpenGLShaderProgram> baseshader;
 
 	int hover = -1;
@@ -80,6 +81,8 @@ private:
 	std::shared_ptr<OpenGLShaderProgram> knobshader;
 
 	OpenGLFrameBuffer frame_buffer;
+	float offset[2] {.005f,.005f};
+	Random random;
 	std::shared_ptr<OpenGLShaderProgram> ppshader;
 
 	float time = 0;
