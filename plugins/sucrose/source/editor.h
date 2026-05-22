@@ -65,33 +65,22 @@ public:
 private:
 	SucroseAudioProcessor& audio_processor;
 
-	OpenGLTexture basetex;
+	OpenGLTexture bgtex;
+	OpenGLTexture fgtex;
+	float websiteht[2] {-1,-1};
 	std::shared_ptr<OpenGLShaderProgram> baseshader;
 
 	int hover = -1;
 	int initialdrag = 0;
 	int held = 0;
 	float initialvalue = 0;
-	int needtoupdate = 2;
 	bool finemode = false;
 	float valueoffset = 0;
 	Point<int> dragpos = Point<int>(0,0);
 	std::shared_ptr<OpenGLShaderProgram> knobshader;
 
-	std::shared_ptr<OpenGLShaderProgram> blackshader;
-
-	std::shared_ptr<OpenGLShaderProgram> visshader;
-
-	float oversamplingalpha = 0;
-	float oversamplinglerped = 1;
-	bool oversampling = true;
-	OpenGLTexture oversamplingtex;
-	std::shared_ptr<OpenGLShaderProgram> oversamplingshader;
-
-	float websiteht = -1;
-	float creditsalpha = 0;
-	OpenGLTexture creditstex;
-	std::shared_ptr<OpenGLShaderProgram> creditsshader;
+	OpenGLFrameBuffer frame_buffer;
+	std::shared_ptr<OpenGLShaderProgram> ppshader;
 
 	float time = 0;
 

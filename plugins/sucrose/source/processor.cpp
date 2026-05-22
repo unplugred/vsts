@@ -267,6 +267,5 @@ AudioProcessorValueTreeState::ParameterLayout SucroseAudioProcessor::create_para
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"lc"		,1},"low cut"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(stolc	).withValueFromStringFunction(sfromlc	)));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"hc"		,1},"high cut"		,juce::NormalisableRange<float>( 0.0f	,1.0f	),0.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(stohc	).withValueFromStringFunction(sfromhc	)));
 	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"algo"	,1},"algorithm"										,0		,2		 ,1		,AudioParameterIntAttributes()	.withStringFromValueFunction(toalgo	).withValueFromStringFunction(fromalgo	)));
-	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"os"		,1},"oversampling"													 ,true	,AudioParameterBoolAttributes()	.withStringFromValueFunction(tobool	).withValueFromStringFunction(frombool	)));
 	return { parameters.begin(), parameters.end() };
 }

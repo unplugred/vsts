@@ -35,7 +35,6 @@ public:
 };
 struct pluginparams {
 	potentiometer pots[7];
-	bool oversampling = true;
 };
 
 struct pluginpreset {
@@ -180,16 +179,6 @@ static std::function<float(const String& s)> sfromdb = [](const String& s) {
 	if(val >= 0)
 		return jlimit(0.f,1.f,val);
 	return jlimit(0.f,1.f,fromdb(val));
-};
-static std::function<String(bool v, int max)> tobool = [](bool v, int max) {
-	return v?"on":"off";
-};
-static std::function<bool(const String& s)> frombool = [](const String& s) {
-	if(s.containsIgnoreCase("n")) return true;
-	if(s.containsIgnoreCase("f")) return false;
-	if(s.containsIgnoreCase("1")) return true;
-	if(s.containsIgnoreCase("0")) return false;
-	return true;
 };
 static std::function<String(int v, int max)> toalgo = [](int v, int max) {
 	if(v == 0) return "dirty";

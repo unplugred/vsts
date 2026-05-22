@@ -1,26 +1,28 @@
 #include "processor.h"
 #include "editor.h"
 
-SucroseAudioProcessorEditor::SucroseAudioProcessorEditor(SucroseAudioProcessor& p, int paramcount, pluginpreset state, pluginparams params) : audio_processor(p), AudioProcessorEditor(&p), plugmachine_gui(*this, p, 30+106*2, 162+100*4) {
+SucroseAudioProcessorEditor::SucroseAudioProcessorEditor(SucroseAudioProcessor& p, int paramcount, pluginpreset state, pluginparams params) : audio_processor(p), AudioProcessorEditor(&p), plugmachine_gui(*this, p, 356, 382) {
+	for(int i = 0; i < paramcount; i++) {
+		knobs[i].id = params.pots[i].id;
+		knobs[i].name = params.pots[i].name;
+		knobs[i].value = params.pots[i].normalize(state.values[i]);
+		knobs[i].minimumvalue = params.pots[i].minimumvalue;
+		knobs[i].maximumvalue = params.pots[i].maximumvalue;
+		knobs[i].defaultvalue = params.pots[i].normalize(params.pots[i].defaultvalue);
+		knobcount++;
+		add_listener(knobs[i].id);
+	}
 	for(int x = 0; x < 2; x++) {
-		for(int y = 0; y < 4; y++) {
+		for(int y = 0; y < 2; y++) {
 			int i = x+y*2;
-			if(i >= paramcount) break;
-			knobs[i].x = x*106+68;
-			knobs[i].y = y*100+144;
-			knobs[i].id = params.pots[i].id;
-			knobs[i].name = params.pots[i].name;
-			knobs[i].value = params.pots[i].normalize(state.values[i]);
-			knobs[i].minimumvalue = params.pots[i].minimumvalue;
-			knobs[i].maximumvalue = params.pots[i].maximumvalue;
-			knobs[i].defaultvalue = params.pots[i].normalize(params.pots[i].defaultvalue);
-			knobcount++;
-			add_listener(knobs[i].id);
+			knobs[i].x = x*170+95;
+			knobs[i].y = y*100+120;
 		}
 	}
-	oversampling = params.oversampling;
-	oversamplinglerped = oversampling;
-	add_listener("os");
+	for(int i = 0; i < 3; i++) {
+		knobs[i+4].x = i*110+70;
+		knobs[i+4].y = 2*100+120;
+	}
 
 	calcvis();
 
@@ -37,20 +39,45 @@ void SucroseAudioProcessorEditor::newOpenGLContextCreated() {
 R"(#version 150 core
 in vec2 aPos;
 uniform float banner;
+uniform vec2 websiteht;
 out vec2 uv;
-void main(){
-	gl_Position = vec4(vec2(aPos.x,aPos.y*(1-banner)+banner)*2-1,0,1);
+out vec4 webuv;
+void main() {
+	gl_Position = vec4(vec2(aPos.x,aPos.y*(1-banner))*2-1,0,1);
 	uv = aPos;
+	vec2 rot = websiteht*vec2(-.08,.05);
+	webuv = vec4(
+		 (uv.x-.28)*cos(rot.x)-(uv.y-.03)*.9319371728*sin(rot.x)             +.28,
+		((uv.x-.28)*sin(rot.x)+(uv.y-.03)*.9319371728*cos(rot.x))/.9319371728+.03,
+		 (uv.x-.5 )*cos(rot.y)-(uv.y-.1 )*.9319371728*sin(rot.y)             +.5 ,
+		((uv.x-.5 )*sin(rot.y)+(uv.y-.1 )*.9319371728*cos(rot.y))/.9319371728+.1 );
 })",
 //BASE FRAG
 R"(#version 150 core
 in vec2 uv;
-uniform sampler2D basetex;
-uniform float texscale;
-uniform float offset;
+in vec4 webuv;
+uniform sampler2D fgtex;
+uniform float algo;
 out vec4 fragColor;
-void main(){
-	fragColor = texture(basetex,vec2(mod(uv.x*texscale+offset,1),uv.y));
+void main() {
+	fragColor = texture(fgtex,uv);
+	if(uv.y > .09 && uv.y < .24) {
+		if(uv.x > .7) {
+			if(algo > 1.5) {
+				fragColor.r += fragColor.g;
+			} else if(algo > 0.5) {
+				fragColor.r += texture(fgtex,uv-vec2(.5,0)).g;
+			} else {
+				fragColor.r += fragColor.b;
+			}
+		}
+		fragColor.gb = vec2(0);
+	} else if(uv.y < .09) {
+		if(uv.x > .16 && uv.x < .36)
+			fragColor = texture(fgtex,webuv.xy);
+		else if(uv.x > .4 && uv.x < .68)
+			fragColor = texture(fgtex,webuv.zw);
+	}
 })");
 
 	knobshader = add_shader(
@@ -63,7 +90,7 @@ uniform vec2 knobpos;
 uniform float banner;
 out vec2 uv;
 void main(){
-	gl_Position = vec4(aPos.x*knobscale.x+knobpos.x,(aPos.y*knobscale.y+knobpos.y)*(1-banner)+banner,0,1);
+	gl_Position = vec4(aPos.x*knobscale.x+knobpos.x,(aPos.y*knobscale.y+knobpos.y)*(1-banner)-banner,0,1);
 	uv = vec2(
 		(aPos.x-.5)*cos(knobrot)-(aPos.y-.5)*sin(knobrot),
 		(aPos.x-.5)*sin(knobrot)+(aPos.y-.5)*cos(knobrot));
@@ -74,98 +101,72 @@ in vec2 uv;
 uniform int hoverstate;
 out vec4 fragColor;
 void main(){
-	fragColor=vec4(vec2((uv.y>0&&abs(uv.x)<.02)?1:0),hoverstate,1);
+	fragColor = vec4(1,0,hoverstate,(uv.y>0&&abs(uv.x)<.02)?1:0);
 })");
 
-	blackshader = add_shader(
-//BLACK VERT
+	ppshader = add_shader(
+//PP VERT
 R"(#version 150 core
 in vec2 aPos;
-uniform vec4 pos;
-uniform float banner;
-void main(){
-	gl_Position = vec4(aPos.x*pos.z+pos.x,(aPos.y*pos.w+pos.y)*(1-banner)+banner,0,1);
-})",
-//BLACK FRAG
-R"(#version 150 core
-uniform int hoverstate;
-out vec4 fragColor;
-void main(){
-	fragColor = vec4(0,0,hoverstate,1);
-})");
-
-	visshader = add_shader(
-//VIS VERT
-R"(#version 150 core
-in vec2 aPos;
-uniform float banner;
-void main(){
-	gl_Position = vec4(aPos.x,aPos.y*(1-banner)+banner,0,1);
-})",
-//VIS FRAG
-R"(#version 150 core
-out vec4 fragColor;
-void main(){
-	fragColor = vec4(1,1,0,1);
-})");
-
-	oversamplingshader = add_shader(
-//OVERSAMPLING VERT
-R"(#version 150 core
-in vec2 aPos;
-uniform float selection;
-uniform vec4 pos;
 uniform float banner;
 out vec2 uv;
-out vec2 highlightcoord;
 void main(){
-	gl_Position = vec4(aPos.x*pos.z+pos.x,(aPos.y*pos.w+pos.y)*(1-banner)+banner,0,1);
+	gl_Position = vec4(vec2(aPos.x,aPos.y*(1-banner)+banner)*2-1,0,1);
 	uv = aPos;
-	highlightcoord = vec2((aPos.x-selection)*4.3214285714,aPos.y*3.3-1.1642857143);
 })",
-//OVERSAMPLING FRAG
+//PP FRAG
 R"(#version 150 core
 in vec2 uv;
-in vec2 highlightcoord;
-uniform sampler2D ostex;
+uniform sampler2D buffertex;
+uniform sampler2D bgtex;
+uniform vec2 misalignment;
+uniform float algo;
 out vec4 fragColor;
 void main(){
-	float tex = texture(ostex,uv).b;
-	if(highlightcoord.x>0&&highlightcoord.x<1&&highlightcoord.y>0&&highlightcoord.y<1)tex=1-tex;
-	fragColor = vec4(1,1,1,tex);
+	vec4 col = vec4(0);
+
+	vec3 fgcol = texture(buffertex,uv).rgb;
+	if(uv.y > .73) {
+		if(fgcol.g > .00001 && fgcol.b > .00001) {
+			col += vec4(.5,.7890625,.5078125,1)*fgcol.g;
+		} else if(uv.x > .4) {
+			if(uv.x > .6) {
+				col += vec4(.97265625,.48828125,.5078125,1)*fgcol.g;
+			} else {
+				col += vec4(.984375,.52734375,.7578125,1)*fgcol.g;
+			}
+			col += vec4(.47265625,.57421875,.84375,1)*fgcol.b;
+		} else {
+			col += vec4(.97265625,.48828125,.5078125,1)*fgcol.g;
+			col += vec4(.9921875,.8046875,.28515625,1)*fgcol.b;
+		}
+	} else if(uv.y < .09) {
+		if(fgcol.g > .00001 && fgcol.b > .00001) {
+			col += vec4(.2421875,.375,.7734375,1)*fgcol.g;
+		} else {
+			col += vec4(.95703125,.34765625,.53515625,1)*fgcol.g;
+			col += vec4(.22265625,.62109375,.52734375,1)*fgcol.b;
+		}
+	}
+	col += vec4(.23828125,.1953125,.22265625,1)*fgcol.r;
+
+	vec3 bgcol = texture(bgtex,uv).rgb;
+	if(algo > 1.5) bgcol.r = bgcol.b; else
+	if(algo < 0.5) bgcol.r = bgcol.g;
+	bgcol.r *= 1-min(1,fgcol.r+fgcol.g+fgcol.b);
+	col += vec4(.8671875,.8984375,.99609375,1)*bgcol.r*(1-col.a);
+	// TODO bg offset
+
+	// TODO abberation;
+
+	fragColor = vec4(col.rgb+vec3(.984375)*(1-col.a),1);
+	//fragColor = texture(buffertex,uv);
 })");
 
-	creditsshader = add_shader(
-//CREDITS VERT
-R"(#version 150 core
-in vec2 aPos;
-uniform vec4 pos;
-uniform float banner;
-out vec2 uv;
-out float xpos;
-void main(){
-	gl_Position = vec4(aPos.x*pos.z+pos.x,(aPos.y*pos.w+pos.y)*(1-banner)+banner,0,1);
-	uv = aPos;
-	xpos = aPos.x;
-})",
-//CREDITS FRAG
-R"(#version 150 core
-in vec2 uv;
-in float xpos;
-uniform sampler2D creditstex;
-uniform float shineprog;
-out vec4 fragColor;
-void main(){
-	vec2 creditols = texture(creditstex,uv).rb;
-	float shine = 0;
-	if(xpos+shineprog < .65 && xpos+shineprog > 0)
-		shine = texture(creditstex,uv+vec2(shineprog,0)).g;
-	fragColor = vec4(vec2(creditols.r),shine,creditols.g);
-})");
+	add_texture(&bgtex,BinaryData::bg_png,BinaryData::bg_pngSize);
+	add_texture(&fgtex,BinaryData::fg_png,BinaryData::fg_pngSize);
 
-	add_texture(&basetex, BinaryData::base_png, BinaryData::base_pngSize, GL_NEAREST, GL_NEAREST, GL_REPEAT, GL_REPEAT);
-	add_texture(&oversamplingtex, BinaryData::oversampling_png, BinaryData::oversampling_pngSize, GL_NEAREST, GL_NEAREST);
-	add_texture(&creditstex, BinaryData::credits_png, BinaryData::credits_pngSize, GL_NEAREST, GL_NEAREST);
+	add_frame_buffer(&frame_buffer,width,height);
 
 	draw_init();
 }
@@ -181,14 +182,17 @@ void SucroseAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glBindBuffer(GL_ARRAY_BUFFER, array_buffer);
 	auto coord = context.extensions.glGetAttribLocation(baseshader->getProgramID(),"aPos");
 	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
+	frame_buffer.makeCurrentRenderingTarget();
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	OpenGLHelpers::clear(Colours::black);
+
 	baseshader->use();
 	context.extensions.glActiveTexture(GL_TEXTURE0);
-	basetex.bind();
-	baseshader->setUniform("basetex",0);
+	fgtex.bind();
+	baseshader->setUniform("fgtex",0);
+	baseshader->setUniform("algo",knobs[6].value*3.f);
 	baseshader->setUniform("banner",banner_offset);
-	baseshader->setUniform("offset",time);
-	baseshader->setUniform("texscale",242.f/basetex.getWidth());
+	baseshader->setUniform("websiteht",1-powf(1-websiteht[1],2),1-powf(1-websiteht[0],2));
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
@@ -200,7 +204,7 @@ void SucroseAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	knobshader->setUniform("knobscale",48.f*2.f/width,48.f*2.f/height);
 	knobshader->setUniform("banner",banner_offset);
-	for(int i = 0; i < knobcount; i++) {
+	for(int i = 0; i < 6; i++) {
 		knobshader->setUniform("knobpos",((float)knobs[i].x*2-48.f)/width-1,1-((float)knobs[i].y*2+48.f)/height);
 		knobshader->setUniform("knobrot",(knobs[i].value-.5f)*5.5f);
 		knobshader->setUniform("hoverstate",hover==i?1:0);
@@ -208,75 +212,24 @@ void SucroseAudioProcessorEditor::renderOpenGL() {
 	}
 	context.extensions.glDisableVertexAttribArray(coord);
 
-	debug_font.scale = ui_scales[ui_scale_index];
-	for(int i = 0; i < knobcount; i++) {
-		debug_font.draw_string(1,1,hover==i?1:0,1,0,0,hover==i?1:0,1,knobs[i].name,0,((float)knobs[i].x)/width,((float)knobs[i].y+45)/height,.5f,1);
-	}
+	frame_buffer.releaseAsRenderingTarget();
 
-	blackshader->use();
-	coord = context.extensions.glGetAttribLocation(blackshader->getProgramID(),"aPos");
+	ppshader->use();
+	context.extensions.glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, frame_buffer.getTextureID());
+	ppshader->setUniform("buffertex",0);
+	context.extensions.glActiveTexture(GL_TEXTURE1);
+	bgtex.bind();
+	ppshader->setUniform("bgtex",1);
+	ppshader->setUniform("misalignment",0.f,0.f);
+	ppshader->setUniform("chromatic",.3f/(getWidth()*dpi));
+	ppshader->setUniform("algo",knobs[6].value*3.f);
+	ppshader->setUniform("banner",banner_offset);
+	coord = context.extensions.glGetAttribLocation(ppshader->getProgramID(),"aPos");
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
-	blackshader->setUniform("banner",banner_offset);
-	blackshader->setUniform("pos",(16.f/width)-1,1-(44.f/height),2-(32.f/width),-160.f/height);
-	blackshader->setUniform("hoverstate",hover<=-4?1:0);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	context.extensions.glDisableVertexAttribArray(coord);
-
-	if(oversamplingalpha <= 0) {
-		glLineWidth(1*scaled_dpi);
-		visshader->use();
-		coord = context.extensions.glGetAttribLocation(visshader->getProgramID(),"aPos");
-		context.extensions.glEnableVertexAttribArray(coord);
-		context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
-		context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*452, visline[0], GL_DYNAMIC_DRAW);
-		visshader->setUniform("banner",banner_offset);
-		glDrawArrays(GL_LINE_STRIP,0,226);
-		if(is_stereo) {
-			context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*452, visline[1], GL_DYNAMIC_DRAW);
-			glDrawArrays(GL_LINE_STRIP,0,226);
-		}
-		context.extensions.glDisableVertexAttribArray(coord);
-		context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
-	}
-
-	else if(oversamplingalpha >= 1) {
-		oversamplingshader->use();
-		coord = context.extensions.glGetAttribLocation(oversamplingshader->getProgramID(),"aPos");
-		context.extensions.glActiveTexture(GL_TEXTURE0);
-		oversamplingtex.bind();
-		oversamplingshader->setUniform("banner",banner_offset);
-		oversamplingshader->setUniform("ostex",0);
-		oversamplingshader->setUniform("selection",.458677686f+oversamplinglerped*.2314049587f);
-		oversamplingshader->setUniform("pos",-120.f/width,1-(170.f/height),242.f/width,92.f/height);
-		context.extensions.glEnableVertexAttribArray(coord);
-		context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
-		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
-		context.extensions.glDisableVertexAttribArray(coord);
-	}
-
-	if(creditsalpha >= 1) {
-		creditsshader->use();
-		context.extensions.glActiveTexture(GL_TEXTURE0);
-		creditstex.bind();
-		creditsshader->setUniform("banner",banner_offset);
-		creditsshader->setUniform("creditstex",0);
-		creditsshader->setUniform("shineprog",websiteht);
-		creditsshader->setUniform("pos",((float)-148)/width,2/(height*.5f)-1,148/(width*.5f), 46/(height*.5f));
-		coord = context.extensions.glGetAttribLocation(creditsshader->getProgramID(),"aPos");
-		context.extensions.glEnableVertexAttribArray(coord);
-		context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
-		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
-		context.extensions.glDisableVertexAttribArray(coord);
-	}
-
-	else if(creditsalpha <= 0)
-		debug_font.draw_string(1,1,0,1,0,0,0,1,(String)"Temporary user interface!\nThe look of this VST is \nsubject to change.",0,0,1,0,1);
-
-	debug_font.draw_string(1,1,0,1,0,0,0,1,audio_processor.getName()+(String)" (Prototype)",0,1,0,1,0);
-	debug_font.scale = 1;
-
-	needtoupdate--;
 
 	draw_end();
 }
@@ -288,35 +241,13 @@ void SucroseAudioProcessorEditor::calcvis() {
 void SucroseAudioProcessorEditor::paint(Graphics& g) { }
 
 void SucroseAudioProcessorEditor::timerCallback() {
-	for(int i = 0; i < knobcount; i++) {
-		if(knobs[i].hoverstate < -1) {
-			needtoupdate = 2;
+	for(int i = 0; i < knobcount; i++)
+		if(knobs[i].hoverstate < -1)
 			knobs[i].hoverstate++;
-		}
-	}
 	if(held > 0) held--;
 
-	if(oversamplingalpha != (hover<=-4?1:0)) {
-		oversamplingalpha = fmax(fmin(oversamplingalpha+(hover<=-4?.17f:-.17f),1),0);
-		needtoupdate = 2;
-	}
-
-	float os = oversampling?1:0;
-	if(oversamplinglerped != os?1:0) {
-		needtoupdate = 2;
-		if(fabs(oversamplinglerped-os) <= .001f) oversamplinglerped = os;
-		oversamplinglerped = oversamplinglerped*.75f+os*.25f;
-	}
-
-	if(creditsalpha != ((hover<=-2&&hover>=-3)?1:0)) {
-		creditsalpha = fmax(fmin(creditsalpha+((hover<=-2&&hover>=-3)?.17f:-.17f),1),0);
-		needtoupdate = 2;
-	}
-	if(creditsalpha <= 0) websiteht = -1;
-	if(websiteht > -1 && creditsalpha >= 1) {
-		websiteht -= .0815;
-		needtoupdate = 2;
-	}
+	for(int i = 0; i < 2; ++i)
+		websiteht[i] = fmin(1,fmax(0,websiteht[i]+((hover+3)==i?.17f:-.17f)));
 
 	time = fmod(time+.0002f,1.f);
 
@@ -324,25 +255,17 @@ void SucroseAudioProcessorEditor::timerCallback() {
 }
 
 void SucroseAudioProcessorEditor::parameterChanged(const String& parameterID, float newValue) {
-	if(parameterID == "os") {
-		oversampling = newValue>.5f;
-		needtoupdate = 2;
-		return;
-	}
 	for(int i = 0; i < knobcount; i++) if(knobs[i].id == parameterID) {
 		knobs[i].value = knobs[i].normalize(newValue);
 		calcvis();
-		needtoupdate = 2;
 		return;
 	}
 }
 void SucroseAudioProcessorEditor::mouseMove(const MouseEvent& event) {
 	int prevhover = hover;
 	hover = recalc_hover(event.x,event.y);
-	if(hover == -3 && prevhover != -3 && websiteht <= -1) websiteht = .65f;
-	else if(hover > -2 && prevhover <= -2) websiteht = -2;
 	if(prevhover != hover && held == 0) {
-		if(hover > -1) knobs[hover].hoverstate = -4;
+		if(    hover > -1) knobs[    hover].hoverstate = -4;
 		if(prevhover > -1) knobs[prevhover].hoverstate = -3;
 	}
 }
@@ -380,7 +303,12 @@ void SucroseAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 
 	held = -1;
 	initialdrag = hover;
-	if(hover > -1) {
+	if(hover == 6) {
+		audio_processor.undo_manager.beginNewTransaction();
+		audio_processor.undo_manager.setCurrentTransactionName("Switched algorithm");
+		audio_processor.undo_manager.beginNewTransaction();
+		audio_processor.apvts.getParameter(knobs[6].id)->setValueNotifyingHost(fmod(round(knobs[6].value*2)+1,3)*.5f);
+	} else if(hover > -1) {
 		initialvalue = knobs[hover].value;
 		valueoffset = 0;
 		audio_processor.undo_manager.beginNewTransaction();
@@ -388,16 +316,10 @@ void SucroseAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		audio_processor.lerpchanged[hover] = true;
 		dragpos = event.getScreenPosition();
 		event.source.enableUnboundedMouseMovement(true);
-	} else if(hover < -4) {
-		oversampling = hover == -6;
-		audio_processor.apvts.getParameter("os")->setValueNotifyingHost(oversampling?1.f:0.f);
-		audio_processor.undo_manager.setCurrentTransactionName(oversampling?"Turned oversampling on":"Turned oversampling off");
-		audio_processor.undo_manager.beginNewTransaction();
 	}
 }
 void SucroseAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
-	if(hover == -1) return;
-	if(initialdrag > -1) {
+	if(initialdrag > -1 && initialdrag != 6) {
 		if(!finemode && (event.mods.isShiftDown() || event.mods.isAltDown())) {
 			finemode = true;
 			initialvalue -= (event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*.0045f;
@@ -410,15 +332,13 @@ void SucroseAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 		audio_processor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(value-valueoffset);
 
 		valueoffset = fmax(fmin(valueoffset,value+.1f),value-1.1f);
-	} else if(initialdrag == -3) {
-		int prevhover = hover;
-		hover = recalc_hover(event.x,event.y)==-3?-3:-2;
-		if(hover == -3 && prevhover != -3 && websiteht < -1) websiteht = .65f;
+	} else if(initialdrag == -3 || initialdrag == -2) {
+		hover = recalc_hover(event.x,event.y)==initialdrag?initialdrag:-1;
 	}
 }
 void SucroseAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 	if(dpi < 0) return;
-	if(hover > -1) {
+	if(hover > -1 && hover != 6) {
 		audio_processor.undo_manager.setCurrentTransactionName(
 			(String)((knobs[hover].value-initialvalue)>=0?"Increased ":"Decreased ") += knobs[hover].name);
 		audio_processor.apvts.getParameter(knobs[hover].id)->endChangeGesture();
@@ -428,22 +348,20 @@ void SucroseAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 	} else {
 		int prevhover = hover;
 		hover = recalc_hover(event.x,event.y);
-		if(hover == -3) {
-			if(prevhover == -3) URL("https://vst.unplug.red/").launchInDefaultBrowser();
-			else if(websiteht < -1) websiteht = .65f;
-		}
-		else if(hover > -1) knobs[hover].hoverstate = -4;
+		if(hover > -1) knobs[hover].hoverstate = -4;
+		else if(hover == -3 && prevhover == -3) URL("https://vst.unplug.red/").launchInDefaultBrowser();
+		else if(hover == -2 && prevhover == -2) URL("https://fx.amee.ee/").launchInDefaultBrowser();
 	}
 	held = 1;
 }
 void SucroseAudioProcessorEditor::mouseDoubleClick(const MouseEvent& event) {
-	if(hover <= -1) return;
+	if(hover <= -1 || hover == 6) return;
 	audio_processor.undo_manager.setCurrentTransactionName((String)"Reset " += knobs[hover].name);
 	audio_processor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(knobs[hover].defaultvalue);
 	audio_processor.undo_manager.beginNewTransaction();
 }
 void SucroseAudioProcessorEditor::mouseWheelMove(const MouseEvent& event, const MouseWheelDetails& wheel) {
-	if(hover <= -1) return;
+	if(hover <= -1 || hover == 6) return;
 	audio_processor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(
 		knobs[hover].value+wheel.deltaY*((event.mods.isShiftDown() || event.mods.isAltDown())?.03f:.2f));
 }
@@ -452,18 +370,19 @@ int SucroseAudioProcessorEditor::recalc_hover(float x, float y) {
 	x /= ui_scales[ui_scale_index];
 	y /= ui_scales[ui_scale_index];
 
-	if(x >= 8 && x <= (width-8) && y >= 22 && y <= 102) {
-		if(y < 53 || y > 67) return -4;
-		float midx = x-(width*.5);
-		if(midx >= -6 && midx <= 22) return -5;
-		if(midx >= 23 && midx <= 51) return -6;
-		return -4;
-	} else if(y >= (height-48) && y < height) {
-		if(x >= (width*.5-74) && x <= (width*.5+73) && y <= (height-4)) return -3;
-		return -2;
-	}
-	for(int i = 0; i < knobcount; i++) {
-		if(fabs(knobs[i].x-x) <= 24 && fabs(knobs[i].y-y) <= 24) return i;
+	if(x < 16 || x >= 342 || y < 90) {
+		return -1;
+	} else if(y < 290) {
+		if(fmod(x-16,171.f) >= 155 || fmod(y-90,100.f) >= 93)
+			return -1;
+		return ((x>=179?1:0)+(y>=186?2:0));
+	} else if(y < 350) {
+		if(fmod(x-16,111.f) >= 104.f)
+			return -1;
+		return floor((x-16)/111.f)+4;
+	} else if(y >= 358 && y < 378) {
+		if(x >= 68 && x < 126) return -2;
+		if(x >= 145 && x < 238) return -3;
 	}
 	return -1;
 }
