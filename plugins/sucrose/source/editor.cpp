@@ -127,48 +127,62 @@ in vec2 uv;
 uniform sampler2D buffertex;
 uniform sampler2D bgtex;
 uniform vec2 misalignment;
+uniform float chromatic;
 uniform float algo;
 out vec4 fragColor;
 void main(){
-	vec4 col = vec4(0);
+	vec3 col = vec3(0);
+	vec3 alpha = vec3(0);
 
-	vec3 fgcol = texture(buffertex,uv).rgb;
+	vec3 texl = texture(buffertex,uv-vec2(chromatic,0)).rgb;
+	vec3 texc = texture(buffertex,uv                  ).rgb;
+	vec3 texr = texture(buffertex,uv+vec2(chromatic,0)).rgb;
+	vec3 fgcolr = vec3(texl.r,texc.r,texr.r);
+	vec3 fgcolg = vec3(texl.g,texc.g,texr.g);
+	vec3 fgcolb = vec3(texl.b,texc.b,texr.b);
 	if(uv.y > .73) {
-		if(fgcol.g > .00001 && fgcol.b > .00001) {
-			col += vec4(.5,.7890625,.5078125,1)*fgcol.g;
+		if(uv.x > .25 && (fgcolg.r+fgcolg.g+fgcolg.b) > .00001 && (fgcolb.r+fgcolb.g+fgcolb.b) > .00001) {
+			col += vec3(.5,.7890625,.5078125)*fgcolg;
 		} else if(uv.x > .4) {
 			if(uv.x > .6) {
-				col += vec4(.97265625,.48828125,.5078125,1)*fgcol.g;
+				col += vec3(.97265625,.48828125,.5078125)*fgcolg;
 			} else {
-				col += vec4(.984375,.52734375,.7578125,1)*fgcol.g;
+				col += vec3(.984375,.52734375,.7578125)*fgcolg;
 			}
-			col += vec4(.47265625,.57421875,.84375,1)*fgcol.b;
+			col += vec3(.47265625,.57421875,.84375)*fgcolb;
 		} else {
-			col += vec4(.97265625,.48828125,.5078125,1)*fgcol.g;
-			col += vec4(.9921875,.8046875,.28515625,1)*fgcol.b;
+			col += vec3(.97265625,.48828125,.5078125)*fgcolg;
+			col += vec3(.9921875,.8046875,.28515625)*fgcolb;
 		}
 	} else if(uv.y < .09) {
-		if(fgcol.g > .00001 && fgcol.b > .00001) {
-			col += vec4(.2421875,.375,.7734375,1)*fgcol.g;
+		if((fgcolg.r+fgcolg.g+fgcolg.b) > .00001 && (fgcolb.r+fgcolb.g+fgcolb.b) > .00001) {
+			col += vec3(.2421875,.375,.7734375)*fgcolg;
 		} else {
-			col += vec4(.95703125,.34765625,.53515625,1)*fgcol.g;
-			col += vec4(.22265625,.62109375,.52734375,1)*fgcol.b;
+			col += vec3(.95703125,.34765625,.53515625)*fgcolg;
+			col += vec3(.22265625,.62109375,.52734375)*fgcolb;
 		}
 	}
-	col += vec4(.23828125,.1953125,.22265625,1)*fgcol.r;
+	col += vec3(.23828125,.1953125,.22265625)*fgcolr;
+	alpha = min(vec3(1),fgcolr+max(fgcolg,fgcolb));
 
-	vec3 bgcol = texture(bgtex,uv).rgb;
-	if(algo > 1.5) bgcol.r = bgcol.b; else
-	if(algo < 0.5) bgcol.r = bgcol.g;
-	vec3 fgoffset = texture(buffertex,uv+misalignment).rgb;
-	bgcol.r *= 1-min(1,fgcol   .r+fgcol   .g+fgcol   .b);
-	bgcol.r *= 1-min(1,fgoffset.r+fgoffset.g+fgoffset.b);
-	col += vec4(.8671875,.8984375,.99609375,1)*bgcol.r*(1-col.a);
-	// TODO bg offset
+	texl = texture(bgtex,uv-vec2(chromatic,0)).rgb;
+	texc = texture(bgtex,uv                  ).rgb;
+	texr = texture(bgtex,uv+vec2(chromatic,0)).rgb;
+	vec3 bgcol = vec3(0);
+	     if(algo > 1.5) bgcol = vec3(texl.b,texc.b,texr.b);
+	else if(algo > 0.5) bgcol = vec3(texl.r,texc.r,texr.r);
+	else                bgcol = vec3(texl.g,texc.g,texr.g);
+	bgcol *= 1-alpha;
 
-	// TODO abberation;
+	texl = texture(buffertex,uv+misalignment-vec2(chromatic,0)).rgb;
+	texc = texture(buffertex,uv+misalignment                  ).rgb;
+	texr = texture(buffertex,uv+misalignment+vec2(chromatic,0)).rgb;
+	bgcol *= 1-min(vec3(1),vec3(texl.r,texc.r,texr.r)+max(vec3(texl.g,texc.g,texr.g),vec3(texl.b,texc.b,texr.b)));
 
-	fragColor = vec4(col.rgb+vec3(.984375)*(1-col.a),1);
+	col += vec3(.8671875,.8984375,.99609375)*bgcol;
+	alpha += bgcol;
+
+	fragColor = vec4(col.rgb+(1-alpha)*.984375,1);
 	//fragColor = texture(buffertex,uv);
 })");
 
@@ -222,6 +236,10 @@ void SucroseAudioProcessorEditor::renderOpenGL() {
 	}
 	context.extensions.glDisableVertexAttribArray(coord);
 
+	// TODO tick mark
+
+	// TODO scribble
+
 	frame_buffer.releaseAsRenderingTarget();
 
 	ppshader->use();
@@ -240,6 +258,7 @@ void SucroseAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	context.extensions.glDisableVertexAttribArray(coord);
+	// TODO fish eye
 
 	draw_end();
 }
