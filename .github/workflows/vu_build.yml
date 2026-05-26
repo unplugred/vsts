@@ -79,28 +79,28 @@ jobs:
     - name: configure
       id: configure
       run: |
-        python3 build.py configure paid
+        python3 build.py configure release paid
 
     - name: build audio unit
       id: build-au
       if: startsWith(matrix.os, 'mac')
       run: |
-        python3 build.py "${{ env.PLUG }}" release au
+        python3 build.py "${{ env.PLUG }}" au
 
     - name: build clap
       id: build-clap
       run: |
-        python3 build.py "${{ env.PLUG }}" release clap
+        python3 build.py "${{ env.PLUG }}" clap
 
     - name: build vst3
       id: build-vst3
       run: |
-        python3 build.py "${{ env.PLUG }}" release vst3
+        python3 build.py "${{ env.PLUG }}" vst3
 
     - name: build standalone
       id: build-standalone
       run: |
-        python3 build.py "${{ env.PLUG }}" release standalone no
+        python3 build.py "${{ env.PLUG }}" standalone no
 
     - name: installer
       id: installer
@@ -116,28 +116,28 @@ jobs:
     - name: configure free
       id: configure-free
       run: |
-        python3 build.py configure free
+        python3 build.py configure release free
 
     - name: build audio unit free
       id: build-au-free
       if: startsWith(matrix.os, 'mac')
       run: |
-        python3 build.py "${{ env.PLUG }}" release au
+        python3 build.py "${{ env.PLUG }}" au
 
     - name: build clap free
       id: build-clap-free
       run: |
-        python3 build.py "${{ env.PLUG }}" release clap
+        python3 build.py "${{ env.PLUG }}" clap
 
     - name: build vst3 free
       id: build-vst3-free
       run: |
-        python3 build.py "${{ env.PLUG }}" release vst3
+        python3 build.py "${{ env.PLUG }}" vst3
 
     - name: build standalone free
       id: build-standalone-free
       run: |
-        python3 build.py "${{ env.PLUG }}" release standalone no
+        python3 build.py "${{ env.PLUG }}" standalone no
 
     - name: installer free
       id: installer-free

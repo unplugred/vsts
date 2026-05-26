@@ -8,9 +8,9 @@ from zipfile import ZipFile
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 codes = {
+	"config": ["Debug","Release"],
 	"version": ["free","paid","beta"],
 	"plugin": [],
-	"config": ["Debug","Release"],
 	"target": [],
 	"run": ["yes","no"],
 	"system": []
@@ -197,9 +197,10 @@ valid_secrets = [
 	"DEVELOPER_ID_APPLICATION",
 	"DEVELOPER_ID_INSTALLER",
 ]
-saved_data = { "is_free": [], "secrets": {}, "codesign_plugins": True }
+saved_data = { "is_debug": [], "is_free": [], "secrets": {}, "codesign_plugins": True }
 for i in range(len(systems)):
-	saved_data["is_free"].append(False)
+	saved_data["is_debug"].append(True)
+	saved_data["is_free"].append(True)
 if os.path.isfile("saved_data.json"):
 	with open("saved_data.json",'r') as open_file:
 		saved_data = json.load(open_file)
@@ -462,8 +463,9 @@ def update_secrets(secrets):
 	with open("saved_data.json","w") as out_file:
 		json.dump(saved_data,out_file);
 
-def configure(version):
-	debug("CONFIGURING "+version.upper()+" VERSION")
+def configure(config, version):
+	debug("CONFIGURING "+config.upper()+", "+version.upper()+" VERSION")
+	saved_data["is_debug"][system] = config == "Debug"
 	saved_data["is_free"][system] = version != "paid"
 	with open("saved_data.json","w") as out_file:
 		json.dump(saved_data,out_file);
@@ -473,14 +475,14 @@ def configure(version):
 		version_num = 0
 	elif version == "beta":
 		version_num = 1
-	cmd = "cmake -DBANNERTYPE="+str(version_num)+" -B \"build_"+systems[system]["code"]+"\" -G "
+	cmd = "cmake -DCMAKE_BUILD_TYPE="+config+" -DBANNERTYPE="+str(version_num)+" -B \"build_"+systems[system]["code"]+"\" -G "
 	if systems[system]["code"] == "win":
 		run_command(cmd+"\""+systems[system]["compiler"]+"\" -T host=x64 -A x64")
 	else:
 		run_command(cmd+"\""+systems[system]["compiler"]+"\"")
 
-def build(plugin, config, target):
-	debug("BUILDING "+plugin.upper()+", CONFIG "+config.upper()+", TARGET "+target.upper())
+def build(plugin, target):
+	debug("BUILDING "+plugin.upper()+", TARGET "+target.upper())
 
 	if target == "Audio Unit" and systems[system]["code"] != "mac":
 		alert("Cannot build audio unit on "+systems[system]["name"]+", skipping...")
@@ -488,18 +490,20 @@ def build(plugin, config, target):
 
 	nospace = plugin.replace(' ','')
 	lower = nospace.lower()
+	config = "Debug" if saved_data["is_debug"][system] else "Release"
 	free = "free" if (saved_data["is_free"][system] or not get_plugin(plugin)["paid"]) else "paid"
 	folder = "build_"+systems[system]["code"]
 	file_extension = get_target(target)["extension"]
 
 	create_dir(join(["setup",folder,free]))
+	source_path = join([folder,"plugins",("" if "bundle" not in get_plugin(plugin) else (get_plugin(plugin)["bundle"].replace(' ','').lower()+"/"))+lower,nospace+"_artefacts",config,target,plugin+file_extension])
 	target_path = join(["setup",folder,free,plugin+file_extension])
 
 	if systems[system]["code"] == "mac":
-		create_dir(join([folder,"plugins",("" if "bundle" not in get_plugin(plugin) else (get_plugin(plugin)["bundle"].replace(' ','').lower()+"/"))+lower,nospace+"_artefacts",config,target]))
+		create_dir(os.path.dirname(source_path))
 		run_command("cmake --build \""+folder+"\" --config "+config+" --target "+nospace+"_"+get_target(target)["code"])
 		if target == "CLAP" or target == "Standalone":
-			copy(join([folder,"plugins",("" if "bundle" not in get_plugin(plugin) else (get_plugin(plugin)["bundle"].replace(' ','').lower()+"/"))+lower,nospace+"_artefacts",config,target,plugin+file_extension]),target_path)
+			copy(source_path,target_path)
 			if target == "Standalone":
 				run_command("chmod -R 755 \""+join([target_path,"Contents","MacOS",plugin])+"\"")
 				run_command("chmod -R 755 \""+target_path+"\"")
@@ -528,7 +532,7 @@ def build(plugin, config, target):
 			remove(target_path)
 			move(join(["setup",plugin+file_extension]),target_path)
 		elif target == "CLAP" or target == "Standalone":
-			copy(join([folder,"plugins",("" if "bundle" not in get_plugin(plugin) else (get_plugin(plugin)["bundle"].replace(' ','').lower()+"/"))+lower,nospace+"_artefacts",config,target,plugin+file_extension]),target_path)
+			copy(source_path,target_path)
 		for file in get_plugin(plugin)["additional_files"]:
 			if ("win_"+free) in file["versions"] and file["copy"] and systems[system]["code"] == "win":
 				if not os.path.isdir(join(["setup",folder,"other",plugin])):
@@ -538,16 +542,17 @@ def build(plugin, config, target):
 	else:
 		run_command("cmake --build \""+folder+"\" --config "+config+" --target "+nospace+"_"+get_target(target)["code"])
 		if target == "CLAP" or target == "Standalone":
-			copy(join([folder,"plugins",("" if "bundle" not in get_plugin(plugin) else (get_plugin(plugin)["bundle"].replace(' ','').lower()+"/"))+lower,nospace+"_artefacts",target,plugin+file_extension]),target_path)
+			copy(source_path,target_path)
 
-def run_plugin(plugin, config):
-	artefact_path = join(["build_"+systems[system]["code"],"plugins",("" if "bundle" not in get_plugin(plugin) else (get_plugin(plugin)["bundle"].replace(' ','').lower()+"/"))+plugin.replace(' ','').lower(),plugin.replace(' ','')+"_artefacts"])
+def run_plugin(plugin):
+	config = "Debug" if saved_data["is_debug"][system] else "Release"
+	artefact_path = "\""+join(["build_"+systems[system]["code"],"plugins",("" if "bundle" not in get_plugin(plugin) else (get_plugin(plugin)["bundle"].replace(' ','').lower()+"/"))+plugin.replace(' ','').lower(),plugin.replace(' ','')+"_artefacts",config,"Standalone",plugin+systems[system]["executable"]])+"\""
 	if systems[system]["code"] == "mac":
-		run_command("open -W \""+join([artefact_path,config,"Standalone",plugin+systems[system]["executable"]])+"\"")
+		run_command("open -W "+artefact_path)
 	elif systems[system]["code"] == "win":
-		run_command("\""+join([artefact_path,config,"Standalone",plugin+systems[system]["executable"]])+"\"")
+		run_command(artefact_path)
 	else:
-		run_command("gdb -ex run \""+join([artefact_path,"Standalone",plugin+systems[system]["executable"]])+"\"")
+		run_command("gdb -ex run "+artefact_path)
 
 def build_installer(plugin, system_i, zip_result=True):
 	debug("BUILDING INSTALLER FOR "+plugin.upper())
@@ -738,11 +743,11 @@ def build_everything_bundle(system_i):
 	zip_files(join(["setup","temp",""]),join(["setup","zips","Everything Bundle "+get_system(system_i)["name"]+".zip"]),9)
 
 
-def build_all():
+def build_all(config):
 	debug("BUILDING ALL")
 	prepare()
 	for free in ["free","paid"]:
-		configure(free)
+		configure(config,free)
 		for plugin in plugins:
 			if plugin["paid"] or free == "free":
 				for target in targets:
@@ -750,7 +755,7 @@ def build_all():
 						continue
 					if not plugin["standalone"] and target["name"] == "Standalone":
 						continue
-					build(plugin["name"],"Release",target["name"])
+					build(plugin["name"],target["name"])
 				build_installer(plugin["name"],system,True)
 	build_everything_bundle(system)
 
@@ -861,7 +866,7 @@ jobs:
     - name: configure'''+version_tag[0]+'''
       id: configure'''+version_tag[1]+'''
       run: |
-        python3 build.py configure '''+version+'''
+        python3 build.py configure release '''+version+'''
 ''')
 			for bundle_plugin in to_build:
 				for target in targets:
@@ -875,7 +880,7 @@ jobs:
       if: startsWith(matrix.os, 'mac')''')
 					file.write('''
       run: |
-        python3 build.py "'''+(bundle_plugin["name"] if "bundle" in plugin else "${{ env.PLUG }}")+'''" release '''+target["code"].lower()+(" no" if target["name"] == "Standalone" else "")+'''
+        python3 build.py "'''+(bundle_plugin["name"] if "bundle" in plugin else "${{ env.PLUG }}")+'''" '''+target["code"].lower()+(" no" if target["name"] == "Standalone" else "")+'''
 ''')
 			file.write('''
     - name: installer'''+version_tag[0]+'''
@@ -901,39 +906,46 @@ def run_program(string):
 	if string.strip() == "":
 		error("You must specify arguments!")
 	args = shlex.split(string)
+	to_build = {}
 
-	if "configure".startswith(args[0]) and ',' not in string and len(args) <= 2:
-		match = "free"
-		if len(args) == 2:
-			match = fuzzy_match(args[1],codes["version"])
+	if "configure".startswith(args[0]) and ',' not in string:
+		arguments = ["config","version"]
+		for argument in arguments:
+			to_build[argument] = []
+
+		for i in range(len(args)-1):
+			match = fuzzy_match(args[i+1],codes[arguments[i]])
 			if match == None:
-				error("Unknown version: "+args[1])
-		configure(match)
+				error("Unknown "+arguments[i]+": "+args[i+1])
+			to_build[arguments[i]].append(match)
+
+		if len(to_build["config"]) == 0:
+			to_build["config"].append("Debug")
+		if len(to_build["version"]) == 0:
+			to_build["version"].append("free")
+
+		configure(to_build["config"][0],to_build["version"][0])
 		return
 
-	to_build = {}
-	arguments = ["plugin","config","target","run","system"]
+	arguments = ["plugin","target","run","system"]
 	for argument in arguments:
 		to_build[argument] = []
 	installer = False
 	everything = False
 	for i in range(len(args)):
-		if i > 4 or (i > 3 and ("Standalone" not in to_build["target"] or not installer)) or (i > 2 and "Standalone" not in to_build["target"] and not installer):
+		if i > len(arguments) or (i > (len(arguments)-1) and ("Standalone" not in to_build["target"] or not installer)) or (i > (len(arguments)-2) and "Standalone" not in to_build["target"] and not installer):
 			error("Unexpected number of arguments!")
-		if (i == 0 and "everythingbundle".startswith(args[i])) or (i == 2 and "all".startswith(args[i])):
+		if (i == 0 and "everythingbundle".startswith(args[i])) or (i == 1 and "all".startswith(args[i])):
 			if i == 0:
 				everything = True
 			for n in codes[arguments[i]]:
 				to_build[arguments[i]].append(n)
 			continue
-		if i == 1 and "installer".startswith(args[i]) and ',' not in args[i]:
-			installer = True
-			continue
-		if i == 3 and ',' in args[i]:
+		if i == 2 and ',' in args[i]:
 			error("Argument "+arguments[i]+" can only have one value")
 		sub_args = args[i].split(',')
 		for n in range(len(sub_args)):
-			if i == 2 and "installer".startswith(sub_args[n]):
+			if i == 1 and "installer".startswith(sub_args[n]):
 				if installer:
 					error("Argument Installer used more than once!")
 				installer = True
@@ -963,8 +975,6 @@ def run_program(string):
 			if match in to_build[arguments[i]]:
 				error("Argument "+match+" used more than once!")
 			to_build[arguments[i]].append(match)
-	if installer and len(to_build["target"]) == 0 and len(to_build["config"]) > 0:
-		error("Cannot use config "+to_build["config"][0]+" to build an installer")
 
 	if len(to_build["system"]) == 0:
 		if len(to_build["target"]) == 0 and everything:
@@ -972,8 +982,6 @@ def run_program(string):
 				to_build["system"].append(system_i["name"])
 		else:
 			to_build["system"].append(systems[system]["name"])
-	if len(to_build["config"]) == 0:
-		to_build["config"].append("Debug")
 	if len(to_build["target"]) == 0 and not installer:
 		to_build["target"].append("Standalone")
 	if len(to_build["run"]) == 0:
@@ -990,11 +998,10 @@ def run_program(string):
 		return
 
 	for plugin in to_build["plugin"]:
-		for config in to_build["config"]:
-			for target in to_build["target"]:
-				build(plugin,config,target)
-			if to_build["run"][0] == "yes":
-				run_plugin(plugin,config)
+		for target in to_build["target"]:
+			build(plugin,target)
+		if to_build["run"][0] == "yes":
+			run_plugin(plugin)
 		if installer:
 			for system_i in to_build["system"]:
 				build_installer(plugin,system_i)
