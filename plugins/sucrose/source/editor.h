@@ -2,6 +2,7 @@
 #include "includes.h"
 #include "processor.h"
 #include "perlin.h"
+#include "functions.h"
 using namespace gl;
 
 class LookNFeel : public plugmachine_look_n_feel {
@@ -47,6 +48,7 @@ public:
 	void renderOpenGL() override;
 	void openGLContextClosing() override;
 	void calcvis();
+	void nextpoint();
 	void paint(Graphics&) override;
 
 	void timerCallback() override;
@@ -82,7 +84,11 @@ private:
 	Point<int> dragpos = Point<int>(0,0);
 
 	perlin noisegen;
-	float visline[4800*4]; // TODO
+	int writepos = 0;
+	functions::dampendvalue angledamp;
+	float scribble[4*SPEED*2];
+	float moveup[4] {8,4,12,24};
+	float visline[(140+SPEED*2*4)*4];
 	int linelength = -1;
 	float lineprevx = 0;
 	float lineprevy = 020;

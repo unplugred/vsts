@@ -17,3 +17,5 @@
 //#include <juce_video/juce_video.h>
 #include "BinaryData.h"
 using namespace juce;
+
+#define SPEED 300

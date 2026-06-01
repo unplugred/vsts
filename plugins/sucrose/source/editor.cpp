@@ -91,6 +91,13 @@ SucroseAudioProcessorEditor::SucroseAudioProcessorEditor(SucroseAudioProcessor& 
 		offset[i] = .003f+random.nextFloat()*.003f;
 	}
 
+	angledamp.reset(0,.5f,-1,30,4);
+	noisegen.init();
+	for(int i = 0; i < 4; ++i) {
+		scribble[SPEED*2*i+(SPEED-1)*2  ] = 160+171*fmod(i,2);
+		scribble[SPEED*2*i+(SPEED-1)*2+1] = 260-moveup[i]*.5f-100*floor(i*.5f);
+	}
+	for(int i = 0; i < SPEED*1.5f; ++i) nextpoint();
 	calcvis();
 
 	setResizable(false,false);
@@ -329,6 +336,29 @@ void SucroseAudioProcessorEditor::renderOpenGL() {
 void SucroseAudioProcessorEditor::openGLContextClosing() {
 	draw_close();
 }
+void SucroseAudioProcessorEditor::nextpoint() {
+	for(int i = 0; i < 4; ++i) {
+		float lastposx = scribble[SPEED*2*i+(int)fmod(writepos-1+SPEED,SPEED)*2  ];
+		float lastposy = scribble[SPEED*2*i+(int)fmod(writepos-1+SPEED,SPEED)*2+1];
+		float targposx = noisegen.noise(i*8,time*(knobs[i].value*3+1))*(sqrt(knobs[i].value)*35.f+2.f)+160+171*fmod(i,2);
+		float targposy = noisegen.noise(time*(knobs[i].value*3+1),i*8)*(sqrt(knobs[i].value)*35.f+2.f)+260-moveup[i]*.5f-100*floor(i*.5f);
+		float angle = std::atan2(targposy-lastposy,targposx-lastposx);
+		while((angledamp.v_current[i]-angle) < -3.1415926535f) angledamp.v_current[i] += 3.1415926535f*2;
+		while((angledamp.v_current[i]-angle) >  3.1415926535f) angledamp.v_current[i] -= 3.1415926535f*2;
+		angle = angledamp.nextvalue(angle,i);
+		scribble[SPEED*2*i+writepos*2  ] = (cos(angle)*(.4f+knobs[i].value*knobs[i].value*1.6f)+lastposx)*.988f+targposx*.012f;
+		scribble[SPEED*2*i+writepos*2+1] = (sin(angle)*(.4f+knobs[i].value*knobs[i].value*1.6f)+lastposy)*.988f+targposy*.012f;
+	}
+	time += .006f;
+	writepos = fmod(writepos+1,SPEED);
+	for(int i = 0; i < 4; ++i) {
+		for(int x = 0; x < SPEED; ++x) {
+			int index = SPEED*2*i+x*2;
+			scribble[index  ] -=     130.f/SPEED;
+			scribble[index+1] += moveup[i]/SPEED;
+		}
+	}
+}
 void SucroseAudioProcessorEditor::calcvis() {
 	linelength = -1;
 
@@ -340,8 +370,8 @@ void SucroseAudioProcessorEditor::calcvis() {
 		float angle   = knobs[i].a[0     ]*(1-knobs[i].lerpedvalue[0])+knobs[i].a[       1]*knobs[i].lerpedvalue[0];
 		beginline(0);
 		for(int k = 0; k <= 9; ++k) {
-			float valuex = knobs[i].lerpedvalue[1]*1.4f+k*.04f;
-			float valuey = knobs[i].lerpedvalue[2]* .2f+i*8   ;
+			float valuex = knobs[i].lerpedvalue[1]*2.1f+k*.06f;
+			float valuey = knobs[i].lerpedvalue[2]* .3f+i*8   ;
 			float perlinx = noisegen.noise(valuex,valuey)*2.f;
 			float perliny = noisegen.noise(valuey,valuex);
 			float m = (k/8.f-.5f)*7+perliny;
@@ -351,12 +381,18 @@ void SucroseAudioProcessorEditor::calcvis() {
 	}
 
 	for(int i = 0; i < 4; ++i) {
-		// TODO scribble
+		beginline(0);
+		for(int x = 0; x < SPEED; ++x) {
+			int index = SPEED*2*i+fmod(x+writepos,SPEED)*2;
+			nextpoint(
+				noisegen.noise(i*8,x*.003f)*2+scribble[index  ],
+				noisegen.noise(x*.003f,i*8)*2+scribble[index+1]);
+		}
+		endline();
 	}
-
 }
 void SucroseAudioProcessorEditor::beginline(int channel) {
-	dist = 0; //  TODO
+	dist = 0; // TODO
 	linechannel = channel;
 	linebegun = 0;
 }
@@ -457,9 +493,10 @@ void SucroseAudioProcessorEditor::timerCallback() {
 		knobs[i].lerpedvalue[2] = knobs[i].lerpedvalue[2]*.8f+(hover==i?1:0)*.2f;
 	}
 
-	time = fmod(time+.0002f,1.f);
-
+	nextpoint();
 	calcvis();
+	debug(linelength);
+	debug(linelength-SPEED*2*4);
 
 	update();
 }
@@ -471,7 +508,6 @@ void SucroseAudioProcessorEditor::parameterChanged(const String& parameterID, fl
 			offset[1] = .003f+random.nextFloat()*.003f;
 		}
 		knobs[i].value = knobs[i].normalize(newValue);
-		calcvis();
 		return;
 	}
 }
