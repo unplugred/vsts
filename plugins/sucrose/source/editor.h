@@ -77,7 +77,7 @@ private:
 
 	int hover = -1;
 	int initialdrag = 0;
-	int held = 0;
+	int fresh = 0;
 	float initialvalue = 0;
 	bool finemode = false;
 	float valueoffset = 0;
@@ -89,6 +89,7 @@ private:
 	float scribble[4*SPEED*2];
 	float moveup[4] {8,4,12,24};
 	float visline[(140+SPEED*2*4)*4];
+	bool knobswitch[7] {false,false,false,false,false,false,false};
 	int linelength = -1;
 	float lineprevx = 0;
 	float lineprevy = 020;

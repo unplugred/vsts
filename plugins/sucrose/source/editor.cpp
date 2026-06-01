@@ -472,11 +472,6 @@ void SucroseAudioProcessorEditor::nextpoint(float x, float y) {
 void SucroseAudioProcessorEditor::paint(Graphics& g) { }
 
 void SucroseAudioProcessorEditor::timerCallback() {
-	for(int i = 0; i < knobcount; i++)
-		if(knobs[i].hoverstate < -1)
-			knobs[i].hoverstate++;
-	if(held > 0) held--;
-
 	for(int i = 0; i < 2; ++i) {
 		bool prev = websiteht[i]<.00001f;
 		websiteht[i] = fmin(1,fmax(0,websiteht[i]+((-2-hover)==i?.3f:-.3f)));
@@ -490,13 +485,11 @@ void SucroseAudioProcessorEditor::timerCallback() {
 	for(int i = 0; i < knobcount; i++) {
 		knobs[i].lerpedvalue[0] = knobs[i].lerpedvalue[0]*.5f+knobs[i].value*.5f;
 		knobs[i].lerpedvalue[1] = knobs[i].lerpedvalue[1]*.7f+knobs[i].value*.3f;
-		knobs[i].lerpedvalue[2] = knobs[i].lerpedvalue[2]*.8f+(hover==i?1:0)*.2f;
+		knobs[i].lerpedvalue[2] = knobs[i].lerpedvalue[2]*.8f+(knobswitch[i]?1:0)*.2f;
 	}
 
 	nextpoint();
 	calcvis();
-	debug(linelength);
-	debug(linelength-SPEED*2*4);
 
 	update();
 }
@@ -514,9 +507,9 @@ void SucroseAudioProcessorEditor::parameterChanged(const String& parameterID, fl
 void SucroseAudioProcessorEditor::mouseMove(const MouseEvent& event) {
 	int prevhover = hover;
 	hover = recalc_hover(event.x,event.y);
-	if(prevhover != hover && held == 0) {
-		if(    hover > -1) knobs[    hover].hoverstate = -4;
-		if(prevhover > -1) knobs[prevhover].hoverstate = -3;
+	if(prevhover != hover && hover > -1) {
+		knobswitch[hover] = !knobswitch[hover];
+		fresh = true;
 	}
 }
 void SucroseAudioProcessorEditor::mouseExit(const MouseEvent& event) {
@@ -551,7 +544,9 @@ void SucroseAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		return;
 	}
 
-	held = -1;
+	if(!fresh && hover > -1)
+		knobswitch[hover] = !knobswitch[hover];
+	fresh = false;
 	initialdrag = hover;
 	if(hover == 6) {
 		audio_processor.undo_manager.beginNewTransaction();
@@ -588,6 +583,8 @@ void SucroseAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 }
 void SucroseAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 	if(dpi < 0) return;
+	if(hover > -1)
+		knobswitch[hover] = !knobswitch[hover];
 	if(hover > -1 && hover != 6) {
 		audio_processor.undo_manager.setCurrentTransactionName(
 			(String)((knobs[hover].value-initialvalue)>=0?"Increased ":"Decreased ") += knobs[hover].name);
@@ -598,11 +595,9 @@ void SucroseAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 	} else {
 		int prevhover = hover;
 		hover = recalc_hover(event.x,event.y);
-		if(hover > -1) knobs[hover].hoverstate = -4;
-		else if(hover == -3 && prevhover == -3) URL("https://vst.unplug.red/").launchInDefaultBrowser();
+		     if(hover == -3 && prevhover == -3) URL("https://vst.unplug.red/").launchInDefaultBrowser();
 		else if(hover == -2 && prevhover == -2) URL("https://fx.amee.ee/").launchInDefaultBrowser();
 	}
-	held = 1;
 }
 void SucroseAudioProcessorEditor::mouseDoubleClick(const MouseEvent& event) {
 	if(hover <= -1 || hover == 6) return;
