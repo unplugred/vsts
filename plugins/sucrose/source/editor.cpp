@@ -12,16 +12,76 @@ SucroseAudioProcessorEditor::SucroseAudioProcessorEditor(SucroseAudioProcessor& 
 		knobcount++;
 		add_listener(knobs[i].id);
 	}
-	for(int x = 0; x < 2; x++) {
-		for(int y = 0; y < 2; y++) {
-			int i = x+y*2;
-			knobs[i].x = x*170+95;
-			knobs[i].y = y*100+120;
-		}
-	}
-	for(int i = 0; i < 3; i++) {
-		knobs[i+4].x = i*110+70;
-		knobs[i+4].y = 2*100+120;
+
+	knobs[0].x[0] = 26;
+	knobs[0].x[1] = 158;
+	knobs[0].y[0] = 210;
+	knobs[0].y[1] = 212;
+	knobs[0].y[2] = 211;
+	knobs[0].y[3] = 209;
+	knobs[0].y[4] = 212;
+	knobs[0].y[5] = 211;
+	knobs[0].y[6] = 208;
+	knobs[0].y[7] = 210;
+
+	knobs[1].x[0] = 199;
+	knobs[1].x[1] = 331;
+	knobs[1].y[0] = 211;
+	knobs[1].y[1] = 212;
+	knobs[1].y[2] = 212;
+	knobs[1].y[3] = 208;
+	knobs[1].y[4] = 213;
+	knobs[1].y[5] = 212;
+	knobs[1].y[6] = 211;
+	knobs[1].y[7] = 208;
+
+	knobs[2].x[0] = 26;
+	knobs[2].x[1] = 158;
+	knobs[2].y[0] = 109;
+	knobs[2].y[1] = 110;
+	knobs[2].y[2] = 108;
+	knobs[2].y[3] = 110;
+	knobs[2].y[4] = 110;
+	knobs[2].y[5] = 111;
+	knobs[2].y[6] = 110;
+	knobs[2].y[7] = 108;
+
+	knobs[3].x[0] = 193;
+	knobs[3].x[1] = 322;
+	knobs[3].y[0] = 113;
+	knobs[3].y[1] = 114;
+	knobs[3].y[2] = 115;
+	knobs[3].y[3] = 112;
+	knobs[3].y[4] = 112;
+	knobs[3].y[5] = 112;
+	knobs[3].y[6] = 111;
+	knobs[3].y[7] = 105;
+
+	knobs[4].x[0] = 30;
+	knobs[4].x[1] = 107;
+	knobs[4].y[0] = 45;
+	knobs[4].y[1] = 47;
+	knobs[4].y[2] = 58;
+	knobs[4].y[3] = 62;
+	knobs[4].y[4] = 64;
+	knobs[4].y[5] = 72;
+	knobs[4].y[6] = 79;
+	knobs[4].y[7] = 84;
+
+	knobs[5].x[0] = 138;
+	knobs[5].x[1] = 218;
+	knobs[5].y[0] = 83;
+	knobs[5].y[1] = 76;
+	knobs[5].y[2] = 72;
+	knobs[5].y[3] = 69;
+	knobs[5].y[4] = 64;
+	knobs[5].y[5] = 55;
+	knobs[5].y[6] = 49;
+	knobs[5].y[7] = 46;
+
+	for(int i = 0; i < 6; ++i) {
+		knobs[i].a[0] = std::atan2(knobs[i].y[3]-knobs[i].y[0],(knobs[i].x[1]-knobs[i].x[0])*.5f);
+		knobs[i].a[1] = std::atan2(knobs[i].y[7]-knobs[i].y[4],(knobs[i].x[1]-knobs[i].x[0])*.5f);
 	}
 
 	for(int i = 0; i < 2; ++i) {
@@ -87,28 +147,34 @@ void main() {
 	}
 })");
 
-	knobshader = add_shader(
-//KNOB VERT
+	lineshader = add_shader(
+//LINE VERT
 R"(#version 150 core
-in vec2 aPos;
-uniform float knobrot;
-uniform vec2 knobscale;
-uniform vec2 knobpos;
+in vec4 aPos;
 uniform float banner;
+out float opacity;
+out float channel;
 out vec2 uv;
-void main(){
-	gl_Position = vec4(aPos.x*knobscale.x+knobpos.x,(aPos.y*knobscale.y+knobpos.y)*(1-banner)-banner,0,1);
-	uv = vec2(
-		(aPos.x-.5)*cos(knobrot)-(aPos.y-.5)*sin(knobrot),
-		(aPos.x-.5)*sin(knobrot)+(aPos.y-.5)*cos(knobrot));
+void main() {
+	gl_Position = vec4(vec2(aPos.x,aPos.y*(1-banner))*2-1,0,1);
+	opacity = 1.5-abs(aPos.z-.5);
+	uv = vec2(mod(aPos.w,1.),min(1,max(0,aPos.z)));
+	channel = floor(aPos.w);
 })",
-//KNOB FRAG
+//LINE FRAG
 R"(#version 150 core
+in float opacity;
+in float channel;
 in vec2 uv;
-uniform int hoverstate;
+uniform float dpi;
+uniform sampler2D linetex;
 out vec4 fragColor;
-void main(){
-	fragColor = vec4(1,0,hoverstate,(uv.y>0&&abs(uv.x)<.02)?1:0);
+void main() {
+	//vec3 col = texture(linetex,uv).rgb; // TODO
+	vec3 col = vec3(1);
+	if(channel > 1.5) col.r = col.b; else
+	if(channel >  .5) col.r = col.g;
+	fragColor = vec4(1,0,0,col.r-1+opacity);
 })");
 
 	ppshader = add_shader(
@@ -186,8 +252,9 @@ void main(){
 	//fragColor = texture(buffertex,uv);
 })");
 
-	add_texture(&bgtex,BinaryData::bg_png,BinaryData::bg_pngSize);
-	add_texture(&fgtex,BinaryData::fg_png,BinaryData::fg_pngSize);
+	add_texture(&bgtex  ,BinaryData::bg_png  ,BinaryData::bg_pngSize  );
+	add_texture(&fgtex  ,BinaryData::fg_png  ,BinaryData::fg_pngSize  );
+	//add_texture(&linetex,BinaryData::line_png,BinaryData::line_pngSize); // TODO
 
 	add_frame_buffer(&frame_buffer,width,height);
 
@@ -222,23 +289,20 @@ void SucroseAudioProcessorEditor::renderOpenGL() {
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	context.extensions.glDisableVertexAttribArray(coord);
 
-	knobshader->use();
-	coord = context.extensions.glGetAttribLocation(knobshader->getProgramID(),"aPos");
+	// LINE
+	lineshader->use();
+	coord = context.extensions.glGetAttribLocation(lineshader->getProgramID(),"aPos");
 	context.extensions.glEnableVertexAttribArray(coord);
-	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
-	knobshader->setUniform("knobscale",48.f*2.f/width,48.f*2.f/height);
-	knobshader->setUniform("banner",banner_offset);
-	for(int i = 0; i < 6; i++) {
-		knobshader->setUniform("knobpos",((float)knobs[i].x*2-48.f)/width-1,1-((float)knobs[i].y*2+48.f)/height);
-		knobshader->setUniform("knobrot",(knobs[i].value-.5f)*5.5f);
-		knobshader->setUniform("hoverstate",hover==i?1:0);
-		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
-	}
+	context.extensions.glVertexAttribPointer(coord,4,GL_FLOAT,GL_FALSE,0,0);
+	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*(linelength+1)*4, visline, GL_DYNAMIC_DRAW);
+	context.extensions.glActiveTexture(GL_TEXTURE0);
+	//linetex.bind(); TODO
+	lineshader->setUniform("linetex",0);
+	lineshader->setUniform("banner",banner_offset);
+	lineshader->setUniform("dpi",scaled_dpi);
+	glDrawArrays(GL_TRIANGLE_STRIP,0,linelength+1);
 	context.extensions.glDisableVertexAttribArray(coord);
-
-	// TODO tick mark
-
-	// TODO scribble
+	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
 
 	frame_buffer.releaseAsRenderingTarget();
 
@@ -266,6 +330,108 @@ void SucroseAudioProcessorEditor::openGLContextClosing() {
 	draw_close();
 }
 void SucroseAudioProcessorEditor::calcvis() {
+	linelength = -1;
+
+	for(int i = 0; i < 6; ++i) {
+		int yindex = floor(knobs[i].lerpedvalue[0]*6.999f);
+		float ylerp = knobs[i].lerpedvalue[0]*7-yindex;
+		float originy = knobs[i].y[yindex]*(1-ylerp                  )+knobs[i].y[yindex+1]*ylerp;
+		float originx = knobs[i].x[0     ]*(1-knobs[i].lerpedvalue[0])+knobs[i].x[       1]*knobs[i].lerpedvalue[0];
+		float angle   = knobs[i].a[0     ]*(1-knobs[i].lerpedvalue[0])+knobs[i].a[       1]*knobs[i].lerpedvalue[0];
+		beginline(0);
+		for(int k = 0; k <= 9; ++k) {
+			float valuex = knobs[i].lerpedvalue[1]*1.4f+k*.04f;
+			float valuey = knobs[i].lerpedvalue[2]* .2f+i*8   ;
+			float perlinx = noisegen.noise(valuex,valuey)*2.f;
+			float perliny = noisegen.noise(valuey,valuex);
+			float m = (k/8.f-.5f)*7+perliny;
+			nextpoint(originx-m*sin(angle)+perlinx*cos(angle),originy+m*cos(angle)+perlinx*sin(angle));
+		}
+		endline();
+	}
+
+	for(int i = 0; i < 4; ++i) {
+		// TODO scribble
+	}
+
+}
+void SucroseAudioProcessorEditor::beginline(int channel) {
+	dist = 0; //  TODO
+	linechannel = channel;
+	linebegun = 0;
+}
+void SucroseAudioProcessorEditor::endline() {
+	float tipsize = 1;
+	linelength += 2;
+	dist = fmod(dist+tipsize/23.f,1); // TODO 23
+	float angle = std::atan2(
+		(visline[linelength*4-7]-visline[linelength*4-15])*height,
+		(visline[linelength*4-8]-visline[linelength*4-16])*width )+1.5707963268f;
+	visline[linelength*4-4] = visline[linelength*4-12]+sin(angle)*tipsize/width ;
+	visline[linelength*4-3] = visline[linelength*4-11]-cos(angle)*tipsize/height;
+	visline[linelength*4-2] = -1.f;
+	visline[linelength*4-1] = dist+linechannel;
+	visline[linelength*4  ] = visline[linelength*4- 8]+sin(angle)*tipsize/width ;
+	visline[linelength*4+1] = visline[linelength*4- 7]-cos(angle)*tipsize/height;
+	visline[linelength*4+2] =  2.f;
+	visline[linelength*4+3] = dist+linechannel;
+}
+void SucroseAudioProcessorEditor::nextpoint(float x, float y) {
+	if(linebegun == 0) {
+		lineprevx = x;
+		lineprevy = y;
+		linecurrentx = x;
+		linecurrenty = y;
+		++linebegun;
+		return;
+	}
+	float linewidth = .75f;
+	dist = fmod(dist+sqrt(powf(linecurrenty-lineprevy,2)+powf(linecurrentx-lineprevx,2))/23.f,1); // TODO 23
+	float angle1 = std::atan2(linecurrenty-   lineprevy,linecurrentx-   lineprevx)+1.5707963268f;
+	float angle2 = std::atan2(           y-linecurrenty,           x-linecurrentx)+1.5707963268f;
+	float angle = 0;
+	     if(linebegun == 1)
+		angle = angle2;
+	else if(fabs(angle1-angle2)<=1)
+		angle = (angle1+angle2)*.5f;
+	else if(fabs(linecurrenty-lineprevy) > fabs(y-linecurrenty))
+		angle = angle1;
+	else
+		angle = angle2;
+	visline[++linelength*4] = (linecurrentx+cos(angle)*linewidth)/width ;
+	visline[1+linelength*4] = (linecurrenty+sin(angle)*linewidth)/height;
+	visline[2+linelength*4] = 0.f;
+	visline[3+linelength*4] = dist+linechannel;
+	visline[++linelength*4] = (linecurrentx-cos(angle)*linewidth)/width ;
+	visline[1+linelength*4] = (linecurrenty-sin(angle)*linewidth)/height;
+	visline[2+linelength*4] = 1.f;
+	visline[3+linelength*4] = dist+linechannel;
+	if(linebegun == 1) {
+		float tipsize = 1;
+		float tempdist = fmod(dist-tipsize/23.f+1,1); // TODO 23
+		linelength += 2;
+		visline[linelength*4- 4] = visline[linelength*4-12];
+		visline[linelength*4- 3] = visline[linelength*4-11];
+		visline[linelength*4- 2] =  0.f;
+		visline[linelength*4- 1] =     dist+linechannel;
+		visline[linelength*4   ] = visline[linelength*4- 8];
+		visline[linelength*4+ 1] = visline[linelength*4- 7];
+		visline[linelength*4+ 2] =  1.f;
+		visline[linelength*4+ 3] =     dist+linechannel;
+		visline[linelength*4-12] -=sin(angle)*tipsize/width ;
+		visline[linelength*4-11] +=cos(angle)*tipsize/height;
+		visline[linelength*4-10] = -1.f;
+		visline[linelength*4- 9] = tempdist+linechannel;
+		visline[linelength*4- 8] -=sin(angle)*tipsize/width ;
+		visline[linelength*4- 7] +=cos(angle)*tipsize/height;
+		visline[linelength*4- 6] =  2.f;
+		visline[linelength*4- 5] = tempdist+linechannel;
+		++linebegun;
+	}
+	lineprevx = linecurrentx;
+	lineprevy = linecurrenty;
+	linecurrentx = x;
+	linecurrenty = y;
 }
 void SucroseAudioProcessorEditor::paint(Graphics& g) { }
 
@@ -285,7 +451,15 @@ void SucroseAudioProcessorEditor::timerCallback() {
 		}
 	}
 
+	for(int i = 0; i < knobcount; i++) {
+		knobs[i].lerpedvalue[0] = knobs[i].lerpedvalue[0]*.5f+knobs[i].value*.5f;
+		knobs[i].lerpedvalue[1] = knobs[i].lerpedvalue[1]*.7f+knobs[i].value*.3f;
+		knobs[i].lerpedvalue[2] = knobs[i].lerpedvalue[2]*.8f+(hover==i?1:0)*.2f;
+	}
+
 	time = fmod(time+.0002f,1.f);
+
+	calcvis();
 
 	update();
 }

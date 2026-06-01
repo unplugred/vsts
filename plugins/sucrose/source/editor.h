@@ -1,6 +1,7 @@
 #pragma once
 #include "includes.h"
 #include "processor.h"
+#include "perlin.h"
 using namespace gl;
 
 class LookNFeel : public plugmachine_look_n_feel {
@@ -19,9 +20,11 @@ public:
 	String font = "n";
 };
 struct knob {
-	int x = 0;
-	int y = 0;
+	int x[2] {0,0};
+	int y[8] {0,0,0,0,0,0,0,0};
+	float a[2] {0,0};
 	float value = .5f;
+	float lerpedvalue[3] {0,0,0};
 	int hoverstate = 0;
 	String id;
 	String name;
@@ -60,7 +63,6 @@ public:
 
 	knob knobs[7];
 	int knobcount = 0;
-	float visline[2][452];
 	bool is_stereo = false;
 private:
 	SucroseAudioProcessor& audio_processor;
@@ -78,7 +80,22 @@ private:
 	bool finemode = false;
 	float valueoffset = 0;
 	Point<int> dragpos = Point<int>(0,0);
-	std::shared_ptr<OpenGLShaderProgram> knobshader;
+
+	perlin noisegen;
+	float visline[4800*4]; // TODO
+	int linelength = -1;
+	float lineprevx = 0;
+	float lineprevy = 020;
+	float linecurrentx = 0;
+	float linecurrenty = 0;
+	int linebegun = 0;
+	float dist = 0;
+	int linechannel = 0;
+	OpenGLTexture linetex;
+	std::shared_ptr<OpenGLShaderProgram> lineshader;
+	void beginline(int channel);
+	void endline();
+	void nextpoint(float x, float y);
 
 	OpenGLFrameBuffer frame_buffer;
 	float offset[2] {.005f,.005f};
