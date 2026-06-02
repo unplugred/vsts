@@ -97,7 +97,7 @@ SucroseAudioProcessorEditor::SucroseAudioProcessorEditor(SucroseAudioProcessor& 
 		scribble[SPEED*2*i+(SPEED-1)*2  ] = 160+171*fmod(i,2);
 		scribble[SPEED*2*i+(SPEED-1)*2+1] = 260-moveup[i]*.5f-100*floor(i*.5f);
 	}
-	for(int i = 0; i < SPEED*1.5f; ++i) nextpoint();
+	for(int i = 0; i < SPEED*1.5f; ++i) calcnext();
 	calcvis();
 
 	setResizable(false,false);
@@ -165,8 +165,8 @@ out vec2 uv;
 void main() {
 	gl_Position = vec4(vec2(aPos.x,aPos.y*(1-banner))*2-1,0,1);
 	opacity = 1.5-abs(aPos.z-.5);
-	uv = vec2(mod(aPos.w,1.),min(1,max(0,aPos.z)));
-	channel = floor(aPos.w);
+	uv = vec2(mod(aPos.w,1.),min(1,max(0,aPos.z))*.5+mod(floor(aPos.w/3.),1.)*.5);
+	channel = mod(floor(aPos.w),3.);
 })",
 //LINE FRAG
 R"(#version 150 core
@@ -177,11 +177,10 @@ uniform float dpi;
 uniform sampler2D linetex;
 out vec4 fragColor;
 void main() {
-	//vec3 col = texture(linetex,uv).rgb; // TODO
-	vec3 col = vec3(1);
+	vec3 col = texture(linetex,uv).rgb;
 	if(channel > 1.5) col.r = col.b; else
 	if(channel >  .5) col.r = col.g;
-	fragColor = vec4(1,0,0,col.r-1+opacity);
+	fragColor = vec4(1,0,0,pow(max(0,sqrt(col.r)-1+opacity),2));
 })");
 
 	ppshader = add_shader(
@@ -261,7 +260,7 @@ void main(){
 
 	add_texture(&bgtex  ,BinaryData::bg_png  ,BinaryData::bg_pngSize  );
 	add_texture(&fgtex  ,BinaryData::fg_png  ,BinaryData::fg_pngSize  );
-	//add_texture(&linetex,BinaryData::line_png,BinaryData::line_pngSize); // TODO
+	add_texture(&linetex,BinaryData::line_png,BinaryData::line_pngSize);
 
 	add_frame_buffer(&frame_buffer,width,height);
 
@@ -303,7 +302,7 @@ void SucroseAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glVertexAttribPointer(coord,4,GL_FLOAT,GL_FALSE,0,0);
 	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*(linelength+1)*4, visline, GL_DYNAMIC_DRAW);
 	context.extensions.glActiveTexture(GL_TEXTURE0);
-	//linetex.bind(); TODO
+	linetex.bind();
 	lineshader->setUniform("linetex",0);
 	lineshader->setUniform("banner",banner_offset);
 	lineshader->setUniform("dpi",scaled_dpi);
@@ -321,7 +320,7 @@ void SucroseAudioProcessorEditor::renderOpenGL() {
 	bgtex.bind();
 	ppshader->setUniform("bgtex",1);
 	ppshader->setUniform("misalignment",offset[0],offset[1]);
-	ppshader->setUniform("chromatic",.3f/(getWidth()*dpi));
+	ppshader->setUniform("chromatic",.5f/(getWidth()*dpi));
 	ppshader->setUniform("algo",knobs[6].value*3.f);
 	ppshader->setUniform("banner",banner_offset);
 	coord = context.extensions.glGetAttribLocation(ppshader->getProgramID(),"aPos");
@@ -336,7 +335,7 @@ void SucroseAudioProcessorEditor::renderOpenGL() {
 void SucroseAudioProcessorEditor::openGLContextClosing() {
 	draw_close();
 }
-void SucroseAudioProcessorEditor::nextpoint() {
+void SucroseAudioProcessorEditor::calcnext() {
 	for(int i = 0; i < 4; ++i) {
 		float lastposx = scribble[SPEED*2*i+(int)fmod(writepos-1+SPEED,SPEED)*2  ];
 		float lastposy = scribble[SPEED*2*i+(int)fmod(writepos-1+SPEED,SPEED)*2+1];
@@ -368,7 +367,7 @@ void SucroseAudioProcessorEditor::calcvis() {
 		float originy = knobs[i].y[yindex]*(1-ylerp                  )+knobs[i].y[yindex+1]*ylerp;
 		float originx = knobs[i].x[0     ]*(1-knobs[i].lerpedvalue[0])+knobs[i].x[       1]*knobs[i].lerpedvalue[0];
 		float angle   = knobs[i].a[0     ]*(1-knobs[i].lerpedvalue[0])+knobs[i].a[       1]*knobs[i].lerpedvalue[0];
-		beginline(0);
+		beginline(i,.1f*(knobs[i].lerpedvalue[1]*2.1f+knobs[i].lerpedvalue[2]*.3f+i*8));
 		for(int k = 0; k <= 9; ++k) {
 			float valuex = knobs[i].lerpedvalue[1]*2.1f+k*.06f;
 			float valuey = knobs[i].lerpedvalue[2]* .3f+i*8   ;
@@ -381,36 +380,37 @@ void SucroseAudioProcessorEditor::calcvis() {
 	}
 
 	for(int i = 0; i < 4; ++i) {
-		beginline(0);
+		beginline(i+3,lastdist[i]);
 		for(int x = 0; x < SPEED; ++x) {
 			int index = SPEED*2*i+fmod(x+writepos,SPEED)*2;
 			nextpoint(
-				noisegen.noise(i*8,x*.003f)*2+scribble[index  ],
-				noisegen.noise(x*.003f,i*8)*2+scribble[index+1]);
+				noisegen.noise(i*8,x*.003f)*1.6f+scribble[index  ],
+				noisegen.noise(x*.003f,i*8)*1.6f+scribble[index+1]);
+			if(x == 2) lastdist[i] = linedist;
 		}
 		endline();
 	}
 }
-void SucroseAudioProcessorEditor::beginline(int channel) {
-	dist = 0; // TODO
+void SucroseAudioProcessorEditor::beginline(int channel, float dist) {
+	linedist = dist;
 	linechannel = channel;
 	linebegun = 0;
 }
 void SucroseAudioProcessorEditor::endline() {
-	float tipsize = 1;
+	float tipsize = 1.7f;
 	linelength += 2;
-	dist = fmod(dist+tipsize/23.f,1); // TODO 23
+	linedist = fmod(linedist+tipsize/177.f,1);
 	float angle = std::atan2(
 		(visline[linelength*4-7]-visline[linelength*4-15])*height,
 		(visline[linelength*4-8]-visline[linelength*4-16])*width )+1.5707963268f;
 	visline[linelength*4-4] = visline[linelength*4-12]+sin(angle)*tipsize/width ;
 	visline[linelength*4-3] = visline[linelength*4-11]-cos(angle)*tipsize/height;
 	visline[linelength*4-2] = -1.f;
-	visline[linelength*4-1] = dist+linechannel;
+	visline[linelength*4-1] = linedist+linechannel;
 	visline[linelength*4  ] = visline[linelength*4- 8]+sin(angle)*tipsize/width ;
 	visline[linelength*4+1] = visline[linelength*4- 7]-cos(angle)*tipsize/height;
 	visline[linelength*4+2] =  2.f;
-	visline[linelength*4+3] = dist+linechannel;
+	visline[linelength*4+3] = linedist+linechannel;
 }
 void SucroseAudioProcessorEditor::nextpoint(float x, float y) {
 	if(linebegun == 0) {
@@ -421,8 +421,8 @@ void SucroseAudioProcessorEditor::nextpoint(float x, float y) {
 		++linebegun;
 		return;
 	}
-	float linewidth = .75f;
-	dist = fmod(dist+sqrt(powf(linecurrenty-lineprevy,2)+powf(linecurrentx-lineprevx,2))/23.f,1); // TODO 23
+	float linewidth = 3.f;
+	linedist = fmod(linedist+sqrt(powf(linecurrenty-lineprevy,2)+powf(linecurrentx-lineprevx,2))/177.f,1);
 	float angle1 = std::atan2(linecurrenty-   lineprevy,linecurrentx-   lineprevx)+1.5707963268f;
 	float angle2 = std::atan2(           y-linecurrenty,           x-linecurrentx)+1.5707963268f;
 	float angle = 0;
@@ -437,23 +437,23 @@ void SucroseAudioProcessorEditor::nextpoint(float x, float y) {
 	visline[++linelength*4] = (linecurrentx+cos(angle)*linewidth)/width ;
 	visline[1+linelength*4] = (linecurrenty+sin(angle)*linewidth)/height;
 	visline[2+linelength*4] = 0.f;
-	visline[3+linelength*4] = dist+linechannel;
+	visline[3+linelength*4] = linedist+linechannel;
 	visline[++linelength*4] = (linecurrentx-cos(angle)*linewidth)/width ;
 	visline[1+linelength*4] = (linecurrenty-sin(angle)*linewidth)/height;
 	visline[2+linelength*4] = 1.f;
-	visline[3+linelength*4] = dist+linechannel;
+	visline[3+linelength*4] = linedist+linechannel;
 	if(linebegun == 1) {
-		float tipsize = 1;
-		float tempdist = fmod(dist-tipsize/23.f+1,1); // TODO 23
+		float tipsize = 1.7f;
+		float tempdist = fmod(linedist-tipsize/177.f+1,1);
 		linelength += 2;
 		visline[linelength*4- 4] = visline[linelength*4-12];
 		visline[linelength*4- 3] = visline[linelength*4-11];
 		visline[linelength*4- 2] =  0.f;
-		visline[linelength*4- 1] =     dist+linechannel;
+		visline[linelength*4- 1] = linedist+linechannel;
 		visline[linelength*4   ] = visline[linelength*4- 8];
 		visline[linelength*4+ 1] = visline[linelength*4- 7];
 		visline[linelength*4+ 2] =  1.f;
-		visline[linelength*4+ 3] =     dist+linechannel;
+		visline[linelength*4+ 3] = linedist+linechannel;
 		visline[linelength*4-12] -=sin(angle)*tipsize/width ;
 		visline[linelength*4-11] +=cos(angle)*tipsize/height;
 		visline[linelength*4-10] = -1.f;
@@ -488,7 +488,7 @@ void SucroseAudioProcessorEditor::timerCallback() {
 		knobs[i].lerpedvalue[2] = knobs[i].lerpedvalue[2]*.8f+(knobswitch[i]?1:0)*.2f;
 	}
 
-	nextpoint();
+	calcnext();
 	calcvis();
 
 	update();

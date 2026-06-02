@@ -48,7 +48,7 @@ public:
 	void renderOpenGL() override;
 	void openGLContextClosing() override;
 	void calcvis();
-	void nextpoint();
+	void calcnext();
 	void paint(Graphics&) override;
 
 	void timerCallback() override;
@@ -84,6 +84,7 @@ private:
 	Point<int> dragpos = Point<int>(0,0);
 
 	perlin noisegen;
+	float lastdist[4] {0,0,0,0};
 	int writepos = 0;
 	functions::dampendvalue angledamp;
 	float scribble[4*SPEED*2];
@@ -96,11 +97,11 @@ private:
 	float linecurrentx = 0;
 	float linecurrenty = 0;
 	int linebegun = 0;
-	float dist = 0;
+	float linedist = 0;
 	int linechannel = 0;
 	OpenGLTexture linetex;
 	std::shared_ptr<OpenGLShaderProgram> lineshader;
-	void beginline(int channel);
+	void beginline(int channel, float dist);
 	void endline();
 	void nextpoint(float x, float y);
 
