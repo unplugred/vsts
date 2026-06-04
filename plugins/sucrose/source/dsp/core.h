@@ -27,9 +27,10 @@ struct DspParams
 
 struct DspChannel
 {
-    float prefilter[4][2];
-    Hiir2<4> downsample;
-    Hiir2<4> upsample;
+    float prefilter[4][2]; // used for pre- low/high cut filtering
+    Hiir2<4> downsample;   // used when oversampling is on
+    Hiir2<4> upsample;     // used when oversampling is on
+    Hiir<4, 1> halfband;   // used for bandlimiting to 1/4 when oversampling is off
 
     union
     {
@@ -78,6 +79,7 @@ struct DspEngine
     std::vector<DspChannel> state;
 
     DspMode mode;
+    bool oversample;
 
     SVF<float> coeffs_hicut;
     SVF<float> coeffs_locut;
@@ -87,7 +89,7 @@ struct DspEngine
     float locut_freq;
     float sample_rate;
 
-    DspEngine(int num_channels, float sample_rate) : sample_rate(sample_rate), mode(DIRTY), state(num_channels, DspChannel(DIRTY))
+    DspEngine(int num_channels, float sample_rate) : sample_rate(sample_rate), mode(DIRTY), state(num_channels, DspChannel(DIRTY)), oversample(sample_rate < 88200.0f)
     {
     }
 
@@ -99,7 +101,6 @@ struct DspEngine
     void run(float *const *data, int offset, int samples, DspParams params)
     {
         int channels = state.size();
-        float inv_channels = 1.0f / channels;
 
         if (params.mode != mode)
         {
@@ -134,6 +135,9 @@ struct DspEngine
 
         mid_side(data, offset, samples, channels);
 
+        float wet_gain = 1.0f / channels;
+        float dry_gain = params.gain1 * wet_gain;
+
         for (int c = 0; c < channels; ++c)
         {
             float *x = data[c];
@@ -149,59 +153,20 @@ struct DspEngine
                 wet = coeffs_locut.run(wet, channel.prefilter[2])[1];
                 wet = coeffs_locut.run(wet, channel.prefilter[3])[1];
 
-                auto z = channel.upsample.run_up(wet, HIIR8_69);
-
-                for (int n = 0; n < 2; ++n)
+                if (oversample)
                 {
-                    switch (mode)
-                    {
-                    case DIRTY:
-                    {
-                        auto result = channel.data.dirty.harmonic.run(z[n]);
-                        z[n] = result.sub2[0] * params.gain0 +
-                               result.oct2[0] * params.gain2 +
-                               result.oct3[0] * params.gain3;
-                        break;
-                    }
-
-                    case CLEAN8:
-                    {
-                        auto bands = channel.data.clean8.bank.run(z[n], coeffs_bank);
-                        auto result = channel.data.clean8.harmonic.run(bands);
-
-                        result.oct2[7] = 0.0f; // reduce aliasing
-                        result.oct3[6] = 0.0f;
-                        result.oct3[7] = 0.0f;
-
-                        z[n] = result.sub2.sum() * params.gain0 +
-                               result.oct2.sum() * params.gain2 +
-                               result.oct3.sum() * params.gain3;
-                        break;
-                    }
-
-                    case CLEAN16:
-                    {
-                        auto bands = channel.data.clean16.bank.run(z[n], coeffs_bank);
-                        auto result = channel.data.clean16.harmonic.run(bands);
-
-                        result.oct2[15] = 0.0f; // reduce aliasing
-                        result.oct3[14] = 0.0f;
-                        result.oct3[15] = 0.0f;
-
-                        z[n] = result.sub2.sum() * params.gain0 +
-                               result.oct2.sum() * params.gain2 +
-                               result.oct3.sum() * params.gain3;
-                        break;
-                    }
-
-                    default:
-                        break;
-                    }
+                    auto z = channel.upsample.run_up(wet, HIIR8_69);
+                    z[0] = run_xsampled_path(z[0], channel, params);
+                    z[1] = run_xsampled_path(z[1], channel, params);
+                    wet = channel.downsample.run_down(z[0], z[1], HIIR8_69);
+                }
+                else
+                {
+                    wet = channel.halfband.run_lp(wet, HIIR8_69)[0];
+                    wet = run_xsampled_path(wet, channel, params);
                 }
 
-                x[i] = channel.downsample.run_down(z[0], z[1], HIIR8_69);
-                x[i] += dry * params.gain1;
-                x[i] *= inv_channels; // cancel out the increase in gain from mid/side encoding
+                x[i] = wet * wet_gain + dry * dry_gain;
             }
         }
 
@@ -212,5 +177,51 @@ struct DspEngine
     {
         for (int c = 0; c < state.size(); ++c)
             state[c] = DspChannel(mode);
+    }
+
+private:
+    inline float run_xsampled_path(float x, DspChannel &channel, DspParams params)
+    {
+        switch (mode)
+        {
+        case DIRTY:
+        {
+            auto result = channel.data.dirty.harmonic.run(x);
+            return result.sub2[0] * params.gain0 +
+                   result.oct2[0] * params.gain2 +
+                   result.oct3[0] * params.gain3;
+        }
+
+        case CLEAN8:
+        {
+            auto bands = channel.data.clean8.bank.run(x, coeffs_bank);
+            auto result = channel.data.clean8.harmonic.run(bands);
+
+            result.oct2[7] = 0.0f; // reduce aliasing
+            result.oct3[6] = 0.0f;
+            result.oct3[7] = 0.0f;
+
+            return result.sub2.sum() * params.gain0 +
+                   result.oct2.sum() * params.gain2 +
+                   result.oct3.sum() * params.gain3;
+        }
+
+        case CLEAN16:
+        {
+            auto bands = channel.data.clean16.bank.run(x, coeffs_bank);
+            auto result = channel.data.clean16.harmonic.run(bands);
+
+            result.oct2[15] = 0.0f; // reduce aliasing
+            result.oct3[14] = 0.0f;
+            result.oct3[15] = 0.0f;
+
+            return result.sub2.sum() * params.gain0 +
+                   result.oct2.sum() * params.gain2 +
+                   result.oct3.sum() * params.gain3;
+        }
+
+        default:
+            return x;
+        }
     }
 };

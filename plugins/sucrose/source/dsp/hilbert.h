@@ -86,10 +86,40 @@ struct Hiir
         return {i, q};
     }
 
+    inline f32x<M> run_lp(const f32x<M> &x, HiirCoeffs<N> coeffs)
+    {
+        auto i = x;
+        auto q = x;
+
+        // allpass cascade
+        for (int n = 0; n < N; ++n)
+        {
+            allpass2_lp(i, coeffs.i[n], s_i[n]);
+            allpass2_lp(q, coeffs.q[n], s_q[n]);
+        }
+
+        // z^-1
+        auto y_i = d_i;
+        d_i = i;
+        i = y_i;
+
+        return (i + q) * f32x<M>(0.5f);
+    }
+
 private:
     static inline void allpass2(f32x<M> &x, float c, f32x<M> s[4])
     {
         auto y = f32x<M>(c) * (x + s[1]) - s[3];
+        s[1] = s[0];
+        s[0] = y;
+        s[3] = s[2];
+        s[2] = x;
+        x = y;
+    }
+
+    static inline void allpass2_lp(f32x<M> &x, float c, f32x<M> s[4])
+    {
+        auto y = f32x<M>(c) * (x - s[1]) + s[3];
         s[1] = s[0];
         s[0] = y;
         s[3] = s[2];
