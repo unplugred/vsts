@@ -19,10 +19,10 @@ SucroseAudioProcessor::SucroseAudioProcessor() : apvts(*this, &undo_manager, "Pa
 	presets[8] = pluginpreset("Shift Up", .0f, .0f, .5f, .0f, .0f, 0.f, 2);
 	presets[9] = pluginpreset("Clarity", .0f, .5f, .6f, .67f, .23f, 0.f, 1);
 
-	for (int i = 9; i < getNumPrograms(); i++)
+	for (int i = 10; i < getNumPrograms(); i++)
 	{
 		presets[i] = presets[0];
-		presets[i].name = "Program " + (String)i;
+		presets[i].name = "Program " + (String)(i-9);
 	}
 
 	params.pots[0] = potentiometer("subharmonix", "sub", .001f, presets[0].values[0]);
