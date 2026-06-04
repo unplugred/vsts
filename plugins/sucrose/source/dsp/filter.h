@@ -1,5 +1,4 @@
 #pragma once
-#define _USE_MATH_DEFINES
 #include "util.h"
 #include <cmath>
 #include <array>
@@ -25,7 +24,7 @@ struct SVF
     SVF(float freq, float q)
     {
         freq = std::clamp(freq, 1e-5f, 0.5f - 1e-4f); // guard against instabilities if sample rate is too low
-        g = std::tan(M_PI * (0.5f - freq));
+        g = std::tan(3.14159265359f * (0.5f - freq));
         a3 = q / (q + q * g * g + g);
     }
 
