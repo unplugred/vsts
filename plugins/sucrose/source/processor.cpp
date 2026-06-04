@@ -198,15 +198,14 @@ void SucroseAudioProcessor::processBlock(AudioBuffer<float> &buffer, MidiBuffer 
 			chunk = params.pots[i].smooth.isSmoothing() ? 1 : chunk; // if we're currently smoothing, we have to do it sample by sample
 		}
 
-		auto params = DspParams{
-			.gain0 = togain(state.values[0]),
-			.gain1 = togain(state.values[1]),
-			.gain2 = togain(state.values[2]),
-			.gain3 = togain(state.values[3]),
-			.locut = tolc(state.values[4]),
-			.hicut = tohc(state.values[5]),
-			.mode = static_cast<DspMode>(state.values[6]),
-		};
+		DspParams params;
+		params.gain0 = togain(state.values[0]);
+		params.gain1 = togain(state.values[1]);
+		params.gain2 = togain(state.values[2]);
+		params.gain3 = togain(state.values[3]);
+		params.locut = tolc(state.values[4]);
+		params.hicut = tohc(state.values[5]);
+		params.mode = static_cast<DspMode>(state.values[6]);
 
 		dsp.run(buffer.getArrayOfWritePointers(), offset, chunk, params);
 		offset += chunk;
