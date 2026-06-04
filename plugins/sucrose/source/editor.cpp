@@ -138,29 +138,62 @@ R"(#version 150 core
 in vec2 uv;
 in vec4 webuv;
 in vec4 cuv;
+uniform vec4 amttop;
+uniform vec3 amtbot;
 uniform sampler2D fgtex;
 uniform float algo;
 uniform vec2 algoprog;
 out vec4 fragColor;
 void main() {
-	fragColor = texture(fgtex,uv);
+	vec2 auv = uv;
+	vec4 acuv = cuv;
+	if(uv.y < .68) {
+		float sect = -9;
+		if(uv.y >= .25)
+			sect = (uv.x>.49?1:0)+(uv.y<.45?2:0);
+		else if(uv.y >= .09)
+			sect = floor(uv.x*3)+4;
+
+		float amt = 0;
+		if(sect == 0) amt = amttop.x; else
+		if(sect == 1) amt = amttop.y; else
+		if(sect == 2) amt = amttop.z; else
+		if(sect == 3) amt = amttop.w; else
+		if(sect == 4) amt = amtbot.x; else
+		if(sect == 5) amt = amtbot.y; else
+		if(sect == 6) amt = amtbot.z;
+
+		if(abs(amt) > .0001) {
+			vec4 origin = vec4(-1);
+			if(uv.y >= .25)
+				origin = vec4(.26+.48*mod(sect,2),.64-.26*floor(sect*.5),.2,.3);
+			else
+				origin = vec4(.19+.31*(sect-4),.16,.12,.9);
+			float dist = 1+min((sqrt(pow(uv.x-origin.x,2.)+pow(uv.y-origin.y,2.))-origin.z),.1)*origin.w*amt;
+			 auv    = ( auv   -origin.xy)*dist+origin.xy;
+			acuv.xy = (acuv.xy-origin.xy)*dist+origin.xy;
+			acuv.zw = (acuv.zw-origin.xy)*dist+origin.xy;
+		}
+	}
+
+	fragColor = texture(fgtex,auv);
 	if(uv.y > .1 && uv.y < .21) {
 		if(uv.x > .816 && uv.x < .93 && fragColor.r <= .0001) {
 			if(algoprog.y >= .9999) {
-				if(algo > 1.5) fragColor.r += fragColor                   .g; else
-				if(algo > 0.5) fragColor.r += texture(fgtex,uv-vec2(.5,0)).g; else
-				               fragColor.r += fragColor                   .b;
+				if(algo > 1.5) fragColor.r += fragColor                    .g; else
+				if(algo > 0.5) fragColor.r += texture(fgtex,auv-vec2(.5,0)).g; else
+				               fragColor.r += fragColor                    .b;
 			} else {
 				vec2 algocrest = vec2(0);
 				if(algo > 1.5) {
-					algocrest = vec2(texture(fgtex,cuv.xy           ).g,
-					                 texture(fgtex,cuv.zw-vec2(.5,0)).g);
+					algocrest = vec2(texture(fgtex,acuv.xy           ).g,
+					                 texture(fgtex,acuv.zw-vec2(.5,0)).g);
 				} else if(algo > 0.5) {
-					algocrest = vec2(texture(fgtex,cuv.xy-vec2(.5,0)).g,
-					                 texture(fgtex,cuv.zw           ).b);
+					algocrest = vec2(texture(fgtex,acuv.xy-vec2(.5,0)).g,
+					                 texture(fgtex,acuv.zw           ).b);
 				} else {
-					algocrest = vec2(texture(fgtex,cuv.xy           ).b,
-					                 texture(fgtex,cuv.zw           ).g);
+					algocrest = vec2(texture(fgtex,acuv.xy           ).b,
+					                 texture(fgtex,acuv.zw           ).g);
 				}
 				fragColor.r += sqrt(pow(algoprog.x*algocrest.r,2)+pow((1-algoprog.x)*algocrest.g,2));
 			}
@@ -179,14 +212,37 @@ void main() {
 R"(#version 150 core
 in vec4 aPos;
 uniform float banner;
+uniform vec4 amttop;
+uniform vec2 amtbot;
 out float opacity;
 out float channel;
 out vec2 uv;
 void main() {
-	gl_Position = vec4(vec2(aPos.x,aPos.y*(1-banner))*2-1,0,1);
 	opacity = 1.5-abs(aPos.z-.5);
-	uv = vec2(mod(aPos.w,1.),min(1,max(0,aPos.z))*.5+mod(floor(aPos.w/3.),1.)*.5);
+	uv = vec2(mod(aPos.w,1.),min(1,max(0,aPos.z))*.5+mod(floor(aPos.w/3.),2.)*.5);
 	channel = mod(floor(aPos.w),3.);
+
+	float sect = mod(floor(aPos.w),9.);
+	float amt = 0;
+	if(sect == 0) amt = amttop.x; else
+	if(sect == 1) amt = amttop.y; else
+	if(sect == 2) amt = amttop.z; else
+	if(sect == 3) amt = amttop.w; else
+	if(sect == 4) amt = amtbot.x; else
+	if(sect == 5) amt = amtbot.y;
+
+	vec2 pos = aPos.xy;
+	if(abs(amt) > .0001) {
+		vec4 origin = vec4(-1);
+		if(sect < 4)
+			origin = vec4(.26+.48*mod(sect,2),.64-.26*floor(sect*.5),.2,.3);
+		else
+			origin = vec4(.19+.31*(sect-4),.16,.12,.9);
+		float dist = 1+min((sqrt(pow(pos.x-origin.x,2.)+pow(pos.y-origin.y,2.))-origin.z),.1)*origin.w*amt;
+		pos = (pos-origin.xy)/dist+origin.xy;
+	}
+
+	gl_Position = vec4(vec2(pos.x,pos.y*(1-banner))*2-1,0,1);
 })",
 //LINE FRAG
 R"(#version 150 core
@@ -306,6 +362,15 @@ void SucroseAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glActiveTexture(GL_TEXTURE0);
 	fgtex.bind();
 	baseshader->setUniform("fgtex",0);
+	baseshader->setUniform("amttop",
+		knobs[0].lerpedvalue[3],
+		knobs[1].lerpedvalue[3],
+		knobs[2].lerpedvalue[3],
+		knobs[3].lerpedvalue[3]);
+	baseshader->setUniform("amtbot",
+		knobs[4].lerpedvalue[3],
+		knobs[5].lerpedvalue[3],
+		knobs[6].lerpedvalue[3]);
 	baseshader->setUniform("algo",knobs[6].value*3.f);
 	baseshader->setUniform("algoprog",knobs[6].lerpedvalue[0],knobs[6].lerpedvalue[1]*.4f+.6f-knobs[6].lerpedvalue[2]*.2f);
 	baseshader->setUniform("banner",banner_offset);
@@ -327,6 +392,14 @@ void SucroseAudioProcessorEditor::renderOpenGL() {
 	lineshader->setUniform("linetex",0);
 	lineshader->setUniform("banner",banner_offset);
 	lineshader->setUniform("dpi",scaled_dpi);
+	lineshader->setUniform("amttop",
+		knobs[0].lerpedvalue[3],
+		knobs[1].lerpedvalue[3],
+		knobs[2].lerpedvalue[3],
+		knobs[3].lerpedvalue[3]);
+	lineshader->setUniform("amtbot",
+		knobs[4].lerpedvalue[3],
+		knobs[5].lerpedvalue[3]);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,linelength+1);
 	context.extensions.glDisableVertexAttribArray(coord);
 	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
@@ -349,7 +422,6 @@ void SucroseAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	context.extensions.glDisableVertexAttribArray(coord);
-	// TODO fish eye
 
 	draw_end();
 }
@@ -401,7 +473,7 @@ void SucroseAudioProcessorEditor::calcvis() {
 	}
 
 	for(int i = 0; i < 4; ++i) {
-		beginline(i+3,lastdist[i]);
+		beginline(i+6+3,lastdist[i]);
 		for(int x = 0; x < SPEED; ++x) {
 			int index = SPEED*2*i+fmod(x+writepos,SPEED)*2;
 			nextpoint(
@@ -508,10 +580,11 @@ void SucroseAudioProcessorEditor::timerCallback() {
 		knobs[i].lerpedvalue[1] = knobs[i].lerpedvalue[1]*.7f+knobs[i].value*.3f;
 		knobs[i].lerpedvalue[2] = knobs[i].lerpedvalue[2]*.8f+(knobswitch[i]?1:0)*.2f;
 	}
-
 	knobs[6].lerpedvalue[0] = knobs[6].lerpedvalue[0]*.55f+.45f;
 	knobs[6].lerpedvalue[1] = knobs[6].lerpedvalue[1]*.8f+.2f;
 	knobs[6].lerpedvalue[2] = knobs[6].lerpedvalue[2]*.7f+.3f*(hover==6?1.f:0.f);
+	for(int i = 0; i < knobcount; i++)
+		knobs[i].lerpedvalue[3] = knobs[i].lerpedvalue[3]*.5f+.5f*(isdown?-.5f:1.f)*(hover==i?1.f:0.f);
 
 	calcnext();
 	calcvis();
@@ -571,6 +644,7 @@ void SucroseAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		return;
 	}
 
+	isdown = true;
 	if(!fresh && hover > -1)
 		knobswitch[hover] = !knobswitch[hover];
 	fresh = false;
@@ -609,6 +683,7 @@ void SucroseAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 	}
 }
 void SucroseAudioProcessorEditor::mouseUp(const MouseEvent& event) {
+	isdown = false;
 	if(dpi < 0) return;
 	if(hover > -1)
 		knobswitch[hover] = !knobswitch[hover];

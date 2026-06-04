@@ -25,7 +25,7 @@ struct knob {
 	int y[8] {0,0,0,0,0,0,0,0};
 	float a[2] {0,0};
 	float value = .5f;
-	float lerpedvalue[3] {0,0,0};
+	float lerpedvalue[4] {0,0,0,0};
 	int hoverstate = 0;
 	String id;
 	String name;
@@ -71,6 +71,7 @@ private:
 
 	OpenGLTexture bgtex;
 	OpenGLTexture fgtex;
+	bool isdown = false;
 	float websiteht[2] {-1,-1};
 	float logopos[6];
 	std::shared_ptr<OpenGLShaderProgram> baseshader;
