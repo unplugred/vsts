@@ -584,7 +584,7 @@ void SucroseAudioProcessorEditor::timerCallback() {
 	knobs[6].lerpedvalue[1] = knobs[6].lerpedvalue[1]*.8f+.2f;
 	knobs[6].lerpedvalue[2] = knobs[6].lerpedvalue[2]*.7f+.3f*(hover==6?1.f:0.f);
 	for(int i = 0; i < knobcount; i++)
-		knobs[i].lerpedvalue[3] = knobs[i].lerpedvalue[3]*.5f+.5f*(isdown?-.5f:1.f)*(hover==i?1.f:0.f);
+		knobs[i].lerpedvalue[3] = knobs[i].lerpedvalue[3]*.55f+.45f*(isdown?-.5f:1.f)*(hover==i?1.f:0.f);
 
 	calcnext();
 	calcvis();
