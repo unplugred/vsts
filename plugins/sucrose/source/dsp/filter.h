@@ -1,4 +1,5 @@
 #pragma once
+#define _USE_MATH_DEFINES
 #include "util.h"
 #include <cmath>
 #include <array>
