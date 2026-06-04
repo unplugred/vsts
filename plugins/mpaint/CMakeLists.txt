@@ -23,6 +23,7 @@ juce_add_plugin("${BaseTargetName}"
 	VST_COPY_DIR "${freedir}"
 	AU_COPY_DIR "${freedir}")
 
+set_target_properties("${BaseTargetName}" PROPERTIES INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
 target_compile_features("${BaseTargetName}" PRIVATE cxx_std_17)
 
 clap_juce_extensions_plugin(TARGET "${BaseTargetName}"

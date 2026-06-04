@@ -22,6 +22,7 @@ juce_add_plugin("${BaseTargetName}"
 	VST_COPY_DIR "../${outdir}"
 	AU_COPY_DIR "../${outdir}")
 
+set_target_properties("${BaseTargetName}" PROPERTIES INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
 target_compile_features("${BaseTargetName}" PRIVATE cxx_std_17)
 add_compile_definitions(PRISMON)
 
