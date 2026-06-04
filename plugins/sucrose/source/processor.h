@@ -62,7 +62,7 @@ struct pluginpreset
 	}
 };
 
-class SucroseAudioProcessor : public plugmachine_dsp, private Timer
+class SucroseAudioProcessor : public plugmachine_dsp
 {
 public:
 	SucroseAudioProcessor();
@@ -108,14 +108,10 @@ public:
 
 	pluginpreset state;
 	pluginparams params;
-	bool lerpchanged[7];
 	int currentpreset = 0;
 
 private:
 	pluginpreset presets[20];
-	void timerCallback() override;
-	float lerptable[7];
-	float lerpstage = 0;
 
 	int channelnum = 0;
 	int samplesperblock = 0;

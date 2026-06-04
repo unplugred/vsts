@@ -659,7 +659,6 @@ void SucroseAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		valueoffset = 0;
 		audio_processor.undo_manager.beginNewTransaction();
 		audio_processor.apvts.getParameter(knobs[hover].id)->beginChangeGesture();
-		audio_processor.lerpchanged[hover] = true;
 		dragpos = event.getScreenPosition();
 		event.source.enableUnboundedMouseMovement(true);
 	}

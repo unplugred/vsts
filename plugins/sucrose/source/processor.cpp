@@ -62,57 +62,11 @@ void SucroseAudioProcessor::setCurrentProgram(int index)
 		return;
 
 	undo_manager.beginNewTransaction((String) "Changed preset to " += presets[index].name);
-	for (int i = 0; i < paramcount; i++)
-	{
-		if (params.pots[i].ttype != potentiometer::floattype)
-			continue;
-		if (lerpstage >= .001 && !lerpchanged[i])
-			continue;
-		lerptable[i] = params.pots[i].normalize(presets[currentpreset].values[i]);
-		lerpchanged[i] = false;
-	}
 	currentpreset = index;
-	for (int i = 0; i < paramcount; i++)
-	{
-		if (params.pots[i].ttype == potentiometer::floattype)
-			continue;
-		apvts.getParameter(params.pots[i].id)->setValueNotifyingHost(params.pots[i].normalize(presets[index].values[i]));
-	}
 
-	if (lerpstage <= 0)
-	{
-		lerpstage = 1;
-		startTimerHz(30);
-	}
-	else
-		lerpstage = 1;
-}
-void SucroseAudioProcessor::timerCallback()
-{
-	lerpstage *= .64f;
-	if (lerpstage < .001)
-	{
-		for (int i = 0; i < paramcount; i++)
-		{
-			if (params.pots[i].ttype != potentiometer::floattype)
-				continue;
-			if (lerpchanged[i])
-				continue;
-			apvts.getParameter(params.pots[i].id)->setValueNotifyingHost(params.pots[i].normalize(presets[currentpreset].values[i]));
-		}
-		lerpstage = 0;
-		undo_manager.beginNewTransaction();
-		stopTimer();
-		return;
-	}
 	for (int i = 0; i < paramcount; i++)
 	{
-		if (params.pots[i].ttype != potentiometer::floattype)
-			continue;
-		if (lerpchanged[i])
-			continue;
-		lerptable[i] = (params.pots[i].normalize(presets[currentpreset].values[i]) - lerptable[i]) * .36f + lerptable[i];
-		apvts.getParameter(params.pots[i].id)->setValueNotifyingHost(lerptable[i]);
+		apvts.getParameter(params.pots[i].id)->setValueNotifyingHost(params.pots[i].normalize(presets[currentpreset].values[i]));
 	}
 }
 const String SucroseAudioProcessor::getProgramName(int index)
@@ -345,8 +299,7 @@ void SucroseAudioProcessor::parameterChanged(const String &parameterID, float ne
 				params.pots[i].smooth.setTargetValue(newValue);
 			else
 				state.values[i] = newValue;
-			if (params.pots[i].ttype != potentiometer::floattype || lerpstage < .001 || lerpchanged[i])
-				presets[currentpreset].values[i] = newValue;
+			presets[currentpreset].values[i] = newValue;
 			return;
 		}
 }
