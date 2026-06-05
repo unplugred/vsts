@@ -98,6 +98,8 @@ public:
 	const String get_preset(int preset_id, const char delimiter = ',') override;
 	void set_preset(const String &preset, int preset_id, const char delimiter = ',', bool print_errors = false) override;
 
+	void randomize();
+
 	virtual void parameterChanged(const String &parameterID, float newValue);
 
 	AudioProcessorValueTreeState::ParameterLayout create_parameters();
@@ -199,9 +201,9 @@ static std::function<float(const String &s)> sfromdb = [](const String &s)
 	if (s.containsIgnoreCase("f"))
 		return 0.f;
 	float val = s.getFloatValue();
-	if (val >= 0)
-		return jlimit(0.f, 1.f, val);
-	return jlimit(0.f, 1.f, fromdb(val));
+	if (s.containsIgnoreCase("d") || val < 0.f || val > 1.f)
+		return jlimit(0.f, 1.f, fromdb(val));
+	return jlimit(0.f, 1.f, val);
 };
 static std::function<String(int v, int max)> toalgo = [](int v, int max)
 {

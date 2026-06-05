@@ -22,7 +22,7 @@ SucroseAudioProcessor::SucroseAudioProcessor() : apvts(*this, &undo_manager, "Pa
 	for (int i = 10; i < getNumPrograms(); i++)
 	{
 		presets[i] = presets[0];
-		presets[i].name = "Program " + (String)(i-9);
+		presets[i].name = "Program " + (String)(i - 9);
 	}
 
 	params.pots[0] = potentiometer("subharmonix", "sub", .001f, presets[0].values[0]);
@@ -302,6 +302,44 @@ void SucroseAudioProcessor::parameterChanged(const String &parameterID, float ne
 			presets[currentpreset].values[i] = newValue;
 			return;
 		}
+}
+
+float estimate_gain(float sub, float dry, float second, float third)
+{
+	return sqrt(dry * dry + sub * sub + second * second + third * third);
+}
+
+void SucroseAudioProcessor::randomize()
+{
+	Random random;
+
+	float high_cut = tohc(pow(random.nextFloat(), 2.f));	 // skew towards higher frequencies
+	float low_cut = high_cut * pow(random.nextFloat(), 4.f); // ensures low cut is always lower than high cut, skew towards lower frequencies as well
+	float sub_gain = togain(random.nextFloat());
+	float dry_gain = togain(random.nextFloat());
+	float second_gain = togain(random.nextFloat());
+	float third_gain = togain(random.nextFloat());
+
+	float post_gain = jmax(1e-5f, estimate_gain(sub_gain, dry_gain, second_gain, third_gain));
+	float pre_gain = estimate_gain(
+		togain(apvts.getParameter("sub")->getValue()),
+		togain(apvts.getParameter("dry")->getValue()),
+		togain(apvts.getParameter("second")->getValue()),
+		togain(apvts.getParameter("third")->getValue()));
+
+	// try to be gain-preserving so the gain doesnt jump around too much (modulo hi/lowcut ofc)
+	sub_gain *= pre_gain / post_gain;
+	dry_gain *= pre_gain / post_gain;
+	second_gain *= pre_gain / post_gain;
+	third_gain *= pre_gain / post_gain;
+
+	apvts.getParameter("algo")->setValueNotifyingHost((float)random.nextInt(3));
+	apvts.getParameter("sub")->setValueNotifyingHost(fromgain(sub_gain));
+	apvts.getParameter("dry")->setValueNotifyingHost(fromgain(dry_gain));
+	apvts.getParameter("second")->setValueNotifyingHost(fromgain(second_gain));
+	apvts.getParameter("third")->setValueNotifyingHost(fromgain(third_gain));
+	apvts.getParameter("lc")->setValueNotifyingHost(fromlc(low_cut));
+	apvts.getParameter("hc")->setValueNotifyingHost(fromhc(high_cut));
 }
 
 AudioProcessor *JUCE_CALLTYPE createPluginFilter() { return new SucroseAudioProcessor(); }

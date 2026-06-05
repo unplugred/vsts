@@ -629,6 +629,7 @@ void SucroseAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		rightclickmenu->setLookAndFeel(&look_n_feel);
 		rightclickmenu->addItem(1,"'Copy preset",true);
 		rightclickmenu->addItem(2,"'Paste preset",audio_processor.is_valid_preset_string(SystemClipboard::getTextFromClipboard()));
+		rightclickmenu->addItem(3,"'Randomize",true);
 		rightclickmenu->addSeparator();
 		rightclickmenu->addSubMenu("'Scale",*scalemenu);
 		rightclickmenu->showMenuAsync(PopupMenu::Options(),[this](int result){
@@ -639,6 +640,8 @@ void SucroseAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 				SystemClipboard::copyTextToClipboard(audio_processor.get_preset(audio_processor.currentpreset));
 			} else if(result == 2) { //paste preset
 				audio_processor.set_preset(SystemClipboard::getTextFromClipboard(), audio_processor.currentpreset);
+			} else if (result == 3) {
+				audio_processor.randomize();
 			}
 		});
 		return;
