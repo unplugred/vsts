@@ -1,7 +1,7 @@
 #include "processor.h"
 #include "editor.h"
 
-SucroseAudioProcessorEditor::SucroseAudioProcessorEditor(SucroseAudioProcessor& p, int paramcount, pluginpreset state, pluginparams params) : audio_processor(p), AudioProcessorEditor(&p), plugmachine_gui(*this, p, 356, 382) {
+SucroseAudioProcessorEditor::SucroseAudioProcessorEditor(SucroseAudioProcessor& p, int paramcount, pluginpreset state, pluginparams params) : audio_processor(p), AudioProcessorEditor(&p), plugmachine_gui(*this, p, 356, 382, 1.5f) {
 	for(int i = 0; i < paramcount; i++) {
 		knobs[i].id = params.pots[i].id;
 		knobs[i].name = params.pots[i].name;
