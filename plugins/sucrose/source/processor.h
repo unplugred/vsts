@@ -201,7 +201,9 @@ static std::function<float(const String &s)> sfromdb = [](const String &s)
 	if (s.containsIgnoreCase("f"))
 		return 0.f;
 	float val = s.getFloatValue();
-	return jlimit(0.f, 1.f, fromdb(val));
+	if (s.containsIgnoreCase("d") || val < 0.f || val > 1.f)
+		return jlimit(0.f, 1.f, fromdb(val));
+	return jlimit(0.f, 1.f, val);
 };
 static std::function<String(int v, int max)> toalgo = [](int v, int max)
 {
