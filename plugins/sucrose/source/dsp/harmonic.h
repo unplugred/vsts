@@ -13,11 +13,11 @@ struct HarmonicResult
 template <int N>
 struct HarmonicGen
 {
-    Hiir<7, N> hiir;
+    Hiir<7, N> hiir = {};
     bool side[N] = {};
     bool sign[N] = {};
 
-    HarmonicGen() : hiir() {}
+    HarmonicGen() {}
 
     inline HarmonicResult<N> run(const f32x<N> &x)
     {

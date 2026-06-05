@@ -15,7 +15,8 @@
 template <typename T>
 struct SVF
 {
-    T g, a3;
+    T g = {};
+    T a3 = {};
 
     SVF() = default;
 
@@ -65,11 +66,11 @@ inline T lr4_comp(const T &x, const SVF<T> &svf, T state[2])
 /// @brief State of an 8-band Linkwitz-Riley (4th order) filterbank
 struct LR4Bank8
 {
-    float comp1[6][2];
-    float split1[3][4];
+    float comp1[6][2] = {};
+    float split1[3][4] = {};
 
-    f32x<4> comp2[2];
-    f32x<4> split2[4];
+    f32x<4> comp2[2] = {};
+    f32x<4> split2[4] = {};
 
     inline f32x<8> run(float x, SVF<float> coeffs[7])
     {
@@ -111,14 +112,14 @@ struct LR4Bank8
 /// @brief State of a 16-band Linkwitz-Riley (4th order) filterbank
 struct LR4Bank16
 {
-    float comp1[14][2];
-    float split1[3][4];
+    float comp1[14][2] = {};
+    float split1[3][4] = {};
 
-    f32x<4> comp2[3][2];
-    f32x<4> split2[4];
+    f32x<4> comp2[3][2] = {};
+    f32x<4> split2[4] = {};
 
-    f32x<8> comp3[2];
-    f32x<8> split3[4];
+    f32x<8> comp3[2] = {};
+    f32x<8> split3[4] = {};
 
     inline f32x<16> run(float x, SVF<float> coeffs[15])
     {

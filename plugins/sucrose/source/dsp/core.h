@@ -27,28 +27,28 @@ struct DspParams
 
 struct DspChannel
 {
-    float prefilter[4][2]; // used for pre- low/high cut filtering
-    Hiir2<4> downsample;   // used when oversampling is on
-    Hiir2<4> upsample;     // used when oversampling is on
-    Hiir<4, 1> halfband;   // used for bandlimiting to 1/4 when oversampling is off
+    float prefilter[4][2] = {}; // used for pre- low/high cut filtering
+    Hiir2<4> downsample = {};   // used when oversampling is on
+    Hiir2<4> upsample = {};     // used when oversampling is on
+    Hiir<4, 1> halfband = {};   // used for bandlimiting to 1/4 when oversampling is off
 
     union
     {
         struct
         {
-            HarmonicGen<1> harmonic;
+            HarmonicGen<1> harmonic = {};
         } dirty;
 
         struct
         {
-            LR4Bank8 bank;
-            HarmonicGen<8> harmonic;
+            LR4Bank8 bank = {};
+            HarmonicGen<8> harmonic = {};
         } clean8;
 
         struct
         {
-            LR4Bank16 bank;
-            HarmonicGen<16> harmonic;
+            LR4Bank16 bank = {};
+            HarmonicGen<16> harmonic = {};
         } clean16;
     } data;
 
@@ -81,15 +81,20 @@ struct DspEngine
     DspMode mode;
     bool oversample;
 
-    SVF<float> coeffs_hicut;
-    SVF<float> coeffs_locut;
-    SVF<float> coeffs_bank[15];
+    SVF<float> coeffs_hicut = {};
+    SVF<float> coeffs_locut = {};
+    SVF<float> coeffs_bank[15] = {};
 
     float hicut_freq;
     float locut_freq;
     float sample_rate;
 
-    DspEngine(int num_channels, float sample_rate) : sample_rate(sample_rate), mode(DIRTY), state(num_channels, DspChannel(DIRTY)), oversample(sample_rate < 88200.0f)
+    DspEngine(int num_channels, float sample_rate) : mode(DIRTY),
+                                                     state(num_channels, DspChannel(DIRTY)),
+                                                     oversample(sample_rate < 88200.0f),
+                                                     sample_rate(sample_rate),
+                                                     hicut_freq(-1.f),
+                                                     locut_freq(-1.f)
     {
     }
 
