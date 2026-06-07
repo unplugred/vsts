@@ -11,7 +11,7 @@ juce_add_plugin("${BaseTargetName}"
 	NEEDS_MIDI_OUTPUT FALSE
 	IS_MIDI_EFFECT FALSE
 	EDITOR_WANTS_KEYBOARD_FOCUS FALSE
-	DESCRIPTION "A prototyping plugin for internal use."
+	DESCRIPTION "Transparent harmonics and subharmonic generator."
 	PLUGIN_MANUFACTURER_CODE Ured
 	PLUGIN_CODE Scrs
 	VST3_CATEGORIES Distortion
