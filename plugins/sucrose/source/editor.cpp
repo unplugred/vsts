@@ -738,40 +738,42 @@ int SucroseAudioProcessorEditor::recalc_hover(float x, float y) {
 
 LookNFeel::LookNFeel() {
 	setColour(PopupMenu::backgroundColourId,Colour::fromFloatRGBA(0.f,0.f,0.f,0.f));
-	font = find_font("Consolas|Noto Mono|DejaVu Sans Mono|Menlo|Andale Mono|SF Mono|Lucida Console|Liberation Mono");
+	font = find_font("Arial|Helvetica Neue|Helvetica|Roboto");
 }
 LookNFeel::~LookNFeel() {
 }
 Font LookNFeel::getPopupMenuFont() {
+	Font fontt;
 	if(font == "None")
-		return Font(18.f*scale,Font::plain);
-	return Font(font,"Regular",18.f*scale);
+		fontt = Font(16.f*scale,Font::plain);
+	else
+		fontt = Font(font,"Regular",16.f*scale);
+	fontt.setHorizontalScale(1.1f);
+	fontt.setExtraKerningFactor(-.05f);
+	return fontt;
 }
 void LookNFeel::drawPopupMenuBackground(Graphics &g, int width, int height) {
-	g.setColour(fg1);
-	g.fillRect(0,0,width,height);
+	g.setColour(fg);
+	g.fillRoundedRectangle(0,0,width,height,4*scale);
 	g.setColour(bg1);
-	g.fillRect(scale,scale,width-2*scale,height-2*scale);
+	g.fillRoundedRectangle(scale,scale,width-2*scale,height-2*scale,3*scale);
 }
 void LookNFeel::drawPopupMenuItem(Graphics &g, const Rectangle<int> &area, bool isSeparator, bool isActive, bool isHighlighted, bool isTicked, bool hasSubMenu, const String &text, const String &shortcutKeyText, const Drawable *icon, const Colour *textColour) {
 	if(isSeparator) {
-		g.setColour(fg1);
+		g.setColour(fg);
 		g.fillRect(0,0,area.getWidth(),area.getHeight());
 		return;
 	}
 
 	bool removeleft = text.startsWith("'");
 	if(isHighlighted && isActive) {
-		g.setColour(fg2);
-		g.fillRect(0,0,area.getWidth(),area.getHeight());
 		g.setColour(bg2);
-		g.fillRect(scale,0.f,area.getWidth()-2*scale,(float)area.getHeight());
-		g.setColour(fg2);
-	} else {
-		g.setColour(fg1);
+		g.fillRoundedRectangle(scale,0.f,area.getWidth()-2*scale,(float)area.getHeight(),4*scale);
 	}
 	if(textColour != nullptr)
 		g.setColour(*textColour);
+	else
+		g.setColour(fg);
 
 	auto r = area;
 	if(removeleft) r.removeFromLeft(5*scale);
@@ -817,13 +819,13 @@ void LookNFeel::drawPopupMenuItem(Graphics &g, const Rectangle<int> &area, bool 
 	}
 }
 int LookNFeel::getPopupMenuBorderSize() {
-	return (int)floor(scale);
+	return (int)round(scale);
 }
 void LookNFeel::getIdealPopupMenuItemSize(const String& text, const bool isSeparator, int standardMenuItemHeight, int& idealWidth, int& idealHeight)
 {
 	if(isSeparator) {
 		idealWidth = 50*scale;
-		idealHeight = (int)floor(scale);
+		idealHeight = (int)round(scale);
 	} else {
 		Font font(getPopupMenuFont());
 
