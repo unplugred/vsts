@@ -133,11 +133,11 @@ static float fromlc(float v)
 };
 static float tohc(float v)
 {
-	return mapToLog10(1 - (double)v, 50.0, 20000.0);
+	return mapToLog10((double)v, 50.0, 20000.0);
 };
 static float fromhc(float v)
 {
-	return (1 - mapFromLog10(v, 50.f, 20000.f));
+	return mapFromLog10(v, 50.f, 20000.f);
 };
 static float togain(float v)
 {

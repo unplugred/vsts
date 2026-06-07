@@ -8,16 +8,16 @@ SucroseAudioProcessor::SucroseAudioProcessor() : apvts(*this, &undo_manager, "Pa
 
 	init();
 
-	presets[0] = pluginpreset("Default", 0.f, .5f, 0.f, 0.f, 0.f, 0.f, 1);
-	presets[1] = pluginpreset("Glitchy", .5f, 0.f, 0.f, 0.f, 0.f, 0.f, 0);
-	presets[2] = pluginpreset("Thick", .5f, .5f, 0.f, 0.f, .0f, .6f, 0);
-	presets[3] = pluginpreset("Crunchy", .0f, .42f, .42f, .42f, .0f, 0.f, 0);
-	presets[4] = pluginpreset("Punchy", .0f, .5f, .354f, .25f, .0f, .8f, 0);
-	presets[5] = pluginpreset("Exciter", .0f, .5f, .5f, .0f, .75f, 0.f, 0);
-	presets[6] = pluginpreset("Doubling", .0f, .42f, .42f, .0f, .0f, 0.f, 1);
-	presets[7] = pluginpreset("Shift Down", .6f, .0f, .0f, .0f, .0f, 0.f, 2);
-	presets[8] = pluginpreset("Shift Up", .0f, .0f, .5f, .0f, .0f, 0.f, 2);
-	presets[9] = pluginpreset("Clarity", .0f, .5f, .6f, .67f, .23f, 0.f, 1);
+	presets[0] = pluginpreset("Default"   , 0.f, .5f , 0.f  , 0.f , 0.f , 1.f, 1);
+	presets[1] = pluginpreset("Glitchy"   , .5f, 0.f , 0.f  , 0.f , 0.f , 1.f, 0);
+	presets[2] = pluginpreset("Thick"     , .5f, .5f , 0.f  , 0.f , .0f , .4f, 0);
+	presets[3] = pluginpreset("Crunchy"   , .0f, .42f, .42f , .42f, .0f , 1.f, 0);
+	presets[4] = pluginpreset("Punchy"    , .0f, .5f , .354f, .25f, .0f , .2f, 0);
+	presets[5] = pluginpreset("Exciter"   , .0f, .5f , .5f  , .0f , .75f, 1.f, 0);
+	presets[6] = pluginpreset("Doubling"  , .0f, .42f, .42f , .0f , .0f , 1.f, 1);
+	presets[7] = pluginpreset("Shift Down", .6f, .0f , .0f  , .0f , .0f , 1.f, 2);
+	presets[8] = pluginpreset("Shift Up"  , .0f, .0f , .5f  , .0f , .0f , 1.f, 2);
+	presets[9] = pluginpreset("Clarity"   , .0f, .5f , .6f  , .67f, .23f, 1.f, 1);
 
 	for (int i = 10; i < getNumPrograms(); i++)
 	{
@@ -313,7 +313,7 @@ void SucroseAudioProcessor::randomize()
 {
 	Random random;
 
-	float high_cut = tohc(pow(random.nextFloat(), 2.f));	 // skew towards higher frequencies
+	float high_cut = tohc(1-pow(random.nextFloat(), 2.f));	 // skew towards higher frequencies
 	float low_cut = high_cut * pow(random.nextFloat(), 4.f); // ensures low cut is always lower than high cut, skew towards lower frequencies as well
 	float sub_gain = togain(random.nextFloat());
 	float dry_gain = togain(random.nextFloat());
@@ -352,7 +352,7 @@ AudioProcessorValueTreeState::ParameterLayout SucroseAudioProcessor::create_para
 	parameters.push_back(std::make_unique<AudioParameterFloat>(ParameterID{"second", 1}, "2nd harmonix", juce::NormalisableRange<float>(0.0f, 1.0f), 0.0f, AudioParameterFloatAttributes().withStringFromValueFunction(stodb).withValueFromStringFunction(sfromdb)));
 	parameters.push_back(std::make_unique<AudioParameterFloat>(ParameterID{"third", 1}, "3rd harmonix", juce::NormalisableRange<float>(0.0f, 1.0f), 0.0f, AudioParameterFloatAttributes().withStringFromValueFunction(stodb).withValueFromStringFunction(sfromdb)));
 	parameters.push_back(std::make_unique<AudioParameterFloat>(ParameterID{"lc", 1}, "low cut", juce::NormalisableRange<float>(0.0f, 1.0f), 0.0f, AudioParameterFloatAttributes().withStringFromValueFunction(stolc).withValueFromStringFunction(sfromlc)));
-	parameters.push_back(std::make_unique<AudioParameterFloat>(ParameterID{"hc", 1}, "high cut", juce::NormalisableRange<float>(0.0f, 1.0f), 0.0f, AudioParameterFloatAttributes().withStringFromValueFunction(stohc).withValueFromStringFunction(sfromhc)));
+	parameters.push_back(std::make_unique<AudioParameterFloat>(ParameterID{"hc", 1}, "high cut", juce::NormalisableRange<float>(0.0f, 1.0f), 1.0f, AudioParameterFloatAttributes().withStringFromValueFunction(stohc).withValueFromStringFunction(sfromhc)));
 	parameters.push_back(std::make_unique<AudioParameterInt>(ParameterID{"algo", 1}, "algorithm", 0, 2, 1, AudioParameterIntAttributes().withStringFromValueFunction(toalgo).withValueFromStringFunction(fromalgo)));
 	return {parameters.begin(), parameters.end()};
 }
