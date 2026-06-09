@@ -174,14 +174,14 @@ static std::function<float(const String &s)> sfromlc = [](const String &s)
 };
 static std::function<String(float v, int max)> stohc = [](float v, int max)
 {
-	if (v <= 0)
+	if (v >= 1)
 		return (String) "off";
 	return String(round(tohc(v))) + "hz";
 };
 static std::function<float(const String &s)> sfromhc = [](const String &s)
 {
 	if (s.containsIgnoreCase("f"))
-		return 0.f;
+		return 1.f;
 	float val = s.getFloatValue();
 	if (!s.containsIgnoreCase("k") && !s.containsIgnoreCase("hz") && val <= 1)
 		return jlimit(0.f, 1.f, val);

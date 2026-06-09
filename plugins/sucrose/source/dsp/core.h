@@ -36,6 +36,8 @@ struct DspChannel
     {
         struct
         {
+            float emphasis[2] = {};   // used for emphasis filtering
+            float deemphasis[2] = {}; // used for deemphasis filtering
             HarmonicGen<1> harmonic = {};
         } dirty;
 
@@ -81,6 +83,7 @@ struct DspEngine
     DspMode mode;
     bool oversample;
 
+    SVF<float> coeffs_emphasis = {};
     SVF<float> coeffs_hicut = {};
     SVF<float> coeffs_locut = {};
     SVF<float> coeffs_bank[15] = {};
@@ -94,7 +97,8 @@ struct DspEngine
                                                      oversample(sample_rate < 88200.0f),
                                                      sample_rate(sample_rate),
                                                      hicut_freq(-1.f),
-                                                     locut_freq(-1.f)
+                                                     locut_freq(-1.f),
+                                                     coeffs_emphasis(440.f / sample_rate, 0.25f)
     {
     }
 
@@ -158,6 +162,12 @@ struct DspEngine
                 wet = coeffs_locut.run(wet, channel.prefilter[2])[1];
                 wet = coeffs_locut.run(wet, channel.prefilter[3])[1];
 
+                if (mode == DIRTY)
+                {
+                    auto [lp, hp] = coeffs_emphasis.run(wet, channel.data.dirty.emphasis);
+                    wet = wet + lp - 0.5f * hp; // tilt shelf
+                }
+
                 if (oversample)
                 {
                     auto z = channel.upsample.run_up(wet, HIIR8_69);
@@ -169,6 +179,12 @@ struct DspEngine
                 {
                     wet = channel.halfband.run_lp(wet, HIIR8_69)[0];
                     wet = run_xsampled_path(wet, channel, params);
+                }
+
+                if (mode == DIRTY)
+                {
+                    auto [lp, hp] = coeffs_emphasis.run(wet, channel.data.dirty.deemphasis);
+                    wet = wet - 0.5f * lp + hp; // inverse tilt shelf
                 }
 
                 x[i] = wet * wet_gain + dry * dry_gain;
@@ -193,8 +209,8 @@ private:
         {
             auto result = channel.data.dirty.harmonic.run(x);
             return result.sub2[0] * params.gain0 +
-                   result.oct2[0] * params.gain2 +
-                   result.oct3[0] * params.gain3;
+                   result.oct2[0] * (params.gain2 * 0.707f) + // emphasis-deemphasis correction gain
+                   result.oct3[0] * (params.gain3 * 0.5f);
         }
 
         case CLEAN8:
