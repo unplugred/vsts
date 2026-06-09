@@ -707,7 +707,7 @@ void SucroseAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 		}
 
 		float value = initialvalue-(event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*(finemode?.0005f:.005f);
-		audio_processor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(value-valueoffset);
+		audio_processor.apvts.getParameter(knobs[initialdrag].id)->setValueNotifyingHost(value-valueoffset);
 
 		valueoffset = fmax(fmin(valueoffset,value+.1f),value-1.1f);
 	} else if(initialdrag == -3 || initialdrag == -2) {
