@@ -40,7 +40,7 @@ struct DspChannel
             float deemphasis[2] = {};  // used for deemphasis filtering
             Hiir2<2> downsample4 = {}; // used for x4 downsampling
             Hiir2<2> upsample4 = {};   // used for x4 upsampling
-            HarmonicGen<7, 1> harmonic = {};
+            HarmonicGen<8, 1> harmonic = {};
         } dirty;
 
         struct
@@ -214,7 +214,7 @@ private:
 
             for (int i = 0; i < 2; ++i)
             {
-                auto result = channel.data.dirty.harmonic.run(z[i], HIIR14_70);
+                auto result = channel.data.dirty.harmonic.run(z[i], HIIR16_84);
                 z[i] = result.sub2[0] * params.gain0 +
                        result.oct2[0] * (params.gain2 * 0.707f) + // emphasis-deemphasis correction gain
                        result.oct3[0] * (params.gain3 * 0.5f);
