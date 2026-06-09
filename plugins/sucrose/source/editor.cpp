@@ -627,11 +627,36 @@ void SucroseAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 			scalemenu->addItem(i,(String)round(ui_scales[i-21]*100)+"%",true,(i-21)==ui_scale_index);
 
 		rightclickmenu->setLookAndFeel(&look_n_feel);
-		rightclickmenu->addItem(1,"'Copy preset",true);
-		rightclickmenu->addItem(2,"'Paste preset",audio_processor.is_valid_preset_string(SystemClipboard::getTextFromClipboard()));
-		rightclickmenu->addItem(3,"'Randomize",true);
+		rightclickmenu->addItem(1,"'copy preset",true);
+		rightclickmenu->addItem(2,"'paste preset",audio_processor.is_valid_preset_string(SystemClipboard::getTextFromClipboard()));
+		rightclickmenu->addItem(3,"'randomize",true);
 		rightclickmenu->addSeparator();
-		rightclickmenu->addSubMenu("'Scale",*scalemenu);
+		rightclickmenu->addSubMenu("'scale",*scalemenu);
+
+		String description = "";
+		     if(hover == 0)
+			description = "subharmonic - undertone an octave below the fundamental";
+		else if(hover == 1)
+			description = "fundamental - the dry unprocessed signal, which does not go through the filters";
+		else if(hover == 2)
+			description = "2nd harmonix - overtone an octave above the fundamental";
+		else if(hover == 3)
+			description = "3rd harmonix - overtone an octave and a fifth above the fundamental";
+		else if(hover == 4)
+			description = "low cut - a 24db/octave resonant low-cut applied before processing to all but the fundamental.";
+		else if(hover == 5)
+			description = "high cut - a 24db/octave resonant high-cut applied before processing to all but the fundamental.";
+		else if(hover == 6)
+			description = "internal processing algorithm:\nheart - dirty\nspiral - clean8\nstar - clean16";
+		else if(hover == -2)
+			description = "https://fx.amee.ee/";
+		else if(hover == -3)
+			description = "https://vst.unplug.red/";
+		if(description != "") {
+			rightclickmenu->addSeparator();
+			rightclickmenu->addItem(-1,"'"+look_n_feel.add_line_breaks(description),false);
+		}
+
 		rightclickmenu->showMenuAsync(PopupMenu::Options(),[this](int result){
 			if(result <= 0) return;
 			else if(result >= 20) {
@@ -781,9 +806,6 @@ void LookNFeel::drawPopupMenuItem(Graphics &g, const Rectangle<int> &area, bool 
 
 	Font font = getPopupMenuFont();
 	if(!isActive && removeleft) font.setItalic(true);
-	float maxFontHeight = ((float)r.getHeight())/1.45f;
-	if(font.getHeight() > maxFontHeight)
-		font.setHeight(maxFontHeight);
 	g.setFont(font);
 
 	Rectangle<float> iconArea = area.toFloat().withX(area.getX()+(r.getX()-area.getX())*.5f-area.getHeight()*.5f).withWidth(area.getHeight());
