@@ -16,7 +16,7 @@ struct HiirCoeffs
     float q[N];
 };
 
-/// @brief 8th order transformer coeffs, used for oversampling
+/// @brief 8th order transformer coeffs, used for oversampling (x2)
 /// Transition band: 0.01
 /// Stopband attenuation: -69db
 const HiirCoeffs<4> HIIR8_69 = {
@@ -33,27 +33,55 @@ const HiirCoeffs<4> HIIR8_69 = {
         0.9412514277740471f,
     }};
 
-/// @brief 14th order transformer coeffs, used for harmonic generation
-/// Transition band: 0.001
-/// Stopband attenuation: -75db
-const HiirCoeffs<7> HIIR14_75 = {
+/// @brief 4th order transformer coeffs, used for oversampling (x4)
+/// Transition band: 0.261666
+/// Stopband attenuation: -120db
+const HiirCoeffs<2> HIIR4_120 = {
+    {0.1665604775598164f, 0.74155297339931314f},
+    {0.041180778598107023f, 0.38702422374344198f}};
+
+/// @brief 12th order transformer coeffs, used for harmonic generation (clean)
+/// Transition band: 0.00115
+/// Stopband attenuation: -70db
+const HiirCoeffs<6> HIIR12_70 = {
     {
-        0.208520598737909096f,
-        0.571092619019306746f,
-        0.812402367443785245f,
-        0.925584736606092973f,
-        0.971855071619908695f,
-        0.99018771226054636f,
-        0.998436446653414578f,
+        0.258620263567817754f,
+        0.653045995906771037f,
+        0.870867102105314927f,
+        0.956217919035841302f,
+        0.986304981768198696f,
+        0.997949470566919294f,
     },
     {
-        0.0583961696557416948f,
-        0.395512247218759827f,
-        0.711249268432477932f,
-        0.880936083750608279f,
-        0.953996713311390687f,
-        0.983059774008774645f,
-        0.994930539951151438f,
+        0.0746709346961870191f,
+        0.471175379274842487f,
+        0.78462034608944331f,
+        0.924237993384099288f,
+        0.975104877836096229f,
+        0.993202838043383607f,
+    }};
+
+/// @brief 14th order transformer coeffs, used for harmonic generation (dirty)
+/// Transition band: 0.0005
+/// Stopband attenuation: -70db
+const HiirCoeffs<7> HIIR14_70 = {
+    {
+        0.243678614141544375f,
+        0.630177510841846589f,
+        0.855633041082200174f,
+        0.948577557225476875f,
+        0.982382795199339021f,
+        0.994349983611077515f,
+        0.999140192497308233f,
+    },
+    {
+        0.0697089125778496826f,
+        0.449303733605533995f,
+        0.764860516499448861f,
+        0.913262353580889807f,
+        0.969782280828782040f,
+        0.989859175494667509f,
+        0.997166242289061033f,
     }};
 
 /// @brief State of a Hilbert transformer
@@ -66,7 +94,7 @@ struct Hiir
     f32x<M> s_q[N][4] = {};
     f32x<M> d_i = {};
 
-    inline std::array<f32x<M>, 2> run(const f32x<M> &x, HiirCoeffs<N> coeffs)
+    inline std::array<f32x<M>, 2> run(const f32x<M> &x, const HiirCoeffs<N> &coeffs)
     {
         auto i = x;
         auto q = x;
@@ -86,7 +114,7 @@ struct Hiir
         return {i, q};
     }
 
-    inline f32x<M> run_lp(const f32x<M> &x, HiirCoeffs<N> coeffs)
+    inline f32x<M> run_lp(const f32x<M> &x, const HiirCoeffs<N> &coeffs)
     {
         auto i = x;
         auto q = x;
@@ -137,7 +165,7 @@ struct Hiir2
     float s_q[N][2] = {};
     float d_i = {};
 
-    inline std::array<float, 2> run_up(float x, HiirCoeffs<N> coeffs)
+    inline std::array<float, 2> run_up(float x, const HiirCoeffs<N> &coeffs)
     {
         float s0 = x;
         float s1 = x;
@@ -152,7 +180,7 @@ struct Hiir2
         return {s0, s1};
     }
 
-    inline float run_down(float s0, float s1, HiirCoeffs<N> coeffs)
+    inline float run_down(float s0, float s1, const HiirCoeffs<N> &coeffs)
     {
         // allpass cascade
         for (int n = 0; n < N; ++n)

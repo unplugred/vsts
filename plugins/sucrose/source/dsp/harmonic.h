@@ -10,21 +10,23 @@ struct HarmonicResult
     f32x<N> sub2;
 };
 
-template <int N>
+/// @brief Hilbert-based (sub)harmonic generator
+/// @tparam H Hilbert order / 2
+/// @tparam N Number of parallel channels
+template <int H, int N>
 struct HarmonicGen
 {
-    Hiir<7, N> hiir = {};
-
+    Hiir<H, N> hiir = {};
     f32x<N> prev_i = {};
     f32x<N> prev_r = {};
     bool sign[N] = {};
 
     HarmonicGen() {}
 
-    inline HarmonicResult<N> run(const f32x<N> &x)
+    inline HarmonicResult<N> run(const f32x<N> &x, const HiirCoeffs<H> &coeffs)
     {
         // real & imag of an analytic signal (with phase shift)
-        auto [r, i] = hiir.run(x, HIIR14_75);
+        auto [r, i] = hiir.run(x, coeffs);
         auto r2 = r * r;
         auto i2 = i * i;
         auto mag = (r2 + i2).sqrt();
