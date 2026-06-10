@@ -1421,7 +1421,7 @@ void SunBurntAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 
 		float value = initialvalue[0]-(event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*(finemode?.0005f:.005f);
 		if(initialdrag > -1) {
-			if(knobs[hover].id == "length") {
+			if(knobs[initialdrag].id == "length") {
 				if(event.mods.isCtrlDown()) {
 					if(!changegesturesync) {
 						audio_processor.apvts.getParameter("sync")->beginChangeGesture();
@@ -1439,10 +1439,10 @@ void SunBurntAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 					audio_processor.apvts.getParameter("length")->setValueNotifyingHost(value-valueoffset[0]);
 				}
 			} else {
-				audio_processor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(value-valueoffset[0]);
+				audio_processor.apvts.getParameter(knobs[initialdrag].id)->setValueNotifyingHost(value-valueoffset[0]);
 			}
 		} else {
-			audio_processor.apvts.getParameter(sliders[slidersvisible[hover+30]].id)->setValueNotifyingHost(value-valueoffset[0]);
+			audio_processor.apvts.getParameter(sliders[slidersvisible[initialdrag+30]].id)->setValueNotifyingHost(value-valueoffset[0]);
 		}
 
 		valueoffset[0] = fmax(fmin(valueoffset[0],value+.1f),value-1.1f);

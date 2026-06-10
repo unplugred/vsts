@@ -815,10 +815,10 @@ void CRMBLAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 			initialvalue += (event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*.0045f;
 		}
 
-		float value = initialvalue-(event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*(finemode?.0005f:.005f)*(hover==7?.2:1);
-		if(hover == 7 && !event.mods.isCtrlDown()) {
-			audio_processor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(round((value-valueoffset)*48)/48.f);
-		} else if(knobs[hover].id == "time") {
+		float value = initialvalue-(event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*(finemode?.0005f:.005f)*(initialdrag==7?.2:1);
+		if(initialdrag == 7 && !event.mods.isCtrlDown()) {
+			audio_processor.apvts.getParameter(knobs[initialdrag].id)->setValueNotifyingHost(round((value-valueoffset)*48)/48.f);
+		} else if(knobs[initialdrag].id == "time") {
 			if(event.mods.isCtrlDown()) {
 				audio_processor.apvts.getParameter("sync")->setValueNotifyingHost((fmax(value-valueoffset,0)*15+1)*.0625);
 			} else {
@@ -826,7 +826,7 @@ void CRMBLAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 				audio_processor.apvts.getParameter("time")->setValueNotifyingHost(value-valueoffset);
 			}
 		} else {
-			audio_processor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(value-valueoffset);
+			audio_processor.apvts.getParameter(knobs[initialdrag].id)->setValueNotifyingHost(value-valueoffset);
 		}
 
 		valueoffset = fmax(fmin(valueoffset,value+.1f),value-1.1f);

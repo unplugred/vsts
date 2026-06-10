@@ -1226,19 +1226,19 @@ void ModManAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 		}
 
 		float value = 0;
-		if(hover == 1 || hover == 2)
+		if(initialdrag == 1 || initialdrag == 2)
 			value = initialvalue[0]-event.getDistanceFromDragStartY()*(finemode?.0005f:.005f)*.75f/ui_scales[ui_scale_index];
 		else
 			value = initialvalue[0]-(event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*(finemode?.0005f:.005f);
-		if(hover == (knobcount-1)) {
-			audio_processor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(value-valueoffset[0]);
+		if(initialdrag == (knobcount-1)) {
+			audio_processor.apvts.getParameter(knobs[initialdrag].id)->setValueNotifyingHost(value-valueoffset[0]);
 		} else {
 			float val = value-valueoffset[0];
 			if(selectedmodulator != 0) {
-				if(hover == 1) val = fmin(val,knobs[2].value[selectedmodulator]); else
-				if(hover == 2) val = fmax(val,knobs[1].value[selectedmodulator]);
+				if(initialdrag == 1) val = fmin(val,knobs[2].value[selectedmodulator]); else
+				if(initialdrag == 2) val = fmax(val,knobs[1].value[selectedmodulator]);
 			}
-			audio_processor.apvts.getParameter("m"+((String)selectedmodulator)+knobs[hover].id)->setValueNotifyingHost(val);
+			audio_processor.apvts.getParameter("m"+((String)selectedmodulator)+knobs[initialdrag].id)->setValueNotifyingHost(val);
 		}
 
 		valueoffset[0] = fmax(fmin(valueoffset[0],value+.1f),value-1.1f);

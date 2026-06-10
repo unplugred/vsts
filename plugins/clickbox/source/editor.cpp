@@ -522,7 +522,7 @@ void ClickBoxAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 	prevpos[0].y = event.y/ui_scales[ui_scale_index]/height;
 	if(initialdrag > -1) {
 		if(sliders[initialdrag].isslider)
-			audio_processor.apvts.getParameter(sliders[hover].id)->setValueNotifyingHost(((float)event.x/ui_scales[ui_scale_index]-sliders[hover].hx-2)/(sliders[hover].hw-sliders[hover].hx-4));
+			audio_processor.apvts.getParameter(sliders[initialdrag].id)->setValueNotifyingHost(((float)event.x/ui_scales[ui_scale_index]-sliders[initialdrag].hx-2)/(sliders[initialdrag].hw-sliders[initialdrag].hx-4));
 		else {
 			hover = recalc_hover(event.x,event.y)==initialdrag?initialdrag:-1;
 			audio_processor.apvts.getParameter(sliders[initialdrag].id)->setValueNotifyingHost(hover==-1?initialvalue:(1-initialvalue));
