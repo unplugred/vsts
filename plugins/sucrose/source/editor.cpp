@@ -698,15 +698,22 @@ void SucroseAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 }
 void SucroseAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 	if(initialdrag > -1 && initialdrag != 6) {
-		if(!finemode && (event.mods.isShiftDown() || event.mods.isAltDown())) {
-			finemode = true;
-			initialvalue -= (event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*.0045f;
-		} else if(finemode && !(event.mods.isShiftDown() || event.mods.isAltDown())) {
-			finemode = false;
-			initialvalue += (event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*.0045f;
+		float ymult = 1;
+		if(initialdrag == 4 || initialdrag == 5) {
+			float x = fabs(event.getDistanceFromDragStartX());
+			float y = fabs(event.getDistanceFromDragStartY());
+			if(y >= 1) ymult = pow(y/(x+y),2);
 		}
 
-		float value = initialvalue-(event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*(finemode?.0005f:.005f);
+		if(!finemode && (event.mods.isShiftDown() || event.mods.isAltDown())) {
+			finemode = true;
+			initialvalue -= (event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX()*ymult)*.0045f;
+		} else if(finemode && !(event.mods.isShiftDown() || event.mods.isAltDown())) {
+			finemode = false;
+			initialvalue += (event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX()*ymult)*.0045f;
+		}
+
+		float value = initialvalue-(event.getDistanceFromDragStartY()*ymult-event.getDistanceFromDragStartX())*(finemode?.0005f:.005f);
 		audio_processor.apvts.getParameter(knobs[initialdrag].id)->setValueNotifyingHost(value-valueoffset);
 
 		valueoffset = fmax(fmin(valueoffset,value+.1f),value-1.1f);
