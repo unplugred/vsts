@@ -8,7 +8,7 @@
 enum DspMode
 {
     DIRTY,
-    CLEAN8,
+    CLEAN4,
     CLEAN16,
 };
 
@@ -45,9 +45,9 @@ struct DspChannel
 
         struct
         {
-            LR4Bank8 bank = {};
-            HarmonicGen<6, 8> harmonic = {};
-        } clean8;
+            LR4Bank4 bank = {};
+            HarmonicGen<6, 4> harmonic = {};
+        } clean4;
 
         struct
         {
@@ -64,8 +64,8 @@ struct DspChannel
             data.dirty = {};
             break;
 
-        case CLEAN8:
-            data.clean8 = {};
+        case CLEAN4:
+            data.clean4 = {};
             break;
 
         case CLEAN16:
@@ -121,8 +121,8 @@ struct DspEngine
 
             switch (mode)
             {
-            case CLEAN8:
-                LR4Bank8::design(coeffs_bank, 2.0 * sample_rate);
+            case CLEAN4:
+                LR4Bank4::design(coeffs_bank, 2.0 * sample_rate);
                 break;
             case CLEAN16:
                 LR4Bank16::design(coeffs_bank, 2.0 * sample_rate);
@@ -223,14 +223,13 @@ private:
             return channel.data.dirty.downsample4.run_down(z[0], z[1], HIIR4_120);
         }
 
-        case CLEAN8:
+        case CLEAN4:
         {
-            auto bands = channel.data.clean8.bank.run(x, coeffs_bank);
-            auto result = channel.data.clean8.harmonic.run(bands, HIIR12_70);
+            auto bands = channel.data.clean4.bank.run(x, coeffs_bank);
+            auto result = channel.data.clean4.harmonic.run(bands, HIIR12_70);
 
-            result.oct2[7] = 0.0f; // reduce aliasing
-            result.oct3[6] = 0.0f;
-            result.oct3[7] = 0.0f;
+            result.oct2[3] = 0.0f; // reduce aliasing
+            result.oct3[3] = 0.0f;
 
             return result.sub2.sum() * params.gain0 +
                    result.oct2.sum() * params.gain2 +
