@@ -702,7 +702,7 @@ void SucroseAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 		if(initialdrag == 4 || initialdrag == 5) {
 			float x = fabs(event.getDistanceFromDragStartX());
 			float y = fabs(event.getDistanceFromDragStartY());
-			if(y >= 1) ymult = pow(y/(x+y),2);
+			if(y >= 1) ymult = pow(y/(x+y),2)*.8f;
 		}
 
 		if(!finemode && (event.mods.isShiftDown() || event.mods.isAltDown())) {
