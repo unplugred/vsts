@@ -2,6 +2,10 @@
 #include <cmath>
 #include <array>
 
+#if defined(__SSE__)
+#include <xmmintrin.h>
+#endif
+
 /// @brief Multi-channel mid-side encoder/decoder, in-place.
 /// Turns N channels into 1 mid and N-1 side channels, each side channel is `mid - 2 * channel`.
 /// Inverse of itself (up to gain of N).
@@ -76,8 +80,26 @@ struct alignas(N * sizeof(float)) f32x
         return result;
     }
 
+    // there is also rsqrt but we dont use it because it is _noticeably_ less accurate
     inline f32x sqrt() const
     {
+// sqrt doesnt seem to be auto-vectorized that well, checked in godbolt, so we do it manually
+//
+// _mm_sqrt_ps is available on baseline x86-64 so we should be ok
+#if defined(__SSE__)
+        if constexpr (N % 4 == 0)
+        {
+            f32x result;
+            for (int i = 0; i < N; i += 4)
+            {
+                __m128 x = _mm_load_ps(&data[i]);
+                __m128 y = _mm_sqrt_ps(x);
+                _mm_store_ps(&result.data[i], y);
+            }
+            return result;
+        }
+#endif
+
         f32x result;
         for (int i = 0; i < N; ++i)
             result.data[i] = std::sqrt(data[i]);

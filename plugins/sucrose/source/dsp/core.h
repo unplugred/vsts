@@ -28,29 +28,31 @@ struct DspParams
 struct DspChannel
 {
     float prefilter[4][2] = {}; // used for pre- low/high cut filtering
+    Hiir<4, 1> halfband = {};   // used for bandlimiting to 1/4 when oversampling is off
     Hiir2<4> downsample = {};   // used when oversampling is on
     Hiir2<4> upsample = {};     // used when oversampling is on
-    Hiir<4, 1> halfband = {};   // used for bandlimiting to 1/4 when oversampling is off
 
     union
     {
         struct
         {
-            float emphasis[2] = {};   // used for emphasis filtering
-            float deemphasis[2] = {}; // used for deemphasis filtering
-            HarmonicGen<1> harmonic = {};
+            float emphasis[2] = {};    // used for emphasis filtering
+            float deemphasis[2] = {};  // used for deemphasis filtering
+            Hiir2<2> downsample4 = {}; // used for x4 downsampling
+            Hiir2<2> upsample4 = {};   // used for x4 upsampling
+            HarmonicGen<8, 1> harmonic = {};
         } dirty;
 
         struct
         {
             LR4Bank8 bank = {};
-            HarmonicGen<8> harmonic = {};
+            HarmonicGen<6, 8> harmonic = {};
         } clean8;
 
         struct
         {
             LR4Bank16 bank = {};
-            HarmonicGen<16> harmonic = {};
+            HarmonicGen<6, 16> harmonic = {};
         } clean16;
     } data;
 
@@ -207,16 +209,24 @@ private:
         {
         case DIRTY:
         {
-            auto result = channel.data.dirty.harmonic.run(x);
-            return result.sub2[0] * params.gain0 +
-                   result.oct2[0] * (params.gain2 * 0.707f) + // emphasis-deemphasis correction gain
-                   result.oct3[0] * (params.gain3 * 0.5f);
+            // we have to do 4x oversampling here because intermodulation can create frequencies above 2x of the bandlimit
+            auto z = channel.data.dirty.upsample4.run_up(x, HIIR4_120);
+
+            for (int i = 0; i < 2; ++i)
+            {
+                auto result = channel.data.dirty.harmonic.run(z[i], HIIR16_84);
+                z[i] = result.sub2[0] * params.gain0 +
+                       result.oct2[0] * (params.gain2 * 0.707f) + // emphasis-deemphasis correction gain
+                       result.oct3[0] * (params.gain3 * 0.5f);
+            }
+
+            return channel.data.dirty.downsample4.run_down(z[0], z[1], HIIR4_120);
         }
 
         case CLEAN8:
         {
             auto bands = channel.data.clean8.bank.run(x, coeffs_bank);
-            auto result = channel.data.clean8.harmonic.run(bands);
+            auto result = channel.data.clean8.harmonic.run(bands, HIIR12_70);
 
             result.oct2[7] = 0.0f; // reduce aliasing
             result.oct3[6] = 0.0f;
@@ -230,7 +240,7 @@ private:
         case CLEAN16:
         {
             auto bands = channel.data.clean16.bank.run(x, coeffs_bank);
-            auto result = channel.data.clean16.harmonic.run(bands);
+            auto result = channel.data.clean16.harmonic.run(bands, HIIR12_70);
 
             result.oct2[15] = 0.0f; // reduce aliasing
             result.oct3[14] = 0.0f;

@@ -647,7 +647,12 @@ void SucroseAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		else if(hover == 5)
 			description = "high cut - a 24db/octave resonant high-cut applied before processing to all but the fundamental.";
 		else if(hover == 6)
-			description = "internal processing algorithm:\nheart - dirty\nspiral - clean8\nstar - clean16";
+			switch ((int)round(knobs[6].value*2)) {
+				case 0: description = "heart - single band mode with slight low frequency emphasis"; break;
+				case 1: description = "spiral - 8-band mode, less intermodulation"; break;
+				case 2: description = "star - 16-band mode, even less intermodulation"; break;
+				default: break;
+			}
 		else if(hover == -2)
 			description = "https://fx.amee.ee/";
 		else if(hover == -3)
@@ -702,7 +707,7 @@ void SucroseAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 		}
 
 		float value = initialvalue-(event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*(finemode?.0005f:.005f);
-		audio_processor.apvts.getParameter(knobs[hover].id)->setValueNotifyingHost(value-valueoffset);
+		audio_processor.apvts.getParameter(knobs[initialdrag].id)->setValueNotifyingHost(value-valueoffset);
 
 		valueoffset = fmax(fmin(valueoffset,value+.1f),value-1.1f);
 	} else if(initialdrag == -3 || initialdrag == -2) {
