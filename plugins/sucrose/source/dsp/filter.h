@@ -63,46 +63,31 @@ inline T lr4_comp(const T &x, const SVF<T> &svf, T state[2])
     return c0[0] + c0[0] + c0[1] + c0[1] - x;
 }
 
-/// @brief State of an 8-band Linkwitz-Riley (4th order) filterbank
-struct LR4Bank8
+/// @brief State of a 4-band Linkwitz-Riley (4th order) filterbank
+struct LR4Bank4
 {
-    float comp1[6][2] = {};
-    float split1[3][4] = {};
+    float comp[2][2] = {};
+    float split[3][4] = {};
 
-    f32x<4> comp2[2] = {};
-    f32x<4> split2[4] = {};
-
-    inline f32x<8> run(float x, SVF<float> coeffs[7])
+    inline f32x<4> run(float x, SVF<float> coeffs[3])
     {
-        SVF<f32x<4>> c2;
-        c2.a3 = {{coeffs[0].a3, coeffs[2].a3, coeffs[4].a3, coeffs[6].a3}};
-        c2.g = {{coeffs[0].g, coeffs[2].g, coeffs[4].g, coeffs[6].g}};
+        auto [u1_l, u1_h] = lr4_split(x, coeffs[1], split[0]);
 
-        auto [u1_l, u1_h] = lr4_split(x, coeffs[3], split1[0]);
+        u1_h = lr4_comp(u1_h, coeffs[0], comp[0]);
+        u1_l = lr4_comp(u1_l, coeffs[2], comp[1]);
 
-        u1_h = lr4_comp(u1_h, coeffs[0], comp1[0]);
-        u1_h = lr4_comp(u1_h, coeffs[1], comp1[1]);
-        u1_h = lr4_comp(u1_h, coeffs[2], comp1[2]);
-        u1_l = lr4_comp(u1_l, coeffs[4], comp1[3]);
-        u1_l = lr4_comp(u1_l, coeffs[5], comp1[4]);
-        u1_l = lr4_comp(u1_l, coeffs[6], comp1[5]);
+        auto [u2_0, u2_1] = lr4_split(u1_l, coeffs[0], split[1]);
+        auto [u2_2, u2_3] = lr4_split(u1_h, coeffs[2], split[2]);
 
-        auto [u2_1, u2_0] = lr4_split(u1_l, coeffs[1], split1[1]);
-        auto [u2_3, u2_2] = lr4_split(u1_h, coeffs[5], split1[2]);
-
-        f32x<4> u2 = {{u2_0, u2_1, u2_2, u2_3}};
-        u2 = lr4_comp(u2, c2, comp2);
-
-        auto [u3_l, u3_h] = lr4_split(u2.rotate2(), c2, split2);
-        return u3_l.interleave(u3_h);
+        return f32x<4>({u2_0, u2_1, u2_2, u2_3});
     }
 
-    static void design(SVF<float> coeffs[7], float sample_rate)
+    static void design(SVF<float> coeffs[3], float sample_rate)
     {
-        const float freqs[7] = {
-            229.6875, 459.375, 918.75, 1837.5, 3675.0, 7350.0, 11025.0};
+        const float freqs[3] = {
+            200.0, 3000.0, 11000.0};
 
-        for (int i = 0; i < 7; ++i)
+        for (int i = 0; i < 3; ++i)
         {
             coeffs[i] = SVF<float>(freqs[i] / sample_rate, 0.7071f);
         }

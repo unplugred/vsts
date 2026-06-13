@@ -647,7 +647,7 @@ void SucroseAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 		else if(hover == 5)
 			description = "high cut - a 24db/octave resonant high-cut applied before processing to all but the fundamental.";
 		else if(hover == 6)
-			description = "heart - single band with low-end emphasis\n\nspiral - 8-band, less intermodulation\n\nstar - 16-band, even less intermodulation";
+			description = "heart - single band with low-end emphasis\n\nspiral - 4-band, less intermodulation\n\nstar - 16-band, even less intermodulation";
 		else if(hover == -2)
 			description = "https://fx.amee.ee/";
 		else if(hover == -3)

@@ -20,6 +20,24 @@ inline void mid_side(float *const *x, int offset, int samples, int channels)
             x[c][i] = x[0][i] - x[c][i] - x[c][i];
 }
 
+/// @brief In-place fade-in of a buffer, with a given ramp and gain state.
+/// Gain is clamped to 0..1 and updated in-place.
+inline void fadeout(float *const *x, int offset, int samples, int channels, float ramp, float &gain)
+{
+    float current = gain;
+    for (int c = 0; c < channels; ++c)
+    {
+        current = gain;
+        for (int i = offset; i < offset + samples; ++i)
+        {
+            current = std::clamp(current + ramp, 0.0f, 1.0f);
+            x[c][i] *= current;
+        }
+    }
+
+    gain = current;
+}
+
 /// @brief A simple N-wide SIMD-like type for float, aligned to 4N bytes.
 /// We just hope that the compiler will optimize this to actual SSE/SSE2 (available on -march=x86-64)
 /// instructions with a little bit of help from us.
