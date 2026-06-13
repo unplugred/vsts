@@ -210,14 +210,14 @@ static std::function<String(int v, int max)> toalgo = [](int v, int max)
 	if (v == 0)
 		return "dirty";
 	if (v == 1)
-		return "clean8";
+		return "clean4";
 	return "clean16";
 };
 static std::function<int(const String &s)> fromalgo = [](const String &s)
 {
 	if (s.containsIgnoreCase("d"))
 		return 0;
-	if (s.containsIgnoreCase("8"))
+	if (s.containsIgnoreCase("4"))
 		return 1;
 	if (s.containsIgnoreCase("1"))
 		return 2;
