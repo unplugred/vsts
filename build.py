@@ -26,7 +26,7 @@ systems = [{
 	"name": "Win64",
 	"code": "win",
 	"image": "windows-latest",
-	"compiler": "Visual Studio 17 2022",
+	"compiler": "Visual Studio 18 2026",
 	"executable": ".exe"
 },{
 	"name": "Linux",
