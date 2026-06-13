@@ -94,14 +94,19 @@ struct DspEngine
     float locut_freq;
     float sample_rate;
 
+    float fadeout_gain = 1.0f;
+    float fadeout_ramp;
+
     DspEngine(int num_channels, float sample_rate) : mode(DIRTY),
                                                      state(num_channels, DspChannel(DIRTY)),
                                                      oversample(sample_rate < 88200.0f),
                                                      sample_rate(sample_rate),
                                                      hicut_freq(-1.f),
                                                      locut_freq(-1.f),
-                                                     coeffs_emphasis(440.f / sample_rate, 0.25f)
+                                                     coeffs_emphasis(440.f / sample_rate, 0.25f),
+                                                     fadeout_ramp(50.0f / sample_rate)
     {
+        reset();
     }
 
     int channels() const
@@ -112,25 +117,6 @@ struct DspEngine
     void run(float *const *data, int offset, int samples, DspParams params)
     {
         int channels = state.size();
-
-        if (params.mode != mode)
-        {
-            mode = params.mode;
-            for (int c = 0; c < channels; ++c)
-                state[c] = DspChannel(mode);
-
-            switch (mode)
-            {
-            case CLEAN4:
-                LR4Bank4::design(coeffs_bank, 2.0 * sample_rate);
-                break;
-            case CLEAN16:
-                LR4Bank16::design(coeffs_bank, 2.0 * sample_rate);
-                break;
-            default:
-                break;
-            }
-        }
 
         if (params.hicut != hicut_freq)
         {
@@ -194,12 +180,38 @@ struct DspEngine
         }
 
         mid_side(data, offset, samples, channels);
+
+        // click-less mode change
+        if (fadeout_gain < 1.0f || mode != params.mode)
+        {
+            fadeout(data, offset, samples, channels,
+                    mode != params.mode ? -fadeout_ramp : fadeout_ramp,
+                    fadeout_gain);
+
+            if (fadeout_gain <= 1e-5f)
+            {
+                mode = params.mode;
+                reset();
+            }
+        }
     }
 
     void reset()
     {
         for (int c = 0; c < state.size(); ++c)
             state[c] = DspChannel(mode);
+
+        switch (mode)
+        {
+        case CLEAN4:
+            LR4Bank4::design(coeffs_bank, 2.0 * sample_rate);
+            break;
+        case CLEAN16:
+            LR4Bank16::design(coeffs_bank, 2.0 * sample_rate);
+            break;
+        default:
+            break;
+        }
     }
 
 private:
