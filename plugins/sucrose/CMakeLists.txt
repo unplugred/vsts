@@ -14,6 +14,7 @@ juce_add_plugin("${BaseTargetName}"
 	DESCRIPTION "Transparent harmonics and subharmonic generator."
 	PLUGIN_MANUFACTURER_CODE Ured
 	PLUGIN_CODE Scrs
+	BUNDLE_ID "com.unplugred.Sucrose"
 	VST3_CATEGORIES Distortion
 	VST2_CATEGORY kPlugCategEffect
 	AU_MAIN_TYPE kAudioUnitType_Effect
