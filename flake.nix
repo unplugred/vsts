@@ -1,28 +1,21 @@
 # activated w "nix develop" or w direnv
 {
-	description = "Development environment with Python and Node.js";
-
 	inputs = {
 		nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 		flake-utils.url = "github:numtide/flake-utils";
 	};
 
-	outputs = { self, nixpkgs, flake-utils }:
+	outputs = { self, nixpkgs, flake-utils, ... }:
 	flake-utils.lib.eachDefaultSystem (system:
 	let
 		pkgs = nixpkgs.legacyPackages.${system};
-
-		# python packages
-		pythonPackages = ps: with ps; [
-		];
-
-		pythonEnv = pkgs.python311.withPackages pythonPackages;
 	in {
 		devShells.default = pkgs.mkShell {
 			# packages
 			buildInputs = with pkgs; [
 				git
-				pythonEnv
+				(python311.withPackages (ps: with ps; [ # python packages
+				]))
 				cmake
 				pkg-config
 				#gnumake
