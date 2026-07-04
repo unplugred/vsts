@@ -1,13 +1,42 @@
 #pragma once
 #include "hilbert.h"
-#include <cmath>
+#include "util.h"
 
+/// A phase-locked loop based subharmonic generator.
 template <int N>
-struct HarmonicResult
+struct PhaseLocked
 {
-    f32x<N> oct2;
-    f32x<N> oct3;
-    f32x<N> sub2;
+    f32x<N> phase = 0.0f;
+    f32x<N> freq = 0.0f;
+    f32x<N> corr = 0.0f;
+
+    inline std::array<f32x<N>, 2> run(const f32x<N> &x, const f32x<N> &y)
+    {
+        const auto freq_beta = 0.0625f / (3.14159265358979323846f); // frequency adjustment factor
+        const auto phase_beta = 0.25f / (3.14159265358979323846f);  // phase adjustment factor
+
+        // current oscillator output
+        auto [cx, cy] = approx_sin_cos_tau(phase - 0.5f);
+
+        // multiply phase by 2 (to lock onto the f/2 subharmonic)
+        auto cx2 = f32x<N>(0.5f) - cx * cx;
+        auto cy2 = cx * cy;
+
+        // phase error between the input signal and the oscillator output
+        // Im(x * conj(y)), originally this was atan2 but it was expensive & this approximates it well enough
+        auto error = cx2 * y - cy2 * x;
+
+        // adjust frequency and phase based on the error
+        freq = freq + error * freq_beta;
+        phase = phase + error * phase_beta + freq;
+        phase = phase - phase.floor(); // wrap phase to avoid accumulating errors
+
+        // bands have +-90 degree offset between neighboring bands (to avoid full cancellation)
+        for (int i = 0; i < N; i += 2)
+            std::swap(cx[i], cy[i]);
+
+        return {cx, cy};
+    }
 };
 
 /// @brief Hilbert-based (sub)harmonic generator
@@ -17,13 +46,9 @@ template <int H, int N>
 struct HarmonicGen
 {
     Hiir<H, N> hiir = {};
-    f32x<N> prev_i = {};
-    f32x<N> prev_r = {};
-    bool sign[N] = {};
+    PhaseLocked<N> pll = {};
 
-    HarmonicGen() {}
-
-    inline HarmonicResult<N> run(const f32x<N> &x, const HiirCoeffs<H> &coeffs)
+    inline std::array<f32x<N>, 3> run(const f32x<N> &x, const HiirCoeffs<H> &coeffs, int channel)
     {
         // real & imag of an analytic signal (with phase shift)
         auto [r, i] = hiir.run(x, coeffs);
@@ -31,44 +56,22 @@ struct HarmonicGen
         // now we split the signal into its magnitude `mag` and phase `p`, the original signal is `r = mag * p`
         // this is the magnitude of our signal
         auto mag = (r * r + i * i).sqrt();
+        auto mag_inv = f32x<N>(1.0f) / mag.max(f32x<N>(1e-8f)); // avoid divide by zero
 
-        // this is the phase signal as a sine wave bounded by -1..1
-        auto p = r / mag.max(f32x<N>(1e-12f)); // avoid divide by zero
-        auto p2 = p * p;                       // p^2
-        auto p2_2 = p2 + p2;                   // 2p^2
+        auto p = r * mag_inv; // this is the phase signal as a sine wave bounded by -1..1
+        auto q = i * mag_inv; // H(p), the quadrature signal
+        auto p2 = p * p;      // p^2
 
         // double the frequency, keep the magnitude
-        auto oct2 = p2_2 * mag - mag;
+        auto oct2 = p2 * 2.0f * mag - mag;
         // triple the frequency, keep the magnitude
-        auto oct3 = (p2_2 + p2_2 - 3.0f) * p * mag;
-        // half the frequency (modulo sign), keep the magnitude, max(0.0) to prevent nans due to precision issues
-        auto sub2 = (p + 1.0f).max(f32x<N>(0.0f)).sqrt() * mag * 0.70710678f;
+        auto oct3 = (p2 * 4.0f - 3.0f) * p * mag;
+        // suboctave is tracked by using N parallel phase-locked loops
+        auto [sub2x, sub2y] = pll.run(p, q);
 
-        // a flip-flop used to keep track of the sign for suboctaving, otherwise it is phase-aligned to our analytic signal
-        // this is in fact the main source of glitchiness
-        auto delta = prev_i * r - prev_r * i;
-        for (int n = 0; n < N; ++n)
-        {
-            bool cross_dn = prev_i[n] >= 0.0f && i[n] < 0.0f;
-            bool cross_up = prev_i[n] < 0.0f && i[n] >= 0.0f;
-            bool positive = delta[n] > 0.0f;
-            bool cross = positive ? cross_up : cross_dn;
+        // channels have 90 degree phase offset (to avoid full cancellation)
+        auto sub2 = ((channel & 1) == 0) ? sub2x * mag : sub2y * mag;
 
-            sign[n] = sign[n] ^ cross;
-            sub2[n] = sign[n] ? -sub2[n] : sub2[n];
-        }
-
-        prev_i = i;
-        prev_r = r;
-
-        int consensus = 0;
-        for (int n = 0; n < N; ++n)
-            if (mag[n] >= 1e-5f)
-                consensus += sign[n] ? 1 : -1;
-        for (int n = 0; n < N; ++n)
-            if (mag[n] < 1e-5f)
-                sign[n] = consensus > 0;
-
-        return HarmonicResult<N>{oct2, oct3, sub2};
+        return {sub2, oct2, oct3};
     }
 };

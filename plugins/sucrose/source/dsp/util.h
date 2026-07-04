@@ -6,36 +6,6 @@
 #include <xmmintrin.h>
 #endif
 
-/// @brief Multi-channel mid-side encoder/decoder, in-place.
-/// Turns N channels into 1 mid and N-1 side channels, each side channel is `mid - N * channel`.
-/// Inverse of itself (up to gain of N).
-template <bool encode>
-inline void mid_side(float *const *x, int offset, int samples, int channels)
-{
-    if (encode)
-    {
-        for (int c = 1; c < channels; ++c)
-            for (int i = offset; i < offset + samples; ++i)
-                x[0][i] += x[c][i];
-
-        for (int c = 1; c < channels; ++c)
-            for (int i = offset; i < offset + samples; ++i)
-                x[c][i] = x[0][i] - x[c][i] * (float)channels;
-    }
-    else
-    {
-        float inv_channels = 1.0f / (float)channels;
-
-        for (int c = 1; c < channels; ++c)
-            for (int i = offset; i < offset + samples; ++i)
-                x[c][i] = (x[0][i] - x[c][i]) * inv_channels;
-
-        for (int c = 1; c < channels; ++c)
-            for (int i = offset; i < offset + samples; ++i)
-                x[0][i] -= x[c][i];
-    }
-}
-
 /// @brief In-place fade-in of a buffer, with a given ramp and gain state.
 /// Gain is clamped to 0..1 and updated in-place.
 inline void fadeout(float *const *x, int offset, int samples, int channels, float ramp, float &gain)
@@ -140,6 +110,30 @@ struct alignas(N * sizeof(float)) f32x
         return result;
     }
 
+    inline f32x abs() const
+    {
+        f32x result;
+        for (int i = 0; i < N; ++i)
+            result.data[i] = std::abs(data[i]);
+        return result;
+    }
+
+    inline f32x floor() const
+    {
+        f32x result;
+        for (int i = 0; i < N; ++i)
+            result.data[i] = std::floor(data[i]);
+        return result;
+    }
+
+    inline f32x copysign(const f32x &other) const
+    {
+        f32x result;
+        for (int i = 0; i < N; ++i)
+            result.data[i] = std::copysign(data[i], other.data[i]);
+        return result;
+    }
+
     inline f32x operator+(const f32x &other) const
     {
         f32x result;
@@ -182,3 +176,37 @@ struct alignas(N * sizeof(float)) f32x
         return data[index];
     }
 };
+
+/// @brief Fast `sincos(2 * pi * x)` approximation.
+/// * Chebyshev polynomial based.
+/// * Maximum absolute error for `cos` is 6e-7
+/// * Maximum absolute error for `sin` is 4e-6
+/// * Range is [-0.5, 0.5].
+template <int N>
+std::array<f32x<N>, 2> approx_sin_cos_tau(const f32x<N> &z)
+{
+    const float s0 = 1.000013316162347f;    // 1
+    const float s1 = -1.2336047188237933f;  // x^2
+    const float s2 = 0.2529001895868434f;   // x^4
+    const float s3 = -0.01930878692539701f; // x^6
+
+    const float c0 = 1.5707909643039777f;    // x
+    const float c1 = -0.6458924755296254f;   // x^3
+    const float c2 = 0.07943359676384154f;   // x^5
+    const float c3 = -0.004332668018125086f; // x^7
+
+    // mirroring to exploit symmetry, saves some multiplies/improves accuracy
+    auto x = f32x<N>(1.0f) - z.abs() * 4.0f;
+
+    // estrin scheme
+    auto x2 = x * x;
+    auto x4 = x2 * x2;
+
+    auto poly1 = x4 * (x2 * c3 + c2) + (x2 * c1 + c0);
+    auto poly2 = x4 * (x2 * s3 + s2) + (x2 * s1 + s0);
+
+    auto sin = poly2.copysign(z);
+    auto cos = poly1 * x;
+
+    return {sin, cos};
+}

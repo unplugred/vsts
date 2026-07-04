@@ -130,8 +130,6 @@ struct DspEngine
             coeffs_locut = SVF<float>(locut_freq / sample_rate, 0.7071f);
         }
 
-        mid_side<true>(data, offset, samples, channels);
-
         // gain compensation for emphasis/de-emphasis
         params.gain2 *= 0.707f;
         params.gain3 *= 0.5f;
@@ -161,14 +159,14 @@ struct DspEngine
                 if (oversample)
                 {
                     auto z = channel.upsample.run_up(wet, HIIR8_69);
-                    z[0] = run_xsampled_path(z[0], channel, params);
-                    z[1] = run_xsampled_path(z[1], channel, params);
+                    z[0] = run_xsampled_path(z[0], c, params);
+                    z[1] = run_xsampled_path(z[1], c, params);
                     wet = channel.downsample.run_down(z[0], z[1], HIIR8_69);
                 }
                 else
                 {
                     wet = channel.halfband.run_lp(wet, HIIR8_69)[0];
-                    wet = run_xsampled_path(wet, channel, params);
+                    wet = run_xsampled_path(wet, c, params);
                 }
 
                 // de-emphasis
@@ -180,8 +178,6 @@ struct DspEngine
                 x[i] = wet + dry * params.gain1;
             }
         }
-
-        mid_side<false>(data, offset, samples, channels);
 
         // click-less mode change
         if (fadeout_gain < 1.0f || mode != params.mode)
@@ -217,8 +213,10 @@ struct DspEngine
     }
 
 private:
-    inline float run_xsampled_path(float x, DspChannel &channel, DspParams params)
+    inline float run_xsampled_path(float x, int channel_idx, DspParams params)
     {
+        DspChannel &channel = state[channel_idx];
+
         switch (mode)
         {
         case DIRTY:
@@ -228,10 +226,10 @@ private:
 
             for (int i = 0; i < 2; ++i)
             {
-                auto result = channel.data.dirty.harmonic.run(z[i], HIIR16_84);
-                z[i] = result.sub2[0] * params.gain0 +
-                       result.oct2[0] * params.gain2 +
-                       result.oct3[0] * params.gain3;
+                auto [sub2, oct2, oct3] = channel.data.dirty.harmonic.run(z[i], HIIR16_84, channel_idx);
+                z[i] = sub2[0] * params.gain0 +
+                       oct2[0] * params.gain2 +
+                       oct3[0] * params.gain3;
             }
 
             return channel.data.dirty.downsample4.run_down(z[0], z[1], HIIR4_120);
@@ -240,28 +238,28 @@ private:
         case CLEAN4:
         {
             auto bands = channel.data.clean4.bank.run(x, coeffs_bank);
-            auto result = channel.data.clean4.harmonic.run(bands, HIIR12_70);
+            auto [sub2, oct2, oct3] = channel.data.clean4.harmonic.run(bands, HIIR12_70, channel_idx);
 
-            result.oct2[3] = 0.0f; // reduce aliasing
-            result.oct3[3] = 0.0f;
+            oct2[3] = 0.0f; // reduce aliasing
+            oct3[3] = 0.0f;
 
-            return result.sub2.sum() * params.gain0 +
-                   result.oct2.sum() * params.gain2 +
-                   result.oct3.sum() * params.gain3;
+            return sub2.sum() * params.gain0 +
+                   oct2.sum() * params.gain2 +
+                   oct3.sum() * params.gain3;
         }
 
         case CLEAN16:
         {
             auto bands = channel.data.clean16.bank.run(x, coeffs_bank);
-            auto result = channel.data.clean16.harmonic.run(bands, HIIR12_70);
+            auto [sub2, oct2, oct3] = channel.data.clean16.harmonic.run(bands, HIIR12_70, channel_idx);
 
-            result.oct2[15] = 0.0f; // reduce aliasing
-            result.oct3[14] = 0.0f;
-            result.oct3[15] = 0.0f;
+            oct2[15] = 0.0f; // reduce aliasing
+            oct3[14] = 0.0f;
+            oct3[15] = 0.0f;
 
-            return result.sub2.sum() * params.gain0 +
-                   result.oct2.sum() * params.gain2 +
-                   result.oct3.sum() * params.gain3;
+            return sub2.sum() * params.gain0 +
+                   oct2.sum() * params.gain2 +
+                   oct3.sum() * params.gain3;
         }
 
         default:
