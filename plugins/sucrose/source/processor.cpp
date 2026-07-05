@@ -154,6 +154,8 @@ void SucroseAudioProcessor::processBlock(AudioBuffer<float> &buffer, MidiBuffer 
 	while (offset < numsamples)
 	{
 		int chunk = numsamples - offset;
+		if (chunk > MAX_BLOCK_SIZE)
+			chunk = MAX_BLOCK_SIZE;
 
 		// param query
 		for (int i = 0; i < paramcount; i++)
