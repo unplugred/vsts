@@ -3,17 +3,27 @@
 #include "util.h"
 
 /// A phase-locked loop based subharmonic generator.
-template <int N>
+template <int H, int N>
 struct PhaseLocked
 {
+    Hiir<H, N> hiir = {};
     f32x<N> phase = 0.0f;
     f32x<N> freq = 0.0f;
-    f32x<N> corr = 0.0f;
 
-    inline std::array<f32x<N>, 2> run(const f32x<N> &x, const f32x<N> &y)
+    inline f32x<N> run(const f32x<N> &z, const HiirCoeffs<H> &coeffs)
     {
         const auto freq_beta = 0.0625f / (3.14159265358979323846f); // frequency adjustment factor
         const auto phase_beta = 0.25f / (3.14159265358979323846f);  // phase adjustment factor
+
+        // quadrature signal (Hilbert transform)
+        auto [x, y] = hiir.run(z, coeffs);
+
+        // same steps as in [`HarmonicGen`] to get the phase signal `p` and quadrature signal `q`
+        auto mag = (x * x + y * y).sqrt();
+        auto mag_inv = f32x<N>(1.0f) / mag.max(f32x<N>(1e-8f)); // avoid divide by zero
+
+        auto p = x * mag_inv; // this is the phase signal as a sine wave bounded by -1..1
+        auto q = y * mag_inv; // H(p), the quadrature signal
 
         // current oscillator output
         auto [cx, cy] = approx_sin_cos_tau(phase - 0.5f);
@@ -24,7 +34,7 @@ struct PhaseLocked
 
         // phase error between the input signal and the oscillator output
         // Im(x * conj(y)), originally this was atan2 but it was expensive & this approximates it well enough
-        auto error = cx2 * y - cy2 * x;
+        auto error = cx2 * p - cy2 * q;
 
         // adjust frequency and phase based on the error
         freq = freq + error * freq_beta;
@@ -35,20 +45,19 @@ struct PhaseLocked
         for (int i = 0; i < N; i += 2)
             std::swap(cx[i], cy[i]);
 
-        return {cx, cy};
+        return cy * mag; // restore magnitude
     }
 };
 
-/// @brief Hilbert-based (sub)harmonic generator
+/// @brief Hilbert-based harmonic generator
 /// @tparam H Hilbert order / 2
 /// @tparam N Number of parallel channels
 template <int H, int N>
 struct HarmonicGen
 {
     Hiir<H, N> hiir = {};
-    PhaseLocked<N> pll = {};
 
-    inline std::array<f32x<N>, 3> run(const f32x<N> &x, const HiirCoeffs<H> &coeffs, int channel)
+    inline std::array<f32x<N>, 2> run(const f32x<N> &x, const HiirCoeffs<H> &coeffs)
     {
         // real & imag of an analytic signal (with phase shift)
         auto [r, i] = hiir.run(x, coeffs);
@@ -66,12 +75,7 @@ struct HarmonicGen
         auto oct2 = p2 * 2.0f * mag - mag;
         // triple the frequency, keep the magnitude
         auto oct3 = (p2 * 4.0f - 3.0f) * p * mag;
-        // suboctave is tracked by using N parallel phase-locked loops
-        auto [sub2x, sub2y] = pll.run(p, q);
 
-        // channels have 90 degree phase offset (to avoid full cancellation)
-        auto sub2 = ((channel & 1) == 0) ? sub2x * mag : sub2y * mag;
-
-        return {sub2, oct2, oct3};
+        return {oct2, oct3};
     }
 };
