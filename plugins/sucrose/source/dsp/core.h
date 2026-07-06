@@ -30,14 +30,11 @@ struct DspParams
 
 struct DspChannel
 {
-    float emphasis[2] = {};       // used for emphasis filtering
-    float deemphasis[2] = {};     // used for deemphasis filtering
-    float deemphasis_sub[2] = {}; // used for suboctave deemphasis filtering
-
+    float emphasis[2] = {};     // used for emphasis filtering
+    float deemphasis[2] = {};   // used for deemphasis filtering
     float prefilter[4][2] = {}; // used for pre- low/high cut filtering
 
     Hiir<4, 1> halfband = {}; // used for bandlimiting to 1/4 when oversampling is off
-
     Hiir2<4> upsample = {};   // used when oversampling is on
     Hiir2<4> downsample = {}; // used when oversampling is on
 
@@ -109,6 +106,7 @@ struct DspEngine
     Hiir<4, 1> sub_halfband = {}; // used for bandlimiting to 1/4 when oversampling is off
     Hiir2<4> sub_upsample = {};   // used when oversampling is on
     Hiir2<4> sub_downsample = {}; // used when oversampling is on
+    float sub_deemphasis[2] = {}; // used for suboctave deemphasis filtering
 
     union
     {
@@ -138,7 +136,6 @@ struct DspEngine
                                                      locut_freq(-1.f),
                                                      coeffs_emphasis(440.f / sample_rate, 0.25f),
                                                      fadeout_ramp(50.0f / sample_rate),
-
                                                      sub_buffer(MAX_BLOCK_SIZE, 0.0f),
                                                      sub_channel({})
     {
@@ -245,6 +242,12 @@ struct DspEngine
                     wet = run_xsampled_suboctave(wet);
                 }
 
+                // tilt shift (de-emphasis) for suboctave
+                {
+                    auto [lp, hp] = coeffs_emphasis.run(wet, sub_deemphasis);
+                    wet = wet - 0.5f * lp + hp; // inverse tilt shelf
+                }
+
                 sub_buffer[i] = wet;
             }
 
@@ -292,6 +295,8 @@ struct DspEngine
         sub_upsample = Hiir2<4>();
         sub_downsample = Hiir2<4>();
         sub_halfband = Hiir<4, 1>();
+        sub_deemphasis[0] = 0.0f;
+        sub_deemphasis[1] = 0.0f;
 
         for (int c = 0; c < state.size(); ++c)
             state[c] = DspChannel(mode);

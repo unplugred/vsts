@@ -61,20 +61,16 @@ struct HarmonicGen
     {
         // real & imag of an analytic signal (with phase shift)
         auto [r, i] = hiir.run(x, coeffs);
+        auto r2 = r * r;
+        auto i2 = i * i;
 
-        // now we split the signal into its magnitude `mag` and phase `p`, the original signal is `r = mag * p`
-        // this is the magnitude of our signal
-        auto mag = (r * r + i * i).sqrt();
-        auto mag_inv = f32x<N>(1.0f) / mag.max(f32x<N>(1e-8f)); // avoid divide by zero
+        auto magi2 = f32x<N>(1.0f) / (r2 + i2).max(f32x<N>(1e-14f)); // avoid divide by zero
 
-        auto p = r * mag_inv; // this is the phase signal as a sine wave bounded by -1..1
-        auto q = i * mag_inv; // H(p), the quadrature signal
-        auto p2 = p * p;      // p^2
-
-        // double the frequency, keep the magnitude
-        auto oct2 = p2 * 2.0f * mag - mag;
-        // triple the frequency, keep the magnitude
-        auto oct3 = (p2 * 4.0f - 3.0f) * p * mag;
+        // let Q be the complex analytic input signal given by the hilbert transform
+        // oct2 = Re(Q^2/|Q|) - twice the angle without changing the magnitude, and get the real part to get the output
+        // oct3 = Re(Q^3/|Q|^2) - same thing but triple the angle and divide by the magnitude squared to keep the same magnitude
+        auto oct2 = (r2 - i2) * magi2.sqrt();
+        auto oct3 = (r2 - f32x<N>(3.0f) * i2) * r * magi2;
 
         return {oct2, oct3};
     }
