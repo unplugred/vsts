@@ -26,12 +26,12 @@ SucroseAudioProcessor::SucroseAudioProcessor() : apvts(*this, &undo_manager, "Pa
 		presets[i].name = "Program " + (String)(i - 9);
 	}
 
-	params.pots[0] = potentiometer("subharmonix", "sub", .001f, presets[0].values[0]);
-	params.pots[1] = potentiometer("fundamental", "dry", .001f, presets[0].values[1]);
-	params.pots[2] = potentiometer("2nd harmonix", "second", .001f, presets[0].values[2]);
-	params.pots[3] = potentiometer("3rd harmonix", "third", .001f, presets[0].values[3]);
-	params.pots[4] = potentiometer("low cut", "lc", 0.f, presets[0].values[4]);
-	params.pots[5] = potentiometer("high cut", "hc", 0.f, presets[0].values[5]);
+	params.pots[0] = potentiometer("subharmonix", "sub", .05f, presets[0].values[0]);
+	params.pots[1] = potentiometer("fundamental", "dry", .05f, presets[0].values[1]);
+	params.pots[2] = potentiometer("2nd harmonix", "second", .05f, presets[0].values[2]);
+	params.pots[3] = potentiometer("3rd harmonix", "third", .05f, presets[0].values[3]);
+	params.pots[4] = potentiometer("low cut", "lc", .05f, presets[0].values[4]);
+	params.pots[5] = potentiometer("high cut", "hc", .05f, presets[0].values[5]);
 	params.pots[6] = potentiometer("algorithm", "algo", 0.f, presets[0].values[6], 0, 2, potentiometer::inttype);
 
 	for (int i = 0; i < paramcount; i++)
@@ -154,6 +154,8 @@ void SucroseAudioProcessor::processBlock(AudioBuffer<float> &buffer, MidiBuffer 
 	while (offset < numsamples)
 	{
 		int chunk = numsamples - offset;
+		if (chunk > MAX_BLOCK_SIZE)
+			chunk = MAX_BLOCK_SIZE;
 
 		// param query
 		for (int i = 0; i < paramcount; i++)

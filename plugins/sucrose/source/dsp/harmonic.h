@@ -1,74 +1,77 @@
 #pragma once
 #include "hilbert.h"
-#include <cmath>
+#include "util.h"
 
-template <int N>
-struct HarmonicResult
+/// A phase-locked loop based subharmonic generator.
+template <int H, int N>
+struct PhaseLocked
 {
-    f32x<N> oct2;
-    f32x<N> oct3;
-    f32x<N> sub2;
+    Hiir<H, N> hiir = {};
+    f32x<N> phase = 0.0f;
+    f32x<N> freq = 0.0f;
+
+    inline f32x<N> run(const f32x<N> &z, const HiirCoeffs<H> &coeffs)
+    {
+        const auto freq_beta = 0.0625f / (3.14159265358979323846f); // frequency adjustment factor
+        const auto phase_beta = 0.25f / (3.14159265358979323846f);  // phase adjustment factor
+
+        // quadrature signal (Hilbert transform)
+        auto [x, y] = hiir.run(z, coeffs);
+
+        // same steps as in [`HarmonicGen`] to get the phase signal `p` and quadrature signal `q`
+        auto mag = (x * x + y * y).sqrt();
+        auto mag_inv = f32x<N>(1.0f) / mag.max(f32x<N>(1e-8f)); // avoid divide by zero
+
+        auto p = x * mag_inv; // this is the phase signal as a sine wave bounded by -1..1
+        auto q = y * mag_inv; // H(p), the quadrature signal
+
+        // current oscillator output
+        auto [cx, cy] = approx_sin_cos_tau(phase - 0.5f);
+
+        // multiply phase by 2 (to lock onto the f/2 subharmonic)
+        auto cx2 = f32x<N>(0.5f) - cx * cx;
+        auto cy2 = cx * cy;
+
+        // phase error between the input signal and the oscillator output
+        // Im(x * conj(y)), originally this was atan2 but it was expensive & this approximates it well enough
+        auto error = cx2 * p - cy2 * q;
+
+        // adjust frequency and phase based on the error
+        freq = freq + error * freq_beta;
+        phase = phase + error * phase_beta + freq;
+        phase = phase - phase.floor(); // wrap phase to avoid accumulating errors
+
+        // bands have +-90 degree offset between neighboring bands (to avoid full cancellation)
+        for (int i = 0; i < N; i += 2)
+            std::swap(cx[i], cy[i]);
+
+        return cy * mag; // restore magnitude
+    }
 };
 
-/// @brief Hilbert-based (sub)harmonic generator
+/// @brief Hilbert-based harmonic generator
 /// @tparam H Hilbert order / 2
 /// @tparam N Number of parallel channels
 template <int H, int N>
 struct HarmonicGen
 {
     Hiir<H, N> hiir = {};
-    f32x<N> prev_i = {};
-    f32x<N> prev_r = {};
-    bool sign[N] = {};
 
-    HarmonicGen() {}
-
-    inline HarmonicResult<N> run(const f32x<N> &x, const HiirCoeffs<H> &coeffs)
+    inline std::array<f32x<N>, 2> run(const f32x<N> &x, const HiirCoeffs<H> &coeffs)
     {
         // real & imag of an analytic signal (with phase shift)
         auto [r, i] = hiir.run(x, coeffs);
+        auto r2 = r * r;
+        auto i2 = i * i;
 
-        // now we split the signal into its magnitude `mag` and phase `p`, the original signal is `r = mag * p`
-        // this is the magnitude of our signal
-        auto mag = (r * r + i * i).sqrt();
+        auto magi2 = f32x<N>(1.0f) / (r2 + i2).max(f32x<N>(1e-14f)); // avoid divide by zero
 
-        // this is the phase signal as a sine wave bounded by -1..1
-        auto p = r / mag.max(f32x<N>(1e-12f)); // avoid divide by zero
-        auto p2 = p * p;                       // p^2
-        auto p2_2 = p2 + p2;                   // 2p^2
+        // let Q be the complex analytic input signal given by the hilbert transform
+        // oct2 = Re(Q^2/|Q|) - twice the angle without changing the magnitude, and get the real part to get the output
+        // oct3 = Re(Q^3/|Q|^2) - same thing but triple the angle and divide by the magnitude squared to keep the same magnitude
+        auto oct2 = (r2 - i2) * magi2.sqrt();
+        auto oct3 = (r2 - f32x<N>(3.0f) * i2) * r * magi2;
 
-        // double the frequency, keep the magnitude
-        auto oct2 = p2_2 * mag - mag;
-        // triple the frequency, keep the magnitude
-        auto oct3 = (p2_2 + p2_2 - 3.0f) * p * mag;
-        // half the frequency (modulo sign), keep the magnitude, max(0.0) to prevent nans due to precision issues
-        auto sub2 = (p + 1.0f).max(f32x<N>(0.0f)).sqrt() * mag * 0.70710678f;
-
-        // a flip-flop used to keep track of the sign for suboctaving, otherwise it is phase-aligned to our analytic signal
-        // this is in fact the main source of glitchiness
-        auto delta = prev_i * r - prev_r * i;
-        for (int n = 0; n < N; ++n)
-        {
-            bool cross_dn = prev_i[n] >= 0.0f && i[n] < 0.0f;
-            bool cross_up = prev_i[n] < 0.0f && i[n] >= 0.0f;
-            bool positive = delta[n] > 0.0f;
-            bool cross = positive ? cross_up : cross_dn;
-
-            sign[n] = sign[n] ^ cross;
-            sub2[n] = sign[n] ? -sub2[n] : sub2[n];
-        }
-
-        prev_i = i;
-        prev_r = r;
-
-        int consensus = 0;
-        for (int n = 0; n < N; ++n)
-            if (mag[n] >= 1e-5f)
-                consensus += sign[n] ? 1 : -1;
-        for (int n = 0; n < N; ++n)
-            if (mag[n] < 1e-5f)
-                sign[n] = consensus > 0;
-
-        return HarmonicResult<N>{oct2, oct3, sub2};
+        return {oct2, oct3};
     }
 };

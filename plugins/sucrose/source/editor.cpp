@@ -635,7 +635,7 @@ void SucroseAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 
 		String description = "";
 		     if(hover == 0)
-			description = "subharmonic - undertone an octave below the fundamental";
+			description = "subharmonic - undertone an octave below the fundamental. always mono";
 		else if(hover == 1)
 			description = "fundamental - the dry unprocessed signal, which does not go through the filters";
 		else if(hover == 2)
