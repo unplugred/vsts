@@ -19,10 +19,12 @@ struct curve {
 	void bufferstart(float input, int channel);
 	void wrap(int channel);
 	float process(float input, int channel);
-	static float calctension(float interp, float tension);
 	curve(String str, const char delimiter = ',', int channelnum = 0);
 	String tostring(const char delimiter = ',');
+	static float calctension(float interp, float tension);
 	static bool isvalidcurvestring(String str, const char delimiter = ',');
+	static void pointsfromstring(std::vector<point>& points, String str, const char delimiter = ',');
+	static String pointstostring(std::vector<point>& points, const char delimiter = ',');
 
 	std::vector<point> points;
 	std::vector<int> nextpoint;

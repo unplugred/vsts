@@ -37,9 +37,23 @@ clap_juce_extensions_plugin(TARGET "${BaseTargetName}"
 target_sources("${BaseTargetName}" PRIVATE
 	source/editor.cpp
 	source/processor.cpp
+
 	source/curves.cpp
 	source/midihandler.cpp
-	source/functions.cpp)
+	source/functions.cpp
+	source/page.cpp
+
+	source/pages/000_general.cpp
+	source/pages/010_operator.cpp
+	source/pages/020_visualizer.cpp
+	source/pages/030_filter.cpp
+	source/pages/040_distortion.cpp
+	source/pages/050_phaser.cpp
+	source/pages/060_chorus.cpp
+	source/pages/070_equalizer.cpp
+	source/pages/080_compressor.cpp
+	source/pages/090_delay.cpp
+	source/pages/100_reverb.cpp)
 
 target_compile_definitions("${BaseTargetName}" PUBLIC
 	JUCE_DISPLAY_SPLASH_SCREEN=0

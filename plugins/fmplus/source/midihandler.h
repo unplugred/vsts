@@ -1,6 +1,7 @@
 #pragma once
 #include "includes.h"
 #include "functions.h"
+#include "pages/000_general.h"
 
 class midihandler {
 	public:
@@ -43,7 +44,7 @@ class midihandler {
 		float age = 2;
 	};
 
-	float* params;
+	FMPlusPageGeneral* page_gen;
 	int samplerate;
 	int sample = 1;
 

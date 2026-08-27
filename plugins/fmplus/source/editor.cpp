@@ -1,87 +1,65 @@
+// TODO tabular save file
+// TODO testing
+//
+// TODO only downsample
+// TODO param groupings
+// TODO string to param
+
 #include "processor.h"
 #include "editor.h"
 
-FMPlusAudioProcessorEditor::FMPlusAudioProcessorEditor(FMPlusAudioProcessor& p, int pgeneralcount, int pparamcount, pluginpreset state, pluginparams params) : audio_processor(p), AudioProcessorEditor(&p), plugmachine_gui(*this, p, 300, 300, 2.f, .5f) {
+FMPlusAudioProcessorEditor::FMPlusAudioProcessorEditor(FMPlusAudioProcessor& p) : audio_processor(p), AudioProcessorEditor(&p), plugmachine_gui(*this, p, 300, 300, 2.f, .5f) {
 
-	tuningfile = params.tuningfile;
-	themefile = params.themefile;
+	for(int p = 0; p < PC; ++p) {
+		audio_processor.pages[p]->mesh = &mesh;
 
-	presetunsaved = params.presetunsaved;
-	generalcount = pgeneralcount+1;
-	paramcount = pparamcount;
-	for(int i = 0; i < pgeneralcount; ++i) {
-		knobs[knobcount].id = params.general[i].id;
-		knobs[knobcount].name = params.general[i].name;
-		knobs[knobcount].value[0] = params.general[i].normalize(state.general[i]);
-		knobs[knobcount].ttype = params.general[i].ttype;
-		knobs[knobcount].minimumvalue = params.general[i].minimumvalue;
-		knobs[knobcount].maximumvalue = params.general[i].maximumvalue;
-		knobs[knobcount].defaultvalue = params.general[i].normalize(params.general[i].defaultvalue);
-		add_listener(knobs[knobcount].id);
-		++knobcount;
-	}
-	knobs[knobcount].id = "antialias";
-	knobs[knobcount].name = "Anti-Alias";
-	knobs[knobcount].value[0] = params.antialiasing;
-	knobs[knobcount].minimumvalue = 0;
-	knobs[knobcount].maximumvalue = 1;
-	knobs[knobcount].defaultvalue = .7f;
-	add_listener(knobs[knobcount].id);
-	++knobcount;
-	for(int i = 0; i < pparamcount; ++i) {
-		knobs[knobcount].id = params.values[i].id;
-		knobs[knobcount].name = params.values[i].name;
-		knobs[knobcount].ttype = params.values[i].ttype;
-		knobs[knobcount].minimumvalue = params.values[i].minimumvalue;
-		knobs[knobcount].maximumvalue = params.values[i].maximumvalue;
-		knobs[knobcount].defaultvalue = params.values[i].normalize(params.values[i].defaultvalue);
-		for(int o = 0; o < MC; ++o) {
-			knobs[knobcount].value[o] = params.values[i].normalize(state.values[o][i]);
-			add_listener("o"+(String)o+knobs[knobcount].id);
+		audio_processor.pages[p]->knobsmooth.reset(.05f,30,audio_processor.pages[p]->params.size());
+
+		for(int i = 0; i < audio_processor.pages[p]->params.size(); ++i) {
+			audio_processor.pages[p]->params[i].defaultvaluenorm = audio_processor.pages[p]->params[i].normalize(audio_processor.pages[p]->params[i].defaultvalue);
+
+			String id = audio_processor.pages[p]->params[i].id;
+			for(int o = 0; o < audio_processor.pages[p]->instances; ++o) {
+				add_listener(p==1?("o"+(String)o+id):id);
+
+				audio_processor.pages[p]->valuenorm[i][o] = audio_processor.pages[p]->params[i].normalize(audio_processor.pages[p]->state.value[i][o]);
+
+			}
 		}
-		++knobcount;
+
+		for(int i = 0; i < audio_processor.pages[p]->curvesnum; ++i)
+			for(int o = 0; o < audio_processor.pages[p]->instances; ++o)
+				audio_processor.pages[p]->curves[i].cui[o] = audio_processor.pages[p]->curves[i].c[o];
 	}
 
-	textlength = -1;
-	addtext(160,31,"+",1);
-	addtext(160,42,"-",1);
-	addtext(5, 0,"Gen");
-	addtext(5,11,"Vis");
-	addtext(5,22,"FX");
-	for(int o = 0; o < MC; ++o)
-		addtext(5,11*(o+3),"OP"+(String)(o+1));
+	mesh.width = width;
+	mesh.height = height;
+	mesh.scaled_dpi = scaled_dpi;
+	mesh.textlength = -1;
+	mesh.addtext(160,31,"+",1);
+	mesh.addtext(160,42,"-",1);
+	for(int i = 0; i < TABC; ++i)
+		mesh.addtext(5,11*i,i==2?"FX":audio_processor.pages[audio_processor.tabp[i]]->tabname.replace("#",(String)(audio_processor.tabo[i]+1)));
 	for(int o = 0; o < (MC+1); ++o) {
-		ops[o].connections = state.opconnections[o];
-		ops[o].pos[0] = state.oppos[o*2  ];
-		ops[o].pos[1] = state.oppos[o*2+1];
-		ops[o].textmesh = textlength;
-		addtext(ops[o].pos[0]+162,ops[o].pos[1]+30,o==0?"Out":(knobs[generalcount].value[o-1]>.5f?("OP"+(String)o):"   "));
+		ops[0][o].connections = audio_processor.presets[audio_processor.currentpreset].opconnections[o];
+		ops[0][o].pos[0] = audio_processor.presets[audio_processor.currentpreset].oppos[    o *2  ];
+		ops[0][o].pos[1] = audio_processor.presets[audio_processor.currentpreset].oppos[    o *2+1];
+		ops[0][o].textmesh = mesh.textlength;
+		mesh.addtext(ops[0][o].pos[0]+162,ops[0][o].pos[1]+30,o==0?"Out":"OP"+(String)o,(o==0||audio_processor.page_op.valuenorm[0][o-1]>.5f)?0:-10);
 	}
+	ops[1][0] = ops[0][0];
+	for(int o = 1; o < (FXC+1); ++o) {
+		ops[1][o].pos[0] = audio_processor.presets[audio_processor.currentpreset].oppos[(MC+o)*2  ];
+		ops[1][o].pos[1] = audio_processor.presets[audio_processor.currentpreset].oppos[(MC+o)*2+1];
+		ops[1][o].textmesh = mesh.textlength;
+		mesh.addtext(ops[1][o].pos[0]+162,ops[1][o].pos[1]+30,audio_processor.pages[o+2]->tabname,-10);
+	}
+	pagestart = mesh.textlength;
 	audio_processor.getframe = true;
 
-	knobs[              5].name = "Arp";
-	knobs[              6].name = "Direction";
-	knobs[              7].name = "Length";
-	knobs[              8].name = "Speed";
-	knobs[             10].name = "Vibrato";
-	knobs[             11].name = "Rate";
-	knobs[             13].name = "Amount";
-	knobs[             14].name = "Attack";
-	knobs[generalcount   ].name = "OPERATOR_X";
-	knobs[generalcount+ 2].name = "Amp";
-	knobs[generalcount+13].name = "LFO";
-	knobs[generalcount+14].name = "Target";
-	knobs[generalcount+15].name = "Rate";
-	knobs[generalcount+17].name = "Influence";
-	knobs[generalcount+18].name = "Attack";
-
-	knobsmooth.reset(.05f,30,paramcount+generalcount);
-	dampadsr.reset(.05f,30,8);
-
-	for(int i = 0; i < 8; i++)
-		curves[i] = state.curves[i];
-
-	rebuildtab(params.selectedtab.get());
+	calcvis(0);
+	audio_processor.tabp[2] = audio_processor.params.fxtab.get();
+	rebuildtab(audio_processor.params.selectedtab.get());
 
 	setResizable(false,false);
 	setWantsKeyboardFocus(true);
@@ -247,7 +225,9 @@ R"(#version 150 core
 in vec3 aPos;
 uniform float banner;
 uniform float animation;
-uniform vec2 htpos;
+uniform vec4 dividerx;
+uniform vec3 dividery;
+uniform vec4 htpos;
 out float linepos;
 out float lineopacity;
 out float anim;
@@ -256,11 +236,28 @@ void main() {
 	gl_Position = vec4(vec2(aPos.x,aPos.y*(1-banner)+banner)*2-1,0,1);
 	linepos = min(1,max(0,aPos.z));
 	lineopacity = 1.5-abs(aPos.z-.5);
-	float id = aPos.x>.51?-1:(aPos.y>.75?0:(aPos.y>.5?1:2));
-	float xpos = id==-1?0:(aPos.x-(id==0?.39:.1033333))*(id==0?9.090909:2.5);
-	anim = min(1,animation*2.5-xpos-id*.5+1);
-	float htxpos = id==1?htpos.x:(id==2?htpos.y:-1);
-	highlight = (xpos-htxpos)*120;
+	if(aPos.x < .51) {
+		int id = -1;
+		float left = .1033333;
+		float right = .5033333;
+		float htxpos = -1;
+		     if(aPos.y > dividery.x) { id = 0; right = dividerx.x; htxpos = htpos.x; }
+		else if(aPos.y > dividery.y) { id = 2; right = dividerx.y; htxpos = htpos.y; }
+		else if(aPos.y > dividery.z) { id = 4; right = dividerx.z; htxpos = htpos.z; }
+		else                         { id = 6; right = dividerx.w; htxpos = htpos.w; }
+		if(aPos.x > right) {
+			left = right;
+			right = .5033333;
+			id += 1;
+		} else right = min(.5033333,right);
+		float xpos = (aPos.x-left)/(right-left);
+
+		anim = animation-xpos-id*.25+1;
+		highlight = (xpos-htxpos)*120;
+	} else {
+		anim = 10;
+		highlight = 10;
+	}
 })",
 //LINE FRAG
 R"(#version 150 core
@@ -274,7 +271,7 @@ uniform vec3 col_on;
 out vec4 fragColor;
 void main() {
 	float mix = min(1,max(0,(1-abs(highlight))*dpi+.5));
-	fragColor = vec4(col_fg*(1-mix)+col_on*mix,min((1-abs(linepos*2-1))*dpi,1)*lineopacity*floor(anim));
+	fragColor = vec4(col_fg*(1-mix)+col_on*mix,min((1-abs(linepos*2-1))*dpi,1)*lineopacity*floor(min(1,anim)));
 })");
 
 	operatorshader = add_shader(
@@ -293,25 +290,35 @@ R"(#version 150 core
 in vec2 uv;
 uniform sampler2D operatortex;
 uniform float dpi;
+uniform float stretch;
+uniform float stage;
 uniform vec3 col_bg;
 uniform vec3 col_ht;
 uniform vec3 col_fg;
 uniform float selected;
 out vec4 fragColor;
 void main() {
-	vec4 col = vec4(max(min((texture(operatortex,uv).rgb-.5)*dpi+.5,1),0),1);
-	if(col.g <= 0) {
-		if(selected < .5 && (abs(uv.x-.5) >= 0.430556 || abs(uv.y-.5) >= 0.333333)) {
-			col.a = 0;
-		} else {
-			col.a = col.r;
-			col.r = 1;
+	vec2 muv = vec2(min(uv.x*stretch,.5)+max(.5-(1-uv.x)*stretch,0),uv.y);
+	vec4 col = vec4(max(min((texture(operatortex,muv).rgb-.5)*dpi+.5,1),0),1);
+	if(stage < .5) {
+		if(col.g <= 0) {
+			if(selected < .5 && (abs(muv.x-.5) >= 0.430556 || abs(muv.y-.5) >= 0.333333))
+				col.a = 0;
+			else
+				col.a = col.r;
 		}
-	} else if(col.g >= 1 && col.r > 0) {
-		col.g -= col.r;
+		fragColor = vec4(col_fg,col.a);
+	} else if(stage <= 1.5) {
+		col.a = col.g;
+		col.rgb = col_bg*(1-col.b)+col_ht*col.b;
+		fragColor = col;
+	} else {
+		if(col.g < 1)
+			col.a = 0;
+		else
+			col.a = col.r;
+		fragColor = vec4(col_fg,col.a);
 	}
-	col.rgb = col_bg*(col.g-col.b)+col_ht*col.b+col_fg*col.r;
-	fragColor = col;
 })");
 
 	indicatorshader = add_shader(
@@ -398,7 +405,7 @@ void FMPlusAudioProcessorEditor::renderOpenGL() {
 	headertex.bind();
 	baseshader->setUniform("headertex",2);
 	baseshader->setUniform("showheader",((tabanimation>=20&&tabanimation<=21)||tabanimation>=25)?1.f:0.f);
-	baseshader->setUniform("tabid",(float)selectedtab);
+	baseshader->setUniform("tabid",(float)mesh.tab);
 	baseshader->setUniform("banner",banner_offset);
 	baseshader->setUniform("dpi",(float)fmax(scaled_dpi*.5f,1));
 	baseshader->setUniform("col_bg",col_bg[0],col_bg[1],col_bg[2]);
@@ -433,7 +440,7 @@ void FMPlusAudioProcessorEditor::renderOpenGL() {
 	// 1 - outline mod
 	// 2 - highlight
 	// 3 - conf mod
-	if(squarelength >= 0) {
+	if(mesh.squarelength >= 0) {
 		squareshader->use();
 		squareshader->setUniform("banner",banner_offset);
 		squareshader->setUniform("dpi",scaled_dpi);
@@ -444,8 +451,8 @@ void FMPlusAudioProcessorEditor::renderOpenGL() {
 		coord = context.extensions.glGetAttribLocation(squareshader->getProgramID(),"coords");
 		context.extensions.glEnableVertexAttribArray(coord);
 		context.extensions.glVertexAttribPointer(coord,4,GL_FLOAT,GL_FALSE,0,0);
-		context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*(squarelength+1)*4, squaremesh, GL_DYNAMIC_DRAW);
-		glDrawArrays(GL_TRIANGLES,0,squarelength+1);
+		context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*(mesh.squarelength+1)*4, mesh.square, GL_DYNAMIC_DRAW);
+		glDrawArrays(GL_TRIANGLES,0,mesh.squarelength+1);
 		context.extensions.glDisableVertexAttribArray(coord);
 	}
 
@@ -454,14 +461,16 @@ void FMPlusAudioProcessorEditor::renderOpenGL() {
 	coord = context.extensions.glGetAttribLocation(lineshader->getProgramID(),"aPos");
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,3,GL_FLOAT,GL_FALSE,0,0);
-	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*(linelength+1)*3, visline, GL_DYNAMIC_DRAW);
+	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*(mesh.linelength+1)*3, mesh.line, GL_DYNAMIC_DRAW);
 	lineshader->setUniform("banner",banner_offset);
 	lineshader->setUniform("dpi",scaled_dpi);
-	lineshader->setUniform("animation",tabanimation/30.f);
+	lineshader->setUniform("animation",tabanimation/30.f*2.5f);
 	lineshader->setUniform("col_fg",col_fg[0],col_fg[1],col_fg[2]);
 	lineshader->setUniform("col_on",col_on[0],col_on[1],col_on[2]);
-	lineshader->setUniform("htpos",adsrht,lfoht);
-	glDrawArrays(GL_TRIANGLE_STRIP,0,linelength+1);
+	lineshader->setUniform("htpos",mesh.lineht[0],mesh.lineht[1],mesh.lineht[2],mesh.lineht[3]);
+	lineshader->setUniform("dividerx",selectedpage->dividerx[0],selectedpage->dividerx[1],selectedpage->dividerx[2],selectedpage->dividerx[3]);
+	lineshader->setUniform("dividery",1-selectedpage->dividery[0],1-selectedpage->dividery[1],1-selectedpage->dividery[2]);
+	glDrawArrays(GL_TRIANGLE_STRIP,0,mesh.linelength+1);
 	context.extensions.glDisableVertexAttribArray(coord);
 	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
 
@@ -475,37 +484,42 @@ void FMPlusAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
 	circleshader->setUniform("size",9.f*scaled_dpi);
 	float inverse_dpi = 1.f/scaled_dpi;
-	for(int i = 0; i < 2; ++i) {
+	if(mesh.tab != 2) for(int i = 0; i < 2; ++i) {
 		if(!displayaddremove[i]) continue;
 		circleshader->setUniform("pos",(159.f-.5f*inverse_dpi)/width,1.f-(41.f+11.f*i+.5f*inverse_dpi)/height,(9.f+inverse_dpi)/width,(9.f+inverse_dpi)/height);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	}
-	if(selectedtab >= 3) {
-		circleshader->setUniform("size",2.5f*scaled_dpi);
-		int nextpoint = 0;
-		for(int i = 0; i < (curves[selectedtab-3].points.size()-1); ++i) {
-			if(!curves[selectedtab-3].points[i].enabled) continue;
-			++nextpoint;
-			while(!curves[selectedtab-3].points[nextpoint].enabled) ++nextpoint;
+	if(selectedpage->curvesnum > 0) {
+		for(int c = 0; c < selectedpage->curvesnum; ++c) {
+			circleshader->setUniform("size",2.5f*scaled_dpi);
+			int nextpoint = 0;
 
-			if(((curves[selectedtab-3].points[nextpoint].x-curves[selectedtab-3].points[i].x)*3.f) <= .02f || fabs(curves[selectedtab-3].points[nextpoint].y-curves[selectedtab-3].points[i].y) <= .02f) continue;
-			float x = (curves[selectedtab-3].points[i].x+curves[selectedtab-3].points[nextpoint].x)*.5f;
-			if((tabanimation*.0833333f-x-1) < 0) continue;
+			curve* currentcurve = &selectedpage->curves[c].cui[mesh.o];
+			float animoffset = selectedpage->curves[c].animid*.25f;
+			for(int i = 0; i < (currentcurve->points.size()-1); ++i) {
+				if(!currentcurve->points[i].enabled) continue;
+				++nextpoint;
+				while(!currentcurve->points[nextpoint].enabled) ++nextpoint;
 
-			float interp = curve::calctension(.5,curves[selectedtab-3].points[i].tension);
-			      x = x                                                                                                  *120.f+31.f-1.25f-.5f*inverse_dpi;
-			float y = (curves[selectedtab-3].points[i].y*(1-interp)+curves[selectedtab-3].points[nextpoint].y*interp)    *40.f +92.f-1.25f-.5f*inverse_dpi;
-			circleshader->setUniform("pos",x/width,y/height,(2.5f+inverse_dpi)/width,(2.5f+inverse_dpi)/height);
-			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
-		}
-		circleshader->setUniform("size",4.f*scaled_dpi);
-		for(int i = 0; i < curves[selectedtab-3].points.size(); ++i) {
-			if(!curves[selectedtab-3].points[i].enabled) continue;
-			if((tabanimation*.0833333f-curves[selectedtab-3].points[i].x-1) < 0) continue;
-			circleshader->setUniform("pos",
-				(curves[selectedtab-3].points[i].x*120.f+31.f-2.f-.5f*inverse_dpi)/width,
-				(curves[selectedtab-3].points[i].y*40.0f+92.f-2.f-.5f*inverse_dpi)/height,(4.f+inverse_dpi)/width,(4.f+inverse_dpi)/height);
-			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+				if(((currentcurve->points[nextpoint].x-currentcurve->points[i].x)*3.f) <= .02f || fabs(currentcurve->points[nextpoint].y-currentcurve->points[i].y) <= .02f) continue;
+				float x = (currentcurve->points[i].x+currentcurve->points[nextpoint].x)*.5f;
+				if((tabanimation/30.f*2.5-                        x-animoffset) < 0) continue;
+
+				float interp = curve::calctension(.5,currentcurve->points[i].tension);
+				      x = x                                                                                  *120.f+31.f-1.25f-.5f*inverse_dpi;
+				float y = (currentcurve->points[i].y*(1-interp)+currentcurve->points[nextpoint].y*interp)    *40.f +92.f-1.25f-.5f*inverse_dpi;
+				circleshader->setUniform("pos",x/width,y/height,(2.5f+inverse_dpi)/width,(2.5f+inverse_dpi)/height);
+				glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+			}
+			circleshader->setUniform("size",4.f*scaled_dpi);
+			for(int i = 0; i < currentcurve->points.size(); ++i) {
+				if(!currentcurve->points[i].enabled) continue;
+				if((tabanimation/30.f*2.5-currentcurve->points[i].x-animoffset) < 0) continue;
+				circleshader->setUniform("pos",
+					(currentcurve->points[i].x*120.f+31.f-2.f-.5f*inverse_dpi)/width,
+					(currentcurve->points[i].y*40.0f+92.f-2.f-.5f*inverse_dpi)/height,(4.f+inverse_dpi)/width,(4.f+inverse_dpi)/height);
+				glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+			}
 		}
 	}
 	context.extensions.glDisableVertexAttribArray(coord);
@@ -524,40 +538,43 @@ void FMPlusAudioProcessorEditor::renderOpenGL() {
 	operatorshader->setUniform("col_bg",col_bg[0],col_bg[1],col_bg[2]);
 	operatorshader->setUniform("col_ht",col_ht[0],col_ht[1],col_ht[2]);
 	operatorshader->setUniform("selected",0.f);
-	for(int o = MC; o >= 0; --o) {
-		if(o != 0 && knobs[generalcount].value[o==0?0:(o-1)] < .5) continue;
-		operatorshader->setUniform("pos",(153.f+ops[o].pos[0])/width,(256.f-ops[o].pos[1])/height,36.f/width,18.f/height);
-		if(selectedtab == (o==0?0:(o+2))) {
-			operatorshader->setUniform("col_bg",col_on[0],col_on[1],col_on[2]);
-			operatorshader->setUniform("col_ht",col_on[0],col_on[1],col_on[2]);
-			operatorshader->setUniform("selected",(opanimation<1||(opanimation>=3&&opanimation<4)||opanimation>=6)?1.f:0.f);
-			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
-			operatorshader->setUniform("col_bg",col_bg[0],col_bg[1],col_bg[2]);
-			operatorshader->setUniform("col_ht",col_ht[0],col_ht[1],col_ht[2]);
-			operatorshader->setUniform("selected",0.f);
+	for(int stage = 0; stage < 3; ++stage) {
+		operatorshader->setUniform("stage",(float)stage);
+		if(mesh.tab == 2) {
+			for(int o = FXC; o >= 0; --o) {
+				float sl = (audio_processor.pages[o+2]->tabname.length()*7+15.f);
+				operatorshader->setUniform("stretch",sl/36.f);
+				operatorshader->setUniform("pos",(153.f+ops[1][o].pos[0])/width,(256.f-ops[1][o].pos[1])/height,sl/width,18.f/height);
+				if(audio_processor.tabp[2] == (o+2)) {
+					operatorshader->setUniform("col_bg",col_on[0],col_on[1],col_on[2]);
+					operatorshader->setUniform("col_ht",col_on[0],col_on[1],col_on[2]);
+					operatorshader->setUniform("selected",(opanimation<1||(opanimation>=3&&opanimation<4)||opanimation>=6)?1.f:0.f);
+					glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+					operatorshader->setUniform("col_bg",col_bg[0],col_bg[1],col_bg[2]);
+					operatorshader->setUniform("col_ht",col_ht[0],col_ht[1],col_ht[2]);
+					operatorshader->setUniform("selected",0.f);
+				} else {
+					glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+				}
+			}
 		} else {
-			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+			operatorshader->setUniform("stretch",1.f);
+			for(int o = MC; o >= 0; --o) {
+				if(o != 0 && audio_processor.page_op.valuenorm[0][o==0?0:(o-1)] < .5) continue;
+				operatorshader->setUniform("pos",(153.f+ops[0][o].pos[0])/width,(256.f-ops[0][o].pos[1])/height,36.f/width,18.f/height);
+				if(mesh.tab == (o==0?0:(o+2))) {
+					operatorshader->setUniform("col_bg",col_on[0],col_on[1],col_on[2]);
+					operatorshader->setUniform("col_ht",col_on[0],col_on[1],col_on[2]);
+					operatorshader->setUniform("selected",(opanimation<1||(opanimation>=3&&opanimation<4)||opanimation>=6)?1.f:0.f);
+					glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+					operatorshader->setUniform("col_bg",col_bg[0],col_bg[1],col_bg[2]);
+					operatorshader->setUniform("col_ht",col_ht[0],col_ht[1],col_ht[2]);
+					operatorshader->setUniform("selected",0.f);
+				} else {
+					glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+				}
+			}
 		}
-	}
-	context.extensions.glDisableVertexAttribArray(coord);
-
-	// INDICATOR
-	indicatorshader->use();
-	indicatorshader->setUniform("banner",banner_offset);
-	indicatorshader->setUniform("col_off",col_off[0],col_off[1],col_off[2]);
-	indicatorshader->setUniform("col_on" ,col_on [0],col_on [1],col_on [2]);
-	coord = context.extensions.glGetAttribLocation(indicatorshader->getProgramID(),"coords");
-	context.extensions.glEnableVertexAttribArray(coord);
-	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
-	for(int o = MC; o >= 0; --o) {
-		indicatorshader->setUniform("light",ops[o].indicator);
-		if(o > 0) {
-			indicatorshader->setUniform("pos",2.f/width,1.f-(30.f+11.f*o)/height,2.f/width,6.f/height);
-			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
-		}
-		if(o != 0 && knobs[generalcount].value[o==0?0:(o-1)] < .5) continue;
-		indicatorshader->setUniform("pos",(153.f+6.f+ops[o].pos[0])/width,(256.f+6.f-ops[o].pos[1])/height,2.f/width,6.f/height);
-		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	}
 	context.extensions.glDisableVertexAttribArray(coord);
 
@@ -566,7 +583,7 @@ void FMPlusAudioProcessorEditor::renderOpenGL() {
 	// 1 - conf
 	// 2 - highlight
 	// 3 - conf mod
-	if(textlength >= 0) {
+	if(mesh.textlength >= 0) {
 		textshader->use();
 		context.extensions.glActiveTexture(GL_TEXTURE0);
 		texttex.bind();
@@ -580,11 +597,44 @@ void FMPlusAudioProcessorEditor::renderOpenGL() {
 		coord = context.extensions.glGetAttribLocation(textshader->getProgramID(),"coords");
 		context.extensions.glEnableVertexAttribArray(coord);
 		context.extensions.glVertexAttribPointer(coord,4,GL_FLOAT,GL_FALSE,0,0);
-		context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*(textlength+1)*4, textmesh, GL_DYNAMIC_DRAW);
-		glDrawArrays(GL_TRIANGLES,0,textlength+1);
+		context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*(mesh.textlength+1)*4, mesh.text, GL_DYNAMIC_DRAW);
+		glDrawArrays(GL_TRIANGLES,0,mesh.textlength+1);
 		context.extensions.glDisableVertexAttribArray(coord);
 		context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
 	}
+
+	// INDICATOR
+	indicatorshader->use();
+	indicatorshader->setUniform("banner",banner_offset);
+	indicatorshader->setUniform("col_off",col_off[0],col_off[1],col_off[2]);
+	indicatorshader->setUniform("col_on" ,col_on [0],col_on [1],col_on [2]);
+	coord = context.extensions.glGetAttribLocation(indicatorshader->getProgramID(),"coords");
+	context.extensions.glEnableVertexAttribArray(coord);
+	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
+	if(mesh.tab == 2) {
+		for(int o = MC; o > 0; --o) {
+			indicatorshader->setUniform("light",ops[0][o].indicator);
+			indicatorshader->setUniform("pos",2.f/width,1.f-(30.f+11.f*o)/height,2.f/width,6.f/height);
+			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+		}
+		for(int o = FXC; o >= 0; --o) {
+			indicatorshader->setUniform("light",ops[1][o].indicator);
+			indicatorshader->setUniform("pos",(153.f+6.f+ops[1][o].pos[0])/width,(256.f+6.f-ops[1][o].pos[1])/height,2.f/width,6.f/height);
+			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+		}
+	} else {
+		for(int o = MC; o >= 0; --o) {
+			indicatorshader->setUniform("light",ops[0][o].indicator);
+			if(o > 0) {
+				indicatorshader->setUniform("pos",2.f/width,1.f-(30.f+11.f*o)/height,2.f/width,6.f/height);
+				glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+			}
+			if(o != 0 && audio_processor.page_op.valuenorm[0][o==0?0:(o-1)] < .5) continue;
+			indicatorshader->setUniform("pos",(153.f+6.f+ops[0][o].pos[0])/width,(256.f+6.f-ops[0][o].pos[1])/height,2.f/width,6.f/height);
+			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+		}
+	}
+	context.extensions.glDisableVertexAttribArray(coord);
 
 	draw_end();
 }
@@ -605,453 +655,157 @@ void FMPlusAudioProcessorEditor::updatetheme() {
 	look_n_feel.fg = Colour::fromFloatRGBA(col_fg[0],col_fg[1],col_fg[2],1.f);
 	look_n_feel.on = Colour::fromFloatRGBA(col_on[0],col_on[1],col_on[2],1.f);
 }
-void FMPlusAudioProcessorEditor::calcvis(int curveupdated) {
-	if(curveupdated == 0) {
-		linewritepos = -1;
-		beginline(153.5f,277+.5f*20+.5f);
+void FMPlusAudioProcessorEditor::calcvis(int lineupdated) {
+	if(lineupdated == 0) {
+		mesh.linewritepos = -1;
+		mesh.beginline(153.5f,277+.5f*20+.5f);
 		for(int i = 0; i < 69; ++i)
-			nextpoint(i+1+(i>=67?154.5f:154.f),277+.5f*20+.5f);
-		endline();
-		curvemesh[0] = linewritepos;
+			mesh.nextpoint(i+1+(i>=67?154.5f:154.f),277+.5f*20+.5f);
+		mesh.endline();
+		mesh.linesegments[0] = mesh.linewritepos;
 		return;
 	}
 
-	if(selectedtab < 3) return;
-
-	if(curveupdated == 1) {
-		morphosc osc;
-		osc.update(knobs[generalcount+3].valuesmoothed);
-		int box = knobs[generalcount+3].box;
-		int h = boxes[box].h;
-		int x = boxes[box].x;
-		int y = height-h-boxes[box].y;
-		linewritepos = curvemesh[0];
-		beginline(x,y+(osc.calc(-1)*-.5f+.5f)*h);
-		for(int i = 0; i < (h+1); ++i)
-			nextpoint(x+i+1,y+(osc.calc((((float)i+1)/h)*2-1)*.5f+.5f)*h);
-		endline();
-		curvemesh[1] = linewritepos;
-		return;
-	}
-
-	if(curveupdated == 2) {
-		int box = knobs[generalcount+9].box;
-		int w = 120;
-		int h = boxes[box].h;
-		int x = boxes[box].x;
-		int y = height-boxes[box].y;
-		float currentx = adsr[0]+.5f;
-		linewritepos = curvemesh[1];
-		beginline(x,y-h+11);
-		nextpoint(x+currentx,y);
-		currentx += adsr[4]+1.f;
-		nextpoint(x+currentx,y-(1-knobs[generalcount+11].valuesmoothed)*(h-11),true);
-		currentx += adsr[8]+1.f;
-		nextpoint(x+currentx,y-(1-knobs[generalcount+11].valuesmoothed)*(h-11),true);
-		nextpoint(x+w,y-h+11,true);
-		nextpoint(x+w,y-h+11);
-		endline();
-		curvemesh[2] = linewritepos;
-		return;
-	}
-
-	if(curveupdated == 3) {
-		int box = knobs[generalcount+14].box-1;
-		int w = boxes[box].w;
-		int h = boxes[box].h;
-		int x = boxes[box].x;
-		int y = height-h-boxes[box].y;
-		linewritepos = curvemesh[2];
-		curveiterator iterator;
-		iterator.reset(curves[selectedtab-3],w);
-		beginline(x,y+iterator.next()*h);
-		for(int i = 0; i < (w+1); ++i)
-			nextpoint(x+i+1,y+iterator.next()*h);
-		endline();
-		curvemesh[3] = linewritepos;
-		return;
-	}
-}
-void FMPlusAudioProcessorEditor::beginline(float x, float y) {
-	lineprevx = x;
-	lineprevy = y;
-	linecurrentx = x;
-	linecurrenty = y;
-	linebegun = true;
-}
-void FMPlusAudioProcessorEditor::endline() {
-	float inversedpi = .5f/scaled_dpi;
-	linewritepos += 2;
-	float angle = std::atan2(
-		(visline[linewritepos*3-5]-visline[linewritepos*3-11])*height,
-		(visline[linewritepos*3-6]-visline[linewritepos*3-12])*width )+1.5707963268f;
-	visline[linewritepos*3-3] = visline[linewritepos*3-9]+ sin(angle)*inversedpi/width ;
-	visline[linewritepos*3-2] = visline[linewritepos*3-8]- cos(angle)*inversedpi/height;
-	visline[linewritepos*3-1] = -1.f;
-	visline[linewritepos*3  ] = visline[linewritepos*3-6]+ sin(angle)*inversedpi/width ;
-	visline[linewritepos*3+1] = visline[linewritepos*3-5]- cos(angle)*inversedpi/height;
-	visline[linewritepos*3+2] =  2.f;
-	visline[linewritepos*3-9]                            -=sin(angle)*inversedpi/width ;
-	visline[linewritepos*3-8]                            +=cos(angle)*inversedpi/height;
-	visline[linewritepos*3-7] =  0.f;
-	visline[linewritepos*3-6]                            -=sin(angle)*inversedpi/width ;
-	visline[linewritepos*3-5]                            +=cos(angle)*inversedpi/height;
-	visline[linewritepos*3-4] =  1.f;
-}
-void FMPlusAudioProcessorEditor::nextpoint(float x, float y, bool knee) {
-	float linewidth = .5f+(.5f/scaled_dpi);
-	float angle1 = std::atan2(linecurrenty-   lineprevy,linecurrentx-   lineprevx)+1.5707963268f;
-	float angle2 = std::atan2(           y-linecurrenty,           x-linecurrentx)+1.5707963268f;
-	float angle = 0;
-	for(int i = ((linebegun||!knee)?1:0); i < 2; ++i) {
-		       if(knee) {
-			angle = i==0?angle1:angle2;
-		} else if(linebegun) {
-			angle = angle2;
-		} else if(fabs(angle1-angle2)<=1) {
-			angle = (angle1+angle2)*.5f;
-		} else if(fabs(linecurrenty-lineprevy) > fabs(y-linecurrenty)) {
-			angle = angle1;
-		} else {
-			angle = angle2;
-		}
-		visline[++linewritepos*3] = (linecurrentx+cos(angle)*linewidth)/width ;
-		visline[1+linewritepos*3] = (linecurrenty+sin(angle)*linewidth)/height;
-		visline[2+linewritepos*3] = 0.f;
-		visline[++linewritepos*3] = (linecurrentx-cos(angle)*linewidth)/width ;
-		visline[1+linewritepos*3] = (linecurrenty-sin(angle)*linewidth)/height;
-		visline[2+linewritepos*3] = 1.f;
-	}
-	if(linebegun) {
-		float inversedpi = .5f/scaled_dpi;
-		linewritepos += 2;
-		visline[linewritepos*3-3] = visline[linewritepos*3-9]+ sin(angle)*inversedpi/width ;
-		visline[linewritepos*3-2] = visline[linewritepos*3-8]- cos(angle)*inversedpi/height;
-		visline[linewritepos*3-1] =  0.f;
-		visline[linewritepos*3  ] = visline[linewritepos*3-6]+ sin(angle)*inversedpi/width ;
-		visline[linewritepos*3+1] = visline[linewritepos*3-5]- cos(angle)*inversedpi/height;
-		visline[linewritepos*3+2] =  1.f;
-		visline[linewritepos*3-9]                            -=sin(angle)*inversedpi/width ;
-		visline[linewritepos*3-8]                            +=cos(angle)*inversedpi/height;
-		visline[linewritepos*3-7] = -1.f;
-		visline[linewritepos*3-6]                            -=sin(angle)*inversedpi/width ;
-		visline[linewritepos*3-5]                            +=cos(angle)*inversedpi/height;
-		visline[linewritepos*3-4] =  2.f;
-		linebegun = false;
-	}
-	lineprevx = linecurrentx;
-	lineprevy = linecurrenty;
-	linecurrentx = x;
-	linecurrenty = y;
+	selectedpage->calcvis(lineupdated);
 }
 void FMPlusAudioProcessorEditor::rebuildtab(int tab) {
-	if(selectedtab == tab) return;
+	if(mesh.p == audio_processor.tabp[tab] && mesh.o == audio_processor.tabo[tab]) return;
 
 	displayaddremove[0] = false;
-	for(int o = 0; o < MC; ++o) if(knobs[generalcount].value[o] < .5f) {
+	for(int o = 0; o < MC; ++o) if(audio_processor.page_op.valuenorm[0][o] < .5f) {
 		displayaddremove[0] = true;
 		break;
 	}
-	displayaddremove[1] = tab>=3&&knobs[generalcount].value[tab-3]>.5f;
-	for(int n = 0; n < 2; ++n) for(int i = 0; i < 6; ++i)
-		textmesh[(n*6+i)*4+2] = displayaddremove[n]?((hover+25)==n?2:1):-10;
+	displayaddremove[1] = audio_processor.tabp[tab]==1&&audio_processor.page_op.valuenorm[0][audio_processor.tabo[tab]]>.5f;
+	if(tab != 2) for(int n = 0; n < 2; ++n) for(int i = 0; i < 6; ++i)
+		mesh.text[2+(n*6+i)*4] = displayaddremove[n]?((hover+25)==n?2:1):-10;
 
 	opanimation = 0;
-	if(selectedtab >= 3 && tab >= 3) {
-		selectedtab = tab;
-		replacetext(boxes[knobs[generalcount].box].textmesh-6,(String)(selectedtab-2));
-		for(int i = 0; i < paramcount  ; ++i) {
-			if((i >= 10 && i <= 12) || i == 16) continue;
-			updatevalue(i+generalcount);
-		}
-		updatehighlight(true);
-
-		calcvis(3);
+	if(mesh.p == audio_processor.tabp[tab]) {
+		mesh.tab = tab;
+		mesh.p = audio_processor.tabp[tab];
+		mesh.o = audio_processor.tabo[tab];
+		for(int i = selectedpage->paramstart; i < ((int)selectedpage->params.size()); ++i)
+			updatevalue(i);
+		updatehighlight(false);
+		updateadsr();
+		for(int i = 0; i < selectedpage->curvesnum; ++i)
+			calcvis(selectedpage->curves[i].linenum);
 
 		return;
 	}
+
+	if((mesh.tab==2) != (tab==2)) {
+		ops[tab==2?1:0][0].pos[0] = ops[mesh.tab==2?1:0][0].pos[0];
+		ops[tab==2?1:0][0].pos[1] = ops[mesh.tab==2?1:0][0].pos[1];
+		if(tab == 2) for(int n = 0; n < 12; ++n)
+			mesh.text[2+n*4] = -10;
+		for(int o = 0; o < MC; ++o) for(int n = (ops[0][o+1].textmesh+1); n < (ops[0][o+1].textmesh+3*6+1); ++n)
+			mesh.text[2+n*4] = (tab!=2&&audio_processor.pages[1]->valuenorm[0][o]>.5f)?0:-10;
+		for(int n = (ops[1][1].textmesh+1); n < (prevtextindex[0]+1); ++n)
+			mesh.text[2+n*4] =  tab==2                                                ?0:-10;
+	}
+
 	tabanimation = 0;
-	selectedtab = tab;
+	for(int i = 0; i < 4; ++i) mesh.lineht[i] = 10;
+	mesh.tab = tab;
+	mesh.p = audio_processor.tabp[tab];
+	mesh.o = audio_processor.tabo[tab];
+	selectedpage = audio_processor.pages[mesh.p];
 
-	boxnum = 0;
-	if(selectedtab == 0) {
-		boxes[boxnum++] = box(             -1, 31,  2,120, 10,2,15,true);
+	mesh.boxnum = 0;
+	mesh.squarelength = -1;
+	mesh.textlength = pagestart;
+	selectedpage->rebuildtab();
 
-		boxes[boxnum++] = box(              0,114, 22, 37, 11,0, 4);
-		boxes[boxnum++] = box(              1,114, 34, 37, 11,0, 4);
-		boxes[boxnum++] = box(              2,114, 46, 37, 11,0, 5);
-		boxes[boxnum++] = box(              3,114, 58, 37, 11,0, 3);
-		boxes[boxnum++] = box(              4,114, 70, 37, 11,0, 4,true);
+	for(int i = 0; i < mesh.boxnum; ++i) {
+		if(mesh.boxes[i].knob != -1) selectedpage->knobbox[mesh.boxes[i].knob] = i;
+		if(mesh.boxes[i].type == -1) continue;
 
-		boxes[boxnum++] = box(              5, 31, 91,  8,  8,3);
-		boxes[boxnum++] = box(              6,107,101, 44, 11,0, 6);
-		boxes[boxnum++] = box(              7,107,113, 44, 11,0, 4);
-		boxes[boxnum++] = box(              8,107,125, 44, 11,0, 6,true);
-		knobs[ 9].box = boxnum-1;
-
-		boxes[boxnum++] = box(             10, 31,146,  8,  8,3);
-		boxes[boxnum++] = box(             11, 86,156, 65, 11,0, 6);
-		knobs[12].box = boxnum-1;
-		boxes[boxnum++] = box(             13, 86,168, 65, 11,0, 4);
-		boxes[boxnum++] = box(             14, 86,180, 65, 11,0, 5,true);
-
-		boxes[boxnum++] = box(             15,114,201, 37, 11,0, 3);
-		boxes[boxnum++] = box(             -1, 31,224,111, 10,2,15);
-		boxes[boxnum++] = box(             -1,143,224,  8, 10,2);
-		boxes[boxnum++] = box(             -1, 31,246,111, 10,2,15);
-		boxes[boxnum++] = box(             -1,143,246,  8, 10,2);
-
-	} else if(selectedtab >= 3) {
-		boxes[boxnum++] = box(generalcount   , 31,  2,  8,  8,3);
-		boxes[boxnum++] = box(generalcount+ 1, 65, 12, 51, 11,1, 5);
-		boxes[boxnum++] = box(generalcount+ 2, 65, 24, 51, 11,0, 4);
-		boxes[boxnum++] = box(generalcount+ 3,117,  2, 33, 33,2);
-		boxes[boxnum++] = box(generalcount+ 4,121, 36, 29, 11,0, 4);
-		boxes[boxnum++] = box(generalcount+ 5,121, 48, 29, 11,0, 4,true);
-
-		boxes[boxnum++] = box(generalcount+ 6, 60, 76,  8, 10,2, 1);
-		boxes[boxnum++] = box(             -1, 69, 69, 29,  6,2);
-		boxes[boxnum++] = box(generalcount+ 7, 69, 76, 29, 10,2, 4);
-		boxes[boxnum++] = box(             -1, 69, 87, 29,  6,2);
-		boxes[boxnum++] = box(             -1, 99, 76,  8, 10,2, 1);
-		boxes[boxnum++] = box(             -1,108, 69, 29,  6,2);
-		boxes[boxnum++] = box(generalcount+ 8,108, 76, 29, 10,2, 4);
-		boxes[boxnum++] = box(             -1,108, 87, 29,  6,2);
-
-		boxes[boxnum++] = box(generalcount+ 9, 31,103,120, 43,4);
-		boxes[boxnum++] = box(generalcount+10, 31,103,120, 43,4);
-		boxes[boxnum++] = box(generalcount+11, 31,103,120, 43,4);
-		boxes[boxnum++] = box(generalcount+12, 31,103,120, 43,4, 5,true);
-
-		boxes[boxnum++] = box(generalcount+13, 31,159,  8,  8,3);
-		boxes[boxnum++] = box(             -1, 31,168,120, 40,2);
-		boxes[boxnum++] = box(generalcount+14,107,209, 44, 11,0, 5);
-		boxes[boxnum++] = box(generalcount+15,107,221, 44, 11,0, 5);
-		knobs[generalcount+16].box = boxnum-1;
-		boxes[boxnum++] = box(generalcount+17,107,233, 44, 11,1, 5);
-		boxes[boxnum++] = box(generalcount+18,107,245, 44, 11,0, 5,true);
-	}
-
-	squarelength = -1;
-	textlength = 365;
-	for(int i = 0; i < boxnum; ++i) {
-		if(boxes[i].knob != -1) knobs[boxes[i].knob].box = i;
-		if(boxes[i].type == -1) continue;
-
-		boxes[i].mesh = squarelength+1;
-		if(boxes[i].type == 0 || boxes[i].type == 1) {
-			addsquare(boxes[i].x,boxes[i].y,boxes[i].w,boxes[i].h,3,boxes[i].corner);
-			addsquare(boxes[i].x+round(boxes[i].w*boxes[i].type*.5f),boxes[i].y+boxes[i].h-1,1-boxes[i].type,1,0);
-			addtext(30,boxes[i].y,knobs[boxes[i].knob].name+":");
-		} else if(boxes[i].type == 2) {
-			addsquare(boxes[i].x,boxes[i].y,boxes[i].w,boxes[i].h,3,boxes[i].corner);
-			if(selectedtab == 0) {
-				if(i ==  0) {
-					addtext(boxes[i].x+109,boxes[i].y,">");
-				}
-				if(i == 15) {
-					addtext(boxes[i].x-1,boxes[i].y-11,"Tuning File:");
-				}
-				if(i == 16) addtext(boxes[i].x,boxes[i].y,"X");
-				if(i == 17) {
-					addtext(boxes[i].x-1,boxes[i].y-11,"Theme:");
-				}
-				if(i == 18) addtext(boxes[i].x,boxes[i].y,"X");
-			} else if(selectedtab >= 3) {
-				if(i ==  6) addtext(30,boxes[i].y,"Freq");
-				if(i ==  7) addtext(boxes[i].x+11,boxes[i].y-2,"<");
-				if(i ==  9) addtext(boxes[i].x+11,boxes[i].y-2,">");
-				if(i == 11) addtext(boxes[i].x+11,boxes[i].y-2,"<");
-				if(i == 12) addsquare(boxes[i].x,boxes[i].y,8,boxes[i].h,0);
-				if(i == 13) addtext(boxes[i].x+11,boxes[i].y-2,">");
-				if(i == 12) addtext(137,boxes[i].y,"Hz");
-			}
-			if((selectedtab >= 3 && (i == 7 || i == 9 || i == 11 || i == 13)) || (selectedtab == 0 && i == 0)) {
-				textmesh[   (textlength-5)*4] +=  9.f/width ; // top    left
-				textmesh[ 1+(textlength-5)*4] -=  1.f/height;
-				textmesh[ 4+(textlength-5)*4] += -1.f/width ; // bottom left
-				textmesh[ 5+(textlength-5)*4] -= -9.f/height;
-				textmesh[ 8+(textlength-5)*4] +=  1.f/width ; // top    right
-				textmesh[ 9+(textlength-5)*4] -=  9.f/height;
-				textmesh[12+(textlength-5)*4] += -1.f/width ; // bottom left
-				textmesh[13+(textlength-5)*4] -= -9.f/height;
-				textmesh[16+(textlength-5)*4] +=  1.f/width ; // top    right
-				textmesh[17+(textlength-5)*4] -=  9.f/height; textmesh[20+(textlength-5)*4] += -9.f/width ; // bottom right
-				textmesh[21+(textlength-5)*4] -= -1.f/height;
-			}
-		} else if(boxes[i].type == 3) {
-			addtext(boxes[i].x+boxes[i].w,boxes[i].y-1,knobs[boxes[i].knob].name);
-			addsquare(boxes[i].x,boxes[i].y,boxes[i].w,boxes[i].h,0,boxes[i].corner);
-			addsquare(boxes[i].x+1,boxes[i].y+1,boxes[i].w-2,boxes[i].h-2,1,boxes[i].corner);
-		} else if(boxes[i].type == 4) {
-			addsquare(boxes[i].x,boxes[i].y,boxes[i].w,boxes[i].h-11,3);
-			addsquare(boxes[i].x,boxes[i].y+boxes[i].h-10,boxes[i].w,10,3,boxes[i].corner);
-			addtext(boxes[i].x,boxes[i].y+boxes[i].h-10,knobs[boxes[i].knob].id.substring(0,1));
+		mesh.boxes[i].mesh = mesh.squarelength+1;
+		if(mesh.boxes[i].type == 0 || mesh.boxes[i].type == 1) { // slider, polar slider
+			mesh.addsquare(mesh.boxes[i].x,mesh.boxes[i].y,mesh.boxes[i].w,mesh.boxes[i].h,3,mesh.boxes[i].corner);
+			mesh.addsquare(mesh.boxes[i].x+round(mesh.boxes[i].w*mesh.boxes[i].type*.5f),mesh.boxes[i].y+mesh.boxes[i].h-1,1-mesh.boxes[i].type,1,0);
+			mesh.addtext(30,mesh.boxes[i].y,selectedpage->params[mesh.boxes[i].knob].nameui+":");
+		} else if(mesh.boxes[i].type == 2) { // no line
+			mesh.addsquare(mesh.boxes[i].x,mesh.boxes[i].y,mesh.boxes[i].w,mesh.boxes[i].h,3,mesh.boxes[i].corner);
+		} else if(mesh.boxes[i].type == 3) { // tick
+			mesh.addtext(mesh.boxes[i].x+mesh.boxes[i].w,mesh.boxes[i].y-1,selectedpage->params[mesh.boxes[i].knob].nameui);
+			mesh.addsquare(mesh.boxes[i].x,mesh.boxes[i].y,mesh.boxes[i].w,mesh.boxes[i].h,0,mesh.boxes[i].corner);
+			mesh.addsquare(mesh.boxes[i].x+1,mesh.boxes[i].y+1,mesh.boxes[i].w-2,mesh.boxes[i].h-2,1,mesh.boxes[i].corner);
+		} else if(mesh.boxes[i].type == 4) { // burger
+			mesh.addsquare(mesh.boxes[i].x,mesh.boxes[i].y,mesh.boxes[i].w,mesh.boxes[i].h-11,3);
+			mesh.addsquare(mesh.boxes[i].x,mesh.boxes[i].y+mesh.boxes[i].h-10,mesh.boxes[i].w,10,3,mesh.boxes[i].corner);
+			mesh.addtext(mesh.boxes[i].x,mesh.boxes[i].y+mesh.boxes[i].h-10,selectedpage->params[mesh.boxes[i].knob].id.substring(0,1));
 		}
-		boxes[i].textmesh = textlength;
-		if(boxes[i].textamount > 0) {
-			if(boxes[i].type == 4) {
-				addtext(boxes[i].x+boxes[i].w-7*boxes[i].textamount,boxes[i].y+boxes[i].h,String("-----------------",boxes[i].textamount));
+		selectedpage->addtext(i);
+		mesh.boxes[i].textmesh = mesh.textlength;
+		if(mesh.boxes[i].textamount > 0) {
+			if(mesh.boxes[i].type == 4) {
+				mesh.addtext(mesh.boxes[i].x+mesh.boxes[i].w-7*mesh.boxes[i].textamount,mesh.boxes[i].y+mesh.boxes[i].h,String("-----------------",mesh.boxes[i].textamount));
 			} else {
-				addtext(boxes[i].x,boxes[i].y,String("-----------------",boxes[i].textamount));
+				mesh.addtext(mesh.boxes[i].x,mesh.boxes[i].y,String("-----------------",mesh.boxes[i].textamount));
 			}
 		}
 	}
 
-	if(selectedtab >= 3) { // adsr mesh indicies
-		boxes[knobs[ 9+generalcount].box].textmesh = boxes[knobs[12+generalcount].box].textmesh;
-		boxes[knobs[10+generalcount].box].textmesh = boxes[knobs[12+generalcount].box].textmesh;
-		boxes[knobs[11+generalcount].box].textmesh = boxes[knobs[12+generalcount].box].textmesh;
-	}
-	if(selectedtab == 0 || selectedtab >= 3) {
-		for(int i = (selectedtab>=3?generalcount:-3); i < (selectedtab>=3?(paramcount+generalcount):generalcount); ++i) {
-			if(i >= (10+generalcount) && i <= (12+generalcount)) continue;
-			if(i == 9 || i == 12 || i == (16+generalcount)) continue;
-			if(i == (3+generalcount)) continue;
-			if(i >= 0)
-				knobs[i].valuesmoothed = knobsmooth.setto(boxes[knobs[i].box].type==1?.5f:0,i);
-			updatevalue(i);
+	audio_processor.updatepreset = false;
+	for(int i = selectedpage->paramstart; i < ((int)selectedpage->params.size()); ++i) {
+		if(i >= 0) {
+			if(selectedpage->params[i].adsrstage > 0 || selectedpage->params[i].bpmsync == 2) continue; // skip adsr, bpm sync
+			if(selectedpage->params[i].adsrstage == 0) { // set textmesh for adsr params
+				int stages = selectedpage->adsr[selectedpage->params[i].adsr].size()/4;
+				for(int s = 0; s < (stages-1); ++s) {
+					mesh.boxes[selectedpage->knobbox[i+s]].textmesh = mesh.boxes[selectedpage->knobbox[i+stages-1]].textmesh;
+					selectedpage->params[i+s].uismooth = selectedpage->knobsmooth.setto(selectedpage->valuenorm[i+s][mesh.o],i+s);
+				}
+			} else if(mesh.boxes[selectedpage->knobbox[i]].type == 2) { // no transition if no line
+				selectedpage->params[i].uismooth = selectedpage->knobsmooth.setto(selectedpage->valuenorm[i][mesh.o],i);
+			} else { // start position
+				selectedpage->params[i].uismooth = selectedpage->knobsmooth.setto(mesh.boxes[selectedpage->knobbox[i]].type==1?.5f:0,i);
+			}
 		}
+		updatevalue(i);
 	}
-	prevtextindex[0] = 365; // animation sections
-	if(selectedtab == 0) {
-		prevtextindex[1] = boxes[knobs[              5].box-1].textmesh+boxes[knobs[              5].box-1].textamount*6;
-		prevtextindex[2] = boxes[knobs[             10].box-1].textmesh+boxes[knobs[             10].box-1].textamount*6;
-		prevtextindex[3] = boxes[knobs[             15].box-1].textmesh+boxes[knobs[             15].box-1].textamount*6;
-	} else if(selectedtab >= 3) {
-		prevtextindex[1] = boxes[knobs[generalcount+ 6].box-1].textmesh+boxes[knobs[generalcount+ 6].box-1].textamount*6;
-		prevtextindex[2] = boxes[knobs[generalcount+ 9].box-1].textmesh+boxes[knobs[generalcount+ 9].box-1].textamount*6;
-		prevtextindex[3] = boxes[knobs[generalcount+13].box-1].textmesh+boxes[knobs[generalcount+13].box-1].textamount*6;
+	for(int a = 0; a < selectedpage->adsrnum; ++a) // reset adsr
+		for(int s = 0; s < (selectedpage->adsr[a].size()/2); ++s)
+			selectedpage->adsr[a][s*2] = selectedpage->dampadsr.setto(selectedpage->adsr[a][s*2+1]+.0001f,a*selectedpage->adsr[a].size()/2+s);
+	updatehighlight(false);
+	updateadsr();
 
-		// operator title
-		replacetext(boxes[knobs[generalcount].box].textmesh-6,(String)(selectedtab-2));
-		for(int p = 0; p < 8; ++p) // reset adsr animation
-			adsr[p*2] = dampadsr.setto(adsr[p*2+1]+.0001f,p);
-		updatehighlight(true);
-	}
+	prevtextindex[0] = pagestart; // animation sections
+	for(int i = 0; i < 3; ++i) if(selectedpage->sections[i] != -1)
+		prevtextindex[i+1] = mesh.boxes[selectedpage->knobbox[selectedpage->sections[i]]-1].textmesh+mesh.boxes[selectedpage->knobbox[selectedpage->sections[i]]-1].textamount*6;
+
 	// make invisible pre animation
-	for(int i =   0; i < (1+squarelength); ++i) if(squaremesh[2+i*4] >= 0) squaremesh[2+i*4] -= 10;
-	for(int i = 366; i < (1+textlength  ); ++i) if(textmesh  [2+i*4] >= 0) textmesh  [2+i*4] -= 10;
+	for(int i =           0; i < (1+mesh.squarelength); ++i) if(mesh.square[2+i*4] >= 0) mesh.square[2+i*4] -= 10;
+	for(int i = pagestart+1; i < (1+mesh.textlength  ); ++i) if(mesh.text  [2+i*4] >= 0) mesh.text  [2+i*4] -= 10;
 
-	if(selectedtab >= 3) for(int i = 0; i < 4; ++i) calcvis(i);
-	else calcvis(0);
-	linelength = curvemesh[selectedtab>=3?3:0];
-}
-void FMPlusAudioProcessorEditor::addsquare(float x, float y, float w, float h, float color, bool corner) {
-	squaremesh[++squarelength*4] =     x    /width  ; // top    left
-	squaremesh[1+squarelength*4] = 1-( y    /height);
-	squaremesh[2+squarelength*4] = color;
-	squaremesh[3+squarelength*4] =          100;
-
-	for(int i = 0; i < 2; ++i) {
-	squaremesh[++squarelength*4] =     x    /width  ; // bottom left
-	squaremesh[1+squarelength*4] = 1-((y+ h)/height);
-	squaremesh[2+squarelength*4] = color;
-	squaremesh[3+squarelength*4] = corner?w:100;
-
-	squaremesh[++squarelength*4] =    (x+ w)/width  ; // top    right
-	squaremesh[1+squarelength*4] = 1-( y    /height);
-	squaremesh[2+squarelength*4] = color;
-	squaremesh[3+squarelength*4] = corner?h:100;
-	}
-
-	squaremesh[++squarelength*4] =    (x+ w)/width  ; // bottom right
-	squaremesh[1+squarelength*4] = 1-((y+ h)/height);
-	squaremesh[2+squarelength*4] = color;
-	squaremesh[3+squarelength*4] = corner?0:100;
-}
-void FMPlusAudioProcessorEditor::addtext(float x, float y, String txt, float color) {
-	int initpos = textlength;
-	float s = x;
-	for(int n = 0; n < txt.length(); ++n) {
-
-	textmesh  [++textlength  *4] =     s    /width  ; // top    left
-	textmesh  [1+textlength  *4] = 1-( y    /height);
-	textmesh  [2+textlength  *4] = color;
-
-	for(int i = 0; i < 2; ++i) {
-	textmesh  [++textlength  *4] =     s    /width  ; // bottom left
-	textmesh  [1+textlength  *4] = 1-((y+10)/height);
-	textmesh  [2+textlength  *4] = color;
-
-	textmesh  [++textlength  *4] =    (s+ 8)/width  ; // top    right
-	textmesh  [1+textlength  *4] = 1-( y    /height);
-	textmesh  [2+textlength  *4] = color;
-	}
-
-	textmesh  [++textlength  *4] =    (s+ 8)/width  ; // bottom right
-	textmesh  [1+textlength  *4] = 1-((y+10)/height);
-	textmesh  [2+textlength  *4] = color;
-
-	s += 7;
-	}
-
-	replacetext(initpos,txt);
-}
-void FMPlusAudioProcessorEditor::replacetext(int id, String txt, int length) {
-	const char* text = txt.toUTF8();
-	int n = -1;
-	bool ended = false;
-	while(++n < length || (!ended && text[n] != '\0')) {
-	if(text[n] == '\0') ended = true;
-	int c = ' ';
-	if(!ended) c = text[n]+floor(text[n]/16.f);
-	textmesh  [3+(1+n*6+id)  *4] = c   ;
-	textmesh  [3+(2+n*6+id)  *4] = c+17;
-	textmesh  [3+(3+n*6+id)  *4] = c+ 1;
-	textmesh  [3+(4+n*6+id)  *4] = c+17;
-	textmesh  [3+(5+n*6+id)  *4] = c+ 1;
-	textmesh  [3+(6+n*6+id)  *4] = c+18;
-	}
+	for(int i = 1; i < (selectedpage->linesnum+1); ++i) calcvis(i);
+	mesh.linelength = mesh.linesegments[selectedpage->linesnum];
 }
 void FMPlusAudioProcessorEditor::updatevalue(int param) {
-	if(param == -3) { // preset name
-		String text = audio_processor.presets[audio_processor.currentpreset].name;
-		int textlength = fmin(boxes[0].textamount,text.length());
-		if(textlength == (boxes[0].textamount-1)) textlength += 1;
-		text = text.substring(0,boxes[0].textamount-(presetunsaved?1:0));
-		float x = boxes[0].x+floor((boxes[0].w-14)*.5f-textlength*3.5f);
-		for(int i = 0; i < fmin(boxes[0].textamount,textlength+1); ++i) for(int t = 0; t < 6; ++t) {
-			if(fmod(fmax(1,fmin(4,t)),2) == 1)
-				textmesh[(boxes[0].textmesh+i*6+t+1)*4] = (x+i*7  )/width;
-			else
-				textmesh[(boxes[0].textmesh+i*6+t+1)*4] = (x+i*7+8)/width;
-		}
-		if(presetunsaved) text += "*";
-		replacetext(boxes[0].textmesh,text,boxes[0].textamount);
-		return;
-	} else if(param == -2 || param == -1) { // tuning/theme
-		int box = knobs[generalcount-1].box+(param==-2?1:3);
-		String text = (param==-2?tuningfile:themefile).substring(0,boxes[box].textamount);
-		float x = boxes[box].x+floor(boxes[box].w*.5f-text.length()*3.5f);
-		for(int i = 0; i < boxes[box].textamount; ++i) for(int t = 0; t < 6; ++t) {
-			if(fmod(fmax(1,fmin(4,t)),2) == 1)
-				textmesh[(boxes[box].textmesh+i*6+t+1)*4] = (x+i*7  )/width;
-			else
-				textmesh[(boxes[box].textmesh+i*6+t+1)*4] = (x+i*7+8)/width;
-		}
-		replacetext(boxes[box].textmesh,text,boxes[box].textamount);
-		return;
-	}
-
-	if(boxes[knobs[param].box].textamount > 0 && (param < (9+generalcount) || param > (12+generalcount))) {
+	if(selectedpage->updatevalue(param)) return;
+	if(selectedpage->params[param].adsrstage > 0 || selectedpage->params[param].bpmsync == 2) return;
+	if(mesh.boxes[selectedpage->knobbox[param]].textamount > 0) {
 		int i = param;
-		if(i == 8 || i == 11 || i == (15+generalcount))
-			if(knobs[i+1].value[selectedtab<3?0:(selectedtab-3)] > 0)
+		if(selectedpage->params[i].bpmsync == 1) // bpm sync
+			if(selectedpage->valuenorm[i+1][mesh.o] > 0)
 				++i;
-		float value = knobs[i].inflate(knobs[i].value[selectedtab<3?0:(selectedtab-3)]);
-		String s = get_string(selectedtab==0?i:(i-generalcount),value,selectedtab);
-		if(i == (generalcount+7) || i == (generalcount+8)) {
-			if(i == (generalcount+8)) {
+		float value = selectedpage->params[i].inflate(selectedpage->valuenorm[i][mesh.o]);
+		String s = get_string(i,value,mesh.p);
+
+		if(mesh.p == 1 && (i == 7 || i == 8)) { // frequency selector
+			if(i == 8) {
 				if(s.startsWith("-")) s = s.substring(1);
-				replacetext(boxes[knobs[i].box].textmesh-6*4,value>=.5?"+":"-");
+				mesh.replacetext(mesh.boxes[selectedpage->knobbox[i]].textmesh-6*4,value>=.5?"+":"-");
 			}
-			if(freqdigit >= -10 && (i==(generalcount+8)) == (freqdigit>=10)) {
+			if(freqdigit >= -10 && (i==8) == (freqdigit>=10)) {
 				int newdotpos = s.indexOfChar('.');
 				if(newdotpos == -1) newdotpos = 4;
 				int dotpos = 4;
 				for(int n = 0; n < 4; ++n) {
-					int c = textmesh[3+(1+n*6+boxes[knobs[i].box].textmesh)*4]-51;
+					int c = mesh.text[3+(1+n*6+mesh.boxes[selectedpage->knobbox[i]].textmesh)*4]-51;
 					if(c < 0) {
 						dotpos = n;
 						break;
@@ -1060,46 +814,8 @@ void FMPlusAudioProcessorEditor::updatevalue(int param) {
 				if(newdotpos != dotpos) freqselect(freqdigit+(newdotpos-dotpos),false);
 			}
 		}
-		replacetext(boxes[knobs[i].box].textmesh,s,boxes[knobs[i].box].textamount);
-	}
 
-	if(param >= (generalcount+ 9) && param <= (generalcount+12)) {
-		float padsr[4] = {
-			powf(knobs[generalcount+ 9].value[selectedtab-3],2)*(MAXA-MINA)+MINA,
-			powf(knobs[generalcount+10].value[selectedtab-3],2)*(MAXD-MIND)+MIND,
-			1,
-			powf(knobs[generalcount+12].value[selectedtab-3],2)*(MAXR-MINR)+MINR
-		};
-		float scaling = (120.f-3)/(padsr[0]+padsr[1]+padsr[2]+padsr[3]);
-		for(int p = 0; p < 4; ++p) padsr[p] *= scaling;
-
-		for(int s = 0; s < 2; ++s) {
-			float prevovershoot = 0;
-			int prevnonclampedsections = 4;
-			for(int i = 0; i < 3; ++i) {
-				float overshoot = -120.f+3;
-				int nonclampedsections = 4;
-				for(int p = 0; p < 4; ++p) {
-					padsr[p] -= (prevovershoot/prevnonclampedsections);
-					if(padsr[p] <= (s==0?1:8)) {
-						--nonclampedsections;
-						padsr[p] = s==0?1:8;
-					}
-					overshoot += padsr[p];
-				}
-				if(overshoot < .5f) break;
-				prevnonclampedsections = nonclampedsections;
-				prevovershoot = overshoot;
-			}
-
-			for(int p = 0; p < 4; ++p) adsr[p*4+s*2+1] = padsr[p];
-		}
-		float currentx = boxes[knobs[generalcount+9].box].x;
-		for(int p = 0; p < 4; ++p) {
-			boxes[knobs[generalcount+9+p].box].x = round(              currentx);
-			boxes[knobs[generalcount+9+p].box].w = round(adsr[p*4+2+1]+currentx)-round(currentx);
-			currentx += adsr[p*4+2+1]+1;
-		}
+		mesh.replacetext(mesh.boxes[selectedpage->knobbox[i]].textmesh,s,mesh.boxes[selectedpage->knobbox[i]].textamount);
 	}
 }
 void FMPlusAudioProcessorEditor::paint(Graphics& g) { }
@@ -1109,194 +825,197 @@ void FMPlusAudioProcessorEditor::timerCallback() {
 	if(websiteht > -1) websiteht -= .0815;
 
 	// tab animation
-	if(tabanimation < 30) {
-		if(boxnum > 0) {
-			for(int q = 0; q < 2; ++q) {
-				int boxbegin = 0;
-				int boxend = 0;
-				for(int s = 0; s < 4; ++s) {
-					     if(s == 0 && selectedtab == 0) boxend = knobs[              5].box-1;
-					else if(s == 1 && selectedtab == 0) boxend = knobs[             10].box-1;
-					else if(s == 2 && selectedtab == 0) boxend = knobs[             15].box-1;
-					else if(s == 0 && selectedtab >= 3) boxend = knobs[generalcount+ 6].box-1;
-					else if(s == 1 && selectedtab >= 3) boxend = knobs[generalcount+ 9].box-1;
-					else if(s == 2 && selectedtab >= 3) boxend = knobs[generalcount+13].box-1;
-					else if(s == 3                    ) boxend = boxnum-1;
-					int current = tabanimation+s*3-4;
-					if(current >= boxbegin && current <= boxend) {
-						if(squaremesh[2+(boxes[current].mesh)*4] < 0)
-							for(int i = 0; i < 6; ++i)
-								squaremesh[2+(boxes[current].mesh+i)*4] += 10;
-					}
-					current -= 6;
-					if(current >= boxbegin && current <= boxend) {
-						if(boxes[current].type != 2)
-							if(squaremesh[2+(boxes[current].mesh+6)*4] < 0)
-								for(int i = 0; i < 6; ++i)
-									squaremesh[2+(boxes[current].mesh+6+i)*4] += 10;
-						for(int l = prevtextindex[s]; l < (boxes[current].textmesh+boxes[current].textamount*6); ++l)
-							if(textmesh[2+(l+1)*4] < 0)
-								textmesh[2+(l+1)*4] += 10;
-						prevtextindex[s] = boxes[current].textmesh+boxes[current].textamount*6;
-					}
-					boxbegin = boxend+1;
-				}
-				++tabanimation;
+	if(tabanimation < 30) for(int q = 0; q < 2; ++q) { // double the speed
+		int boxbegin = 0;
+		int boxend = 0;
+		for(int s = 0; s < 4; ++s) {
+			if(selectedpage->sections[s] == -1) boxend = mesh.boxnum-1;
+			else boxend = selectedpage->knobbox[selectedpage->sections[s]]-1;
+
+			int current = tabanimation+s*3-4;
+			if(current >= boxbegin && current <= boxend) {
+				if(mesh.square[2+(mesh.boxes[current].mesh)*4] < 0)
+					for(int i = 0; i < 6; ++i)
+						mesh.square[2+(mesh.boxes[current].mesh+i)*4] += 10;
 			}
-		} else {
-			tabanimation += 2;
+			current -= 6;
+			if(current <= boxend) {
+				if(current >= boxbegin) {
+					if(mesh.boxes[current].type != 2)
+						if(mesh.square[2+(mesh.boxes[current].mesh+6)*4] < 0)
+							for(int i = 0; i < 6; ++i)
+								mesh.square[2+(mesh.boxes[current].mesh+6+i)*4] += 10;
+					for(int l = prevtextindex[s]; l < (mesh.boxes[current].textmesh+mesh.boxes[current].textamount*6); ++l)
+						if(mesh.text[2+(l+1)*4] < 0)
+							mesh.text[2+(l+1)*4] += 10;
+					prevtextindex[s] = mesh.boxes[current].textmesh+mesh.boxes[current].textamount*6;
+				}
+			} else if(boxend == (mesh.boxnum-1) && prevtextindex[s] < mesh.textlength) {
+				for(int l = prevtextindex[s]; l < mesh.textlength; ++l)
+					if(mesh.text[2+(l+1)*4] < 0)
+						mesh.text[2+(l+1)*4] += 10;
+				prevtextindex[s] = mesh.textlength;
+			}
+			boxbegin = boxend+1;
 		}
+		++tabanimation;
 	}
 	if(opanimation < 30) ++opanimation;
 
 	// smooth value
-	bool updatedadsr = false;
-	for(int i = (selectedtab>=3?generalcount:0); i < (selectedtab>=3?(paramcount+generalcount):generalcount); ++i) {
-		if(i == 9 || i == 12 || i == (16+generalcount) || i == (10+generalcount) || i == (12+generalcount)) continue; // skip tempo sync, update adsr once
-		if(knobs[i].box == -1 || squaremesh[2+(boxes[knobs[i].box].mesh+6)*4] < 0) continue; // box doesnt exist or invisible, skip
-		float current = knobs[i].valuesmoothed;
-		float target = knobs[i].value[selectedtab<3?0:(selectedtab-3)];
-		if(i == 8 || i == 11 || i == (15+generalcount)) // tempo sync is active, use that value instead
-			if(knobs[i+1].value[selectedtab<3?0:(selectedtab-3)] > 0)
-				target = (knobs[i+1].value[selectedtab<3?0:(selectedtab-3)]*knobs[i+1].maximumvalue-1)/(knobs[i+1].maximumvalue-1);
-		if(i == 15 && target >= .5f) target = fmin(6,floor(target*8-1))/6.f; // round second half of anti aliasing knob
-		if(i >= (9+generalcount) && i <= (12+generalcount) && i != (11+generalcount)) { // interpolate adsr
+	bool updateline[selectedpage->linesnum+1];
+	for(int i = 0; i < (selectedpage->linesnum+1); ++i)
+		updateline[i] = false;
+	for(int i = 0; i < selectedpage->params.size(); ++i) {
+		if(selectedpage->params[i].bpmsync == 2 || (selectedpage->params[i].adsrstage > 0 && selectedpage->params[i].adsrstage < 10)) continue; // skip tempo sync, update adsr once
+		if(selectedpage->knobbox[i] == -1 || (mesh.square[2+(mesh.boxes[selectedpage->knobbox[i]].mesh+6)*4] < 0 && selectedpage->params[i].adsr < 0)) continue; // box doesnt exist or invisible, skip
+		float current = selectedpage->params[i].uismooth;
+		float target = selectedpage->valuenorm[i][mesh.o];
+		if(selectedpage->params[i].bpmsync == 1) // tempo sync is active, use that value instead
+			if(selectedpage->valuenorm[i+1][mesh.o] > 0)
+				target = (selectedpage->valuenorm[i+1][mesh.o]*selectedpage->params[i+1].maximumvalue-1)/(selectedpage->params[i+1].maximumvalue-1);
+		if(mesh.p == 0 && i == 15 && target >= .5f) target = fmin(6,floor(target*8-1))/6.f; // round second half of anti aliasing knob
+		if(selectedpage->params[i].adsrstage == 0) { // interpolate adsr
 			bool updated = false;
-			for(int p = 0; p < 8; ++p) {
-				if(adsr[p*2] == adsr[p*2+1]) continue;
+			int adsrid = selectedpage->params[i].adsr;
+			for(int s = 0; s < (selectedpage->adsr[adsrid].size()/2); ++s) {
+				if(selectedpage->adsr[adsrid][s*2] == selectedpage->adsr[adsrid][s*2+1]) continue;
 				updated = true;
-				if(fabs(adsr[p*2]-adsr[p*2+1]) <= .0005f)
-					adsr[p*2] = dampadsr.setto(adsr[p*2+1],p);
+				if(fabs(selectedpage->adsr[adsrid][s*2]-selectedpage->adsr[adsrid][s*2+1]) <= .0005f)
+					selectedpage->adsr[adsrid][s*2] = selectedpage->dampadsr.setto(selectedpage->adsr[adsrid][s*2+1],adsrid*selectedpage->adsr[adsrid].size()/2+s);
 				else
-					adsr[p*2] = dampadsr.nextvalue(adsr[p*2+1],p);
+					selectedpage->adsr[adsrid][s*2] = selectedpage->dampadsr.nextvalue(selectedpage->adsr[adsrid][s*2+1],adsrid*selectedpage->adsr[adsrid].size()/2+s);
 			}
 			if(!updated) continue;
 		} else { // clamp to 0
 			if(current == target) continue;
 			if(fabs(current-target) <= .0005f)
-				current = knobsmooth.setto(target,i);
+				current = selectedpage->knobsmooth.setto(target,i);
 		}
-		knobs[i].valuesmoothed = knobsmooth.nextvalue(target,i); // interpolate
+		selectedpage->params[i].uismooth = selectedpage->knobsmooth.nextvalue(target,i); // interpolate
 
-		if(knobs[i].box != -1 && (boxes[knobs[i].box].type == 0 || boxes[knobs[i].box].type == 1)) {
+		if(selectedpage->knobbox[i] != -1 && (mesh.boxes[selectedpage->knobbox[i]].type == 0 || mesh.boxes[selectedpage->knobbox[i]].type == 1)) {
 			int roundedvalue = 0;
-			if(boxes[knobs[i].box].type == 0) // regular
-				roundedvalue = floor(current*(boxes[knobs[i].box].w-1.99f)+1.99f);
+			if(mesh.boxes[selectedpage->knobbox[i]].type == 0) // regular
+				roundedvalue = floor(current*(mesh.boxes[selectedpage->knobbox[i]].w-1.99f)+1.99f);
 			else // pan
-				roundedvalue = floor(current*(boxes[knobs[i].box].w-.99f)+.99f+(.5-fabs(current-.5f)));
+				roundedvalue = floor(current*(mesh.boxes[selectedpage->knobbox[i]].w-.99f)+.99f+(.5-fabs(current-.5f)));
 			for(int t = 0; t < 6; ++t)
 				if(fmod(fmax(1,fmin(4,t)),2) == 0)
-					squaremesh[(boxes[knobs[i].box].mesh+t+6)*4] = (boxes[knobs[i].box].x+(float)roundedvalue)/width;
-		} else if(boxes[knobs[i].box].type == 3) { // switch
+					mesh.square[(mesh.boxes[selectedpage->knobbox[i]].mesh+t+6)*4] = (mesh.boxes[selectedpage->knobbox[i]].x+(float)roundedvalue)/width;
+		} else if(mesh.boxes[selectedpage->knobbox[i]].type == 3) { // switch
 			for(int t = 0; t < 6; ++t)
-				squaremesh[(boxes[knobs[i].box].mesh+t+6)*4+2] = 1+current;
-		} else if(boxes[knobs[i].box].type == 4) { // adsr
-			if(i != (11+generalcount)) for(int s = 0; s < 2; ++s) {
-				float currentx = boxes[knobs[generalcount+9].box].x;
+				mesh.square[(mesh.boxes[selectedpage->knobbox[i]].mesh+t+6)*4+2] = 1+current;
+		} else if(mesh.boxes[selectedpage->knobbox[i]].type == 4) { // update adsr mesh
+			int adsrid = selectedpage->params[i].adsr;
+			if(selectedpage->params[i].adsrstage == 0) for(int s = 0; s < 2; ++s) {
+				float currentx = mesh.boxes[selectedpage->knobbox[i]].x;
 				for(int p = 0; p < 4; ++p) {
-					int box = knobs[generalcount+9+p].box;
+					int box = selectedpage->knobbox[i+p];
 					for(int t = 0; t < 6; ++t) {
 						if(fmod(fmax(1,fmin(4,t)),2) == 1)
-							squaremesh[(boxes[box].mesh+s*6          +t)*4] = ((float)round(currentx                  )  )/width;
+							mesh.square[(mesh.boxes[box].mesh+s*6          +t)*4] = ((float)round(currentx                                        )  )/width;
 						else
-							squaremesh[(boxes[box].mesh+s*6          +t)*4] = ((float)round(currentx+adsr[p*4+s*2]    )  )/width;
+							mesh.square[(mesh.boxes[box].mesh+s*6          +t)*4] = ((float)round(currentx+selectedpage->adsr[adsrid][p*4+s*2]    )  )/width;
 					}
 					if(s == 1) for(int t = 0; t < 6; ++t) {
 						if(fmod(fmax(1,fmin(4,t)),2) == 1)
-							textmesh  [(boxes[box].textmesh-(4-p)*6+1+t)*4] = ((float)round(currentx+adsr[p*4+  2]*.5f)-4)/width;
+							mesh.text  [(mesh.boxes[box].textmesh-(4-p)*6+1+t)*4] = ((float)round(currentx+selectedpage->adsr[adsrid][p*4+  2]*.5f)-4)/width;
 						else
-							textmesh  [(boxes[box].textmesh-(4-p)*6+1+t)*4] = ((float)round(currentx+adsr[p*4+  2]*.5f)+4)/width;
+							mesh.text  [(mesh.boxes[box].textmesh-(4-p)*6+1+t)*4] = ((float)round(currentx+selectedpage->adsr[adsrid][p*4+  2]*.5f)+4)/width;
 					}
 					if(p == 3 && s == 1)
-						squaremesh[boxes[box].mesh*4+39] = round(currentx+adsr[14])-currentx;
-					currentx += adsr[p*4+s*2]+1;
+						mesh.square[mesh.boxes[box].mesh*4+39] = round(currentx+selectedpage->adsr[adsrid][14])-currentx;
+					currentx += selectedpage->adsr[adsrid][p*4+s*2]+1;
 				}
 			}
-			updatedadsr = true;
-		} else if(i == (generalcount+3)) {
-			calcvis(1);
 		}
+		if(selectedpage->params[i].updateline >= 0)
+			updateline[selectedpage->params[i].updateline] = true;
 	}
 
 	if(audio_processor.updatevis.get()) {
-		for(int o = 0; o < MC; o++)
-			curves[o] = audio_processor.presets[audio_processor.currentpreset].curves[o];
-		calcvis(3);
+		for(int p = 0; p < PC; ++p)
+			for(int i = 0; i < audio_processor.pages[p]->curvesnum; ++i)
+				for(int o = 0; o < audio_processor.pages[p]->instances; ++o)
+					audio_processor.pages[p]->curves[i].cui[o] = audio_processor.pages[p]->curves[i].c[o];
+		for(int i = 0; i < selectedpage->curvesnum; ++i)
+			updateline[selectedpage->curves[i].linenum] = true;
 		audio_processor.updatevis = false;
 	}
 
 	// update lines on dpi change
 	if(prevdpi != scaled_dpi) {
 		prevdpi = scaled_dpi;
-		for(int i = 0; i < 4; ++i) calcvis(i);
-		updatedadsr = false;
-	}
-
-	if(updatedadsr) calcvis(2);
+		mesh.scaled_dpi = scaled_dpi;
+		for(int i = 0; i < (selectedpage->linesnum+1); ++i) calcvis(i);
+	} else for(int i = 0; i < (selectedpage->linesnum+1); ++i) if(updateline[i]) calcvis(i);
 
 	if(!audio_processor.getframe.get()) {
-		for(int o = 0; o < (MC+1); o++)
-			ops[o].indicator = fmin(1,audio_processor.indicators[o]);
+		for(int o = 0; o < (MC+1); ++o)
+			ops[0][o].indicator = fmin(1,audio_processor.indicators[o]);
+		for(int i = 0; i < selectedpage->framedatavals; ++i)
+			mesh.framedata[i] = audio_processor.framedata[i].get();
 		// TODO get vis
+		selectedpage->getframe();
 		audio_processor.getframe = true;
-		lfoht = audio_processor.lfoht.get();
-		adsrht = audio_processor.adsrht.get();
-		     if(adsrht <= 0)
-			adsrht = -1;
-		else if(adsrht <  1)
-			adsrht *=              (adsr[ 0]+.5f)                /120.f;
-		else if(adsrht <  2)
-			adsrht =   ((adsrht-1)*(adsr[ 4]+1.f)+(adsr[ 0]+.5f))/120.f;
-		else if(adsrht <= 3)
-			adsrht = 1-((3-adsrht)*(adsr[ 8]+1.f)+(adsr[12]-.5f))/120.f;
-		else if(adsrht <  4)
-			adsrht = 1- (4-adsrht)*(adsr[12]+.5f)                /120.f;
-		else
-			adsrht = -1;
 	}
+
+	if(mesh.p == 0 && audio_processor.updatepreset.get()) {
+		audio_processor.updatepreset = false;
+		updatevalue(-3); // update preset name
+	}
+
+	//debug(mesh.boxnum);
+	//debug(mesh.squarelength);
+	//debug(mesh.linelength);
+	//debug(mesh.textlength);
 
 	update();
 }
 
 void FMPlusAudioProcessorEditor::parameterChanged(const String& parameterID, float newValue) {
-	for(int i = 0; i < knobcount; ++i)
-		for(int o = 0; o < (i<generalcount?1:MC); ++o)
-			if(parameterID == (i<generalcount?knobs[i].id:("o"+(String)o+knobs[i].id))) {
+	for(int p = 0; p < PC; ++p) {
+		for(int o = 0; o < audio_processor.pages[p]->instances; ++o) {
+			if(p == 1 && !parameterID.startsWith("o"+(String)o)) continue;
+			for(int i = 0; i < audio_processor.pages[p]->params.size(); ++i) {
+				if(parameterID != (p==1?("o"+(String)o+audio_processor.pages[p]->params[i].id):audio_processor.pages[p]->params[i].id)) continue;
 
-		knobs[i].value[o] = knobs[i].normalize(newValue);
+				audio_processor.pages[p]->valuenorm[i][o] = audio_processor.pages[p]->params[i].normalize(newValue);
 
-		if(selectedtab == (i<generalcount?0:(o+3))) {
-			if(i == 9 || i == 12 || i == (16+generalcount))
-				updatevalue(i-1);
-			else
-				updatevalue(i  );
-			if(i >= (9+generalcount) && i <= (12+generalcount))
-				updatehighlight(true);
-			if(i == generalcount) {
-				if(knobs[i].value[o] > .5f) opanimation = 0;
-				displayaddremove[1] = knobs[generalcount].value[selectedtab-3]>.5f;
-				for(int i = 0; i < 6; ++i)
-					textmesh[(6+i)*4+2] = displayaddremove[1]?(hover==-24?2:1):-10;
+				if(mesh.p == p && mesh.o == o) { // update in gui
+					if(audio_processor.pages[p]->params[i].bpmsync == 2)
+						updatevalue(i-1);
+					else
+						updatevalue(i  );
+					if(audio_processor.pages[p]->params[i].adsr >= 0)
+						updateadsr(audio_processor.pages[p]->params[i].adsr);
+
+					if(p == 1 && i == 0) {
+						// reset node select animation
+						if(audio_processor.pages[p]->valuenorm[i][o] > .5f) opanimation = 0;
+						// display minus sign
+						displayaddremove[1] = audio_processor.page_op.valuenorm[0][mesh.o]>.5f;
+						if(mesh.tab != 2) for(int n = 0; n < 6; ++n)
+							mesh.text[2+(6+n)*4] = displayaddremove[1]?(hover==-24?2:1):-10;
+					}
+				}
+
+				if(p == 1 && i == 0) { // update plus and minus buttons, remove the operator node
+					if(mesh.tab != 2) for(int n = (ops[0][o+1].textmesh+1); n < (ops[0][o+1].textmesh+3*6+1); ++n)
+						mesh.text[2+n*4] = audio_processor.pages[p]->valuenorm[i][o]>.5f?0:-10;
+					displayaddremove[0] = audio_processor.pages[p]->valuenorm[i][o]<.5f;
+					if(!displayaddremove[0]) for(int o = 0; o < MC; ++o) if(audio_processor.page_op.valuenorm[0][o] < .5f) {
+						displayaddremove[0] = true;
+						break;
+					}
+					if(mesh.tab != 2) for(int n = 0; n < 6; ++n)
+						mesh.text[2+n*4] = displayaddremove[0]?(hover==-25?2:1):-10;
+				}
+
+				return;
 			}
 		}
-
-		if(i == generalcount) {
-			replacetext(ops[o+1].textmesh,knobs[i].value[o]>.5f?("OP"+(String)(o+1)):"   ");
-			displayaddremove[0] = knobs[i].value[o]<.5f;
-			if(!displayaddremove[0]) for(int o = 0; o < MC; ++o) if(knobs[generalcount].value[o] < .5f) {
-				displayaddremove[0] = true;
-				break;
-			}
-			for(int i = 0; i < 6; ++i)
-				textmesh[i*4+2] = displayaddremove[0]?(hover==-25?2:1):-10;
-		}
-
-		if(parameterID != "antialias" && !presetunsaved) {
-			presetunsaved = true;
-			if(selectedtab == 0) updatevalue(-3);
-		}
-
-		return;
 	}
 }
 void FMPlusAudioProcessorEditor::mouseMove(const MouseEvent& event) {
@@ -1310,10 +1029,10 @@ void FMPlusAudioProcessorEditor::mouseMove(const MouseEvent& event) {
 	if(hover == -26 && prevhover != -26 && websiteht <= -1) websiteht = .65f;
 }
 void FMPlusAudioProcessorEditor::mouseExit(const MouseEvent& event) {
-	if(hover >= 0 && hover < boxnum)
-		if(boxes[hover].type != -1 && boxes[hover].type != 3)
-			for(int t = 0; t < (boxes[hover].type==4?12:6); ++t)
-				squaremesh[(boxes[hover].mesh+t)*4+2] = 3;
+	if(hover >= 0 && hover < mesh.boxnum)
+		if(mesh.boxes[hover].type != -1 && mesh.boxes[hover].type != 3)
+			for(int t = 0; t < (mesh.boxes[hover].type==4?12:6); ++t)
+				mesh.square[(mesh.boxes[hover].mesh+t)*4+2] = 3;
 	hover = -1;
 }
 void FMPlusAudioProcessorEditor::mouseDown(const MouseEvent& event) {
@@ -1329,7 +1048,7 @@ void FMPlusAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 			scalemenu->addItem(i,(String)round(ui_scales[i-21]*100)+"%",true,(i-21)==ui_scale_index);
 
 		rightclickmenu->setLookAndFeel(&look_n_feel);
-		if(hover == 19) {
+		if(mesh.boxes[hover].curve >= 0) {
 			rightclickmenu->addItem(1,"'Copy curve",true);
 			rightclickmenu->addItem(2,"'Paste curve",curve::isvalidcurvestring(SystemClipboard::getTextFromClipboard()));
 			rightclickmenu->addItem(3,"'Reset curve",true);
@@ -1344,11 +1063,11 @@ void FMPlusAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 			else if(result >= 20)
 				set_ui_scale(result-21);
 			else if(result == 1) //copy curve
-				SystemClipboard::copyTextToClipboard(audio_processor.curvetostring());
+				SystemClipboard::copyTextToClipboard(audio_processor.curvetostring(mesh.p,mesh.boxes[hover].curve,mesh.o));
 			else if(result == 2) //paste curve
-				audio_processor.curvefromstring(SystemClipboard::getTextFromClipboard());
+				audio_processor.curvefromstring(mesh.p,mesh.boxes[hover].curve,mesh.o,SystemClipboard::getTextFromClipboard());
 			else if(result == 3) //reset curve
-				audio_processor.resetcurve();
+				audio_processor.resetcurve(mesh.p,mesh.boxes[hover].curve,mesh.o);
 			else if(result == 4) //copy preset
 				SystemClipboard::copyTextToClipboard(audio_processor.get_preset(audio_processor.currentpreset));
 			else if(result == 5) //paste preset
@@ -1359,35 +1078,56 @@ void FMPlusAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 
 	initialdrag = hover;
 
-	if(boxes[initialdrag].knob == (7+generalcount) || boxes[initialdrag].knob == (8+generalcount)) {
-		freqselect(fmin(floor((((float)event.x)/ui_scales[ui_scale_index]-boxes[initialdrag].x)/7.f),3)+(boxes[initialdrag].knob-generalcount-7)*20);
+	if(mesh.p == 1) {
+		if(mesh.boxes[initialdrag].knob == 7 || mesh.boxes[initialdrag].knob == 8) {
+			freqselect(fmin(floor((((float)event.x)/ui_scales[ui_scale_index]-mesh.boxes[initialdrag].x)/7.f),3)+(mesh.boxes[initialdrag].knob-7)*20);
 
-		int dotpos = 4;
-		for(int n = 1; n < 4; ++n) {
-			int c = textmesh[3+(1+n*6+boxes[initialdrag].textmesh)*4]-51;
-			if(c < 0) {
-				dotpos = n;
-				break;
+			int dotpos = 4;
+			for(int n = 1; n < 4; ++n) {
+				int c = mesh.text[3+(1+n*6+mesh.boxes[initialdrag].textmesh)*4]-51;
+				if(c < 0) {
+					dotpos = n;
+					break;
+				}
 			}
-		}
-		freqoffset = knobs[boxes[initialdrag].knob].value[selectedtab-3];
-		if(boxes[initialdrag].knob == (7+generalcount))
-			freqoffset = knobs[7+generalcount].inflate(freqoffset);
-		else
-			freqoffset = freqaddinflate(freqoffset);
-		     if(dotpos >= 3) freqoffset = round(freqoffset      )     ;
-		else if(dotpos == 2) freqoffset = round(freqoffset*10.f )*.1f ;
-		else                 freqoffset = round(freqoffset*100.f)*.01f;
-		bool flipped = freqoffset<-.005f;
-		freqoffset = round(fmod(fabs(freqoffset)+.00001f,freqstep)*100.f)*.01f;
-		if(flipped) freqoffset = freqstep-fabs(freqoffset);
+			freqoffset = selectedpage->valuenorm[mesh.boxes[initialdrag].knob][mesh.o];
+			if(mesh.boxes[initialdrag].knob == 7)
+				freqoffset = selectedpage->params[7].inflate(freqoffset);
+			else
+				freqoffset = freqaddinflate(freqoffset);
+			     if(dotpos >= 3) freqoffset = round(freqoffset      )     ;
+			else if(dotpos == 2) freqoffset = round(freqoffset*10.f )*.1f ;
+			else                 freqoffset = round(freqoffset*100.f)*.01f;
+			bool flipped = freqoffset<-.005f;
+			freqoffset = round(fmod(fabs(freqoffset)+.00001f,freqstep)*100.f)*.01f;
+			if(flipped) freqoffset = freqstep-fabs(freqoffset);
 
-	} else freqselect(-20);
+		} else freqselect(-20);
+	}
 
 	if(initialdrag == -1) return;
 	if(initialdrag > -1) {
-		if(boxes[initialdrag].knob == -1) {
-			if(selectedtab == 0) {
+		if(mesh.boxes[initialdrag].knob == -1) {
+			if(curvehover >= 0) { // lfo
+				curve* currentcurve = &selectedpage->curves[mesh.boxes[initialdrag].curve].cui[mesh.o];
+				valueoffset[0] = 0;
+				audio_processor.undo_manager.beginNewTransaction();
+				dragpos = event.getScreenPosition();
+				event.source.enableUnboundedMouseMovement(true);
+				int i = curvehover;
+				if((i%2) == 0) {
+					i /= 2;
+					initialvalue[0] = currentcurve->points[i].x;
+					initialvalue[1] = currentcurve->points[i].y;
+					initialdotvalue[0] = initialvalue[0];
+					initialdotvalue[1] = initialvalue[1];
+					valueoffset[1] = 0;
+				} else {
+					i = (i-1)/2;
+					initialvalue[0] = currentcurve->points[i].tension;
+					initialdotvalue[0] = initialvalue[0];
+				}
+			} else if(mesh.p == 0) {
 				       if(initialdrag ==  0) { // preset
 					// TODO preset select
 				} else if(initialdrag == 15) { // tuning select
@@ -1396,7 +1136,7 @@ void FMPlusAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 					tuningchooser = std::make_unique<FileChooser>("Open tuning...",tuningdir,"*.scl;*.kbm");
 					int folderChooserFlags = FileBrowserComponent::openMode | FileBrowserComponent::canSelectFiles;
 					tuningchooser->launchAsync(folderChooserFlags,[this](const FileChooser& chooser) {
-						tuningfile = audio_processor.updatetuning(chooser.getResult());
+						audio_processor.updatetuning(chooser.getResult());
 						updatevalue(-2);
 					});
 				} else if(initialdrag == 17) { // theme select
@@ -1405,116 +1145,105 @@ void FMPlusAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 					themechooser = std::make_unique<FileChooser>("Open theme...",themedir,"*.txt;*.ini");
 					int folderChooserFlags = FileBrowserComponent::openMode | FileBrowserComponent::canSelectFiles;
 					themechooser->launchAsync(folderChooserFlags,[this](const FileChooser& chooser) {
-						themefile = audio_processor.updatetheme(chooser.getResult());
+						audio_processor.updatetheme(chooser.getResult());
 						updatevalue(-1);
 						updatetheme();
 					});
 				} else if(initialdrag == 16) { // default tuning
 					audio_processor.resettuning();
-					tuningfile = "Standard";
 					updatevalue(-2);
 				} else if(initialdrag == 18) { // default theme
 					audio_processor.resettheme();
-					themefile = "Default";
 					updatevalue(-1);
 					updatetheme();
 				}
-			} else if(selectedtab >= 3) {
+			} else if(mesh.p == 1) {
 				       if(initialdrag ==  7 || initialdrag ==  9) { // up down freq mult
-					float v = knobs[generalcount+7].inflate(knobs[generalcount+7].value[selectedtab-3]);
+					float v = selectedpage->params[7].inflate(selectedpage->valuenorm[7][mesh.o]);
 					float multiplier = 1;
-					     if(v < (initialdrag==7?.375f: .75f)) multiplier = .25f;
+						 if(v < (initialdrag==7?.375f: .75f)) multiplier = .25f;
 					else if(v < (initialdrag==7?.75f :1.25f)) multiplier = .5f ;
-					audio_processor.apvts.getParameter("o"+(String)(selectedtab-3)+knobs[generalcount+7].id)->setValueNotifyingHost(knobs[generalcount+7].normalize(v+(8-initialdrag)*multiplier));
+					audio_processor.apvts.getParameter("o"+(String)(mesh.o)+selectedpage->params[7].id)->setValueNotifyingHost(selectedpage->params[7].normalize(v+(8-initialdrag)*multiplier));
 				} else if(initialdrag == 10) { // sign freq offset
-					audio_processor.apvts.getParameter("o"+(String)(selectedtab-3)+knobs[generalcount+8].id)->setValueNotifyingHost(1-knobs[generalcount+8].value[selectedtab-3]);
+					audio_processor.apvts.getParameter("o"+(String)(mesh.o)+selectedpage->params[8].id)->setValueNotifyingHost(1-selectedpage->valuenorm[8][mesh.o]);
 				} else if(initialdrag == 11 || initialdrag == 13) { // up down freq offset
-					float v = freqaddinflate(knobs[generalcount+8].value[selectedtab-3]);
-					float s = fabs(get_string(8,knobs[generalcount+8].value[selectedtab-3],selectedtab).getFloatValue());
+					float v = freqaddinflate(selectedpage->valuenorm[8][mesh.o]);
+					float s = fabs(get_string(8,selectedpage->valuenorm[8][mesh.o],mesh.p).getFloatValue());
 					int m = initialdrag==11?1:-1;
 					if((initialdrag==13) == (v>=0)) s -= .001f;
-					     if(s >= 1000) v += 1000*m;
+						 if(s >= 1000) v += 1000*m;
 					else if(s >=  100) v +=  100*m;
 					else if(s >=   10) v +=   10*m;
 					else if(s >=    1) v +=      m;
 					else if(s >=   .1) v +=  .1f*m;
 					else               v += .01f*m;
 					if(fabs(v) <= .005f) v = 0;
-					audio_processor.apvts.getParameter("o"+(String)(selectedtab-3)+knobs[generalcount+8].id)->setValueNotifyingHost(freqaddnormalize(v));
-				} else if(lfohover >= 0) { // lfo
-					valueoffset[0] = 0;
-					audio_processor.undo_manager.beginNewTransaction();
-					dragpos = event.getScreenPosition();
-					event.source.enableUnboundedMouseMovement(true);
-					int i = lfohover;
-					if((i%2) == 0) {
-						i /= 2;
-						initialvalue[0] = curves[selectedtab-3].points[i].x;
-						initialvalue[1] = curves[selectedtab-3].points[i].y;
-						initialdotvalue[0] = initialvalue[0];
-						initialdotvalue[1] = initialvalue[1];
-						valueoffset[1] = 0;
-					} else {
-						i = (i-1)/2;
-						initialvalue[0] = curves[selectedtab-3].points[i].tension;
-						initialdotvalue[0] = initialvalue[0];
-					}
+					audio_processor.apvts.getParameter("o"+(String)(mesh.o)+selectedpage->params[8].id)->setValueNotifyingHost(freqaddnormalize(v));
 				}
 			}
 		} else {
-			String id;
-			if(boxes[initialdrag].knob >= generalcount) id = "o"+(String)(selectedtab-3)+knobs[boxes[initialdrag].knob].id;
-			else id = knobs[boxes[initialdrag].knob].id;
+			String id = selectedpage->params[mesh.boxes[initialdrag].knob].id;
+			if(mesh.p == 1) id = "o"+(String)mesh.o+id;
 
-			initialvalue[0] = knobs[boxes[initialdrag].knob].value[selectedtab==0?0:(selectedtab-3)];
+			initialvalue[0] = selectedpage->valuenorm[mesh.boxes[initialdrag].knob][mesh.o];
 
-			if(boxes[initialdrag].knob == 8 || boxes[initialdrag].knob == 11 || boxes[initialdrag].knob == (15+generalcount)) {
-				if(knobs[boxes[initialdrag].knob+1].value[selectedtab==0?0:(selectedtab-3)] > 0) {
-					initialvalue[0] = knobs[boxes[initialdrag].knob+1].value[selectedtab==0?0:(selectedtab-3)];
-					initialvalue[0] = 1-(1-fmax(0,initialvalue[0]))/(1-1.f/knobs[boxes[initialdrag].knob+1].maximumvalue);
+			if(selectedpage->params[mesh.boxes[initialdrag].knob].bpmsync == 1) {
+				if(selectedpage->valuenorm[mesh.boxes[initialdrag].knob+1][mesh.o] > 0) {
+					initialvalue[0] = selectedpage->valuenorm[mesh.boxes[initialdrag].knob+1][mesh.o];
+					initialvalue[0] = 1-(1-fmax(0,initialvalue[0]))/(1-1.f/selectedpage->params[mesh.boxes[initialdrag].knob+1].maximumvalue);
 				}
 			}
-			     if(boxes[initialdrag].knob == (7+generalcount))
-				initialvalue[0] =                  initialvalue[0]              /freqstep*24  /5;
-			else if(boxes[initialdrag].knob == (8+generalcount))
-				initialvalue[0] = ((freqaddinflate(initialvalue[0])/9999+1)*.5f)/freqstep*9999/5;
+			if(mesh.p == 1) {
+				     if(mesh.boxes[initialdrag].knob == 7)
+					initialvalue[0] =                  initialvalue[0]              /freqstep*24  /5;
+				else if(mesh.boxes[initialdrag].knob == 8)
+					initialvalue[0] = ((freqaddinflate(initialvalue[0])/9999+1)*.5f)/freqstep*9999/5;
+			}
 
 			valueoffset[0] = 0;
 			audio_processor.undo_manager.beginNewTransaction();
 			audio_processor.apvts.getParameter(id)->beginChangeGesture();
 
-			if(knobs[boxes[initialdrag].knob].ttype == potentiometer::ptype::booltype) {
+			if(selectedpage->params[mesh.boxes[initialdrag].knob].ttype == potentiometer::ptype::booltype) {
 				audio_processor.apvts.getParameter(id)->setValueNotifyingHost(1-initialvalue[0]);
 			} else {
 				dragpos = event.getScreenPosition();
 				event.source.enableUnboundedMouseMovement(true);
 			}
 		}
-	} else if(initialdrag >= -12) {
+	} else if(initialdrag >= -12) { // click tab
 		rebuildtab(initialdrag+12);
-		audio_processor.params.selectedtab = selectedtab;
-	} else if(initialdrag >= -23) {
-		rebuildtab(initialdrag+23);
-		audio_processor.params.selectedtab = selectedtab;
-		initialvalue[0] = ops[selectedtab==0?0:(selectedtab-2)].pos[0];
-		initialvalue[1] = ops[selectedtab==0?0:(selectedtab-2)].pos[1];
-	} else if(initialdrag == -24) {
-		if(selectedtab >= 3 &&                knobs[generalcount].value[selectedtab -3] > .5) {
-			int prevop = selectedtab-3;
-			   for(int o = 0; o < MC; ++o) if(knobs[generalcount].value[(prevop+o+1)%8] > .5) {
+		audio_processor.params.selectedtab = mesh.tab;
+	} else if(initialdrag >= -23) { // click op
+		if(mesh.tab == 2 && initialdrag != -23) {
+			audio_processor.tabp[2] = initialdrag+23;
+			rebuildtab(2);
+			initialvalue[0] = ops[1][audio_processor.tabp[2]-2].pos[0];
+			initialvalue[1] = ops[1][audio_processor.tabp[2]-2].pos[1];
+			audio_processor.params.fxtab = audio_processor.tabp[2];
+		} else {
+			rebuildtab(initialdrag+23);
+			initialvalue[0] = ops[0][(int)fmax(0,mesh.tab-2)].pos[0];
+			initialvalue[1] = ops[0][(int)fmax(0,mesh.tab-2)].pos[1];
+		}
+		audio_processor.params.selectedtab = mesh.tab;
+	} else if(initialdrag == -24) { // minus op
+		if(mesh.p == 0 && audio_processor.page_op.valuenorm[0][mesh.o] > .5) {
+			int prevop = mesh.o;
+			   for(int o = 0; o < MC; ++o) if(audio_processor.page_op.valuenorm[0][(prevop+o+1)%8] > .5) {
 				rebuildtab((prevop+o+1)%8+3);
-				audio_processor.params.selectedtab = selectedtab;
+				audio_processor.params.selectedtab = mesh.tab;
 				break;
 			}
-			audio_processor.apvts.getParameter("o"+(String)prevop+knobs[generalcount].id)->setValueNotifyingHost(0.f);
+			audio_processor.apvts.getParameter("o"+(String)prevop+audio_processor.page_op.params[0].id)->setValueNotifyingHost(0.f);
 		}
-	} else if(initialdrag == -25) {
-		if(selectedtab >= 3 &&                knobs[generalcount].value[selectedtab -3] < .5) {
-			audio_processor.apvts.getParameter("o"+(String)(selectedtab-3)+knobs[generalcount].id)->setValueNotifyingHost(1.f);
-		} else for(int o = 0; o < MC; ++o) if(knobs[generalcount].value[        o     ] < .5) {
+	} else if(initialdrag == -25) { // plus op
+		if(mesh.p == 0 && audio_processor.page_op.valuenorm[0][mesh.o] < .5) {
+			audio_processor.apvts.getParameter("o"+(String)mesh.o+audio_processor.page_op.params[0].id)->setValueNotifyingHost(1.f);
+		} else for(int o = 0; o < MC; ++o) if(audio_processor.page_op.valuenorm[0][        o     ] < .5) {
 			rebuildtab(o+3);
-			audio_processor.params.selectedtab = selectedtab;
-			audio_processor.apvts.getParameter("o"+(String)o              +knobs[generalcount].id)->setValueNotifyingHost(1.f);
+			audio_processor.params.selectedtab = mesh.tab;
+			audio_processor.apvts.getParameter("o"+(String)o     +audio_processor.page_op.params[0].id)->setValueNotifyingHost(1.f);
 			break;
 		}
 	}
@@ -1522,18 +1251,20 @@ void FMPlusAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 void FMPlusAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 	if(initialdrag == -1) return;
 	if(initialdrag > -1) {
-		if(boxes[initialdrag].knob == -1) {
-			if(lfohover < 0) {
+		if(mesh.boxes[initialdrag].knob == -1) {
+			if(curvehover == -1) {
 				int prevhover = hover;
 				hover = initialdrag==recalc_hover(event.x,event.y)?initialdrag:-1;
 				updatehighlight();
-				if(prevhover == -1 && hover != -1 && boxes[initialdrag].type != -1 && boxes[initialdrag].type != 3)
-					for(int t = 0; t < (boxes[initialdrag].type==4?12:6); ++t)
-						squaremesh[(boxes[initialdrag].mesh+t)*4+2] = 2;
+				if(prevhover == -1 && hover != -1 && mesh.boxes[initialdrag].type != -1 && mesh.boxes[initialdrag].type != 3)
+					for(int t = 0; t < (mesh.boxes[initialdrag].type==4?12:6); ++t)
+						mesh.square[(mesh.boxes[initialdrag].mesh+t)*4+2] = 2;
 				return;
 			}
-			float dragspeed = 1.f/(boxes[initialdrag].w*ui_scales[ui_scale_index]);
-			int i = lfohover;
+			// CURVE
+			curve* currentcurve = &selectedpage->curves[mesh.boxes[initialdrag].curve].cui[mesh.o];
+			float dragspeed = 1.f/(mesh.boxes[initialdrag].w*ui_scales[ui_scale_index]);
+			int i = curvehover;
 			if((i%2) == 0) { // dragging a dot
 				i /= 2;
 				if(!finemode && event.mods.isAltDown()) { //start of fine mode
@@ -1549,7 +1280,7 @@ void FMPlusAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 				float valuey = initialvalue[1]-event.getDistanceFromDragStartY()*dragspeed*(finemode?.1f:1)*3.f;
 				float pointy = valuey-valueoffset[1];
 
-				if(i > 0 && i < (curves[selectedtab-3].points.size()-1)) {
+				if(i > 0 && i < (currentcurve->points.size()-1)) {
 					float valuex = initialvalue[0]+event.getDistanceFromDragStartX()*dragspeed*(finemode?.1f:1);
 					float pointx = valuex-valueoffset[0];
 
@@ -1577,21 +1308,21 @@ void FMPlusAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 					} else axislock = -1;
 
 					if(event.mods.isShiftDown()) { // free mode
-						if((i > 1 && pointx < curves[selectedtab-3].points[i-1].x) || (i < (curves[selectedtab-3].points.size()-2) && pointx > curves[selectedtab-3].points[i+1].x)) {
-							point pnt = curves[selectedtab-3].points[i];
+						if((i > 1 && pointx < currentcurve->points[i-1].x) || (i < (currentcurve->points.size()-2) && pointx > currentcurve->points[i+1].x)) {
+							point pnt = currentcurve->points[i];
 							int n = 1;
-							for(n = 1; n < (curves[selectedtab-3].points.size()-1); ++n) //finding new position
-								if(pnt.x < curves[selectedtab-3].points[n].x) break;
+							for(n = 1; n < (currentcurve->points.size()-1); ++n) //finding new position
+								if(pnt.x < currentcurve->points[n].x) break;
 							if(n > i) { // move points back
 								n--;
 								for(int f = i; f <= n; f++)
-									curves[selectedtab-3].points[f] = curves[selectedtab-3].points[f+1];
+									currentcurve->points[f] = currentcurve->points[f+1];
 							} else { //move points forward
 								for(int f = i; f >= n; f--)
-									curves[selectedtab-3].points[f] = curves[selectedtab-3].points[f-1];
+									currentcurve->points[f] = currentcurve->points[f-1];
 							}
 							i = n;
-							lfohover = i*2;
+							curvehover = i*2;
 						}
 					}
 
@@ -1604,16 +1335,16 @@ void FMPlusAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 					float xright = 1;
 					if(!event.mods.isShiftDown()) { // no free mode
 						if(i > 1) {
-							xleft = curves[selectedtab-3].points[i-1].x;
-							if(pointx <= curves[selectedtab-3].points[i-1].x) {
-								pointx = curves[selectedtab-3].points[i-1].x;
+							xleft = currentcurve->points[i-1].x;
+							if(pointx <= currentcurve->points[i-1].x) {
+								pointx = currentcurve->points[i-1].x;
 								clamppedx = true;
 							}
 						}
-						if(i < (curves[selectedtab-3].points.size()-2)) {
-							xright = curves[selectedtab-3].points[i+1].x;
-							if(pointx >= curves[selectedtab-3].points[i+1].x) {
-								pointx = curves[selectedtab-3].points[i+1].x;
+						if(i < (currentcurve->points.size()-2)) {
+							xright = currentcurve->points[i+1].x;
+							if(pointx >= currentcurve->points[i+1].x) {
+								pointx = currentcurve->points[i+1].x;
 								clamppedx = true;
 							}
 						}
@@ -1628,18 +1359,18 @@ void FMPlusAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 					if(clamppedy)
 						amioutofbounds[1] += preclampy-pointy-fmin(fmax(amioutofbounds[1],-.1f),.1f);
 					else amioutofbounds[1] = 0;
-					curves[selectedtab-3].points[i].enabled = (fabs(amioutofbounds[0])+fabs(amioutofbounds[1])) < .8;
+					currentcurve->points[i].enabled = (fabs(amioutofbounds[0])+fabs(amioutofbounds[1])) < .8;
 
-					curves[selectedtab-3].points[i].x = pointx;
+					currentcurve->points[i].x = pointx;
 					if(axislock != 2)
 						valueoffset[0] = fmax(fmin(valueoffset[0],valuex-xleft+.1f),valuex-xright-.1f);
 				}
-				curves[selectedtab-3].points[i].y = fmax(fmin(pointy,1),0);
+				currentcurve->points[i].y = fmax(fmin(pointy,1),0);
 				if(axislock != 1)
 					valueoffset[1] = fmax(fmin(valueoffset[1],valuey+.1f),valuey-1.1f);
 			} else { //dragging tension
 				i = (i-1)/2;
-				int dir = curves[selectedtab-3].points[i].y > curves[selectedtab-3].points[i+1].y ? -1 : 1;
+				int dir = currentcurve->points[i].y > currentcurve->points[i+1].y ? -1 : 1;
 				if(!finemode && (event.mods.isShiftDown() || event.mods.isAltDown())) {
 					finemode = true;
 					initialvalue[0] -= dir*event.getDistanceFromDragStartY()*dragspeed*.9f*3.f;
@@ -1649,37 +1380,37 @@ void FMPlusAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 				}
 
 				float value = initialvalue[0]-dir*event.getDistanceFromDragStartY()*dragspeed*(finemode?.1f:1)*3.f;
-				curves[selectedtab-3].points[i].tension = fmin(fmax(value-valueoffset[0],0),1);
+				currentcurve->points[i].tension = fmin(fmax(value-valueoffset[0],0),1);
 
 				valueoffset[0] = fmax(fmin(valueoffset[0],value+.1f),value-1.1f);
 			}
-			calcvis(3);
+			calcvis(selectedpage->curves[mesh.boxes[initialdrag].curve].linenum);
 		} else {
-			String id = knobs[boxes[initialdrag].knob].id;
+			String id = selectedpage->params[mesh.boxes[initialdrag].knob].id;
 			int bpmmax = -1;
-			if(boxes[initialdrag].knob == 8 || boxes[initialdrag].knob == 11 || boxes[initialdrag].knob == (15+generalcount)) {
-				if(event.mods.isCtrlDown() != (boxes[initialdrag].knob == 8)) {
-					id = knobs[boxes[initialdrag].knob+1].id;
-					bpmmax = knobs[boxes[initialdrag].knob+1].maximumvalue;
-				} else if(knobs[boxes[initialdrag].knob].value[selectedtab==0?0:(selectedtab-3)] > 0) {
-					String bpmid = knobs[boxes[initialdrag].knob+1].id;
-					if(boxes[initialdrag].knob >= generalcount) bpmid = "o"+(String)(selectedtab-3)+bpmid;
+			if(selectedpage->params[mesh.boxes[initialdrag].knob].bpmsync == 1) {
+				if(event.mods.isCtrlDown() != selectedpage->params[mesh.boxes[initialdrag].knob].defaultbpm) {
+					id = selectedpage->params[mesh.boxes[initialdrag].knob+1].id;
+					bpmmax = selectedpage->params[mesh.boxes[initialdrag].knob+1].maximumvalue;
+				} else if(selectedpage->valuenorm[mesh.boxes[initialdrag].knob][mesh.o] > 0) {
+					String bpmid = selectedpage->params[mesh.boxes[initialdrag].knob+1].id;
+					if(mesh.p == 1) bpmid = "o"+(String)(mesh.o)+bpmid;
 					audio_processor.apvts.getParameter(bpmid)->setValueNotifyingHost(0);
 				}
 			}
-			if(boxes[initialdrag].knob >= generalcount) id = "o"+(String)(selectedtab-3)+id;
+			if(mesh.p == 1) id = "o"+(String)mesh.o+id;
 
-			if(knobs[boxes[initialdrag].knob].ttype == potentiometer::ptype::booltype) {
+			if(selectedpage->params[mesh.boxes[initialdrag].knob].ttype == potentiometer::ptype::booltype) {
 				int prevhover = hover;
 				hover = initialdrag==recalc_hover(event.x,event.y)?initialdrag:-1;
 				updatehighlight();
-				if(prevhover == -1 && hover != -1 && boxes[initialdrag].type != -1 && boxes[initialdrag].type != 3)
-					for(int t = 0; t < (boxes[initialdrag].type==4?12:6); ++t)
-						squaremesh[(boxes[initialdrag].mesh+t)*4+2] = 2;
-				if(knobs[boxes[initialdrag].knob].value[selectedtab==0?0:(selectedtab-3)] != (initialdrag==hover?(1-initialvalue[0]):initialvalue[0]))
+				if(prevhover == -1 && hover != -1 && mesh.boxes[initialdrag].type != -1 && mesh.boxes[initialdrag].type != 3)
+					for(int t = 0; t < (mesh.boxes[initialdrag].type==4?12:6); ++t)
+						mesh.square[(mesh.boxes[initialdrag].mesh+t)*4+2] = 2;
+				if(selectedpage->valuenorm[mesh.boxes[initialdrag].knob][mesh.o] != (initialdrag==hover?(1-initialvalue[0]):initialvalue[0]))
 					audio_processor.apvts.getParameter(id)->setValueNotifyingHost(initialdrag==hover?(1-initialvalue[0]):initialvalue[0]);
 			} else {
-				       if(!finemode &&  (event.mods.isShiftDown() || event.mods.isAltDown()) && boxes[initialdrag].knob != (7+generalcount) && boxes[initialdrag].knob != (8+generalcount)) {
+				       if(!finemode &&  (event.mods.isShiftDown() || event.mods.isAltDown()) && (mesh.p != 1 || (mesh.boxes[initialdrag].knob != 7 && mesh.boxes[initialdrag].knob != 8))) {
 					finemode = true;
 					initialvalue[0] -= (event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*.0045f;
 				} else if( finemode && !(event.mods.isShiftDown() || event.mods.isAltDown())) {
@@ -1691,21 +1422,23 @@ void FMPlusAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 				float updatevalue = value;
 				float clampres = .1f;
 
-				       if(boxes[initialdrag].knob == (7+generalcount)) {
-					clampres = .1f*freqstep/24  *5;
-					value = value *freqstep/24  *5;
-					updatevalue = knobs[7+generalcount].inflate(value-valueoffset[0]);
-					if(!(event.mods.isShiftDown() || event.mods.isAltDown()))
-						updatevalue = floor(fmax(fmin(updatevalue,  24-freqoffset),    0)/freqstep+.00001f)*freqstep;
-					updatevalue = knobs[7+generalcount].normalize(updatevalue+freqoffset);
-				} else if(boxes[initialdrag].knob == (8+generalcount)) {
-					clampres = .1f*freqstep/9999*5;
-					value = value *freqstep/9999*5;
-					updatevalue = (9999*(2*                    (value-valueoffset[0])-1));
-					if(!(event.mods.isShiftDown() || event.mods.isAltDown()))
-						updatevalue = floor(fmax(fmin(updatevalue,9999-freqoffset),-9999.1f)/freqstep+.00001f)*freqstep;
-					updatevalue = freqaddnormalize               (updatevalue+freqoffset);
+				if(mesh.p == 1 && (mesh.boxes[initialdrag].knob == 7 || mesh.boxes[initialdrag].knob == 8)) {
+					if(mesh.boxes[initialdrag].knob == 7) {
+						clampres = .1f*freqstep/24  *5;
+						value = value *freqstep/24  *5;
+						updatevalue = selectedpage->params[7].inflate(value-valueoffset[0]);
+						if(!(event.mods.isShiftDown() || event.mods.isAltDown()))
+							updatevalue = floor(fmax(fmin(updatevalue,  24-freqoffset),       0)/freqstep+.00001f)*freqstep;
+						updatevalue = selectedpage->params[7].normalize(updatevalue+freqoffset);
+					} else {
+						clampres = .1f*freqstep/9999*5;
+						value = value *freqstep/9999*5;
+						updatevalue = (9999*(2*                      (value-valueoffset[0])-1));
+						if(!(event.mods.isShiftDown() || event.mods.isAltDown()))
+							updatevalue = floor(fmax(fmin(updatevalue,9999-freqoffset),-9999.1f)/freqstep+.00001f)*freqstep;
+						updatevalue = freqaddnormalize               (updatevalue+freqoffset);
 
+					}
 				} else {
 					updatevalue = value-valueoffset[0];
 					if(bpmmax > 0) updatevalue = 1-(1-fmax(0,updatevalue))*(1-1.f/bpmmax);
@@ -1717,34 +1450,42 @@ void FMPlusAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 		}
 	} else if(initialdrag >= -12) {
 		return;
-	} else if(initialdrag >= -23) {
-		int o = selectedtab==0?0:(selectedtab-2);
-		ops[o].pos[0] = fmin(112,fmax(0,initialvalue[0]+event.getDistanceFromDragStartX()/ui_scales[ui_scale_index]));
-		ops[o].pos[1] = fmin(257,fmax(0,initialvalue[1]+event.getDistanceFromDragStartY()/ui_scales[ui_scale_index]));
-		audio_processor.presets[audio_processor.currentpreset].oppos[o*2  ] = ops[o].pos[0];
-		audio_processor.presets[audio_processor.currentpreset].oppos[o*2+1] = ops[o].pos[1];
+	} else if(initialdrag >= -23) { // drag operator
+		int o = 0;
+		int sl = 3;
+		int t = mesh.tab==2?1:0;
+		if(mesh.tab == 2 && initialdrag != -23) {
+			o = audio_processor.tabp[2]-2;
+			sl = selectedpage->tabname.length();
+		} else {
+			o = mesh.tab==0?0:(mesh.tab-2);
+		}
+		ops[t][o].pos[0] = fmin(133-sl*7,fmax(0,initialvalue[0]+event.getDistanceFromDragStartX()/ui_scales[ui_scale_index]));
+		ops[t][o].pos[1] = fmin(257,fmax(0,initialvalue[1]+event.getDistanceFromDragStartY()/ui_scales[ui_scale_index]));
+		audio_processor.presets[audio_processor.currentpreset].oppos[o*2  ] = ops[t][o].pos[0];
+		audio_processor.presets[audio_processor.currentpreset].oppos[o*2+1] = ops[t][o].pos[1];
 
-		float x = ops[o].pos[0]+162;
-		float y = ops[o].pos[1]+30;
-		int s = ops[o].textmesh+1;
-		for(int n = 0; n < 3; ++n) {
-			textmesh[   (s+n*6)*4] =     x    /width  ; // top    left
-			textmesh[ 1+(s+n*6)*4] = 1-( y    /height);
+		float x = ops[t][o].pos[0]+162;
+		float y = ops[t][o].pos[1]+30;
+		int s = ops[t][o].textmesh+1;
+		for(int n = 0; n < sl; ++n) {
+			mesh.text[   (s+n*6)*4] =     x    /width  ; // top    left
+			mesh.text[ 1+(s+n*6)*4] = 1-( y    /height);
 
-			textmesh[ 4+(s+n*6)*4] =     x    /width  ; // bottom left
-			textmesh[ 5+(s+n*6)*4] = 1-((y+10)/height);
+			mesh.text[ 4+(s+n*6)*4] =     x    /width  ; // bottom left
+			mesh.text[ 5+(s+n*6)*4] = 1-((y+10)/height);
 
-			textmesh[ 8+(s+n*6)*4] =    (x+ 8)/width  ; // top    right
-			textmesh[ 9+(s+n*6)*4] = 1-( y    /height);
+			mesh.text[ 8+(s+n*6)*4] =    (x+ 8)/width  ; // top    right
+			mesh.text[ 9+(s+n*6)*4] = 1-( y    /height);
 
-			textmesh[12+(s+n*6)*4] =     x    /width  ; // bottom left
-			textmesh[13+(s+n*6)*4] = 1-((y+10)/height);
+			mesh.text[12+(s+n*6)*4] =     x    /width  ; // bottom left
+			mesh.text[13+(s+n*6)*4] = 1-((y+10)/height);
 
-			textmesh[16+(s+n*6)*4] =    (x+ 8)/width  ; // top    right
-			textmesh[17+(s+n*6)*4] = 1-( y    /height);
+			mesh.text[16+(s+n*6)*4] =    (x+ 8)/width  ; // top    right
+			mesh.text[17+(s+n*6)*4] = 1-( y    /height);
 
-			textmesh[20+(s+n*6)*4] =    (x+ 8)/width  ; // bottom right
-			textmesh[21+(s+n*6)*4] = 1-((y+10)/height);
+			mesh.text[20+(s+n*6)*4] =    (x+ 8)/width  ; // bottom right
+			mesh.text[21+(s+n*6)*4] = 1-((y+10)/height);
 			x += 7;
 		}
 	} else if(initialdrag == -26) {
@@ -1756,53 +1497,54 @@ void FMPlusAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 void FMPlusAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 	if(dpi < 0) return;
 	if(initialdrag > -1) {
-		if(boxes[initialdrag].knob == -1) {
-			if(lfohover < 0) {
+		if(mesh.boxes[initialdrag].knob == -1) {
+			if(curvehover == -1) {
 				hover = recalc_hover(event.x,event.y);
 				updatehighlight();
 				return;
 			}
+			curve* currentcurve = &selectedpage->curves[mesh.boxes[initialdrag].curve].cui[mesh.o];
 			event.source.enableUnboundedMouseMovement(false);
 			Desktop::setMousePosition(dragpos);
 			axislock = -1;
-			int i = lfohover;
+			int i = curvehover;
 			if((i%2) == 0) {
 				i /= 2;
-				if((fabs(initialdotvalue[0]-curves[selectedtab-3].points[i].x)+fabs(initialdotvalue[1]-curves[selectedtab-3].points[i].y)) < .00001) {
-					curves[selectedtab-3].points[i].x = initialdotvalue[0];
-					curves[selectedtab-3].points[i].y = initialdotvalue[1];
+				if((fabs(initialdotvalue[0]-currentcurve->points[i].x)+fabs(initialdotvalue[1]-currentcurve->points[i].y)) < .00001) {
+					currentcurve->points[i].x = initialdotvalue[0];
+					currentcurve->points[i].y = initialdotvalue[1];
 					return;
 				}
-				dragpos.x += (curves[selectedtab-3].points[i].x-initialdotvalue[0])*ui_scales[ui_scale_index]*boxes[initialdrag].w;
-				dragpos.y += (initialdotvalue[1]-curves[selectedtab-3].points[i].y)*ui_scales[ui_scale_index]*boxes[initialdrag].h;
-				if(!curves[selectedtab-3].points[i].enabled) {
-					curves[selectedtab-3].points.erase(curves[selectedtab-3].points.begin()+i);
-					audio_processor.deletepoint(i);
-				} else audio_processor.movepoint(i,curves[selectedtab-3].points[i].x,curves[selectedtab-3].points[i].y);
+				dragpos.x += (currentcurve->points[i].x-initialdotvalue[0])*ui_scales[ui_scale_index]*mesh.boxes[initialdrag].w;
+				dragpos.y += (initialdotvalue[1]-currentcurve->points[i].y)*ui_scales[ui_scale_index]*mesh.boxes[initialdrag].h;
+				if(!currentcurve->points[i].enabled) {
+					currentcurve->points.erase(currentcurve->points.begin()+i);
+					audio_processor.deletepoint(mesh.p,mesh.boxes[initialdrag].curve,mesh.o,i);
+				} else audio_processor.movepoint(mesh.p,mesh.boxes[initialdrag].curve,mesh.o,i,currentcurve->points[i].x,currentcurve->points[i].y);
 			} else {
 				i = (i-1)/2;
-				if(fabs(initialdotvalue[0]-curves[selectedtab-3].points[i].tension) < .00001) {
-					curves[selectedtab-3].points[i].tension = initialdotvalue[0];
+				if(fabs(initialdotvalue[0]-currentcurve->points[i].tension) < .00001) {
+					currentcurve->points[i].tension = initialdotvalue[0];
 					return;
 				}
-				float interp = curve::calctension(.5,curves[selectedtab-3].points[i].tension)-curve::calctension(.5,initialdotvalue[0]);
-				dragpos.y += (curves[selectedtab-3].points[i].y-curves[selectedtab-3].points[i+1].y)*interp*ui_scales[ui_scale_index]*200.f;
-				audio_processor.movetension(i,curves[selectedtab-3].points[i].tension);
+				float interp = curve::calctension(.5,currentcurve->points[i].tension)-curve::calctension(.5,initialdotvalue[0]);
+				dragpos.y += (currentcurve->points[i].y-currentcurve->points[i+1].y)*interp*ui_scales[ui_scale_index]*200.f;
+				audio_processor.movetension(mesh.p,mesh.boxes[initialdrag].curve,mesh.o,i,currentcurve->points[i].tension);
 			}
-			if((lfohover%2) == 0) audio_processor.undo_manager.setCurrentTransactionName("Moved point");
+			if((curvehover%2) == 0) audio_processor.undo_manager.setCurrentTransactionName("Moved point");
 			else audio_processor.undo_manager.setCurrentTransactionName("Moved tension");
 			audio_processor.undo_manager.beginNewTransaction();
 		} else {
 			String id;
-			if(boxes[initialdrag].knob >= generalcount) id = "o"+(String)(selectedtab-3)+knobs[boxes[initialdrag].knob].id;
-			else id = knobs[boxes[initialdrag].knob].id;
+			if(mesh.p == 1) id = "o"+(String)mesh.o+selectedpage->params[mesh.boxes[initialdrag].knob].id;
+			else id = selectedpage->params[mesh.boxes[initialdrag].knob].id;
 
 			audio_processor.undo_manager.setCurrentTransactionName(
-				(String)((knobs[boxes[initialdrag].knob].value[selectedtab==0?0:(selectedtab-3)]-initialvalue[0])>=0?"Increased ":"Decreased ") += knobs[boxes[initialdrag].knob].name);
+				(String)((selectedpage->valuenorm[mesh.boxes[initialdrag].knob][mesh.o]-initialvalue[0])>=0?"Increased ":"Decreased ") += selectedpage->params[mesh.boxes[initialdrag].knob].name);
 			audio_processor.apvts.getParameter(id)->endChangeGesture();
 			audio_processor.undo_manager.beginNewTransaction();
 
-			if(knobs[boxes[initialdrag].knob].ttype != potentiometer::ptype::booltype) {
+			if(selectedpage->params[mesh.boxes[initialdrag].knob].ttype != potentiometer::ptype::booltype) {
 				event.source.enableUnboundedMouseMovement(false);
 				Desktop::setMousePosition(dragpos);
 			}
@@ -1823,96 +1565,97 @@ void FMPlusAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 }
 void FMPlusAudioProcessorEditor::mouseDoubleClick(const MouseEvent& event) {
 	if(hover <= -1) return;
-	if(boxes[hover].knob == -1) {
-		if(selectedtab < 3 || hover != 19) return;
-		if(lfohover < 0) {
-			float x = fmin(fmax((((float)event.x)/ui_scales[ui_scale_index]-boxes[hover].x)/boxes[hover].w,0),1);
-			float y = fmin(fmax(1-(((float)event.y)/ui_scales[ui_scale_index]-boxes[hover].y)/boxes[hover].h,0),1);
+	if(mesh.boxes[hover].knob == -1) { // curves
+		if(mesh.boxes[hover].curve == -1) return;
+		curve* currentcurve = &selectedpage->curves[mesh.boxes[hover].curve].cui[mesh.o];
+		if(curvehover < 0) { // double click add point
+			float x = fmin(fmax((((float)event.x)/ui_scales[ui_scale_index]-mesh.boxes[hover].x)/mesh.boxes[hover].w,0),1);
+			float y = fmin(fmax(1-(((float)event.y)/ui_scales[ui_scale_index]-mesh.boxes[hover].y)/mesh.boxes[hover].h,0),1);
 			int i = 1;
-			for(i = 1; i < curves[selectedtab-3].points.size(); ++i)
-				if(x < curves[selectedtab-3].points[i].x) break;
-			curves[selectedtab-3].points.insert(curves[selectedtab-3].points.begin()+i,point(x,y,curves[selectedtab-3].points[i-1].tension));
-			audio_processor.addpoint(i,x,y);
+			for(i = 1; i < currentcurve->points.size(); ++i)
+				if(x < currentcurve->points[i].x) break;
+			currentcurve->points.insert(currentcurve->points.begin()+i,point(x,y,currentcurve->points[i-1].tension));
+			audio_processor.addpoint(mesh.p,mesh.boxes[hover].curve,mesh.o,i,x,y);
 		} else {
-			int i = lfohover;
-			if((i%2) == 0) {
+			int i = curvehover;
+			if((i%2) == 0) { // double click delete point
 				i /= 2;
-				if(i > 0 && i < (curves[selectedtab-3].points.size()-1)) {
-					curves[selectedtab-3].points.erase(curves[selectedtab-3].points.begin()+i);
-					audio_processor.deletepoint(i);
+				if(i > 0 && i < (currentcurve->points.size()-1)) {
+					currentcurve->points.erase(currentcurve->points.begin()+i);
+					audio_processor.deletepoint(mesh.p,mesh.boxes[hover].curve,mesh.o,i);
 				}
-			} else {
+			} else { // double click reset tension
 				i = (i-1)/2;
-				if(fabs(curves[selectedtab-3].points[i].tension-.5) < .00001f) return;
-				curves[selectedtab-3].points[i].tension = .5f;
-				audio_processor.movetension(i,.5f);
+				if(fabs(currentcurve->points[i].tension-.5) < .00001f) return;
+				currentcurve->points[i].tension = .5f;
+				audio_processor.movetension(mesh.p,mesh.boxes[hover].curve,mesh.o,i,.5f);
 			}
 		}
 		hover = recalc_hover(event.x,event.y);
-		calcvis(3);
-	} else {
-		if(knobs[boxes[hover].knob].ttype == potentiometer::ptype::booltype) return;
+		calcvis(selectedpage->curves[mesh.boxes[hover].curve].linenum);
+	} else { // set to default
+		if(selectedpage->params[mesh.boxes[hover].knob].ttype == potentiometer::ptype::booltype) return;
 
-		String id;
-		if(boxes[hover].knob >= generalcount) id = "o"+(String)(selectedtab-3)+knobs[boxes[hover].knob].id;
-		else id = knobs[boxes[hover].knob].id;
+		String id = selectedpage->params[mesh.boxes[hover].knob].id;
+		if(mesh.p == 1) id = "o"+(String)mesh.o+id;
+		audio_processor.undo_manager.setCurrentTransactionName((String)"Reset " += selectedpage->params[mesh.boxes[hover].knob].name);
+		audio_processor.apvts.getParameter(id)->setValueNotifyingHost(selectedpage->params[mesh.boxes[hover].knob].defaultvaluenorm);
 
-		audio_processor.undo_manager.setCurrentTransactionName((String)"Reset " += knobs[boxes[hover].knob].name);
-		audio_processor.apvts.getParameter(id)->setValueNotifyingHost(knobs[boxes[hover].knob].defaultvalue);
-		if(boxes[hover].knob == 8 || boxes[hover].knob == 11 || boxes[hover].knob == (15+generalcount)) {
-			String id = knobs[boxes[hover].knob+1].id;
-			if(boxes[hover].knob >= generalcount) id = "o"+(String)(selectedtab-3)+id;
-			audio_processor.apvts.getParameter(id)->setValueNotifyingHost(knobs[boxes[hover].knob+1].defaultvalue);
+		if(selectedpage->params[mesh.boxes[hover].knob].bpmsync == 1) { // reset bpm sync
+			String id = selectedpage->params[mesh.boxes[hover].knob+1].id;
+			if(mesh.p == 1) id = "o"+(String)mesh.o+id;
+			audio_processor.apvts.getParameter(id)->setValueNotifyingHost(selectedpage->params[mesh.boxes[hover].knob+1].defaultvaluenorm);
 		}
+
 		audio_processor.undo_manager.beginNewTransaction();
 	}
 }
 void FMPlusAudioProcessorEditor::mouseWheelMove(const MouseEvent& event, const MouseWheelDetails& wheel) {
 	if(initialdrag != -1 || hover <= -1) return;
-	if(boxes[hover].knob == -1) return;
-	if(knobs[boxes[hover].knob].ttype == potentiometer::ptype::booltype) return;
+	if(mesh.boxes[hover].knob == -1) return;
+	if(selectedpage->params[mesh.boxes[hover].knob].ttype == potentiometer::ptype::booltype) return;
 
-	String id = knobs[boxes[hover].knob].id;
-	float value = knobs[boxes[hover].knob].value[selectedtab==0?0:(selectedtab-3)];
-	float range = knobs[boxes[hover].knob].ttype==potentiometer::ptype::floattype?-1:knobs[boxes[hover].knob].maximumvalue-knobs[boxes[hover].knob].minimumvalue;
+	String id = selectedpage->params[mesh.boxes[hover].knob].id;
+	float value = selectedpage->valuenorm[mesh.boxes[hover].knob][mesh.o];
+	float range = selectedpage->params[mesh.boxes[hover].knob].ttype==potentiometer::ptype::floattype?-1:selectedpage->params[mesh.boxes[hover].knob].maximumvalue-selectedpage->params[mesh.boxes[hover].knob].minimumvalue;
 	int bpmmax = -1;
-	if(boxes[hover].knob == 8 || boxes[hover].knob == 11 || boxes[hover].knob == (15+generalcount)) { // bpm sync
-		if(knobs[boxes[hover].knob+1].value[selectedtab==0?0:(selectedtab-3)] > 0) {
-			value = knobs[boxes[hover].knob+1].value[selectedtab==0?0:(selectedtab-3)];
-			value = 1-(1-fmax(0,value))/(1-1.f/knobs[boxes[hover].knob+1].maximumvalue);
+	if(selectedpage->params[mesh.boxes[hover].knob].bpmsync == 1) {
+		if(selectedpage->valuenorm[mesh.boxes[hover].knob+1][mesh.o] > 0) {
+			value = selectedpage->valuenorm[mesh.boxes[hover].knob+1][mesh.o];
+			value = 1-(1-fmax(0,value))/(1-1.f/selectedpage->params[mesh.boxes[hover].knob+1].maximumvalue);
 		}
-		if(event.mods.isCtrlDown() != (boxes[hover].knob == 8)) {
-			id = knobs[boxes[hover].knob+1].id;
-			bpmmax = knobs[boxes[hover].knob+1].maximumvalue;
-			range = knobs[boxes[hover].knob+1].ttype==potentiometer::ptype::floattype?-1:knobs[boxes[hover].knob+1].maximumvalue-knobs[boxes[hover].knob+1].minimumvalue;
-		} else if(knobs[boxes[hover].knob].value[selectedtab==0?0:(selectedtab-3)] > 0) {
-			String bpmid = knobs[boxes[hover].knob+1].id;
-			if(boxes[hover].knob >= generalcount) bpmid = "o"+(String)(selectedtab-3)+bpmid;
+		if(event.mods.isCtrlDown() != selectedpage->params[mesh.boxes[hover].knob].defaultbpm) {
+			id = selectedpage->params[mesh.boxes[hover].knob+1].id;
+			bpmmax = selectedpage->params[mesh.boxes[hover].knob+1].maximumvalue;
+			range = selectedpage->params[mesh.boxes[hover].knob+1].ttype==potentiometer::ptype::floattype?-1:selectedpage->params[mesh.boxes[hover].knob+1].maximumvalue-selectedpage->params[mesh.boxes[hover].knob+1].minimumvalue;
+		} else if(selectedpage->valuenorm[mesh.boxes[hover].knob][mesh.o] > 0) {
+			String bpmid = selectedpage->params[mesh.boxes[hover].knob+1].id;
+			if(mesh.p == 1) bpmid = "o"+(String)mesh.o+bpmid;
 			audio_processor.apvts.getParameter(bpmid)->setValueNotifyingHost(0);
 		}
 	}
-	if(boxes[hover].knob >= generalcount) id = "o"+(String)(selectedtab-3)+id;
-	if(boxes[hover].knob == (7+generalcount) || boxes[hover].knob == (8+generalcount)) { // freq
-		int a = fmin(floor((((float)event.x)/ui_scales[ui_scale_index]-boxes[hover].x)/7.f),3)+(boxes[hover].knob-generalcount-7)*20;
+	if(mesh.p == 1) id = "o"+(String)mesh.o+id;
+	if(mesh.p == 1 && (mesh.boxes[hover].knob == 7 || mesh.boxes[hover].knob == 8)) { // freq
+		int a = fmin(floor((((float)event.x)/ui_scales[ui_scale_index]-mesh.boxes[hover].x)/7.f),3)+(mesh.boxes[hover].knob-7)*20;
 		if(scrolldigit != a) {
 			freqselect(a);
 			scrolldigit = a;
 		}
 
-		       if(boxes[hover].knob == (7+generalcount)) {
-			value = knobs[7+generalcount].inflate  (value);
+		if(mesh.boxes[hover].knob == 7) {
+			value = selectedpage->params[7].inflate  (value);
 			if(event.mods.isShiftDown() || event.mods.isAltDown())
 				value +=  wheel.deltaY*2.f        *freqstep;
 			else if((value+(wheel.deltaY>0?1.f:-1.f)*freqstep) >=     0 && (value+(wheel.deltaY>0?1.f:-1.f)*freqstep) <=   24)
 				value += (wheel.deltaY>0?1.f:-1.f)*freqstep;
-			value = knobs[7+generalcount].normalize(value);
-		} else if(boxes[hover].knob == (8+generalcount)) {
-			value = freqaddinflate                 (value);
+			value = selectedpage->params[7].normalize(value);
+		} else {
+			value = freqaddinflate                   (value);
 			if(event.mods.isShiftDown() || event.mods.isAltDown())
 				value +=  wheel.deltaY*2.f        *freqstep;
 			else if((value+(wheel.deltaY>0?1.f:-1.f)*freqstep) >= -9999 && (value+(wheel.deltaY>0?1.f:-1.f)*freqstep) <= 9999)
 				value += (wheel.deltaY>0?1.f:-1.f)*freqstep;
-			value = freqaddnormalize               (value);
+			value = freqaddnormalize                 (value);
 		}
 
 	} else { // regular
@@ -1946,15 +1689,15 @@ bool FMPlusAudioProcessorEditor::keyPressed(const KeyPress& key) {
 	// minus or plus
 	if((code == 45 || code == 43) && freqdigit > 10) {
 		// change sign
-		if((code==45) == (knobs[generalcount+8].value[selectedtab-3]>=.5f))
-			audio_processor.apvts.getParameter("o"+(String)(selectedtab-3)+knobs[generalcount+8].id)->setValueNotifyingHost(1-knobs[generalcount+8].value[selectedtab-3]);
+		if((code==45) == (selectedpage->valuenorm[8][mesh.o]>=.5f))
+			audio_processor.apvts.getParameter("o"+(String)mesh.o+selectedpage->params[8].id)->setValueNotifyingHost(1-selectedpage->valuenorm[8][mesh.o]);
 		return true;
 	}
 
 	// slash or backslash or asterisk
 	if((code == 47 || code == 92 || code == 42) && freqdigit <= 10) {
 		// change mult mode
-		audio_processor.apvts.getParameter("o"+(String)(selectedtab-3)+knobs[generalcount+6].id)->setValueNotifyingHost(code==42?1:0);
+		audio_processor.apvts.getParameter("o"+(String)mesh.o+selectedpage->params[6].id)->setValueNotifyingHost(code==42?1:0);
 		return true;
 	}
 
@@ -1972,9 +1715,9 @@ bool FMPlusAudioProcessorEditor::keyPressed(const KeyPress& key) {
 		bool up = code == 268435538 || code == 107 || code == 119;
 		// increment digit
 		if(freqdigit > 10)
-			audio_processor.apvts.getParameter("o"+(String)(selectedtab-3)+knobs[generalcount+8].id)->setValueNotifyingHost(               freqaddnormalize(               freqaddinflate(knobs[generalcount+8].value[selectedtab-3])+(up?1:-1)*freqstep));
+			audio_processor.apvts.getParameter("o"+(String)mesh.o+selectedpage->params[8].id)->setValueNotifyingHost(                 freqaddnormalize(                 freqaddinflate(selectedpage->valuenorm[8][mesh.o])+(up?1:-1)*freqstep));
 		else
-			audio_processor.apvts.getParameter("o"+(String)(selectedtab-3)+knobs[generalcount+7].id)->setValueNotifyingHost(knobs[generalcount+7].normalize(knobs[generalcount+7].inflate(knobs[generalcount+7].value[selectedtab-3])+(up?1:-1)*freqstep));
+			audio_processor.apvts.getParameter("o"+(String)mesh.o+selectedpage->params[7].id)->setValueNotifyingHost(selectedpage->params[7].normalize(selectedpage->params[7].inflate(selectedpage->valuenorm[7][mesh.o])+(up?1:-1)*freqstep));
 		return true;
 	}
 
@@ -1984,7 +1727,7 @@ bool FMPlusAudioProcessorEditor::keyPressed(const KeyPress& key) {
 	int dotpos = 4;
 	int nums[4];
 	for(int n = 0; n < 4; ++n) {
-		nums[n] = textmesh[3+(1+n*6+boxes[knobs[generalcount+(freqdigit>10?8:7)].box].textmesh)*4]-51;
+		nums[n] = mesh.text[3+(1+n*6+mesh.boxes[selectedpage->knobbox[freqdigit>10?8:7]].textmesh)*4]-51;
 		if(nums[n] < 0) dotpos = n;
 	}
 
@@ -2050,10 +1793,10 @@ bool FMPlusAudioProcessorEditor::keyPressed(const KeyPress& key) {
 		v += nums[n]*pow(10,dotpos-n-(dotpos>n?1:0));
 	}
 	if(freqdigit <= 10) {
-		audio_processor.apvts.getParameter("o"+(String)(selectedtab-3)+knobs[generalcount+7].id)->setValueNotifyingHost(knobs[7+generalcount].normalize(v));
+		audio_processor.apvts.getParameter("o"+(String)mesh.o+selectedpage->params[7].id)->setValueNotifyingHost(selectedpage->params[7].normalize(v));
 	} else {
-		if(knobs[generalcount+8].value[selectedtab-3] < .5f) v *= -1;
-		audio_processor.apvts.getParameter("o"+(String)(selectedtab-3)+knobs[generalcount+8].id)->setValueNotifyingHost(               freqaddnormalize(v));
+		if(selectedpage->valuenorm[8][mesh.o] < .5f) v *= -1;
+		audio_processor.apvts.getParameter("o"+(String)mesh.o+selectedpage->params[8].id)->setValueNotifyingHost(                 freqaddnormalize(v));
 	}
 
 	if(current == 3)
@@ -2068,65 +1811,73 @@ int FMPlusAudioProcessorEditor::recalc_hover(float x, float y) {
 	x /= ui_scales[ui_scale_index];
 	y /= ui_scales[ui_scale_index];
 
-	lfohover = -1;
+	curvehover = -1;
 
 	// -26 logo
 	if(x > 224.5f && x < 298.5f && y > 1.5f && y < 24.5f)
 		return -26;
 
-	// -25 - -24 +-
-	float xx = x-163.5f;
-	float yy = y-36.5f;
-	if((xx*xx+yy*yy) <= 30.25f && displayaddremove[0]) return -25;
-	yy -= 11;
-	if((xx*xx+yy*yy) <= 30.25f && displayaddremove[1]) return -24;
-
 	// -23 - -13 operators
-	for(int o = 0; o < (MC+1); ++o) {
-		if(o != 0 && knobs[generalcount].value[o==0?0:(o-1)] < .5) continue;
-		if(x >= (ops[o].pos[0]+157) && x < (ops[o].pos[0]+187) && y >= (ops[o].pos[1]+30) && y < (ops[o].pos[1]+42))
-			return o==0?-23:(o-21);
+	if(mesh.tab == 2) {
+		for(int o = 0; o < (FXC+1); ++o) {
+			if(x >= (ops[1][o].pos[0]+157) && x < (ops[1][o].pos[0]+166+audio_processor.pages[o+2]->tabname.length()*7) && y >= (ops[1][o].pos[1]+30) && y < (ops[1][o].pos[1]+42))
+				return o==0?-23:(o-21);
+		}
+	} else {
+		for(int o = 0; o < (MC+1); ++o) {
+			if(o != 0 && audio_processor.page_op.valuenorm[0][o==0?0:(o-1)] < .5) continue;
+			if(x >= (ops[0][o].pos[0]+157) && x < (ops[0][o].pos[0]+187                                               ) && y >= (ops[0][o].pos[1]+30) && y < (ops[0][o].pos[1]+42))
+				return o==0?-23:(o-21);
+		}
+
+	// -25 - -24 +-
+		float xx = x-163.5f;
+		float yy = y-36.5f;
+		if((xx*xx+yy*yy) <= 30.25f && displayaddremove[0]) return -25;
+		yy -= 11;
+		if((xx*xx+yy*yy) <= 30.25f && displayaddremove[1]) return -24;
 	}
 
 	// -12 - -2 tabs
 	if(x <= 29) {
 		int i = floor(y/11.f);
-		if(i >= 11) return -1;
+		if(i >= TABC) return -1;
 		return i-12;
 	}
 
 	// 0 - 23 boxes
-	for(int i = 0; i < boxnum; ++i) {
-		if(i == 19 && selectedtab >= 3 && x >= (boxes[i].x-4) && x < (boxes[i].x+boxes[i].w+4) && y >= (boxes[i].y-4) && y < (boxes[i].y+boxes[i].h+4)) {
-			x -= boxes[i].x;
-			y -= boxes[i].y;
-			for(int p = 0; p < curves[selectedtab-3].points.size(); ++p) {
-				float xx = x-curves[selectedtab-3].points[p].x*boxes[i].w;
-				float yy = y-(1-curves[selectedtab-3].points[p].y)*boxes[i].h;
+	for(int i = 0; i < mesh.boxnum; ++i) {
+		if(mesh.boxes[i].curve >= 0 && x >= (mesh.boxes[i].x-4) && x < (mesh.boxes[i].x+mesh.boxes[i].w+4) && y >= (mesh.boxes[i].y-4) && y < (mesh.boxes[i].y+mesh.boxes[i].h+4)) {
+			x -= mesh.boxes[i].x;
+			y -= mesh.boxes[i].y;
+			curve* currentcurve = &selectedpage->curves[mesh.boxes[i].curve].cui[mesh.o];
+			for(int p = 0; p < currentcurve->points.size(); ++p) {
+				float xx = x-currentcurve->points[p].x*mesh.boxes[i].w;
+				float yy = y-(1-currentcurve->points[p].y)*mesh.boxes[i].h;
 				// dot
 				if((xx*xx+yy*yy) <= 8) {
-					lfohover = p*2;
-					return 19;
+					curvehover = p*2;
+					return i;
 				}
 
-				if(p < (curves[selectedtab-3].points.size()-1)) {
-					float interp = curve::calctension(.5,curves[selectedtab-3].points[p].tension);
-					xx = x-(curves[selectedtab-3].points[p].x+curves[selectedtab-3].points[p+1].x)*.5f*boxes[i].w;
-					yy = y-(1-(curves[selectedtab-3].points[p].y*(1-interp)+curves[selectedtab-3].points[p+1].y*interp))*boxes[i].h;
+				if(p < (currentcurve->points.size()-1)) {
+					float interp = curve::calctension(.5,currentcurve->points[p].tension);
+					xx = x-(currentcurve->points[p].x+currentcurve->points[p+1].x)*.5f*mesh.boxes[i].w;
+					yy = y-(1-(currentcurve->points[p].y*(1-interp)+currentcurve->points[p+1].y*interp))*mesh.boxes[i].h;
 					// tension
 					if((xx*xx+yy*yy) <= 8) {
-						lfohover = p*2+1;
-						return 19;
+						curvehover = p*2+1;
+						return i;
 					}
 				}
 			}
 
 			// curve bg
-			if(x >= 0 && y >= 0 && x <= boxes[i].w && y <= boxes[i].h) {
-				lfohover = -1;
-				return 19;
+			if(x >= 0 && y >= 0 && x <= mesh.boxes[i].w && y <= mesh.boxes[i].h) {
+				curvehover = -1;
+				return i;
 			}
-		} else if(boxes[i].type != -1 && x >= boxes[i].x && x < (boxes[i].x+boxes[i].w) && y >= boxes[i].y && y < (boxes[i].y+boxes[i].h)) {
+		} else if(mesh.boxes[i].type != -1 && x >= mesh.boxes[i].x && x < (mesh.boxes[i].x+mesh.boxes[i].w) && y >= mesh.boxes[i].y && y < (mesh.boxes[i].y+mesh.boxes[i].h)) {
 			return i;
 		}
 	}
@@ -2137,74 +1888,97 @@ int FMPlusAudioProcessorEditor::recalc_hover(float x, float y) {
 }
 void FMPlusAudioProcessorEditor::updatehighlight(bool update_adsr) {
 	if(highlight == hover && !update_adsr) return;
-	bool adsrlen = update_adsr;
-	if(highlight >= 0 && highlight < boxnum) {
-		if(boxes[highlight].type != -1 && boxes[highlight].type != 3)
-			for(int t = 0; t < (boxes[highlight].type==4?12:6); ++t)
-				squaremesh[(boxes[highlight].mesh+t)*4+2] = 3;
+	// prev highlight
+	bool validhighlight = false;
+	if(highlight >= 0 && highlight < mesh.boxnum) {
+		validhighlight = mesh.boxes[highlight].knob >= 0;
 
-		if((boxes[highlight].knob == (7+generalcount) && freqdigit >= -10 && freqdigit < 10) || (boxes[highlight].knob == (8+generalcount) && freqdigit >= 10))
+		if(mesh.boxes[highlight].type != -1 && mesh.boxes[highlight].type != 3)
+			for(int t = 0; t < (mesh.boxes[highlight].type==4?12:6); ++t)
+				mesh.square[(mesh.boxes[highlight].mesh+t)*4+2] = 3;
+
+		if(update_adsr && mesh.boxes[highlight].knob >= 0 && selectedpage->params[mesh.boxes[highlight].knob].adsr >= 0)
+			updateadsr(selectedpage->params[mesh.boxes[highlight].knob].adsr);
+
+		if(mesh.p == 1 && ((mesh.boxes[highlight].knob == 7 && freqdigit >= -10 && freqdigit < 10) || (mesh.boxes[highlight].knob == 8 && freqdigit >= 10)))
 			for(int t = 0; t < 6; ++t)
-				textmesh[(boxes[highlight].textmesh+6*(int)fmin(3,fmax(0,freqdigit>=10?(freqdigit-20):freqdigit))+t+1)*4+2] = 3;
+				mesh.text[(mesh.boxes[highlight].textmesh+6*(int)fmin(3,fmax(0,freqdigit>=10?(freqdigit-20):freqdigit))+t+1)*4+2] = 3;
 
-		if(boxes[highlight].knob >= (9+generalcount) && boxes[highlight].knob <= (12+generalcount))
-			adsrlen = true;
-	} else if((highlight == -25 || highlight == -24) && displayaddremove[highlight+25]) {
+	} else if(mesh.tab != 2 && (highlight == -25 || highlight == -24) && displayaddremove[highlight+25]) {
 		for(int t = 0; t < 6; ++t)
-			textmesh[((highlight+25)*6+t)*4+2] = 1;
+			mesh.text[2+((highlight+25)*6+t)*4] = 1;
 	}
-	if(hover     >= 0 && hover     < boxnum) {
-		if(boxes[hover    ].type != -1 && boxes[hover    ].type != 3)
-			for(int t = 0; t < (boxes[hover    ].type==4?12:6); ++t)
-				squaremesh[(boxes[hover    ].mesh+t)*4+2] = 2;
+	// current highligt
+	if(hover     >= 0 && hover     < mesh.boxnum) {
+		if(mesh.boxes[hover    ].type != -1 && mesh.boxes[hover    ].type != 3)
+			for(int t = 0; t < (mesh.boxes[hover    ].type==4?12:6); ++t)
+				mesh.square[(mesh.boxes[hover    ].mesh+t)*4+2] = 2;
 
-		if((boxes[hover    ].knob == (7+generalcount) && freqdigit >= -10 && freqdigit < 10) || (boxes[hover    ].knob == (8+generalcount) && freqdigit >= 10))
+		if(update_adsr && mesh.boxes[hover    ].knob >= 0 && selectedpage->params[mesh.boxes[hover    ].knob].adsr >= 0)
+			if(!validhighlight || selectedpage->params[mesh.boxes[highlight].knob].adsr != selectedpage->params[mesh.boxes[hover    ].knob].adsr)
+				updateadsr(selectedpage->params[mesh.boxes[hover    ].knob].adsr);
+
+		if(mesh.p == 1 && ((mesh.boxes[hover    ].knob == 7 && freqdigit >= -10 && freqdigit < 10) || (mesh.boxes[hover    ].knob == 8 && freqdigit >= 10)))
 			for(int t = 0; t < 6; ++t)
-				textmesh[(boxes[hover    ].textmesh+6*(int)fmin(3,fmax(0,freqdigit>=10?(freqdigit-20):freqdigit))+t+1)*4+2] = 2;
-
-		if(boxes[hover    ].knob >= (9+generalcount) && boxes[hover    ].knob <= (12+generalcount)) {
-			adsrlen = false;
-			String s = get_string(boxes[hover].knob-generalcount,knobs[boxes[hover].knob].value[selectedtab-3],selectedtab);
-			replacetext(boxes[hover].textmesh,s.paddedLeft(' ',5));
-		}
-	} else if((hover     == -25 || hover     == -24) && displayaddremove[hover    +25]) {
+				mesh.text[(mesh.boxes[hover    ].textmesh+6*(int)fmin(3,fmax(0,freqdigit>=10?(freqdigit-20):freqdigit))+t+1)*4+2] = 2;
+	} else if(mesh.tab != 2 && (hover     == -25 || hover     == -24) && displayaddremove[hover    +25]) {
 		for(int t = 0; t < 6; ++t)
-			textmesh[((hover    +25)*6+t)*4+2] = 2;
-	}
-	if(adsrlen) {
-		String s = format_time(
-			powf(knobs[ 9+generalcount].value[selectedtab-3],2)*(MAXA-MINA)+MINA+
-			powf(knobs[10+generalcount].value[selectedtab-3],2)*(MAXD-MIND)+MIND+
-			powf(knobs[12+generalcount].value[selectedtab-3],2)*(MAXR-MINR)+MINR);
-		replacetext(boxes[knobs[9+generalcount].box].textmesh,s.paddedLeft(' ',5));
+			mesh.text[2+((hover    +25)*6+t)*4] = 2;
 	}
 	highlight = hover;
 }
+void FMPlusAudioProcessorEditor::updateadsr(int adsr) {
+	int currentadsr = -1;
+	int hoverknob = -1;
+	int hoveradsr = -1;
+	if(hover >= 0 && hover < mesh.boxnum && mesh.boxes[hover].knob >= 0 && selectedpage->params[mesh.boxes[hover].knob].adsr >= 0 && (adsr == -1 || adsr == selectedpage->params[mesh.boxes[hover].knob].adsr)) {
+		hoverknob = mesh.boxes[hover].knob;
+		hoveradsr = selectedpage->params[hoverknob].adsr;
+	}
+	for(int i = 0; i < selectedpage->params.size(); ++i) {
+		if(hoverknob == i) {
+			String s = get_string(mesh.boxes[hover].knob,selectedpage->valuenorm[mesh.boxes[hover].knob][mesh.o],mesh.p);
+			mesh.replacetext(mesh.boxes[hover].textmesh,s.paddedLeft(' ',5));
+		}
+
+		if(selectedpage->params[i].adsr == currentadsr) continue;
+		currentadsr = selectedpage->params[i].adsr;
+		if(currentadsr == hoveradsr || currentadsr < 0 || (adsr != currentadsr && adsr != -1)) continue;
+
+		String s = format_time( // does not support multistage
+			powf(selectedpage->valuenorm[i  ][mesh.o],2)*(MAXA-MINA)+MINA+
+			powf(selectedpage->valuenorm[i+1][mesh.o],2)*(MAXD-MIND)+MIND+
+			powf(selectedpage->valuenorm[i+3][mesh.o],2)*(MAXR-MINR)+MINR);
+		mesh.replacetext(mesh.boxes[selectedpage->knobbox[i]].textmesh,s.paddedLeft(' ',5));
+
+		if(adsr >= 0) return;
+	}
+}
 void FMPlusAudioProcessorEditor::freqselect(int digit, bool calcfreqstep) {
-	int square = boxes[knobs[generalcount+8].box].mesh;
-	int nbox = knobs[generalcount+(    digit>10?8:7)].box;
-	int pbox = knobs[generalcount+(freqdigit>10?8:7)].box;
+	int square = mesh.boxes[selectedpage->knobbox[8]].mesh;
+	int nbox = selectedpage->knobbox[    digit>10?8:7];
+	int pbox = selectedpage->knobbox[freqdigit>10?8:7];
 	if((digit<-10) != (freqdigit<-10)) {
 		if(digit >= -10)
 			grabKeyboardFocus();
 		else
 			giveAwayKeyboardFocus();
 		for(int t = 0; t < 6; ++t)
-				squaremesh[(square             +6              +t  )*4+2] = digit<-10?-10:0;
+				mesh.square[(square                   +6              +t  )*4+2] = digit<-10?-10:0;
 	}
 	if(freqdigit >= -10) {
 		for(int t = 0; t < 6; ++t)
-				textmesh  [(boxes[pbox].textmesh+6*(int)fmin(3,fmax(0,freqdigit>=10?(freqdigit-20):freqdigit))+t+1)*4+2] = 0;
+				mesh.text  [(mesh.boxes[pbox].textmesh+6*(int)fmin(3,fmax(0,freqdigit>=10?(freqdigit-20):freqdigit))+t+1)*4+2] = 0;
 	}
 	if(digit >= -10) {
-		int clampeddigit =                         (int)fmin(3,fmax(0,    digit>=10?(    digit-20):    digit));
+		int clampeddigit =                               (int)fmin(3,fmax(0,    digit>=10?(    digit-20):    digit));
 		for(int t = 0; t < 6; ++t)
-				textmesh  [(boxes[nbox].textmesh+6*clampeddigit                                               +t+1)*4+2] = hover==nbox?2:3;
+				mesh.text  [(mesh.boxes[nbox].textmesh+6*clampeddigit                                               +t+1)*4+2] = hover==nbox?2:3;
 		for(int t = 0; t < 6; ++t) {
 			if(fmod(fmax(1,fmin(4,t)),2) == 1)
-				squaremesh[(square              +6              +t  )*4  ] = (boxes[nbox].x+clampeddigit*7.f  )/width;
+				mesh.square[(square                   +6              +t  )*4  ] = (mesh.boxes[nbox].x+clampeddigit*7.f  )/width;
 			else
-				squaremesh[(square              +6              +t  )*4  ] = (boxes[nbox].x+clampeddigit*7.f+8)/width;
+				mesh.square[(square                   +6              +t  )*4  ] = (mesh.boxes[nbox].x+clampeddigit*7.f+8)/width;
 		}
 	}
 	freqdigit = digit;
@@ -2212,7 +1986,7 @@ void FMPlusAudioProcessorEditor::freqselect(int digit, bool calcfreqstep) {
 	if(freqdigit >= -10 && calcfreqstep) {
 		int dotpos = 4;
 		for(int n = 1; n < 4; ++n) {
-			int c = textmesh[3+(1+n*6+boxes[nbox].textmesh)*4]-51;
+			int c = mesh.text[3+(1+n*6+mesh.boxes[nbox].textmesh)*4]-51;
 			if(c < 0) {
 				dotpos = n;
 				break;

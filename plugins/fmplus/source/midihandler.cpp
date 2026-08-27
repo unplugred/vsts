@@ -48,31 +48,31 @@ void midihandler::newbuffer() {
 }
 
 void midihandler::reset(int samplesperblock, int sr) {
-	voicessize = params[0];
+	voicessize = page_gen->state.value[0][0];
 	samplerate = sr;
 	for(int v = 0; v < voicessize; ++v)
 		voices[v].reset(samplesperblock);
-	glide.reset(params[2]*params[2]*MAXGLIDE,samplerate,voicessize*3,-666);
+	glide.reset(page_gen->state.value[2][0]*page_gen->state.value[2][0]*MAXGLIDE,samplerate,voicessize*3,-666);
 	pitchdamp     .reset( .1f,samplerate, 1,0);
 	aftertouchdamp.reset(.01f,samplerate,VC,0);
 	allsoundoff();
 }
 void midihandler::setvoices(int samplesperblock) {
-	glide.reset(params[2]*params[2]*MAXGLIDE,samplerate,params[0]*3,-666);
-	if(voicessize < params[0]) { // increase voice count
-		for(int v = voicessize; v < params[0]; ++v) {
+	glide.reset(page_gen->state.value[2][0]*page_gen->state.value[2][0]*MAXGLIDE,samplerate,page_gen->state.value[0][0]*3,-666);
+	if(voicessize < page_gen->state.value[0][0]) { // increase voice count
+		for(int v = voicessize; v < page_gen->state.value[0][0]; ++v) {
 			voices[v].reset(samplesperblock);
 
 			if(inactivevoicessize < 0) { // restore stolen notes
 				int noteindex = inactivevoicessize*-1-1;
 				notes[activenotes[noteindex]].unsteal(v);
-				if(params[5] < .5f) voices[v].noteon(1);
+				if(page_gen->state.value[5][0] < .5f) voices[v].noteon(1);
 				voices[v].noteid = activenotes[noteindex];
 				voices[v].aftertouchsmooth = aftertouchdamp.setto(notes[voices[v].noteid].aftertouch,v);
-				voices[v].freq[0] = notes[(int)fmax(activenotes[noteindex]-params[1],  0)].pitch;
-				voices[v].freq[1] = notes[          activenotes[noteindex]               ].pitch;
-				voices[v].freq[2] = notes[(int)fmin(activenotes[noteindex]+params[1],127)].pitch;
-				if(params[2] == 0) for(int i = 0; i < 3; ++i)
+				voices[v].freq[0] = notes[(int)fmax(activenotes[noteindex]-page_gen->state.value[1][0],  0)].pitch;
+				voices[v].freq[1] = notes[          activenotes[noteindex]                                 ].pitch;
+				voices[v].freq[2] = notes[(int)fmin(activenotes[noteindex]+page_gen->state.value[1][0],127)].pitch;
+				if(page_gen->state.value[2][0] == 0) for(int i = 0; i < 3; ++i)
 					voices[v].freqsmooth[i] = voices[v].freq[i];
 				activevoices[activevoicessize++] = v;
 			} else {
@@ -84,7 +84,7 @@ void midihandler::setvoices(int samplesperblock) {
 	} else { // decrease voice count
 		int offset = 0;
 		for(int n = 0; n < activenotessize; ++n) {
-			while((n+offset) < activenotessize && notes[activenotes[n+offset]].voice >= params[0]) {
+			while((n+offset) < activenotessize && notes[activenotes[n+offset]].voice >= page_gen->state.value[0][0]) {
 				++offset;
 			}
 			if((n+offset) >= activenotessize) break;
@@ -93,13 +93,13 @@ void midihandler::setvoices(int samplesperblock) {
 		activenotessize -= offset;
 
 		for(int n = 0; n < 128; ++n)
-			if(notes[n].voice >= params[0])
+			if(notes[n].voice >= page_gen->state.value[0][0])
 				notes[n].off();
 
 		if(inactivevoicessize > 0) {
 			offset = 0;
 			for(int v = 0; v < inactivevoicessize; ++v) {
-				while((v+offset) < inactivevoicessize && inactivevoices[v+offset] >= params[0]) {
+				while((v+offset) < inactivevoicessize && inactivevoices[v+offset] >= page_gen->state.value[0][0]) {
 					voices[inactivevoices[v+offset]].reset(0);
 					++offset;
 				}
@@ -111,7 +111,7 @@ void midihandler::setvoices(int samplesperblock) {
 
 		offset = 0;
 		for(int v = 0; v < activevoicessize; ++v) {
-			while((v+offset) < activevoicessize && activevoices[v+offset] >= params[0]) {
+			while((v+offset) < activevoicessize && activevoices[v+offset] >= page_gen->state.value[0][0]) {
 				voices[activevoices[v+offset]].reset(0);
 				++offset;
 			}
@@ -120,7 +120,7 @@ void midihandler::setvoices(int samplesperblock) {
 		}
 		activevoicessize -= offset;
 	}
-	voicessize = params[0];
+	voicessize = page_gen->state.value[0][0];
 
 	arpupdate();
 }
@@ -162,7 +162,7 @@ void midihandler::noteon(int noteid, float notevel) {
 				found = true;
 				activenotes[activenotessize] = noteid;
 				notes[noteid].on(notes[noteid].voice,notevel);
-				if(params[5] < .5f && params[3] < .5f) voices[notes[noteid].voice].noteon(sample);
+				if(page_gen->state.value[5][0] < .5f && page_gen->state.value[3][0] < .5f) voices[notes[noteid].voice].noteon(sample);
 			}
 		}
 		if(found) activenotes[n] = activenotes[n+1];
@@ -179,10 +179,10 @@ void midihandler::noteon(int noteid, float notevel) {
 		for(int v = 0; v < (activevoicessize-1); ++v)
 			activevoices[v] = activevoices[v+1];
 		activevoices[activevoicessize-1] = voicenum;
-		if(params[5] < .5f && params[3] < .5f) voices[voicenum].noteon(sample);
+		if(page_gen->state.value[5][0] < .5f && page_gen->state.value[3][0] < .5f) voices[voicenum].noteon(sample);
 	} else { // dont steal
 		int voiceindex = 0;
-		if(params[3] > .5) {
+		if(page_gen->state.value[3][0] > .5) {
 			voiceindex = inactivevoicessize-1;
 			int dist = 1000;
 			for(int v = fmax(0,inactivevoicessize-(lastchordsize-activevoicessize)); v < inactivevoicessize; ++v) {
@@ -205,19 +205,19 @@ void midihandler::noteon(int noteid, float notevel) {
 		for(int v = voiceindex; v < (inactivevoicessize-1); ++v)
 			inactivevoices[v] = inactivevoices[v+1];
 		activevoices[activevoicessize++] = voicenum;
-		if(params[5] < .5f) voices[voicenum].noteon(sample);
+		if(page_gen->state.value[5][0] < .5f) voices[voicenum].noteon(sample);
 	}
 	--inactivevoicessize;
 	currentchordsize = activevoicessize;
 
 	voices[voicenum].noteid = noteid;
 	voices[voicenum].aftertouchsmooth = aftertouchdamp.setto(notes[voices[voicenum].noteid].aftertouch,voicenum);
-	voices[voicenum].freq[0] = notes[(int)fmax(noteid-params[1],  0)].pitch;
-	voices[voicenum].freq[1] = notes[          noteid               ].pitch;
-	voices[voicenum].freq[2] = notes[(int)fmin(noteid+params[1],127)].pitch;
-	if(params[2] == 0) for(int i = 0; i < 3; ++i)
+	voices[voicenum].freq[0] = notes[(int)fmax(noteid-page_gen->state.value[1][0],  0)].pitch;
+	voices[voicenum].freq[1] = notes[          noteid                                 ].pitch;
+	voices[voicenum].freq[2] = notes[(int)fmin(noteid+page_gen->state.value[1][0],127)].pitch;
+	if(page_gen->state.value[2][0] == 0) for(int i = 0; i < 3; ++i)
 		voices[voicenum].freqsmooth[i] = voices[voicenum].freq[i];
-	if(params[3] < .5 && inactivevoicessize >= 0)
+	if(page_gen->state.value[3][0] < .5 && inactivevoicessize >= 0)
 		for(int i = 0; i < 3; ++i)
 			glide.setto(voices[voicenum].freq[i],voicenum*3+i);
 	activenotes[activenotessize++] = noteid;
@@ -240,13 +240,13 @@ void midihandler::noteoff(int noteid, bool sustained) {
 					int noteindex = inactivevoicessize*-1-1;
 					int voiceindex = notes[activenotes[n+offset]].voice;
 					notes[activenotes[noteindex]].unsteal(voiceindex);
-					if(params[5] < .5f && params[3] < .5f) voices[voiceindex].noteon(sample);
+					if(page_gen->state.value[5][0] < .5f && page_gen->state.value[3][0] < .5f) voices[voiceindex].noteon(sample);
 					voices[voiceindex].noteid = activenotes[noteindex];
 					voices[voiceindex].aftertouchsmooth = aftertouchdamp.setto(notes[voices[voiceindex].noteid].aftertouch,voiceindex);
-					voices[voiceindex].freq[0] = notes[(int)fmax(activenotes[noteindex]-params[1],  0)].pitch;
-					voices[voiceindex].freq[1] = notes[          activenotes[noteindex]               ].pitch;
-					voices[voiceindex].freq[2] = notes[(int)fmin(activenotes[noteindex]+params[1],127)].pitch;
-					if(params[2] == 0) for(int i = 0; i < 3; ++i)
+					voices[voiceindex].freq[0] = notes[(int)fmax(activenotes[noteindex]-page_gen->state.value[1][0],  0)].pitch;
+					voices[voiceindex].freq[1] = notes[          activenotes[noteindex]                                 ].pitch;
+					voices[voiceindex].freq[2] = notes[(int)fmin(activenotes[noteindex]+page_gen->state.value[1][0],127)].pitch;
+					if(page_gen->state.value[2][0] == 0) for(int i = 0; i < 3; ++i)
 						voices[voiceindex].freqsmooth[i] = voices[voiceindex].freq[i];
 
 					bool found = false;
@@ -262,7 +262,7 @@ void midihandler::noteoff(int noteid, bool sustained) {
 					activevoices[0] = voiceindex;
 				} else { //note off
 					int voiceindex = notes[activenotes[n+offset]].voice;
-					if(params[5] < .5f) voices[voiceindex].noteoff(sample,samplerate);
+					if(page_gen->state.value[5][0] < .5f) voices[voiceindex].noteoff(sample,samplerate);
 					bool found = false;
 					for(int v = 0; v < (activevoicessize-1); ++v) {
 						if(!found) {
@@ -326,7 +326,7 @@ void midihandler::modwheel(int noteid, float val) {
 }
 
 void midihandler::arpset() {
-	if(params[5] > .5f) {
+	if(page_gen->state.value[5][0] > .5f) {
 		arplastnote = -1;
 		for(int v = 0; v < activevoicessize; ++v)
 			voices[activevoices[v]].noteoff(sample,samplerate);
@@ -337,7 +337,7 @@ void midihandler::arpset() {
 	}
 }
 void midihandler::arpupdate() {
-	if(params[5] < .5f) return;
+	if(page_gen->state.value[5][0] < .5f) return;
 	int size = activevoicessize;
 	for(int v = size; v < 48; ++v) arporder[v] = -1;
 	if(size == 0) {
@@ -347,8 +347,8 @@ void midihandler::arpupdate() {
 
 	for(int v = 0; v < size; ++v)
 		arporder[v] = activevoices[v];
-	if(activevoicessize > 1 && params[6] != 0) {
-		if(params[6] == 5) { // shuffle
+	if(activevoicessize > 1 && page_gen->state.value[6][0] != 0) {
+		if(page_gen->state.value[6][0] == 5) { // shuffle
 			for(int i = size-1; i > 0; --i) {
 				int pick = random.nextInt(i+1);
 				int temp = arporder[i];
@@ -356,7 +356,7 @@ void midihandler::arpupdate() {
 				arporder[pick] = temp;
 			}
 		} else { //sort
-			bool up = params[6]==1||params[6]==3;
+			bool up = page_gen->state.value[6][0]==1||page_gen->state.value[6][0]==3;
 			for(int step = 0; step < (size-1); ++step) {
 				for(int i = 0; i < (size-step-1); ++i) {
 					if((voices[arporder[i]].noteid>voices[arporder[i+1]].noteid) == up) {
@@ -366,7 +366,7 @@ void midihandler::arpupdate() {
 					}
 				}
 			}
-			if(params[6] >= 3) { // mirror
+			if(page_gen->state.value[6][0] >= 3) { // mirror
 				size = (size-1)*2;
 				for(int v = activevoicessize; v < size; ++v)
 					arporder[v] = arporder[size-v];
@@ -378,24 +378,24 @@ void midihandler::arpupdate() {
 		arpon = false;
 		arpprogress = 1;
 		arpindex = -1;
-		arpdirection = params[6]==1||params[6]==3;
+		arpdirection = page_gen->state.value[6][0]==1||page_gen->state.value[6][0]==3;
 	}
 	arpdirty = true;
 }
 void midihandler::pitchesupdate() {
 	for(int v = 0; v < voicessize; ++v) {
 		if(voices[v].noteid == -1) continue;
-		voices[v].freq[0] = notes[(int)fmax(voices[v].noteid-params[1],  0)].pitch;
-		voices[v].freq[1] = notes[          voices[v].noteid               ].pitch;
-		voices[v].freq[2] = notes[(int)fmin(voices[v].noteid+params[1],127)].pitch;
+		voices[v].freq[0] = notes[(int)fmax(voices[v].noteid-page_gen->state.value[1][0],  0)].pitch;
+		voices[v].freq[1] = notes[          voices[v].noteid                                 ].pitch;
+		voices[v].freq[2] = notes[(int)fmin(voices[v].noteid+page_gen->state.value[1][0],127)].pitch;
 	}
 }
 
 void midihandler::tick() {
 	// ---- ARP ----
-	if(params[5] > .5f && (arporder[0] != -1 || arplastnote != -1)) {
+	if(page_gen->state.value[5][0] > .5f && (arporder[0] != -1 || arplastnote != -1)) {
 		arpprogress += arpspeed;
-		if(arpon && arpprogress >= params[7]) { // note off
+		if(arpon && arpprogress >= page_gen->state.value[7][0]) { // note off
 			if(arpdirty) {
 				for(int v = 0; v < inactivevoicessize; ++v)
 					if(voices[inactivevoices[v]].ison)
@@ -417,7 +417,7 @@ void midihandler::tick() {
 				arpprogress = fmod(arpprogress,1.f);
 				if(arpdirty && arplastnote != -1) {
 					int dist = 1000;
-					bool skipfirsthalf = arporder[2]!=-1&&((params[6]==3&&!arpdirection)||(params[6]==4&&arpdirection));
+					bool skipfirsthalf = arporder[2]!=-1&&((page_gen->state.value[6][0]==3&&!arpdirection)||(page_gen->state.value[6][0]==4&&arpdirection));
 					for(int v = 0; v < 48; ++v) {
 						if(arporder[v] == -1) break;
 						if(skipfirsthalf && v != 0) {
@@ -434,7 +434,7 @@ void midihandler::tick() {
 				}
 				if(arporder[++arpindex] == -1) arpindex = 0; // advance
 				voices[arporder[arpindex]].noteon(sample);
-				if(arplastnote != -1 && params[6] == 3 || params[6] == 4)
+				if(arplastnote != -1 && page_gen->state.value[6][0] == 3 || page_gen->state.value[6][0] == 4)
 					arpdirection = arplastnote<voices[arporder[arpindex]].noteid;
 				arplastnote = voices[arporder[arpindex]].noteid;
 				arpdirty = false;
@@ -444,7 +444,7 @@ void midihandler::tick() {
 	}
 
 	// ---- GLIDE ----
-	if(params[2] > 0) {
+	if(page_gen->state.value[2][0] > 0) {
 		if(glide.current[0] == -666)
 			for(int v = 0; v < voicessize; ++v)
 				for(int i = 0; i < 3; ++i)

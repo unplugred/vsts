@@ -1,60 +1,33 @@
 #pragma once
 #include "includes.h"
-#include "curves.h"
 #include "midihandler.h"
 #include "oscillator.h"
+#include "curves.h"
+#include "pages/000_general.h"
+#include "pages/010_operator.h"
+#include "pages/020_visualizer.h"
+#include "pages/030_filter.h"
+#include "pages/040_distortion.h"
+#include "pages/050_phaser.h"
+#include "pages/060_chorus.h"
+#include "pages/070_equalizer.h"
+#include "pages/080_compressor.h"
+#include "pages/090_delay.h"
+#include "pages/100_reverb.h"
 
-struct potentiometer {
-public:
-	enum ptype {
-		floattype = 0,
-		inttype = 1,
-		booltype = 2
-	};
-	String name = "";
-	String id = "";
-	float minimumvalue = 0;
-	float maximumvalue = 1;
-	float defaultvalue = 0;
-	ptype ttype = ptype::floattype;
-	SmoothedValue<float,ValueSmoothingTypes::Linear> smooth[MC];
-	float smoothtime = 0;
-	potentiometer(String potname = "", String potid = "", float smoothed = 0, float potdefault = 0.f, float potmin = 0.f, float potmax = 1.f, ptype pottype = ptype::floattype) {
-		name = potname;
-		id = potid;
-		smoothtime = smoothed;
-		if(smoothed > 0) for(int o = 0; o < MC; ++o)
-			smooth[o].setCurrentAndTargetValue(defaultvalue);
-		defaultvalue = potdefault;
-		minimumvalue = potmin;
-		maximumvalue = potmax;
-		ttype = pottype;
-	}
-	float normalize(float val) {
-		return (val-minimumvalue)/(maximumvalue-minimumvalue);
-	}
-	float inflate(float val) {
-		return val*(maximumvalue-minimumvalue)+minimumvalue;
-	}
-};
 struct pluginparams {
-	potentiometer general[15];
-	potentiometer values[19];
-	float antialiasing = .7f; // 0.0 aa, 0.5 1x, 0.625 2x, 0.75 4x, 0.875 8x
-	Atomic<int> selectedtab = 3;
-	bool presetunsaved = false;
-	String tuningfile = "Standard";
-	String themefile = "Default";
+	Atomic<signed char> selectedtab = 3;
+	Atomic<signed char> fxtab = 3;
 	File tuningdir = File();
 	File themedir = File();
 	unsigned char theme[14] = "             ";
 };
 
 struct connection {
-	int input = 0;
-	int output = 0;
+	signed char input = 0;
+	signed char output = 0;
 	float influence = .5f;
-	connection(int pinput, int poutput, float pinfluence) {
+	connection(signed char pinput, signed char poutput, float pinfluence) {
 		input = pinput;
 		output = poutput;
 		influence = pinfluence;
@@ -62,14 +35,10 @@ struct connection {
 };
 struct pluginpreset {
 	String name = "";
-	float general[16];
-	float values[MC][19];
-	int oppos[(MC+1)*2];
+	short oppos[(MC+FXC+1)*2];
 	std::vector<connection> opconnections[9];
-	curve curves[MC];
 	pluginpreset(String pname = "") {
 		name = pname;
-		for(int o = 0; o < MC; ++o) curves[o] = curve("3,0,0,0.5,0.5,1,0.5,1,0,0.5");
 	}
 };
 
@@ -120,44 +89,55 @@ public:
 
 	virtual void parameterChanged(const String& parameterID, float newValue);
 
-	void movepoint(int index, float x, float y);
-	void movetension(int index, float tension);
-	void addpoint(int index, float x, float y);
-	void deletepoint(int index);
-	const String curvetostring(const char delimiter = ',');
-	void curvefromstring(String str, const char delimiter = ',');
-	void resetcurve();
+	void movepoint				(int page, int curve, int instance, int index, float x, float y);
+	void movetension			(int page, int curve, int instance, int index, float tension);
+	void addpoint				(int page, int curve, int instance, int index, float x, float y);
+	void deletepoint			(int page, int curve, int instance, int index);
+	const String curvetostring	(int page, int curve, int instance, const char delimiter = ',');
+	void curvefromstring		(int page, int curve, int instance, String str, const char delimiter = ',');
+	void resetcurve				(int page, int curve, int instance);
 	Atomic<bool> updatevis = false;
-	Atomic<int> updatedcurve = 1+2+4+8+16+32+64+128;
 
 	float indicators[MC+1];
 	Atomic<bool> getframe = false;
-	Atomic<float> adsrht = -1;
-	Atomic<float> lfoht = -1;
+	Atomic<bool> updatepreset = false;
+	Atomic<float> framedata[VC];
 
 	void resettuning();
-	String updatetuning(File file);
+	void updatetuning(File file);
 	void resettheme();
-	String updatetheme(File file);
+	void updatetheme(File file);
 
 	AudioProcessorValueTreeState::ParameterLayout create_parameters();
 	AudioProcessorValueTreeState apvts;
 
 	int version = 0;
-	const int generalcount = 15;
-	const int paramcount = 19;
 
-	pluginpreset state;
 	pluginparams params;
 	int currentpreset = 0;
 	pluginpreset presets[20];
+
+	int tabp[TABC] = { 0,2,3, 1,1,1,1, 1,1,1,1 };
+	int tabo[TABC] = { 0,0,0, 0,1,2,3, 4,5,6,7 };
+	FMPlusPage* pages[PC];
+	FMPlusPageGeneral    page_gen;
+	FMPlusPageOperator   page_op;
+	FMPlusPageVisualizer page_vis;
+	FMPlusPageFilter     page_filter;
+	FMPlusPageDistortion page_dist;
+	FMPlusPagePhaser     page_phaser;
+	FMPlusPageChorus     page_chorus;
+	FMPlusPageEqualizer  page_eq;
+	FMPlusPageCompressor page_comp;
+	FMPlusPageDelay      page_delay;
+	FMPlusPageReverb     page_reverb;
 
 private:
 	bool preparedtoplay = false;
 	bool saved = false;
 
-	int oporder[MC];
-	int voiceorder[VC];
+	signed char oporder[MC];
+	signed char voiceorder[VC];
 	int opcount = 0;
 	int channelnum = 0;
 	int samplesperblock = 0;
@@ -231,8 +211,8 @@ const String bpmsyncs_s  [13] {"Off","1/32","1/16","1/16d", "1/8","1/8t","1/8d",
 const float  bpmsyncs_f  [13] {    0, .125f,  .25f,  .375f,   .5f, 2/3.f,  .75f,    1, 4/3.f,  1.5f,    2,     3,    4};
 const String bpmsynclfo_s[16] {"Off", "1/8", "1/4", "1/4t","1/4d", "1/2","1/2d","1/1","1/1d", "2/1","3/1", "4/1","6/1","8/1","12/1","16/1"};
 const float  bpmsynclfo_f[16] {    0,   .5f,     1,  4/3.f,  1.5f,     2,     3,    4,     6,     8,   12,    16,   24,   32,    48,    64};
-static String get_string(int param, float value, int tab) {
-	  if(tab == 0) {
+static String get_string(int param, float value, int page) {
+	  if(page == 0) {
 		  if(param ==  0) {
 			if(value == 1)
 				return "Mono";
@@ -286,7 +266,7 @@ static String get_string(int param, float value, int tab) {
 				return (String)floor(value*200)+'%';
 			return (String)pow(2,fmin(3,fmax(0,floor(value*8-4))))+'x';
 		}
-	} if(tab >= 3) {
+	} if(page == 1) {
 		  if(param ==  1) {
 			if(round(value*200) == 100)
 				return "0\%C";
@@ -424,91 +404,91 @@ static std::function<float(const String& s)> fromantialias = [](const String& s)
 	return jlimit(0.f,1.f,s.getFloatValue());
 };
 static std::function<String(float v, int max)> topan = [](float v, int max) {
-	return get_string(1,v,3);
+	return get_string(1,v,1);
 };
 static std::function<float(const String& s)> frompan = [](const String& s) { // TODO
 	return jlimit(0.f,1.f,s.getFloatValue());
 };
 static std::function<String(float v, int max)> toamp = [](float v, int max) {
-	return get_string(2,v,3);
+	return get_string(2,v,1);
 };
 static std::function<float(const String& s)> fromamp = [](const String& s) { // TODO
 	return jlimit(0.f,1.f,s.getFloatValue());
 };
 static std::function<String(float v, int max)> tovelocity = [](float v, int max) {
-	return get_string(4,v,3);
+	return get_string(4,v,1);
 };
 static std::function<float(const String& s)> fromvelocity = [](const String& s) { // TODO
 	return jlimit(0.f,1.f,s.getFloatValue());
 };
 static std::function<String(float v, int max)> tomodat = [](float v, int max) {
-	return get_string(5,v,3);
+	return get_string(5,v,1);
 };
 static std::function<float(const String& s)> frommodat = [](const String& s) { // TODO
 	return jlimit(0.f,1.f,s.getFloatValue());
 };
 static std::function<String(bool v, int max)> tofreqmode = [](bool v, int max) {
-	return get_string(6,v,3);
+	return get_string(6,v,1);
 };
 static std::function<bool(const String& s)> fromfreqmode = [](const String& s) { // TODO
 	return jlimit(0.f,1.f,s.getFloatValue());
 };
 static std::function<String(float v, int max)> tofreqmult = [](float v, int max) {
-	return get_string(7,v,3);
+	return get_string(7,v,1);
 };
 static std::function<float(const String& s)> fromfreqmult = [](const String& s) { // TODO
 	return jlimit(0.f,1.f,s.getFloatValue());
 };
 static std::function<String(float v, int max)> tofreqadd = [](float v, int max) {
-	return get_string(8,v,3);
+	return get_string(8,v,1);
 };
 static std::function<float(const String& s)> fromfreqadd = [](const String& s) { // TODO
 	return jlimit(0.f,1.f,s.getFloatValue());
 };
 static std::function<String(float v, int max)> toattack = [](float v, int max) {
-	return get_string(9,v,3);
+	return get_string(9,v,1);
 };
 static std::function<float(const String& s)> fromattack = [](const String& s) { // TODO
 	return jlimit(0.f,1.f,s.getFloatValue());
 };
 static std::function<String(float v, int max)> todecay = [](float v, int max) {
-	return get_string(10,v,3);
+	return get_string(10,v,1);
 };
 static std::function<float(const String& s)> fromdecay = [](const String& s) { // TODO
 	return jlimit(0.f,1.f,s.getFloatValue());
 };
 static std::function<String(float v, int max)> torelease = [](float v, int max) {
-	return get_string(12,v,3);
+	return get_string(12,v,1);
 };
 static std::function<float(const String& s)> fromrelease = [](const String& s) { // TODO
 	return jlimit(0.f,1.f,s.getFloatValue());
 };
 static std::function<String(int v, int max)> tolfotarget = [](int v, int max) {
-	return get_string(14,v,3);
+	return get_string(14,v,1);
 };
 static std::function<int(const String& s)> fromlfotarget = [](const String& s) { // TODO
 	return jlimit(0.f,1.f,s.getFloatValue());
 };
 static std::function<String(float v, int max)> tolforate = [](float v, int max) {
-	return get_string(15,v,3);
+	return get_string(15,v,1);
 };
 static std::function<float(const String& s)> fromlforate = [](const String& s) { // TODO
 	return jlimit(0.f,1.f,s.getFloatValue());
 };
 static std::function<String(int v, int max)> tolfobpm = [](int v, int max) {
-	return get_string(16,v,3);
+	return get_string(16,v,1);
 };
 static std::function<int(const String& s)> fromlfobpm = [](const String& s) { // TODO
 	return jlimit(0.f,1.f,s.getFloatValue());
 };
 static std::function<String(float v, int max)> tolfoinfluence = [](float v, int max) {
-	return get_string(17,v,3);
+	return get_string(17,v,1);
 };
 static std::function<float(const String& s)> fromlfoinfluence = [](const String& s) { // TODO
 	return jlimit(0.f,1.f,s.getFloatValue());
 };
 static std::function<String(float v, int max)> tolfoattack = [](float v, int max) {
-	return get_string(18,v,3);
+	return get_string(18,v,1);
 };
 static std::function<float(const String& s)> fromlfoattack = [](const String& s) { // TODO
 	return jlimit(0.f,1.f,s.getFloatValue());

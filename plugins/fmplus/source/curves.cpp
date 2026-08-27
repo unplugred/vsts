@@ -80,6 +80,12 @@ curve::curve(String str, const char delimiter, int channelnum) {
 		}
 	}
 
+	curve::pointsfromstring(points,str,delimiter);
+}
+String curve::tostring(const char delimiter) {
+	return curve::pointstostring(points,delimiter);
+}
+void curve::pointsfromstring(std::vector<point>& points, String str, const char delimiter) {
 	std::stringstream ss(str.trim().toRawUTF8());
 	std::string token;
 	std::getline(ss, token, delimiter);
@@ -99,7 +105,7 @@ curve::curve(String str, const char delimiter, int channelnum) {
 		points.push_back(point(x,y,tension));
 	}
 }
-String curve::tostring(const char delimiter) {
+String curve::pointstostring(std::vector<point>& points, const char delimiter) {
 	std::ostringstream data;
 	data << points.size() << delimiter;
 	for(int p = 0; p < points.size(); ++p)
