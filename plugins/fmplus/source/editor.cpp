@@ -863,7 +863,7 @@ void FMPlusAudioProcessorEditor::timerCallback() {
 	if(opanimation < 30) ++opanimation;
 
 	// smooth value
-	bool updateline[selectedpage->linesnum+1];
+	bool updateline[MC+1];
 	for(int i = 0; i < (selectedpage->linesnum+1); ++i)
 		updateline[i] = false;
 	for(int i = 0; i < selectedpage->params.size(); ++i) {
