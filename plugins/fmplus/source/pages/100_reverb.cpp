@@ -1,4 +1,4 @@
-#include "100_Reverb.h"
+#include "100_reverb.h"
 
 FMPlusPageReverb::FMPlusPageReverb() : FMPlusPage() {
 	tabname = "Reverb";

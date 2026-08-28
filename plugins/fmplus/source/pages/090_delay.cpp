@@ -1,4 +1,4 @@
-#include "090_Delay.h"
+#include "090_delay.h"
 
 FMPlusPageDelay::FMPlusPageDelay() : FMPlusPage() {
 	tabname = "Delay";

@@ -1,4 +1,4 @@
-#include "080_Compressor.h"
+#include "080_compressor.h"
 
 FMPlusPageCompressor::FMPlusPageCompressor() : FMPlusPage() {
 	tabname = "Comp";
