@@ -35,6 +35,7 @@ struct connection {
 };
 struct pluginpreset {
 	String name = "";
+	char fxorder[FXC] { 3,4,5,6,7,8,9,10 };
 	short oppos[(MC+FXC+1)*2];
 	std::vector<connection> opconnections[9];
 	pluginpreset(String pname = "") {
@@ -116,6 +117,9 @@ public:
 	pluginparams params;
 	int currentpreset = 0;
 	pluginpreset presets[20];
+
+	char fxorder[FXC] { 3,4,5,6,7,8,9,10 };
+	Atomic<bool> updatefxorder = true;
 
 	int tabp[TABC] = { 0,2,3, 1,1,1,1, 1,1,1,1 };
 	int tabo[TABC] = { 0,0,0, 0,1,2,3, 4,5,6,7 };

@@ -1,7 +1,7 @@
 #include "060_chorus.h"
 
 FMPlusPageChorus::FMPlusPageChorus() : FMPlusPage() {
-	tabname = "Chorus";
+	tabname = "Chrs";
 	params.resize(1);
 	params[ 0] = potentiometer("Chorus On"	,"choruson"	,"CHORUS"	,.001f	,0	,1	,potentiometer::booltype	);
 }

@@ -1,7 +1,7 @@
 #include "050_phaser.h"
 
 FMPlusPagePhaser::FMPlusPagePhaser() : FMPlusPage() {
-	tabname = "Phaser";
+	tabname = "Phsr";
 	params.resize(1);
 	params[ 0] = potentiometer("Phaser On"	,"phaseron"	,"PHASER"	,.001f	,0	,1	,potentiometer::booltype	);
 }

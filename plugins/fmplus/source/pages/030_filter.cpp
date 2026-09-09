@@ -1,7 +1,7 @@
 #include "030_filter.h"
 
 FMPlusPageFilter::FMPlusPageFilter() : FMPlusPage() {
-	tabname = "Filter";
+	tabname = "Fltr";
 	params.resize(1);
 	params[ 0] = potentiometer("Filter On"	,"filteron"	,"FILTER"	,.001f	,0	,1	,potentiometer::booltype	);
 }

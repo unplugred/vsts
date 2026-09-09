@@ -21,7 +21,7 @@ public:
 };
 
 struct op {
-	int pos[2] { 0,0 };
+	short pos[2] { 0,0 };
 	std::vector<connection> connections;
 	float indicator = 0;
 	int textmesh = -1;
@@ -36,6 +36,11 @@ public:
 	void renderOpenGL() override;
 	void openGLContextClosing() override;
 	void calcvis(int curveupdated);
+	void addop();
+	void removeop();
+	void updatefxop();
+	void resortop();
+	void calcline();
 	void rebuildtab(int tab);
 	void updatevalue(int param);
 	void paint(Graphics&) override;
@@ -106,6 +111,16 @@ private:
 
 	OpenGLTexture operatortex;
 	op ops[2][MC+1];
+	short opz[MC+1] { 0,1,2,3,4,5,6,7,8 };
+	dampenedvalue fxdamp;
+	float fx_smooth[FXC+1][2];
+	short fx_target[FXC+1][2];
+	signed char scaleop = -10;
+	float scaleoplerp = 1;
+	signed char fxanim = -1;
+	signed char opdrag = -10;
+	signed char opdragpos = -10;
+	bool dragoutop = false;
 	std::shared_ptr<OpenGLShaderProgram> operatorshader;
 
 	std::shared_ptr<OpenGLShaderProgram> indicatorshader;

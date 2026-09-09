@@ -1,7 +1,7 @@
 #include "100_reverb.h"
 
 FMPlusPageReverb::FMPlusPageReverb() : FMPlusPage() {
-	tabname = "Reverb";
+	tabname = "Rvrb";
 	params.resize(1);
 	params[ 0] = potentiometer("Reverb On"	,"reverbon"	,"REVERB"	,.001f	,0	,1	,potentiometer::booltype	);
 }

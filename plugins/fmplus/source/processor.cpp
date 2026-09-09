@@ -86,11 +86,11 @@ FMPlusAudioProcessor::FMPlusAudioProcessor() :
 		}
 		for(int o = 0; o < (MC+1); ++o) {
 			presets[n].oppos[      o *2  ] = 56;
-			presets[n].oppos[      o *2+1] = 180-o*20;
+			presets[n].oppos[      o *2+1] = 180-o*22;
 		}
 		for(int o = 0; o < FXC; ++o) {
-			presets[n].oppos[(MC+1+o)*2  ] = floor(66.5f-pages[o+3]->tabname.length()*3.5f);
-			presets[n].oppos[(MC+1+o)*2+1] = 180-(FXC-o)*20;
+			presets[n].oppos[(MC+1+o)*2  ] = round((fmod(o,2)*.7f+.15f)*133.f-pages[o+3]->tabname.length()*3.5f);
+			presets[n].oppos[(MC+1+o)*2+1] = round(136.5f+10-8.f-(ceil(FXC/2)*.5f-floor(o/2))*22);
 		}
 	}
 	page_gen.presetname = presets[currentpreset].name;
@@ -248,6 +248,13 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 	int newindex = fmin(3,fmax(0,floor(page_gen.state.value[15][0]*8-4)));
 	if(newindex != osindex) setoversampling();
 
+	// update fx order
+	if(updatefxorder.get()) {
+		updatefxorder = false;
+		for(int o = 0; o < FXC; ++o)
+			fxorder[o] = presets[currentpreset].fxorder[o];
+	}
+
 	// update curve
 	for(int p = 0; p < PC; ++p) {
 		for(int i = 0; i < pages[p]->curvesnum; ++i) for(int o = 0; o < pages[p]->instances; ++o) {
@@ -294,7 +301,7 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 
 	opcount = 0; // TODO factor connections
 	for(int o = 0; o < MC; ++o)
-		if(page_op.state.value[0][o] > .5 || page_op.presets[currentpreset].value[0][o] > .5)
+		if(page_op.state.value[0][o] > .5f || page_op.presets[currentpreset].value[0][o] > .5f)
 			oporder[opcount++] = o;
 
 	// update bpm
@@ -456,7 +463,7 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 		if(page_gen.state.value[4][0] == 2) {
 			for(int o = 0; o < opcount; ++o) {
 				int op = oporder[o];
-				if(page_op.state.value[13][op] < .5 && page_op.presets[currentpreset].value[13][op] < .5) continue;
+				if(page_op.state.value[13][op] < .5f && page_op.presets[currentpreset].value[13][op] < .5f) continue;
 				for(int s = 0; s < numsamples; ++s) {
 					osc[op][0].w[s] = .5f;
 				}
@@ -481,7 +488,7 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 		} else {
 			for(int o = 0; o < opcount; ++o) {
 				int op = oporder[o];
-				if(page_op.state.value[13][op] < .5 && page_op.presets[currentpreset].value[13][op] < .5) continue;
+				if(page_op.state.value[13][op] < .5f && page_op.presets[currentpreset].value[13][op] < .5f) continue;
 				inits[0] = page_op.state.value[13][op];
 				inits[1] = page_op.state.value[17][op];
 				for(int v = 0; v < voicecount; ++v) {
@@ -529,7 +536,7 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 		// ---- COPY DATA ----
 		for(int o = 0; o < opcount; ++o) {
 			int op = oporder[o];
-			if((page_op.state.value[13][op] > .5 || page_op.presets[currentpreset].value[13][op] > .5) && page_gen.state.value[4][0] == 2) {
+			if((page_op.state.value[13][op] > .5f || page_op.presets[currentpreset].value[13][op] > .5f) && page_gen.state.value[4][0] == 2) {
 				for(int v = 0; v < voicecount; ++v) {
 					if(voiceorder[v] == 0) continue;
 					memcpy(
@@ -547,7 +554,7 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 		// ---- LFO ATTACK ----
 		for(int o = 0; o < opcount; ++o) {
 			int op = oporder[o];
-			if(page_op.state.value[13][op] < .5 && page_op.presets[currentpreset].value[13][op] < .5) continue;
+			if(page_op.state.value[13][op] < .5f && page_op.presets[currentpreset].value[13][op] < .5f) continue;
 			if(page_op.state.value[18][op] <= .00001f) continue;
 			for(int v = 0; v < voicecount; ++v) {
 				int vi = voiceorder[v];
@@ -570,7 +577,7 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 			int op = oporder[o];
 
 			float freqmult = page_op.state.value[7][op];
-			if(page_op.state.value[6][op] < .5 && freqmult > .00005f) freqmult = 1.f/freqmult;
+			if(page_op.state.value[6][op] < .5f && freqmult > .00005f) freqmult = 1.f/freqmult;
 			float freqadd = freqaddinflate(page_op.state.value[8][op]);
 			inits[0] = page_op.state.value[0][op];
 			inits[1] = page_op.state.value[1][op];
@@ -658,7 +665,7 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 				framedata[0] = egstage[latestvoice]+egprog[latestvoice];
 				if(egstage[latestvoice] == 2)
 					framedata[0] = framedata[0].get()+egsustain[latestvoice];
-				if(page_op.state.value[13][tabo[params.selectedtab.get()]] < .5)
+				if(page_op.state.value[13][tabo[params.selectedtab.get()]] < .5f)
 					framedata[1] = -1;
 				else
 					framedata[1] = lfophase[page_gen.state.value[4][0]==2?(tabo[params.selectedtab.get()]*VC):latestvoice];
@@ -700,7 +707,15 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 		}
 	}
 
-	// ---- TODO FX ----
+	// ---- FX ----
+	//debug((String)"");
+	for(int o = 0; o < FXC; ++o) {
+		if(pages[fxorder[o]]->state.value[0][0] > .5f || pages[fxorder[o]]->presets[currentpreset].value[0][0] > .5f) {
+			//debug(pages[fxorder[o]]->params[0].nameui);
+			// TODO downsampling
+			// TODO process
+		}
+	}
 
 	// ---- TODO VIS ----
 	if(getframe.get()) {

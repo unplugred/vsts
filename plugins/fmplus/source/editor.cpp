@@ -48,18 +48,39 @@ FMPlusAudioProcessorEditor::FMPlusAudioProcessorEditor(FMPlusAudioProcessor& p) 
 		mesh.addtext(ops[0][o].pos[0]+162,ops[0][o].pos[1]+30,o==0?"Out":"OP"+(String)o,(o==0||audio_processor.page_op.valuenorm[0][o-1]>.5f)?0:-10);
 	}
 	ops[1][0] = ops[0][0];
+
+	fxdamp.reset(.08f,30,(FXC+1)*2);
+	updatefxop();
 	for(int o = 1; o < (FXC+1); ++o) {
 		ops[1][o].pos[0] = audio_processor.presets[audio_processor.currentpreset].oppos[(MC+o)*2  ];
 		ops[1][o].pos[1] = audio_processor.presets[audio_processor.currentpreset].oppos[(MC+o)*2+1];
+		if(audio_processor.pages[o+2]->valuenorm[0][0] < .5) {
+			fx_target[o][0] = ops[1][o].pos[0];
+			fx_target[o][1] = ops[1][o].pos[1];
+		}
+		fx_smooth[o][0] = fx_target[o][0];
+		fx_smooth[o][1] = fx_target[o][1];
+		fxdamp.setto(fx_target[o][0],o*2  );
+		fxdamp.setto(fx_target[o][1],o*2+1);
 		ops[1][o].textmesh = mesh.textlength;
 		mesh.addtext(ops[1][o].pos[0]+162,ops[1][o].pos[1]+30,audio_processor.pages[o+2]->tabname,-10);
 	}
+	int selectedtab = audio_processor.params.selectedtab.get();
+	if(selectedtab != 2) {
+		fx_target[0][0] = ops[0][0].pos[0];
+		fx_target[0][1] = ops[0][0].pos[1];
+	}
+	fx_smooth[0][0] = fx_target[0][0];
+	fx_smooth[0][1] = fx_target[0][1];
+	fxdamp.setto(fx_target[0][0],0);
+	fxdamp.setto(fx_target[0][1],1);
+	resortop();
 	pagestart = mesh.textlength;
 	audio_processor.getframe = true;
 
 	calcvis(0);
 	audio_processor.tabp[2] = audio_processor.params.fxtab.get();
-	rebuildtab(audio_processor.params.selectedtab.get());
+	rebuildtab(selectedtab);
 
 	setResizable(false,false);
 	setWantsKeyboardFocus(true);
@@ -461,7 +482,7 @@ void FMPlusAudioProcessorEditor::renderOpenGL() {
 	coord = context.extensions.glGetAttribLocation(lineshader->getProgramID(),"aPos");
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,3,GL_FLOAT,GL_FALSE,0,0);
-	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*(mesh.linelength+1)*3, mesh.line, GL_DYNAMIC_DRAW);
+	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*(mesh.linelength+mesh.connectorlength+1)*3, mesh.line, GL_DYNAMIC_DRAW);
 	lineshader->setUniform("banner",banner_offset);
 	lineshader->setUniform("dpi",scaled_dpi);
 	lineshader->setUniform("animation",tabanimation/30.f*2.5f);
@@ -470,7 +491,7 @@ void FMPlusAudioProcessorEditor::renderOpenGL() {
 	lineshader->setUniform("htpos",mesh.lineht[0],mesh.lineht[1],mesh.lineht[2],mesh.lineht[3]);
 	lineshader->setUniform("dividerx",selectedpage->dividerx[0],selectedpage->dividerx[1],selectedpage->dividerx[2],selectedpage->dividerx[3]);
 	lineshader->setUniform("dividery",1-selectedpage->dividery[0],1-selectedpage->dividery[1],1-selectedpage->dividery[2]);
-	glDrawArrays(GL_TRIANGLE_STRIP,0,mesh.linelength+1);
+	glDrawArrays(GL_TRIANGLE_STRIP,0,mesh.linelength+(fxanim>0?0:mesh.connectorlength)+1);
 	context.extensions.glDisableVertexAttribArray(coord);
 	context.extensions.glBufferData(GL_ARRAY_BUFFER, sizeof(float)*8, square, GL_DYNAMIC_DRAW);
 
@@ -482,10 +503,51 @@ void FMPlusAudioProcessorEditor::renderOpenGL() {
 	coord = context.extensions.glGetAttribLocation(circleshader->getProgramID(),"coords");
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
-	circleshader->setUniform("size",9.f*scaled_dpi);
 	float inverse_dpi = 1.f/scaled_dpi;
-	if(mesh.tab != 2) for(int i = 0; i < 2; ++i) {
+	if(mesh.tab == 2) {
+		if(fxanim <= 1) {
+			float x = 160.f+66.5f-.5f*inverse_dpi;
+			float y = round(fx_smooth[0][1])+4.5f-.5f*inverse_dpi;
+
+			for(int o = 1; o < (FXC+1); ++o) {
+				if(audio_processor.pages[o+2]->valuenorm[0][0] > .5) {
+
+					if(fx_smooth[o][1] > fx_smooth[0][1]) continue;
+					if(fx_smooth[o][1] < (255-fx_smooth[0][1])) continue;
+					float scale = sqrt(fmax(0,16.f-fabs(fx_smooth[o][0]-round(66.5f-audio_processor.pages[o+2]->tabname.length()*3.5f)))/16.f);
+					if(scaleop == o) scale *= scaleoplerp;
+					circleshader->setUniform("size",5.f*scale*scaled_dpi);
+
+					if(fx_smooth[o][1] > (266-fx_smooth[0][1])) {
+						circleshader->setUniform("pos",(x-2.5f*scale)/width,(256+14.5f-round(fx_smooth[o][1])-2.5f*scale-.5f*inverse_dpi)/height,(5.f*scale+inverse_dpi)/width,(5.f*scale+inverse_dpi)/height);
+						glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+					}
+
+					if(fx_smooth[o][1] < (fx_smooth[0][1]-6)) {
+						circleshader->setUniform("pos",(x-2.5f*scale)/width,(256+ 3.5f-round(fx_smooth[o][1])-2.5f*scale-.5f*inverse_dpi)/height,(5.f*scale+inverse_dpi)/width,(5.f*scale+inverse_dpi)/height);
+						glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+					}
+				}
+			}
+			circleshader->setUniform("size",5.f*scaled_dpi);
+			circleshader->setUniform("pos",(x-2.5f)/width,(256+14.5f-round(fx_smooth[0][1])-2.5f-.5*inverse_dpi)/height,(5.f+inverse_dpi)/width,(5.f+inverse_dpi)/height);
+			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+
+			circleshader->setUniform("size",9.f*scaled_dpi);
+			circleshader->setUniform("pos",(x-4.5f)/width,(y-4.5f)/height,(9.f+inverse_dpi)/width,(9.f+inverse_dpi)/height);
+			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+			circleshader->setUniform("size",7.f*scaled_dpi);
+			circleshader->setUniform("pos",(x-3.5f)/width,(y-3.5f)/height,(7.f+inverse_dpi)/width,(7.f+inverse_dpi)/height);
+			circleshader->setUniform("col",col_ht[0],col_ht[1],col_ht[2]);
+			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+			circleshader->setUniform("size",3.f*scaled_dpi);
+			circleshader->setUniform("pos",(x-1.5f)/width,(y-1.5f)/height,(3.f+inverse_dpi)/width,(3.f+inverse_dpi)/height);
+			circleshader->setUniform("col",col_fg[0],col_fg[1],col_fg[2]);
+			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+		}
+	} else for(int i = 0; i < 2; ++i) {
 		if(!displayaddremove[i]) continue;
+		circleshader->setUniform("size",9.f*scaled_dpi);
 		circleshader->setUniform("pos",(159.f-.5f*inverse_dpi)/width,1.f-(41.f+11.f*i+.5f*inverse_dpi)/height,(9.f+inverse_dpi)/width,(9.f+inverse_dpi)/height);
 		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 	}
@@ -540,12 +602,14 @@ void FMPlusAudioProcessorEditor::renderOpenGL() {
 	operatorshader->setUniform("selected",0.f);
 	for(int stage = 0; stage < 3; ++stage) {
 		operatorshader->setUniform("stage",(float)stage);
-		if(mesh.tab == 2) {
-			for(int o = FXC; o >= 0; --o) {
+		for(int n = 0; n < (mesh.tab==2?(FXC+1):(MC+1)); ++n) {
+			int o = opz[n];
+			if(fxanim > (stage==2?3:4) && o != 0) continue;
+			if(mesh.tab == 2 || o == 0) {
 				float sl = (audio_processor.pages[o+2]->tabname.length()*7+15.f);
 				operatorshader->setUniform("stretch",sl/36.f);
-				operatorshader->setUniform("pos",(153.f+ops[1][o].pos[0])/width,(256.f-ops[1][o].pos[1])/height,sl/width,18.f/height);
-				if(audio_processor.tabp[2] == (o+2)) {
+				operatorshader->setUniform("pos",(153.f+round(fx_smooth[o][0]))/width,(256.f-round(fx_smooth[o][1]))/height,sl/width,18.f/height);
+				if((mesh.tab == 0 && o == 0) || audio_processor.tabp[2] == (o+2)) {
 					operatorshader->setUniform("col_bg",col_on[0],col_on[1],col_on[2]);
 					operatorshader->setUniform("col_ht",col_on[0],col_on[1],col_on[2]);
 					operatorshader->setUniform("selected",(opanimation<1||(opanimation>=3&&opanimation<4)||opanimation>=6)?1.f:0.f);
@@ -556,13 +620,11 @@ void FMPlusAudioProcessorEditor::renderOpenGL() {
 				} else {
 					glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 				}
-			}
-		} else {
-			operatorshader->setUniform("stretch",1.f);
-			for(int o = MC; o >= 0; --o) {
-				if(o != 0 && audio_processor.page_op.valuenorm[0][o==0?0:(o-1)] < .5) continue;
+			} else {
+				if(audio_processor.page_op.valuenorm[0][o==0?0:(o-1)] < .5 || (dragoutop && o == (initialdrag+21))) continue;
+				operatorshader->setUniform("stretch",1.f);
 				operatorshader->setUniform("pos",(153.f+ops[0][o].pos[0])/width,(256.f-ops[0][o].pos[1])/height,36.f/width,18.f/height);
-				if(mesh.tab == (o==0?0:(o+2))) {
+				if(mesh.tab == (o+2)) {
 					operatorshader->setUniform("col_bg",col_on[0],col_on[1],col_on[2]);
 					operatorshader->setUniform("col_ht",col_on[0],col_on[1],col_on[2]);
 					operatorshader->setUniform("selected",(opanimation<1||(opanimation>=3&&opanimation<4)||opanimation>=6)?1.f:0.f);
@@ -611,25 +673,30 @@ void FMPlusAudioProcessorEditor::renderOpenGL() {
 	coord = context.extensions.glGetAttribLocation(indicatorshader->getProgramID(),"coords");
 	context.extensions.glEnableVertexAttribArray(coord);
 	context.extensions.glVertexAttribPointer(coord,2,GL_FLOAT,GL_FALSE,0,0);
-	if(mesh.tab == 2) {
-		for(int o = MC; o > 0; --o) {
+	if(mesh.tab == 2 || fxanim > 3) {
+		for(int o = 1; o < (MC+1); ++o) {
 			indicatorshader->setUniform("light",ops[0][o].indicator);
 			indicatorshader->setUniform("pos",2.f/width,1.f-(30.f+11.f*o)/height,2.f/width,6.f/height);
 			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 		}
-		for(int o = FXC; o >= 0; --o) {
+		for(int n = 0; n < (FXC+1); ++n) {
+			int o = opz[n];
+			if(fxanim > 3 && o != 0) continue;
 			indicatorshader->setUniform("light",ops[1][o].indicator);
-			indicatorshader->setUniform("pos",(153.f+6.f+ops[1][o].pos[0])/width,(256.f+6.f-ops[1][o].pos[1])/height,2.f/width,6.f/height);
+			indicatorshader->setUniform("pos",(153.f+6.f+round(fx_smooth[o][0]))/width,(256.f+6.f-round(fx_smooth[o][1]))/height,2.f/width,6.f/height);
 			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 		}
 	} else {
-		for(int o = MC; o >= 0; --o) {
+		indicatorshader->setUniform("light",ops[0][0].indicator);
+		indicatorshader->setUniform("pos",(153.f+6.f+round(fx_smooth[0][0]))/width,(256.f+6.f-round(fx_smooth[0][1]))/height,2.f/width,6.f/height);
+		glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+		for(int n = 0; n < (MC+1); ++n) {
+			int o = opz[n];
+			if(o == 0) continue;
 			indicatorshader->setUniform("light",ops[0][o].indicator);
-			if(o > 0) {
-				indicatorshader->setUniform("pos",2.f/width,1.f-(30.f+11.f*o)/height,2.f/width,6.f/height);
-				glDrawArrays(GL_TRIANGLE_STRIP,0,4);
-			}
-			if(o != 0 && audio_processor.page_op.valuenorm[0][o==0?0:(o-1)] < .5) continue;
+			indicatorshader->setUniform("pos",2.f/width,1.f-(30.f+11.f*o)/height,2.f/width,6.f/height);
+			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
+			if(audio_processor.page_op.valuenorm[0][o-1] < .5 || (dragoutop && o == (initialdrag+21))) continue;
 			indicatorshader->setUniform("pos",(153.f+6.f+ops[0][o].pos[0])/width,(256.f+6.f-ops[0][o].pos[1])/height,2.f/width,6.f/height);
 			glDrawArrays(GL_TRIANGLE_STRIP,0,4);
 		}
@@ -655,6 +722,143 @@ void FMPlusAudioProcessorEditor::updatetheme() {
 	look_n_feel.fg = Colour::fromFloatRGBA(col_fg[0],col_fg[1],col_fg[2],1.f);
 	look_n_feel.on = Colour::fromFloatRGBA(col_on[0],col_on[1],col_on[2],1.f);
 }
+void FMPlusAudioProcessorEditor::removeop() {
+	if(mesh.p != 0 && audio_processor.page_op.valuenorm[0][mesh.o] > .5) {
+		int prevop = mesh.o;
+		   for(int o = 0; o < MC; ++o) if(audio_processor.page_op.valuenorm[0][(prevop+o+1)%8] > .5) {
+			rebuildtab((prevop+o+1)%8+3);
+			audio_processor.params.selectedtab = mesh.tab;
+			break;
+		}
+		audio_processor.apvts.getParameter("o"+(String)prevop+audio_processor.page_op.params[0].id)->setValueNotifyingHost(0.f);
+	}
+}
+void FMPlusAudioProcessorEditor::addop() {
+	if(mesh.p != 0 && audio_processor.page_op.valuenorm[0][mesh.o] < .5) {
+		audio_processor.apvts.getParameter("o"+(String)mesh.o+audio_processor.page_op.params[0].id)->setValueNotifyingHost(1.f);
+	} else for(int o = 0; o < MC; ++o) if(audio_processor.page_op.valuenorm[0][        o     ] < .5) {
+		rebuildtab(o+3);
+		audio_processor.params.selectedtab = mesh.tab;
+		audio_processor.apvts.getParameter("o"+(String)o     +audio_processor.page_op.params[0].id)->setValueNotifyingHost(1.f);
+		break;
+	}
+}
+void FMPlusAudioProcessorEditor::updatefxop() {
+	if(mesh.tab == 2) {
+		if(initialdrag >= -20 && initialdrag < -12)
+			opdrag = initialdrag+23;
+		else
+			opdrag = -10;
+
+		int opnum = 0;
+		for(int o = 1; o < (FXC+1); ++o)
+			if(audio_processor.pages[o+2]->valuenorm[0][0] > .5 && opdrag != (o+2))
+				++opnum;
+
+		float fxy = 136.5f+10.f-8.f-11.f*opnum;
+
+		if(opdrag >= 0) {
+			if(fabs((66.5f-audio_processor.pages[opdrag]->tabname.length()*3.5f)-ops[1][opdrag-2].pos[0]) >= 30) {
+				opdragpos = -10;
+			} else {
+				float dragpos = (ops[1][opdrag-2].pos[1]-fxy)/22.f+1;
+				if(dragpos < -.5f || dragpos > (opnum+2.f)) opdragpos = -10;
+				else {
+					fxy -= 11;
+					opdragpos = fmin(opnum,fmax(0,floor(dragpos)));
+				}
+			}
+		} else opdragpos = -10;
+
+		opnum = 0;
+		if(opdragpos == 0) {
+			fxy += 22;
+			++opnum;
+		}
+		for(int o = 0; o < FXC; ++o) {
+			int p = audio_processor.presets[audio_processor.currentpreset].fxorder[o];
+			if(audio_processor.pages[p]->valuenorm[0][0] > .5 && opdrag != p) {
+				fx_target[p-2][0] = round(66.5f-audio_processor.pages[p]->tabname.length()*3.5f);
+				fx_target[p-2][1] = round(fxy);
+				fxy += 22;
+				++opnum;
+				if(opdragpos == opnum) {
+					fxy += 22;
+					++opnum;
+				}
+			}
+		}
+		fx_target[0][0] = round(66.5f-audio_processor.pages[0]->tabname.length()*3.5f);
+		fx_target[0][1] = round(fxy);
+
+		fxy = 136.5f-11.f*opnum-22-7;
+		for(int o = 1; o < (FXC+1); ++o) {
+			if(audio_processor.pages[o+2]->valuenorm[0][0] < .5 && opdrag != (o+2)) {
+				if(fabs((66.5f-audio_processor.pages[o+2]->tabname.length()*3.5f)-ops[1][o].pos[0]) < 30) {
+					if(ops[1][o].pos[1] > fxy && ops[1][o].pos[1] < (fxy+(opnum+3)*22-17)) {
+						if(ops[1][o].pos[1] <= 136.5f-8)
+							fx_target[o][1] = ops[1][o].pos[1]-11*fmax(0,ceil ((ops[1][o].pos[1]- fxy                 )/11.f));
+						else
+							fx_target[o][1] = ops[1][o].pos[1]-11*fmin(0,floor((ops[1][o].pos[1]-(fxy+(opnum+3)*22-17))/11.f));
+					} else  fx_target[o][1] = ops[1][o].pos[1];
+				}
+			}
+		}
+	} else {
+		opdrag = -10;
+		opdragpos = -10;
+	}
+}
+void FMPlusAudioProcessorEditor::resortop() {
+	float opx[MC+1];
+	if(mesh.tab == 2) {
+		for(char o = 0; o < (FXC+1); ++o) {
+			if(opz[o] == (audio_processor.tabp[2]-2))
+				opx[o] = 300;
+			else
+				opx[o] = fx_smooth[opz[o]][0]+fx_smooth[opz[o]][1]/300.f;
+			opx[o] += audio_processor.pages[opz[o]+2]->tabname.length()*7;
+		}
+	} else {
+		for(char o = 0; o < (MC+1); ++o) {
+			if(opz[o] == 0) {
+				if(mesh.tab == 0)
+					opx[o] = 300;
+				else
+					opx[o] = fx_smooth[opz[o]][0]+fx_smooth[opz[o]][1]/300.f;
+			} else if(opz[o] == (mesh.tab-2)) {
+				opx[o] = 300;
+			} else {
+				opx[o] = ops[0][opz[o]].pos[0]+ops[0][opz[o]].pos[1]/300.f;
+			}
+		}
+	}
+
+	for(char i = 1; i < (mesh.tab==2?(FXC+1):(MC+1)); i++) {
+		char j = i;
+		while(j > 0 && opx[j] < opx[j-1]) {
+			signed short temp = opx[j];
+			opx[j] = opx[j-1];
+			opx[j-1] = temp;
+			             temp = opz[j];
+			opz[j] = opz[j-1];
+			opz[j-1] = temp;
+			j--;
+		}
+	}
+}
+void FMPlusAudioProcessorEditor::calcline() {
+	mesh.linewritepos = mesh.linelength;
+	if(mesh.tab == 2) {
+		mesh.beginline(160.f+66.5f,round(256.f+13.f-fx_smooth[0][1]));
+		mesh.nextpoint(160.f+66.5f,round(  2.f     +fx_smooth[0][1]));
+		mesh.nextpoint(160.f+66.5f,round(  2.f     +fx_smooth[0][1]));
+		mesh.endline();
+	} else {
+		// TODO connectors
+	}
+	mesh.connectorlength = mesh.linewritepos-mesh.linelength;
+}
 void FMPlusAudioProcessorEditor::calcvis(int lineupdated) {
 	if(lineupdated == 0) {
 		mesh.linewritepos = -1;
@@ -671,6 +875,7 @@ void FMPlusAudioProcessorEditor::calcvis(int lineupdated) {
 void FMPlusAudioProcessorEditor::rebuildtab(int tab) {
 	if(mesh.p == audio_processor.tabp[tab] && mesh.o == audio_processor.tabo[tab]) return;
 
+	// update + - buttons
 	displayaddremove[0] = false;
 	for(int o = 0; o < MC; ++o) if(audio_processor.page_op.valuenorm[0][o] < .5f) {
 		displayaddremove[0] = true;
@@ -691,19 +896,43 @@ void FMPlusAudioProcessorEditor::rebuildtab(int tab) {
 		updateadsr();
 		for(int i = 0; i < selectedpage->curvesnum; ++i)
 			calcvis(selectedpage->curves[i].linenum);
+		resortop();
 
 		return;
 	}
 
+	bool rebuildnodes = false;
 	if((mesh.tab==2) != (tab==2)) {
+		rebuildnodes = true;
+		fxanim = 12;
 		ops[tab==2?1:0][0].pos[0] = ops[mesh.tab==2?1:0][0].pos[0];
 		ops[tab==2?1:0][0].pos[1] = ops[mesh.tab==2?1:0][0].pos[1];
-		if(tab == 2) for(int n = 0; n < 12; ++n)
-			mesh.text[2+n*4] = -10;
-		for(int o = 0; o < MC; ++o) for(int n = (ops[0][o+1].textmesh+1); n < (ops[0][o+1].textmesh+3*6+1); ++n)
-			mesh.text[2+n*4] = (tab!=2&&audio_processor.pages[1]->valuenorm[0][o]>.5f)?0:-10;
-		for(int n = (ops[1][1].textmesh+1); n < (prevtextindex[0]+1); ++n)
-			mesh.text[2+n*4] =  tab==2                                                ?0:-10;
+		fx_target[0][0] = ops[0][0].pos[0];
+		fx_target[0][1] = ops[0][0].pos[1];
+		if(tab == 2) {
+			for(int o = 1; o < (FXC+1); ++o) {
+				if(audio_processor.pages[o+2]->valuenorm[0][0] < .5) {
+					fx_target[o][0] = ops[1][o].pos[0];
+					fx_target[o][1] = ops[1][o].pos[1];
+				}
+				fx_smooth[o][0] = fx_target[o][0];
+				fx_smooth[o][1] = fx_target[o][1];
+				fxdamp.setto(fx_target[o][0],o*2  );
+				fxdamp.setto(fx_target[o][1],o*2+1);
+			}
+			for(int n = 0; n < 12; ++n) // remove + - buttons
+				mesh.text[2+n*4] = -10;
+		}
+		// hide/unhide text
+		if(tab == 2) {
+			for(int o = 0; o < MC; ++o)
+				if(audio_processor.page_op.valuenorm[0][o] > .5f)
+					for(int n = (ops[0][o+1].textmesh+1); n < (ops[0][o+1].textmesh+3*6+1); ++n)
+						mesh.text[2+n*4] = -10;
+		} else {
+			for(int n = (ops[1][1].textmesh+1); n < (prevtextindex[0]+1); ++n)
+				mesh.text[2+n*4] = -10;
+		}
 	}
 
 	tabanimation = 0;
@@ -783,6 +1012,11 @@ void FMPlusAudioProcessorEditor::rebuildtab(int tab) {
 
 	for(int i = 1; i < (selectedpage->linesnum+1); ++i) calcvis(i);
 	mesh.linelength = mesh.linesegments[selectedpage->linesnum];
+	if(rebuildnodes) {
+		updatefxop();
+		calcline();
+	}
+	resortop();
 }
 void FMPlusAudioProcessorEditor::updatevalue(int param) {
 	if(selectedpage->updatevalue(param)) return;
@@ -860,7 +1094,21 @@ void FMPlusAudioProcessorEditor::timerCallback() {
 		}
 		++tabanimation;
 	}
-	if(opanimation < 30) ++opanimation;
+	if(fxanim > 0) {
+		--fxanim;
+		if(fxanim == 2) {
+			if(mesh.tab == 2) {
+				for(int n = (ops[1][1].textmesh+1); n < (prevtextindex[0]+1); ++n)
+					mesh.text[2+n*4] = 0;
+			} else {
+				for(int o = 0; o < MC; ++o)
+					if(audio_processor.page_op.valuenorm[0][o] > .5f)
+						for(int n = (ops[0][o+1].textmesh+1); n < (ops[0][o+1].textmesh+3*6+1); ++n)
+							mesh.text[2+n*4] = 0;
+			}
+		}
+	}
+	if(fxanim <= 4 && opanimation < 30) ++opanimation;
 
 	// smooth value
 	bool updateline[MC+1];
@@ -949,6 +1197,7 @@ void FMPlusAudioProcessorEditor::timerCallback() {
 		prevdpi = scaled_dpi;
 		mesh.scaled_dpi = scaled_dpi;
 		for(int i = 0; i < (selectedpage->linesnum+1); ++i) calcvis(i);
+		calcline();
 	} else for(int i = 0; i < (selectedpage->linesnum+1); ++i) if(updateline[i]) calcvis(i);
 
 	if(!audio_processor.getframe.get()) {
@@ -964,6 +1213,51 @@ void FMPlusAudioProcessorEditor::timerCallback() {
 	if(mesh.p == 0 && audio_processor.updatepreset.get()) {
 		audio_processor.updatepreset = false;
 		updatevalue(-3); // update preset name
+	}
+
+	// fx ops
+	bool rebuildnodes = false;
+	for(int o = 0; o < (mesh.tab==2?(FXC+1):1); ++o) {
+		float currentx = fxdamp.nextvalue(mesh.tab==2?fx_target[o][0]:ops[0][0].pos[0],o*2  );
+		float currenty = fxdamp.nextvalue(mesh.tab==2?fx_target[o][1]:ops[0][0].pos[1],o*2+1);
+		if(round(currentx) != round(fx_smooth[o][0]) || round(currenty) != round(fx_smooth[o][1])) {
+			rebuildnodes = true;
+			float x = round(currentx)+162;
+			float y = round(currenty)+30;
+			int s = ops[1][o].textmesh+1;
+			int sl = audio_processor.pages[o+2]->tabname.length();
+			for(int n = 0; n < sl; ++n) {
+				mesh.text[   (s+n*6)*4] =     x    /width  ; // top    left
+				mesh.text[ 1+(s+n*6)*4] = 1-( y    /height);
+
+				mesh.text[ 4+(s+n*6)*4] =     x    /width  ; // bottom left
+				mesh.text[ 5+(s+n*6)*4] = 1-((y+10)/height);
+
+				mesh.text[ 8+(s+n*6)*4] =    (x+ 8)/width  ; // top    right
+				mesh.text[ 9+(s+n*6)*4] = 1-( y    /height);
+
+				mesh.text[12+(s+n*6)*4] =     x    /width  ; // bottom left
+				mesh.text[13+(s+n*6)*4] = 1-((y+10)/height);
+
+				mesh.text[16+(s+n*6)*4] =    (x+ 8)/width  ; // top    right
+				mesh.text[17+(s+n*6)*4] = 1-( y    /height);
+
+				mesh.text[20+(s+n*6)*4] =    (x+ 8)/width  ; // bottom right
+				mesh.text[21+(s+n*6)*4] = 1-((y+10)/height);
+				x += 7;
+			}
+			if(mesh.tab != 2 || o == 0) {
+				fx_smooth[o][0] = currentx;
+				fx_smooth[o][1] = currenty;
+			}
+		}
+		fx_smooth[o][0] = currentx;
+		fx_smooth[o][1] = currenty;
+	}
+	scaleoplerp = scaleoplerp*.4f+.6f;
+	if(rebuildnodes) {
+		calcline();
+		resortop();
 	}
 
 	//debug(mesh.boxnum);
@@ -1001,16 +1295,29 @@ void FMPlusAudioProcessorEditor::parameterChanged(const String& parameterID, flo
 					}
 				}
 
-				if(p == 1 && i == 0) { // update plus and minus buttons, remove the operator node
-					if(mesh.tab != 2) for(int n = (ops[0][o+1].textmesh+1); n < (ops[0][o+1].textmesh+3*6+1); ++n)
-						mesh.text[2+n*4] = audio_processor.pages[p]->valuenorm[i][o]>.5f?0:-10;
-					displayaddremove[0] = audio_processor.pages[p]->valuenorm[i][o]<.5f;
-					if(!displayaddremove[0]) for(int o = 0; o < MC; ++o) if(audio_processor.page_op.valuenorm[0][o] < .5f) {
-						displayaddremove[0] = true;
-						break;
+				if(i == 0) {
+					if(p == 1) { // update plus and minus buttons, remove the operator node
+						if(mesh.tab != 2) for(int n = (ops[0][o+1].textmesh+1); n < (ops[0][o+1].textmesh+3*6+1); ++n)
+							mesh.text[2+n*4] = audio_processor.pages[p]->valuenorm[i][o]>.5f?0:-10;
+						displayaddremove[0] = audio_processor.pages[p]->valuenorm[i][o]<.5f;
+						if(!displayaddremove[0]) for(int n = 0; n < MC; ++n) if(audio_processor.page_op.valuenorm[0][n] < .5f) {
+							displayaddremove[0] = true;
+							break;
+						}
+						if(mesh.tab != 2) for(int n = 0; n < 6; ++n)
+							mesh.text[2+n*4] = displayaddremove[0]?(hover==-25?2:1):-10;
+						return;
 					}
-					if(mesh.tab != 2) for(int n = 0; n < 6; ++n)
-						mesh.text[2+n*4] = displayaddremove[0]?(hover==-25?2:1):-10;
+
+					if(p >= 3) { // fx node
+						scaleop = p-2;
+						scaleoplerp = 0;
+						if(newValue < .5f) {
+							fx_target[p-2][0] = ops[1][p-2].pos[0];
+							fx_target[p-2][1] = ops[1][p-2].pos[1];
+						}
+						updatefxop();
+					}
 				}
 
 				return;
@@ -1214,38 +1521,28 @@ void FMPlusAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 	} else if(initialdrag >= -12) { // click tab
 		rebuildtab(initialdrag+12);
 		audio_processor.params.selectedtab = mesh.tab;
-	} else if(initialdrag >= -23) { // click op
-		if(mesh.tab == 2 && initialdrag != -23) {
-			audio_processor.tabp[2] = initialdrag+23;
-			rebuildtab(2);
-			initialvalue[0] = ops[1][audio_processor.tabp[2]-2].pos[0];
-			initialvalue[1] = ops[1][audio_processor.tabp[2]-2].pos[1];
-			audio_processor.params.fxtab = audio_processor.tabp[2];
+	} else if(initialdrag >= -21) { // click op
+		if(mesh.tab == 2) {
+			if(initialdrag == -21) {
+				initialdrag = -1;
+				rebuildtab(0);
+			} else {
+				audio_processor.tabp[2] = initialdrag+23;
+				audio_processor.params.fxtab = audio_processor.tabp[2];
+				rebuildtab(2);
+				initialvalue[0] = fx_smooth[audio_processor.tabp[2]-2][0];
+				initialvalue[1] = fx_smooth[audio_processor.tabp[2]-2][1];
+			}
 		} else {
-			rebuildtab(initialdrag+23);
+			rebuildtab(initialdrag==-21?0:initialdrag+23);
 			initialvalue[0] = ops[0][(int)fmax(0,mesh.tab-2)].pos[0];
 			initialvalue[1] = ops[0][(int)fmax(0,mesh.tab-2)].pos[1];
 		}
 		audio_processor.params.selectedtab = mesh.tab;
 	} else if(initialdrag == -24) { // minus op
-		if(mesh.p == 0 && audio_processor.page_op.valuenorm[0][mesh.o] > .5) {
-			int prevop = mesh.o;
-			   for(int o = 0; o < MC; ++o) if(audio_processor.page_op.valuenorm[0][(prevop+o+1)%8] > .5) {
-				rebuildtab((prevop+o+1)%8+3);
-				audio_processor.params.selectedtab = mesh.tab;
-				break;
-			}
-			audio_processor.apvts.getParameter("o"+(String)prevop+audio_processor.page_op.params[0].id)->setValueNotifyingHost(0.f);
-		}
+		removeop();
 	} else if(initialdrag == -25) { // plus op
-		if(mesh.p == 0 && audio_processor.page_op.valuenorm[0][mesh.o] < .5) {
-			audio_processor.apvts.getParameter("o"+(String)mesh.o+audio_processor.page_op.params[0].id)->setValueNotifyingHost(1.f);
-		} else for(int o = 0; o < MC; ++o) if(audio_processor.page_op.valuenorm[0][        o     ] < .5) {
-			rebuildtab(o+3);
-			audio_processor.params.selectedtab = mesh.tab;
-			audio_processor.apvts.getParameter("o"+(String)o     +audio_processor.page_op.params[0].id)->setValueNotifyingHost(1.f);
-			break;
-		}
+		addop();
 	}
 }
 void FMPlusAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
@@ -1353,7 +1650,7 @@ void FMPlusAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 					if(pointx > 1) { pointx = 1; clamppedx = true; }
 					if(pointy < 0) { pointy = 0; clamppedy = true; }
 					if(pointy > 1) { pointy = 1; clamppedy = true; }
-					if(clamppedx)
+					if(clamppedx) // remove if out of bounds
 						amioutofbounds[0] += preclampx-pointx-fmin(fmax(amioutofbounds[0],-.1f),.1f);
 					else amioutofbounds[0] = 0;
 					if(clamppedy)
@@ -1450,44 +1747,72 @@ void FMPlusAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 		}
 	} else if(initialdrag >= -12) {
 		return;
-	} else if(initialdrag >= -23) { // drag operator
-		int o = 0;
+	} else if(initialdrag >= -21) { // drag operator
+		int o = initialdrag+21;
 		int sl = 3;
 		int t = mesh.tab==2?1:0;
-		if(mesh.tab == 2 && initialdrag != -23) {
-			o = audio_processor.tabp[2]-2;
+		if(mesh.tab == 2 && initialdrag != -21)
 			sl = selectedpage->tabname.length();
-		} else {
-			o = mesh.tab==0?0:(mesh.tab-2);
+		signed short x = initialvalue[0]+event.getDistanceFromDragStartX()/ui_scales[ui_scale_index];
+		signed short y = initialvalue[1]+event.getDistanceFromDragStartY()/ui_scales[ui_scale_index];
+		if(mesh.tab != 2 && o != 0) {
+			if((x < -100 || y < -100 || x > (133-3*7+100) || y > (257+100))) {
+				if(!dragoutop) {
+					dragoutop = true;
+					for(int n = (ops[0][o].textmesh+1); n < (ops[0][o].textmesh+3*6+1); ++n)
+						mesh.text[2+n*4] = -10;
+				}
+			} else if(dragoutop) {
+				dragoutop = false;
+				for(int n = (ops[0][o].textmesh+1); n < (ops[0][o].textmesh+3*6+1); ++n)
+					mesh.text[2+n*4] = 0;
+			}
 		}
-		ops[t][o].pos[0] = fmin(133-sl*7,fmax(0,initialvalue[0]+event.getDistanceFromDragStartX()/ui_scales[ui_scale_index]));
-		ops[t][o].pos[1] = fmin(257,fmax(0,initialvalue[1]+event.getDistanceFromDragStartY()/ui_scales[ui_scale_index]));
-		audio_processor.presets[audio_processor.currentpreset].oppos[o*2  ] = ops[t][o].pos[0];
-		audio_processor.presets[audio_processor.currentpreset].oppos[o*2+1] = ops[t][o].pos[1];
+		if(dragoutop) return;
 
-		float x = ops[t][o].pos[0]+162;
-		float y = ops[t][o].pos[1]+30;
+		x = fmin(133-sl*7,fmax(0,x));
+		y = fmin(257     ,fmax(0,y));
+		if(x < 14 && y < 25) { // + - collision
+			if(ops[t][o].pos[0] < 14) y = 25;
+			else                      x = 14;
+		}
+		if(ops[t][o].pos[0] == x && ops[t][o].pos[1] == y) return;
+		ops[t][o].pos[0] = x;
+		ops[t][o].pos[1] = y;
+		updatefxop();
+		if(mesh.tab == 0 || (mesh.tab == 2 && initialdrag != -21)) {
+			for(int n = 0; n < 2; ++n) {
+				fx_target[o][n] = ops[mesh.tab==2?1:0][o].pos[n];
+				fx_smooth[o][n] = fx_target[o][n];
+				fxdamp.setto(fx_target[o][n],o*2+n);
+			}
+		}
+
+		// update text
+		x = ops[t][o].pos[0]+162;
+		y = ops[t][o].pos[1]+30;
 		int s = ops[t][o].textmesh+1;
 		for(int n = 0; n < sl; ++n) {
-			mesh.text[   (s+n*6)*4] =     x    /width  ; // top    left
-			mesh.text[ 1+(s+n*6)*4] = 1-( y    /height);
+			mesh.text[   (s+n*6)*4] =     x    /((float)width  ); // top    left
+			mesh.text[ 1+(s+n*6)*4] = 1-( y    /((float)height));
 
-			mesh.text[ 4+(s+n*6)*4] =     x    /width  ; // bottom left
-			mesh.text[ 5+(s+n*6)*4] = 1-((y+10)/height);
+			mesh.text[ 4+(s+n*6)*4] =     x    /((float)width  ); // bottom left
+			mesh.text[ 5+(s+n*6)*4] = 1-((y+10)/((float)height));
 
-			mesh.text[ 8+(s+n*6)*4] =    (x+ 8)/width  ; // top    right
-			mesh.text[ 9+(s+n*6)*4] = 1-( y    /height);
+			mesh.text[ 8+(s+n*6)*4] =    (x+ 8)/((float)width  ); // top    right
+			mesh.text[ 9+(s+n*6)*4] = 1-( y    /((float)height));
 
-			mesh.text[12+(s+n*6)*4] =     x    /width  ; // bottom left
-			mesh.text[13+(s+n*6)*4] = 1-((y+10)/height);
+			mesh.text[12+(s+n*6)*4] =     x    /((float)width  ); // bottom left
+			mesh.text[13+(s+n*6)*4] = 1-((y+10)/((float)height));
 
-			mesh.text[16+(s+n*6)*4] =    (x+ 8)/width  ; // top    right
-			mesh.text[17+(s+n*6)*4] = 1-( y    /height);
+			mesh.text[16+(s+n*6)*4] =    (x+ 8)/((float)width  ); // top    right
+			mesh.text[17+(s+n*6)*4] = 1-( y    /((float)height));
 
-			mesh.text[20+(s+n*6)*4] =    (x+ 8)/width  ; // bottom right
-			mesh.text[21+(s+n*6)*4] = 1-((y+10)/height);
+			mesh.text[20+(s+n*6)*4] =    (x+ 8)/((float)width  ); // bottom right
+			mesh.text[21+(s+n*6)*4] = 1-((y+10)/((float)height));
 			x += 7;
 		}
+		resortop();
 	} else if(initialdrag == -26) {
 		int prevhover = hover;
 		hover = recalc_hover(event.x,event.y)==-26?-26:-1;
@@ -1495,12 +1820,16 @@ void FMPlusAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 	}
 }
 void FMPlusAudioProcessorEditor::mouseUp(const MouseEvent& event) {
-	if(dpi < 0) return;
+	if(dpi < 0) {
+		initialdrag = -1;
+		return;
+	}
 	if(initialdrag > -1) {
 		if(mesh.boxes[initialdrag].knob == -1) {
 			if(curvehover == -1) {
 				hover = recalc_hover(event.x,event.y);
 				updatehighlight();
+				initialdrag = -1;
 				return;
 			}
 			curve* currentcurve = &selectedpage->curves[mesh.boxes[initialdrag].curve].cui[mesh.o];
@@ -1513,6 +1842,7 @@ void FMPlusAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 				if((fabs(initialdotvalue[0]-currentcurve->points[i].x)+fabs(initialdotvalue[1]-currentcurve->points[i].y)) < .00001) {
 					currentcurve->points[i].x = initialdotvalue[0];
 					currentcurve->points[i].y = initialdotvalue[1];
+					initialdrag = -1;
 					return;
 				}
 				dragpos.x += (currentcurve->points[i].x-initialdotvalue[0])*ui_scales[ui_scale_index]*mesh.boxes[initialdrag].w;
@@ -1525,6 +1855,7 @@ void FMPlusAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 				i = (i-1)/2;
 				if(fabs(initialdotvalue[0]-currentcurve->points[i].tension) < .00001) {
 					currentcurve->points[i].tension = initialdotvalue[0];
+					initialdrag = -1;
 					return;
 				}
 				float interp = curve::calctension(.5,currentcurve->points[i].tension)-curve::calctension(.5,initialdotvalue[0]);
@@ -1548,23 +1879,105 @@ void FMPlusAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 				event.source.enableUnboundedMouseMovement(false);
 				Desktop::setMousePosition(dragpos);
 			}
+		}
+	} else if(initialdrag >= -21 && initialdrag < -12) { // release operator
+		if(opdragpos >= 0 || dragoutop) {
+			ops[mesh.tab==2?1:0][initialdrag+21].pos[0] = audio_processor.presets[audio_processor.currentpreset].oppos[((mesh.tab==2?MC:0)+initialdrag+21)*2  ];
+			ops[mesh.tab==2?1:0][initialdrag+21].pos[1] = audio_processor.presets[audio_processor.currentpreset].oppos[((mesh.tab==2?MC:0)+initialdrag+21)*2+1];
+			if(dragoutop) {
+				float x = ops[0][initialdrag+21].pos[0]+162;
+				float y = ops[0][initialdrag+21].pos[1]+30;
+				int   s = ops[0][initialdrag+21].textmesh+1;
+				for(int n = 0; n < 3; ++n) {
+					mesh.text[   (s+n*6)*4] =     x    /width  ; // top    left
+					mesh.text[ 1+(s+n*6)*4] = 1-( y    /height);
 
-			hover = recalc_hover(event.x,event.y);
-			updatehighlight();
+					mesh.text[ 4+(s+n*6)*4] =     x    /width  ; // bottom left
+					mesh.text[ 5+(s+n*6)*4] = 1-((y+10)/height);
+
+					mesh.text[ 8+(s+n*6)*4] =    (x+ 8)/width  ; // top    right
+					mesh.text[ 9+(s+n*6)*4] = 1-( y    /height);
+
+					mesh.text[12+(s+n*6)*4] =     x    /width  ; // bottom left
+					mesh.text[13+(s+n*6)*4] = 1-((y+10)/height);
+
+					mesh.text[16+(s+n*6)*4] =    (x+ 8)/width  ; // top    right
+					mesh.text[17+(s+n*6)*4] = 1-( y    /height);
+
+					mesh.text[20+(s+n*6)*4] =    (x+ 8)/width  ; // bottom right
+					mesh.text[21+(s+n*6)*4] = 1-((y+10)/height);
+					x += 7;
+				}
+				resortop();
+			}
+		} else {
+			audio_processor.presets[audio_processor.currentpreset].oppos[((mesh.tab==2?MC:0)+initialdrag+21)*2  ] = ops[mesh.tab==2?1:0][initialdrag+21].pos[0];
+			audio_processor.presets[audio_processor.currentpreset].oppos[((mesh.tab==2?MC:0)+initialdrag+21)*2+1] = ops[mesh.tab==2?1:0][initialdrag+21].pos[1];
 		}
-	} else {
-		int prevhover = hover;
-		hover = recalc_hover(event.x,event.y);
-		updatehighlight();
-		if(hover == -26) {
-			if(prevhover == -26) URL("https://vst.unplug.red/").launchInDefaultBrowser();
-			else if(websiteht < -1) websiteht = .65f;
+		if(dragoutop) {
+			removeop();
+			dragoutop = false;
+		} else if(opdrag >= 0) {
+			if(opdragpos >= 0) {
+				//reorder operator
+				int currentposition = -10;
+				int desiredposition = -10;
+				int opnum = 0;
+				if(opdragpos == 0) {
+					desiredposition = 0;
+					++opnum;
+				}
+				audio_processor.updatefxorder = false;
+				char* fxorder = audio_processor.presets[audio_processor.currentpreset].fxorder;
+				for(int o = 0; o < FXC; ++o) {
+					int p = fxorder[o];
+					if(opdragpos == opnum) {
+						desiredposition = o;
+						++opnum;
+					}
+					if(opdrag == p) {
+						currentposition = o;
+						--opdragpos;
+					} else if(audio_processor.pages[p]->valuenorm[0][0] > .5) {
+						++opnum;
+					}
+				}
+				if(currentposition < desiredposition) {
+					for(int o = currentposition; o < desiredposition; ++o)
+						fxorder[o] = fxorder[o+1];
+				} else if(currentposition > desiredposition) {
+					for(int o = currentposition; o > desiredposition; --o)
+						fxorder[o] = fxorder[o-1];
+				}
+				fxorder[desiredposition] = opdrag;
+				audio_processor.updatefxorder = true;
+
+				// turn on operator
+				if(selectedpage->valuenorm[0][0] < .5) {
+					audio_processor.undo_manager.setCurrentTransactionName((String)"Turn "+selectedpage->tabname+" on");
+					audio_processor.apvts.getParameter(selectedpage->params[0].id)->setValueNotifyingHost(1.f);
+					selectedpage->valuenorm[0][0] = 1.f;
+				}
+			} else if(selectedpage->valuenorm[0][0] > .5) {
+				// turn off operator
+				audio_processor.undo_manager.setCurrentTransactionName((String)"Turn "+selectedpage->tabname+" off");
+				audio_processor.apvts.getParameter(selectedpage->params[0].id)->setValueNotifyingHost(0.f);
+				selectedpage->valuenorm[0][0] = 0.f;
+			}
 		}
+		initialdrag = -1;
+		updatefxop();
+	}
+	int prevhover = hover;
+	hover = recalc_hover(event.x,event.y);
+	updatehighlight();
+	if(hover == -26) {
+		if(prevhover == -26) URL("https://vst.unplug.red/").launchInDefaultBrowser();
+		else if(websiteht < -1) websiteht = .65f;
 	}
 	initialdrag = -1;
 }
 void FMPlusAudioProcessorEditor::mouseDoubleClick(const MouseEvent& event) {
-	if(hover <= -1) return;
 	if(mesh.boxes[hover].knob == -1) { // curves
 		if(mesh.boxes[hover].curve == -1) return;
 		curve* currentcurve = &selectedpage->curves[mesh.boxes[hover].curve].cui[mesh.o];
@@ -1593,7 +2006,7 @@ void FMPlusAudioProcessorEditor::mouseDoubleClick(const MouseEvent& event) {
 		}
 		hover = recalc_hover(event.x,event.y);
 		calcvis(selectedpage->curves[mesh.boxes[hover].curve].linenum);
-	} else { // set to default
+	} else if(hover >= 0) { // set to default
 		if(selectedpage->params[mesh.boxes[hover].knob].ttype == potentiometer::ptype::booltype) return;
 
 		String id = selectedpage->params[mesh.boxes[hover].knob].id;
@@ -1608,6 +2021,46 @@ void FMPlusAudioProcessorEditor::mouseDoubleClick(const MouseEvent& event) {
 		}
 
 		audio_processor.undo_manager.beginNewTransaction();
+	} else if(mesh.tab != 2) {
+		if(displayaddremove[1] && hover >= -20 && hover < -12) { // double click operator
+			removeop();
+		} else if(displayaddremove[0] && hover == -22) { // double click bg
+			addop();
+			short xx = fmin(112,fmax(0,round(((float)event.x)/ui_scales[ui_scale_index])-154-18));
+			short yy = fmin(257,fmax(0,round(((float)event.y)/ui_scales[ui_scale_index])- 25- 9));
+			if(xx < 14 && yy < 25) { // + - collision
+				if((xx-14) < (yy-25)) xx = 14;
+				else                  yy = 25;
+			}
+			ops[0][mesh.o+1].pos[0] = xx;
+			ops[0][mesh.o+1].pos[1] = yy;
+			audio_processor.presets[audio_processor.currentpreset].oppos[(mesh.o+1)*2  ] = ops[0][mesh.o+1].pos[0];
+			audio_processor.presets[audio_processor.currentpreset].oppos[(mesh.o+1)*2+1] = ops[0][mesh.o+1].pos[1];
+			float x = ops[0][mesh.o+1].pos[0]+162;
+			float y = ops[0][mesh.o+1].pos[1]+30;
+			int   s = ops[0][mesh.o+1].textmesh+1;
+			for(int n = 0; n < 3; ++n) {
+				mesh.text[   (s+n*6)*4] =     x    /width  ; // top    left
+				mesh.text[ 1+(s+n*6)*4] = 1-( y    /height);
+
+				mesh.text[ 4+(s+n*6)*4] =     x    /width  ; // bottom left
+				mesh.text[ 5+(s+n*6)*4] = 1-((y+10)/height);
+
+				mesh.text[ 8+(s+n*6)*4] =    (x+ 8)/width  ; // top    right
+				mesh.text[ 9+(s+n*6)*4] = 1-( y    /height);
+
+				mesh.text[12+(s+n*6)*4] =     x    /width  ; // bottom left
+				mesh.text[13+(s+n*6)*4] = 1-((y+10)/height);
+
+				mesh.text[16+(s+n*6)*4] =    (x+ 8)/width  ; // top    right
+				mesh.text[17+(s+n*6)*4] = 1-( y    /height);
+
+				mesh.text[20+(s+n*6)*4] =    (x+ 8)/width  ; // bottom right
+				mesh.text[21+(s+n*6)*4] = 1-((y+10)/height);
+				x += 7;
+			}
+			resortop();
+		}
 	}
 }
 void FMPlusAudioProcessorEditor::mouseWheelMove(const MouseEvent& event, const MouseWheelDetails& wheel) {
@@ -1817,25 +2270,34 @@ int FMPlusAudioProcessorEditor::recalc_hover(float x, float y) {
 	if(x > 224.5f && x < 298.5f && y > 1.5f && y < 24.5f)
 		return -26;
 
-	// -23 - -13 operators
-	if(mesh.tab == 2) {
-		for(int o = 0; o < (FXC+1); ++o) {
-			if(x >= (ops[1][o].pos[0]+157) && x < (ops[1][o].pos[0]+166+audio_processor.pages[o+2]->tabname.length()*7) && y >= (ops[1][o].pos[1]+30) && y < (ops[1][o].pos[1]+42))
-				return o==0?-23:(o-21);
-		}
-	} else {
-		for(int o = 0; o < (MC+1); ++o) {
-			if(o != 0 && audio_processor.page_op.valuenorm[0][o==0?0:(o-1)] < .5) continue;
-			if(x >= (ops[0][o].pos[0]+157) && x < (ops[0][o].pos[0]+187                                               ) && y >= (ops[0][o].pos[1]+30) && y < (ops[0][o].pos[1]+42))
-				return o==0?-23:(o-21);
+	if(x >= 154 && y >= 25) {
+		// -21 - -13 operators
+		if(mesh.tab == 2) {
+			for(int o = 0; o < (FXC+1); ++o) {
+				if(x >= (fx_smooth[o][0]+156) && x < (fx_smooth[o][0]+165+audio_processor.pages[o+2]->tabname.length()*7) && y >= (fx_smooth[o] [1]+29) && y < (fx_smooth[o] [1]+41))
+					return o-21;
+			}
+		} else {
+			for(int o = 0; o < (MC+1); ++o) {
+				if(o != 0 && audio_processor.page_op.valuenorm[0][o==0?0:(o-1)] < .5) continue;
+				if(x >= (ops[0][o].pos[0]+156) && x < (ops[0][o].pos[0]+186                                             ) && y >= (ops[0][o].pos[1]+29) && y < (ops[0][o].pos[1]+41))
+					return o-21;
+			}
+
+
+		// -25 - -24 +-
+			float xx = x-163.5f;
+			float yy = y-36.5f;
+			if((xx*xx+yy*yy) <= 30.25f && displayaddremove[0]) return -25;
+			yy -= 11;
+			if((xx*xx+yy*yy) <= 30.25f && displayaddremove[1]) return -24;
 		}
 
-	// -25 - -24 +-
-		float xx = x-163.5f;
-		float yy = y-36.5f;
-		if((xx*xx+yy*yy) <= 30.25f && displayaddremove[0]) return -25;
-		yy -= 11;
-		if((xx*xx+yy*yy) <= 30.25f && displayaddremove[1]) return -24;
+		// -22 op bg
+		if(x >= 170 || y >= 54)
+			return -22;
+
+		// -23 ???
 	}
 
 	// -12 - -2 tabs
@@ -1881,8 +2343,6 @@ int FMPlusAudioProcessorEditor::recalc_hover(float x, float y) {
 			return i;
 		}
 	}
-
-	// 24+ node connections
 
 	return -1;
 }

@@ -1,7 +1,7 @@
 #include "090_delay.h"
 
 FMPlusPageDelay::FMPlusPageDelay() : FMPlusPage() {
-	tabname = "Delay";
+	tabname = "Dly";
 	params.resize(1);
 	params[ 0] = potentiometer("Delay On"	,"delayon"	,"DELAY"	,.001f	,0	,1	,potentiometer::booltype	);
 }
