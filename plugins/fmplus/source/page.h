@@ -96,9 +96,9 @@ struct meshdata {
 	int squarelength = -1;
 	void addsquare(float x, float y, float w, float h, float color = 0, bool corner = false);
 
-	float line[(479+1)*3+1000]; // TODO
+	float line[(479+24*3*(MC+1)+1)*3]; // 479 lines, 24 per connector, 3*(MC+1) connectors
 	int linelength = -1;
-	int connectorlength = 0;
+	int connectorlength[2] { 0,0 };
 	float lineprevx = 0;
 	float lineprevy = 020;
 	float linecurrentx = 0;

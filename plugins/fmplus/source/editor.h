@@ -22,7 +22,11 @@ public:
 
 struct op {
 	short pos[2] { 0,0 };
-	std::vector<connection> connections;
+
+	signed char outputs[3]     { -1, -1, -1 };
+	signed char inputs [3]     { -1, -1, -1 };
+	unsigned char influence[3] { 50, 50, 50 };
+
 	float indicator = 0;
 	int textmesh = -1;
 };
@@ -40,7 +44,9 @@ public:
 	void removeop();
 	void updatefxop();
 	void resortop();
+	void sortconnectors(signed char o, bool outputs);
 	void calcline();
+	void makeconnector(int x1, int y1, int x2, int y2, int oo, int io, int on, int in, bool isdrag = false);
 	void rebuildtab(int tab);
 	void updatevalue(int param);
 	void paint(Graphics&) override;
@@ -107,6 +113,11 @@ private:
 	std::shared_ptr<OpenGLShaderProgram> lineshader;
 
 	bool displayaddremove[2] = { true, true };
+	signed char circlehover = -5; // i?0:10 for origin
+	signed char circlesnapt = 0; // post sort drag n
+	signed char circlesnapo = -1; // snap o
+	signed char circlesnapn = 0; // snap n
+	bool circlesteppedout = false;
 	std::shared_ptr<OpenGLShaderProgram> circleshader;
 
 	OpenGLTexture operatortex;

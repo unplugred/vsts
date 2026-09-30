@@ -87,11 +87,28 @@ FMPlusAudioProcessor::FMPlusAudioProcessor() :
 		for(int o = 0; o < (MC+1); ++o) {
 			presets[n].oppos[      o *2  ] = 56;
 			presets[n].oppos[      o *2+1] = 180-o*22;
+			for(int i = 0; i < 3; ++i) {
+				presets[n].inputs   [o][i] = -1;
+				presets[n].outputs  [o][i] = -1;
+				presets[n].influence[o][i] = 50;
+			}
 		}
 		for(int o = 0; o < FXC; ++o) {
 			presets[n].oppos[(MC+1+o)*2  ] = round((fmod(o,2)*.7f+.15f)*133.f-pages[o+3]->tabname.length()*3.5f);
 			presets[n].oppos[(MC+1+o)*2+1] = round(136.5f+10-8.f-(ceil(FXC/2)*.5f-floor(o/2))*22);
 		}
+
+		presets[n].inputs [0][0] = 1;
+		presets[n].outputs[1][0] = 0;
+
+		presets[n].inputs [0][1] = 2;
+		presets[n].outputs[2][0] = 0;
+
+		presets[n].inputs [2][0] = 2;
+		presets[n].outputs[2][1] = 2;
+
+		presets[n].inputs [1][0] = 3;
+		presets[n].outputs[3][0] = 1;
 	}
 	page_gen.presetname = presets[currentpreset].name;
 

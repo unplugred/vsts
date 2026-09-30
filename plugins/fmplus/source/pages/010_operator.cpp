@@ -83,7 +83,7 @@ void FMPlusPageOperator::calcvis(int lineupdated) {
 		float currentx = adsr[0][0]+.5f;
 		mesh->linewritepos = mesh->linesegments[1];
 		mesh->beginline(x,y-h+11);
-		mesh->nextpoint(x+currentx,y);
+		mesh->nextpoint(x+currentx,y,true);
 		currentx += adsr[0][4]+1.f;
 		mesh->nextpoint(x+currentx,y-(1-params[11].uismooth)*(h-11),true);
 		currentx += adsr[0][8]+1.f;

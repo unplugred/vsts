@@ -23,21 +23,13 @@ struct pluginparams {
 	unsigned char theme[14] = "             ";
 };
 
-struct connection {
-	signed char input = 0;
-	signed char output = 0;
-	float influence = .5f;
-	connection(signed char pinput, signed char poutput, float pinfluence) {
-		input = pinput;
-		output = poutput;
-		influence = pinfluence;
-	}
-};
 struct pluginpreset {
 	String name = "";
 	char fxorder[FXC] { 3,4,5,6,7,8,9,10 };
 	short oppos[(MC+FXC+1)*2];
-	std::vector<connection> opconnections[9];
+	signed char inputs     [MC+1][3];
+	signed char outputs    [MC+1][3];
+	unsigned char influence[MC+1][3];
 	pluginpreset(String pname = "") {
 		name = pname;
 	}
