@@ -100,7 +100,7 @@ struct meshdata {
 	int linelength = -1;
 	int connectorlength[2] { 0,0 };
 	float lineprevx = 0;
-	float lineprevy = 020;
+	float lineprevy = 20;
 	float linecurrentx = 0;
 	float linecurrenty = 0;
 	bool linebegun = true;

@@ -9,9 +9,8 @@
 // TODO dot shift anim
 // TODO dot scale anim
 // TODO op appear anim
-// TODO influence appear anim
+// TODO influence anim
 //
-// TODO update data in audio processor
 // TODO fm
 //
 // TODO tabular save file
@@ -30,16 +29,12 @@ FMPlusAudioProcessorEditor::FMPlusAudioProcessorEditor(FMPlusAudioProcessor& p) 
 		audio_processor.pages[p]->mesh = &mesh;
 
 		audio_processor.pages[p]->knobsmooth.reset(.05f,30,audio_processor.pages[p]->params.size());
-
 		for(int i = 0; i < audio_processor.pages[p]->params.size(); ++i) {
 			audio_processor.pages[p]->params[i].defaultvaluenorm = audio_processor.pages[p]->params[i].normalize(audio_processor.pages[p]->params[i].defaultvalue);
-
 			String id = audio_processor.pages[p]->params[i].id;
 			for(int o = 0; o < audio_processor.pages[p]->instances; ++o) {
 				add_listener(p==1?("o"+(String)o+id):id);
-
 				audio_processor.pages[p]->valuenorm[i][o] = audio_processor.pages[p]->params[i].normalize(audio_processor.pages[p]->state.value[i][o]);
-
 			}
 		}
 
@@ -984,9 +979,8 @@ void FMPlusAudioProcessorEditor::sortconnectors(signed char o, bool outputs) {
 		if(t < 0) {
 			val[n] = 900;
 		} else {
-			val[n] =
-				(ops[0][t].pos[0]-ops[0][o].pos[0])+fabs
-				(ops[0][t].pos[1]-ops[0][o].pos[1]);
+			val[n]  =      ops[0][t].pos[0]-ops[0][o].pos[0];
+			val[n] += fabs(ops[0][t].pos[1]-ops[0][o].pos[1]+150)*(val[n]<0?-1:1);
 			if(((ops[0][t].pos[1]-ops[0][o].pos[1]) > -19) && (fabs(ops[0][t].pos[0]-ops[0][o].pos[0]) < 33))
 				val[n] -= 900;
 		}
@@ -1005,7 +999,7 @@ void FMPlusAudioProcessorEditor::sortconnectors(signed char o, bool outputs) {
 			ids[j-1] = temp;
 
 			if(!outputs) {
-			             temp = ops[0][o].influence[j];
+			             temp = ops[0][o].influence[j]; // TODO is a float tho ?????
 			ops[0][o].influence[j] = ops[0][o].influence[j-1];
 			ops[0][o].influence[j-1] = temp;
 			}
@@ -1116,13 +1110,13 @@ void FMPlusAudioProcessorEditor::makeconnector(int x1, int y1, int x2, int y2, i
 		mesh.endline();
 	} else {
 		int half = round(((x2-io)+(x1-oo)+18*2)*.5f);
-		mesh.beginline(x1  +.5f,y1                            );
-		mesh.nextpoint(x1  +.5f,fmax(   .5f,y1-on*2-5.5f),true);
-		mesh.nextpoint(half+.5f,fmax(   .5f,y1-on*2-5.5f),true);
-		mesh.nextpoint(half+.5f,fmin(272.5f,y2+in*2+5.5f),true);
-		mesh.nextpoint(x2  +.5f,fmin(272.5f,y2+in*2+5.5f),true);
-		mesh.nextpoint(x2  +.5f,y2                       ,true);
-		mesh.nextpoint(x2  +.5f,y2                            );
+		mesh.beginline(x1  +.5f,y1                                           );
+		mesh.nextpoint(x1  +.5f,fmax(   .5f,y1-(x1>x2?on:(2-on))*2-5.5f),true);
+		mesh.nextpoint(half+.5f,fmax(   .5f,y1-(x1>x2?on:(2-on))*2-5.5f),true);
+		mesh.nextpoint(half+.5f,fmin(272.5f,y2+(x1<x2?in:(2-in))*2+5.5f),true);
+		mesh.nextpoint(x2  +.5f,fmin(272.5f,y2+(x1<x2?in:(2-in))*2+5.5f),true);
+		mesh.nextpoint(x2  +.5f,y2                                      ,true);
+		mesh.nextpoint(x2  +.5f,y2                                           );
 		mesh.endline();
 	}
 	} else if(y2+(isdrag?11:18) > y1) {
@@ -1587,20 +1581,21 @@ void FMPlusAudioProcessorEditor::parameterChanged(const String& parameterID, flo
 
 				if(i == 0) {
 					if(p == 1) { // update plus and minus buttons, remove the operator node
-						if(mesh.tab != 2) for(int n = (ops[0][o+1].textmesh+1); n < (ops[0][o+1].textmesh+3*6+1); ++n)
-							mesh.text[2+n*4] = audio_processor.pages[p]->valuenorm[i][o]>.5f?0:-10;
 						displayaddremove[0] = audio_processor.pages[p]->valuenorm[i][o]<.5f;
 						if(!displayaddremove[0]) for(int n = 0; n < MC; ++n) if(audio_processor.page_op.valuenorm[0][n] < .5f) {
 							displayaddremove[0] = true;
 							break;
 						}
-						if(mesh.tab != 2) for(int n = 0; n < 6; ++n)
-							mesh.text[2+n*4] = displayaddremove[0]?(hover==-25?2:1):-10;
+						if(mesh.tab != 2) {
+							for(int n = 0; n < 6; ++n)
+								mesh.text[2+n*4] = displayaddremove[0]?(hover==-25?2:1):-10;
+							for(int n = (ops[0][o+1].textmesh+1); n < (ops[0][o+1].textmesh+3*6+1); ++n)
+								mesh.text[2+n*4] = audio_processor.pages[p]->valuenorm[i][o]>.5f?0:-10;
+						}
 
-						// TODO update in audio processor
 						for(int n = 0; n < 3; ++n) {
 							signed char input  = audio_processor.presets[audio_processor.currentpreset].inputs [o+1][n];
-							if(input  >= 0 && (input == 0 || audio_processor.page_op.valuenorm[0][fmax(0,input -1)] > .5f) &&  (o+1) != input ) {
+							if(input  >= 0 && (input == 0 || audio_processor.page_op.valuenorm[0][fmax(0,input -1)] > .5f) && (o+1) != input ) {
 								for(int nn = 0; nn < 3; ++nn) if(ops[0][input ].outputs[nn] == (newValue>.5f?-1:(o+1))) {
 									ops[0][input ].outputs[nn] = newValue>.5f?(o+1) :-1;
 									ops[0][o+1   ].inputs [n ] = newValue>.5f?input :-1;
@@ -2337,7 +2332,6 @@ void FMPlusAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 	} else if(initialdrag >= -21 && initialdrag < -12) { // release operator
 		if(circlehover >= -1) {
 			signed char prevo;
-			signed char prevt = initialdrag+21;
 			if(circlehover >= 9) {
 				prevo = ops[0][initialdrag+21].outputs[circlesnapt];
 				for(signed char n = 0; n < 3; ++n) if(ops[0][prevo].inputs [n] == initialdrag+21) {
@@ -2367,12 +2361,30 @@ void FMPlusAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 				}
 			}
 
+			signed char prevt = initialdrag+21;
+			signed char prevs = circlesnapo;
+			bool i = circlehover<9;
 			initialdrag = -1;
 			circlesnapo = -1;
-			if(prevo       >= 0) sortconnectors(prevo,circlehover< 9);
-			if(circlesnapo <  0) sortconnectors(prevt,circlehover>=9);
+			if(prevo >= 0) {
+				sortconnectors(prevo,i);
+				if(prevs < 0)
+					sortconnectors(prevt,!i);
+			}
 			hover = recalc_hover(event.x,event.y);
 			updatehighlight();
+
+			if(prevo >= 0 || prevs >= 0) {
+				if(!i) {
+					audio_processor.updateconnectors(prevt,true ,ops[0][prevt].outputs);
+					if(prevs >= 0)
+						audio_processor.updateconnectors(prevs,false,ops[0][prevs].inputs);
+				} else {
+					audio_processor.updateconnectors(prevt,false,ops[0][prevt].inputs);
+					if(prevs >= 0)
+						audio_processor.updateconnectors(prevs,true ,ops[0][prevs].outputs);
+				}
+			}
 
 			calcline();
 			return;

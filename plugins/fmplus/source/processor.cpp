@@ -265,6 +265,11 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 	int newindex = fmin(3,fmax(0,floor(page_gen.state.value[15][0]*8-4)));
 	if(newindex != osindex) setoversampling();
 
+	if(updateconnections.get()) {
+		updateconnections = false;
+		// TODO !!!!!!!!!!
+	}
+
 	// update fx order
 	if(updatefxorder.get()) {
 		updatefxorder = false;
@@ -1051,6 +1056,95 @@ void FMPlusAudioProcessor::parameterChanged(const String& parameterID, float new
 			}
 		}
 	}
+}
+void FMPlusAudioProcessor::updateconnectors(signed char o, bool outputs, signed char* ids) {
+	updateconnections = false;
+
+	signed char* apids;
+	if(outputs) apids = presets[currentpreset].outputs[o];
+	else        apids = presets[currentpreset].inputs [o];
+
+	// remove connections removed for turned on operators
+	bool replacable[3];
+	bool hasemptyslot = false;
+	for(signed char n = 0; n < 3; ++n) {
+		signed char id = apids[n];
+		replacable[n] = true;
+		if(id < 0) {
+			hasemptyslot = true;
+			continue;
+		}
+		if(id != 0 && page_op.state.value[0][fmax(0,id-1)] < .5f) continue;
+		for(signed char nn = 0; nn < 3; ++nn) if(id == ids[nn]) {
+			replacable[n] = false;
+			break;
+		}
+		if(replacable[n]) {
+			hasemptyslot = true;
+			for(signed char nn = 0; nn < 3; ++nn) {
+				if( outputs && presets[currentpreset].inputs [id][nn] == o) {
+					presets[currentpreset].inputs [id][nn] = -1;
+					break;
+				}
+				if(!outputs && presets[currentpreset].outputs[id][nn] == o) {
+					presets[currentpreset].outputs[id][nn] = -1;
+					break;
+				}
+			}
+			apids[n] = -1;
+		}
+	}
+
+	// mark the new item
+	signed char newitem = -1;
+	for(signed char n = 0; n < 3; ++n) {
+		signed char id = ids[n];
+		bool isnew = true;
+		for(signed char nn = 0; nn < 3; ++nn) if(id == apids[nn]) {
+			isnew = false;
+			break;
+		}
+		if(isnew) {
+			newitem = id;
+			break;
+		}
+	}
+	if(newitem == -1) return;
+
+	if(!hasemptyslot) for(signed char n = 2; n >= 0; --n) if(replacable[n]) {
+		for(signed char nn = 0; nn < 3; ++nn) {
+			if( outputs && presets[currentpreset].inputs [apids[n]][nn] == o) {
+				presets[currentpreset].inputs [apids[n]][nn] = -1;
+				break;
+			}
+			if(!outputs && presets[currentpreset].outputs[apids[n]][nn] == o) {
+				presets[currentpreset].outputs[apids[n]][nn] = -1;
+				break;
+			}
+		}
+		apids[n] = -1;
+		break;
+	}
+
+	// replace removed item w new item, pushing the rest,
+	signed char temp;
+	float newinfl = .5f;
+	float tempinfl;
+	for(signed char n = 0; n < 3; ++n) {
+		temp = apids[n];
+		apids[n] = newitem;
+		newitem = temp;
+
+		if(!outputs) {
+			tempinfl = presets[currentpreset].influence[o][n];
+			presets[currentpreset].influence[o][n] = newinfl;
+			newinfl = tempinfl;
+		}
+
+		if(temp == -1) break;
+	}
+
+	updateconnections = true;
 }
 void FMPlusAudioProcessor::updatearpspeed() {
 	if(page_gen.state.value[ 9][0] > 0)
