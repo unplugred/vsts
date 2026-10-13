@@ -84,19 +84,21 @@ struct box {
 	}
 };
 struct meshdata {
-	float text[(1937+1)*4]; // X Y COL CHAR
+	float text[(1877+(MC+1)*3*12+1)*4]; // X Y COL CHAR
 	int textlength = -1;
+	int connectortext = 0;
 	void addtext(float x, float y, String txt, float color = 0, bool rotated = false);
 	void replacetext(int id, String txt, int length = -1);
 
 	box boxes[24];
 	int boxnum = 0;
 
-	float square[(233+1)*4];
+	float square[(233+(MC+1)*3*6+1)*4];
 	int squarelength = -1;
+	int connectorsquare = 0;
 	void addsquare(float x, float y, float w, float h, float color = 0, bool corner = false);
 
-	float line[(479+24*3*(MC+1)+1)*3]; // 479 lines, 24 per connector, 3*(MC+1) connectors
+	float line[(479+(MC+1)*3*24+1)*3]; // 479 lines, 24 per connector, 3*(MC+1) connectors
 	int linelength = -1;
 	int connectorlength[2] { 0,0 };
 	float lineprevx = 0;

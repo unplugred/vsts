@@ -27,9 +27,9 @@ struct pluginpreset {
 	String name = "";
 	char fxorder[FXC] { 3,4,5,6,7,8,9,10 };
 	short oppos[(MC+FXC+1)*2];
-	signed char inputs     [MC+1][3];
-	signed char outputs    [MC+1][3];
-	unsigned char influence[MC+1][3];
+	signed char inputs   [MC+1][3];
+	signed char outputs  [MC+1][3];
+	float       influence[MC+1][3];
 	pluginpreset(String pname = "") {
 		name = pname;
 	}

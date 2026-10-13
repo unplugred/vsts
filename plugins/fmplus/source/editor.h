@@ -23,9 +23,10 @@ public:
 struct op {
 	short pos[2] { 0,0 };
 
-	signed char outputs[3]     { -1, -1, -1 };
-	signed char inputs [3]     { -1, -1, -1 };
-	unsigned char influence[3] { 50, 50, 50 };
+	signed char outputs[3] { -1, -1, -1 };
+	signed char inputs [3] { -1, -1, -1 };
+	float influence    [3] {  0,  0,  0 }; // tied to inputs
+	int influencemesh  [3] { -1, -1, -1 };
 
 	float indicator = 0;
 	int textmesh = -1;
@@ -46,7 +47,7 @@ public:
 	void resortop();
 	void sortconnectors(signed char o, bool outputs);
 	void calcline();
-	void makeconnector(int x1, int y1, int x2, int y2, int oo, int io, int on, int in, bool isdrag = false);
+	int makeconnector(int x1, int y1, int x2, int y2, int oo, int io, int on, int in, bool isdrag = false);
 	void rebuildtab(int tab);
 	void updatevalue(int param);
 	void paint(Graphics&) override;
@@ -131,6 +132,8 @@ private:
 	signed char fxanim = -1;
 	signed char opdrag = -10;
 	signed char opdragpos = -10;
+	signed char influencen = -1;
+	signed char previnfluencen = -1;
 	bool dragoutop = false;
 	std::shared_ptr<OpenGLShaderProgram> operatorshader;
 

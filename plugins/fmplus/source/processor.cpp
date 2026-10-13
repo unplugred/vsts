@@ -90,7 +90,7 @@ FMPlusAudioProcessor::FMPlusAudioProcessor() :
 			for(int i = 0; i < 3; ++i) {
 				presets[n].inputs   [o][i] = -1;
 				presets[n].outputs  [o][i] = -1;
-				presets[n].influence[o][i] = 50;
+				presets[n].influence[o][i] = 0;
 			}
 		}
 		for(int o = 0; o < FXC; ++o) {
@@ -98,17 +98,21 @@ FMPlusAudioProcessor::FMPlusAudioProcessor() :
 			presets[n].oppos[(MC+1+o)*2+1] = round(136.5f+10-8.f-(ceil(FXC/2)*.5f-floor(o/2))*22);
 		}
 
-		presets[n].inputs [0][0] = 1;
-		presets[n].outputs[1][0] = 0;
+		presets[n].inputs   [0][0] = 1;
+		presets[n].outputs  [1][0] = 0;
+		presets[n].influence[0][0] = .34f;
 
-		presets[n].inputs [0][1] = 2;
-		presets[n].outputs[2][0] = 0;
+		presets[n].inputs   [0][1] = 2;
+		presets[n].outputs  [2][0] = 0;
+		presets[n].influence[0][1] = .29f;
 
-		presets[n].inputs [2][0] = 2;
-		presets[n].outputs[2][1] = 2;
+		presets[n].inputs   [2][0] = 2;
+		presets[n].outputs  [2][1] = 2;
+		presets[n].influence[2][0] = .48f;
 
-		presets[n].inputs [1][0] = 3;
-		presets[n].outputs[3][0] = 1;
+		presets[n].inputs   [1][0] = 3;
+		presets[n].outputs  [3][0] = 1;
+		presets[n].influence[1][0] = .93f;
 	}
 	page_gen.presetname = presets[currentpreset].name;
 
