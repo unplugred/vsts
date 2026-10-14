@@ -60,6 +60,7 @@ public:
 	void mouseDown(const MouseEvent& event) override;
 	void mouseDrag(const MouseEvent& event) override;
 	void mouseUp(const MouseEvent& event) override;
+	void domouseup(float x, float y);
 	void mouseDoubleClick(const MouseEvent& event) override;
 	void mouseWheelMove(const MouseEvent& event, const MouseWheelDetails& wheel) override;
 	bool keyPressed(const KeyPress& key) override;

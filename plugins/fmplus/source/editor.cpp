@@ -1,11 +1,11 @@
-// TODO tab switch hotkey
-// TODO reroute crosshatched connections
-//
-// TODO line lerp anim
-// TODO dot shift anim
-// TODO dot scale anim
 // TODO op appear anim
 // TODO influence anim
+// TODO dot scale anim
+// TODO line lerp anim
+// TODO dot shift anim
+//
+// TODO autohide influence
+// TODO reroute crosshatched connections
 //
 // TODO fm
 //
@@ -1189,6 +1189,7 @@ void FMPlusAudioProcessorEditor::rebuildtab(int tab) {
 
 	opanimation = 0;
 	if(mesh.p == audio_processor.tabp[tab]) {
+		if(initialdrag >= 0) domouseup(-5,-5);
 		mesh.tab = tab;
 		mesh.p = audio_processor.tabp[tab];
 		mesh.o = audio_processor.tabo[tab];
@@ -1199,12 +1200,12 @@ void FMPlusAudioProcessorEditor::rebuildtab(int tab) {
 		for(int i = 0; i < selectedpage->curvesnum; ++i)
 			calcvis(selectedpage->curves[i].linenum);
 		resortop();
-
 		return;
 	}
 
 	bool rebuildnodes = false;
 	if((mesh.tab==2) != (tab==2)) {
+		domouseup(-5,-5);
 		rebuildnodes = true;
 		fxanim = 13;
 		ops[tab==2?1:0][0].pos[0] = ops[mesh.tab==2?1:0][0].pos[0];
@@ -1212,10 +1213,36 @@ void FMPlusAudioProcessorEditor::rebuildtab(int tab) {
 		fx_target[0][0] = ops[0][0].pos[0];
 		fx_target[0][1] = ops[0][0].pos[1];
 		if(tab == 2) {
-			for(int o = 1; o < (FXC+1); ++o) {
+			for(int o = 1; o < (FXC+1); ++o) { // snap fx
 				if(audio_processor.pages[o+2]->valuenorm[0][0] < .5) {
 					fx_target[o][0] = ops[1][o].pos[0];
 					fx_target[o][1] = ops[1][o].pos[1];
+				}
+				if(round(fx_smooth[o][0]) != round(fx_target[o][0]) || round(fx_smooth[o][1]) != round(fx_target[o][1])) {
+					float x = round(fx_target[o][0])+162;
+					float y = round(fx_target[o][1])+30;
+					int s = ops[1][o].textmesh+1;
+					int sl = audio_processor.pages[o+2]->tabname.length();
+					for(int n = 0; n < sl; ++n) {
+						mesh.text[   (s+n*6)*4] =     x    /width  ; // top    left
+						mesh.text[ 1+(s+n*6)*4] = 1-( y    /height);
+
+						mesh.text[ 4+(s+n*6)*4] =     x    /width  ; // bottom left
+						mesh.text[ 5+(s+n*6)*4] = 1-((y+10)/height);
+
+						mesh.text[ 8+(s+n*6)*4] =    (x+ 8)/width  ; // top    right
+						mesh.text[ 9+(s+n*6)*4] = 1-( y    /height);
+
+						mesh.text[12+(s+n*6)*4] =     x    /width  ; // bottom left
+						mesh.text[13+(s+n*6)*4] = 1-((y+10)/height);
+
+						mesh.text[16+(s+n*6)*4] =    (x+ 8)/width  ; // top    right
+						mesh.text[17+(s+n*6)*4] = 1-( y    /height);
+
+						mesh.text[20+(s+n*6)*4] =    (x+ 8)/width  ; // bottom right
+						mesh.text[21+(s+n*6)*4] = 1-((y+10)/height);
+						x += 7;
+					}
 				}
 				fx_smooth[o][0] = fx_target[o][0];
 				fx_smooth[o][1] = fx_target[o][1];
@@ -1224,17 +1251,25 @@ void FMPlusAudioProcessorEditor::rebuildtab(int tab) {
 			}
 			for(int n = 0; n < 12; ++n) // remove + - buttons
 				mesh.text[2+n*4] = -10;
-		}
-		// hide/unhide text
-		if(tab == 2) {
-			for(int o = 0; o < MC; ++o)
+
+			// hide/unhide text
+			for(int o = 0; o < MC; ++o) {
 				if(audio_processor.page_op.valuenorm[0][o] > .5f)
 					for(int n = (ops[0][o+1].textmesh+1); n < (ops[0][o+1].textmesh+3*6+1); ++n)
 						mesh.text[2+n*4] = -10;
+			}
 		} else {
 			for(int n = (ops[1][1].textmesh+1); n < (prevtextindex[0]+1); ++n)
 				mesh.text[2+n*4] = -10;
 		}
+
+		circlehover = -5;
+		curvehover = -1;
+		influencen = -1;
+		hover = -1;
+	} else if(hover >= 0) {
+		if(initialdrag >= 0) domouseup(-5,-5);
+		hover = -1;
 	}
 
 	tabanimation = 0;
@@ -1860,6 +1895,7 @@ void FMPlusAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 			if(initialdrag == -21) {
 				initialdrag = -1;
 				rebuildtab(0);
+				audio_processor.params.selectedtab = 0;
 			} else {
 				audio_processor.tabp[2] = initialdrag+23;
 				audio_processor.params.fxtab = audio_processor.tabp[2];
@@ -1869,7 +1905,6 @@ void FMPlusAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 			}
 			audio_processor.params.selectedtab = mesh.tab;
 		} else if(influencen >= 0) { // click influence
-			// TODO !!!!!!!
 			initialvalue[0] = ops[0][initialdrag+21].influence[influencen];
 			valueoffset[0] = 0;
 			audio_processor.undo_manager.beginNewTransaction();
@@ -2130,7 +2165,6 @@ void FMPlusAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 		return;
 	} else if(initialdrag >= -21) {
 		if(influencen >= 0) { // drag influence
-			// TODO !!!!!!!
 			       if(!finemode &&  (event.mods.isShiftDown() || event.mods.isAltDown())) {
 				finemode = true;
 				initialvalue[0] -= (event.getDistanceFromDragStartY()-event.getDistanceFromDragStartX())*.0045f;
@@ -2321,6 +2355,10 @@ void FMPlusAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 	}
 }
 void FMPlusAudioProcessorEditor::mouseUp(const MouseEvent& event) {
+	event.source.enableUnboundedMouseMovement(false);
+	domouseup(event.x,event.y);
+}
+void FMPlusAudioProcessorEditor::domouseup(float eventx, float eventy) {
 	if(dpi < 0) {
 		initialdrag = -1;
 		return;
@@ -2328,13 +2366,12 @@ void FMPlusAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 	if(initialdrag > -1) {
 		if(mesh.boxes[initialdrag].knob == -1) { // lfo
 			if(curvehover == -1) {
-				hover = recalc_hover(event.x,event.y);
+				hover = recalc_hover(eventx,eventy);
 				updatehighlight();
 				initialdrag = -1;
 				return;
 			}
 			curve* currentcurve = &selectedpage->curves[mesh.boxes[initialdrag].curve].cui[mesh.o];
-			event.source.enableUnboundedMouseMovement(false);
 			Desktop::setMousePosition(dragpos);
 			axislock = -1;
 			int i = curvehover;
@@ -2366,6 +2403,8 @@ void FMPlusAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 			if((curvehover%2) == 0) audio_processor.undo_manager.setCurrentTransactionName("Moved point");
 			else audio_processor.undo_manager.setCurrentTransactionName("Moved tension");
 			audio_processor.undo_manager.beginNewTransaction();
+			initialdrag = -1;
+			return;
 		} else {
 			String id;
 			if(mesh.p == 1) id = "o"+(String)mesh.o+selectedpage->params[mesh.boxes[initialdrag].knob].id;
@@ -2377,17 +2416,16 @@ void FMPlusAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 			audio_processor.undo_manager.beginNewTransaction();
 
 			if(selectedpage->params[mesh.boxes[initialdrag].knob].ttype != potentiometer::ptype::booltype) {
-				event.source.enableUnboundedMouseMovement(false);
 				Desktop::setMousePosition(dragpos);
+				initialdrag = -1;
+				return;
 			}
 		}
 	} else if(initialdrag >= -21 && initialdrag < -12) {
 		if(influencen >= 0) { // release influence
-			// TODO !!!!!!!
 			audio_processor.undo_manager.setCurrentTransactionName(
 				(String)((ops[0][initialdrag+21].influence[influencen]-initialvalue[0])>=0?"Increased operator influence":"Decreased operator influence"));
 			audio_processor.undo_manager.beginNewTransaction();
-			event.source.enableUnboundedMouseMovement(false);
 			Desktop::setMousePosition(dragpos);
 			initialdrag = -1;
 			return;
@@ -2435,7 +2473,7 @@ void FMPlusAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 				if(prevs < 0)
 					sortconnectors(prevt,!i);
 			}
-			hover = recalc_hover(event.x,event.y);
+			hover = recalc_hover(eventx,eventy);
 			updatehighlight();
 
 			if(prevo >= 0 || prevs >= 0) {
@@ -2541,7 +2579,7 @@ void FMPlusAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 		updatefxop();
 	}
 	int prevhover = hover;
-	hover = recalc_hover(event.x,event.y);
+	hover = recalc_hover(eventx,eventy);
 	updatehighlight();
 	if(hover == -26) {
 		if(prevhover == -26) URL("https://vst.unplug.red/").launchInDefaultBrowser();
@@ -2597,7 +2635,6 @@ void FMPlusAudioProcessorEditor::mouseDoubleClick(const MouseEvent& event) {
 
 	} else if(mesh.tab != 2) {
 		if(influencen >= 0) { // double click influence
-			// TODO !!!!!!
 			audio_processor.undo_manager.setCurrentTransactionName((String)"Remove connection");
 			signed char prevt = hover+21;
 			signed char prevo = ops[0][prevt].inputs[influencen];
@@ -2658,7 +2695,6 @@ void FMPlusAudioProcessorEditor::mouseDoubleClick(const MouseEvent& event) {
 }
 void FMPlusAudioProcessorEditor::mouseWheelMove(const MouseEvent& event, const MouseWheelDetails& wheel) {
 	if(influencen >= 0) { // scroll influence
-		// TODO !!!!!!!!
 		ops[0][hover+21].influence[influencen] = fmax(0.f,fmin(1.f,ops[0][hover+21].influence[influencen]+wheel.deltaY*((event.mods.isShiftDown()||event.mods.isAltDown())?.03f:.25858652f)));
 		mesh.replacetext(ops[0][hover+21].influencemesh[influencen],((String)round(ops[0][hover+21].influence[influencen]*99)).paddedLeft('0',2));
 		return;
@@ -2722,142 +2758,227 @@ void FMPlusAudioProcessorEditor::mouseWheelMove(const MouseEvent& event, const M
 	audio_processor.apvts.getParameter(id)->setValueNotifyingHost(value);
 }
 bool FMPlusAudioProcessorEditor::keyPressed(const KeyPress& key) {
-	if(freqdigit < -10) return false;
 	int code = key.getKeyCode();
 
-	// tab
-	if(code == 9) {
-		// switch field
-		freqselect(freqdigit>10?0:20);
-		return true;
-	}
+	if(freqdigit >= -10) {
+		// tab
+		if(code == 9) {
+			// switch field
+			freqselect(freqdigit>10?0:20);
+			return true;
+		}
 
-	// escape or enter
-	if(code == 27 || code == 13) {
-		// release focus
-		freqselect(-20);
-		return true;
-	}
+		// escape or enter
+		if(code == 27 || code == 13) {
+			// release focus
+			freqselect(-20);
+			return true;
+		}
 
-	// minus or plus
-	if((code == 45 || code == 43) && freqdigit > 10) {
-		// change sign
-		if((code==45) == (selectedpage->valuenorm[8][mesh.o]>=.5f))
-			audio_processor.apvts.getParameter("o"+(String)mesh.o+selectedpage->params[8].id)->setValueNotifyingHost(1-selectedpage->valuenorm[8][mesh.o]);
-		return true;
-	}
+		// minus or plus
+		if((code == 45 || code == 43) && freqdigit > 10) {
+			// change sign
+			if((code==45) == (selectedpage->valuenorm[8][mesh.o]>=.5f))
+				audio_processor.apvts.getParameter("o"+(String)mesh.o+selectedpage->params[8].id)->setValueNotifyingHost(1-selectedpage->valuenorm[8][mesh.o]);
+			return true;
+		}
 
-	// slash or backslash or asterisk
-	if((code == 47 || code == 92 || code == 42) && freqdigit <= 10) {
-		// change mult mode
-		audio_processor.apvts.getParameter("o"+(String)mesh.o+selectedpage->params[6].id)->setValueNotifyingHost(code==42?1:0);
-		return true;
-	}
+		// slash or backslash or asterisk
+		if((code == 47 || code == 92 || code == 42) && freqdigit <= 10) {
+			// change mult mode
+			audio_processor.apvts.getParameter("o"+(String)mesh.o+selectedpage->params[6].id)->setValueNotifyingHost(code==42?1:0);
+			return true;
+		}
 
-	// left or right or h or l or a or d or backspace or space
-	if(code == 268435537 || code == 104 || code == 97 || code == 8 || code == 268435539 || code == 108 || code == 100 || code == 32) {
-		bool right = code == 268435537 || code == 104 || code == 97 || code == 8;
-		// move cursor
-		int min = freqdigit>10?20:0;
-		freqselect(fmin(min+3,fmax(min,(right?-1:1)+fmin(min+3,fmax(min,freqdigit)))));
-		return true;
-	}
+		// left or right or h or l or a or d or backspace or space
+		if(code == 268435537 || code == 104 || code == 97 || code == 8 || code == 268435539 || code == 108 || code == 100 || code == 32) {
+			bool right = code == 268435537 || code == 104 || code == 97 || code == 8;
+			// move cursor
+			int min = freqdigit>10?20:0;
+			freqselect(fmin(min+3,fmax(min,(right?-1:1)+fmin(min+3,fmax(min,freqdigit)))));
+			return true;
+		}
 
-	// up or down or k or j or w or s
-	if(code == 268435538 || code == 107 || code == 119 || code == 268435540 || code == 106 || code == 115) {
-		bool up = code == 268435538 || code == 107 || code == 119;
-		// increment digit
-		if(freqdigit > 10)
-			audio_processor.apvts.getParameter("o"+(String)mesh.o+selectedpage->params[8].id)->setValueNotifyingHost(                 freqaddnormalize(                 freqaddinflate(selectedpage->valuenorm[8][mesh.o])+(up?1:-1)*freqstep));
+		// up or down or k or j or w or s
+		if(code == 268435538 || code == 107 || code == 119 || code == 268435540 || code == 106 || code == 115) {
+			bool up = code == 268435538 || code == 107 || code == 119;
+			// increment digit
+			if(freqdigit > 10)
+				audio_processor.apvts.getParameter("o"+(String)mesh.o+selectedpage->params[8].id)->setValueNotifyingHost(                 freqaddnormalize(                 freqaddinflate(selectedpage->valuenorm[8][mesh.o])+(up?1:-1)*freqstep));
+			else
+				audio_processor.apvts.getParameter("o"+(String)mesh.o+selectedpage->params[7].id)->setValueNotifyingHost(selectedpage->params[7].normalize(selectedpage->params[7].inflate(selectedpage->valuenorm[7][mesh.o])+(up?1:-1)*freqstep));
+			return true;
+		}
+
+		if(code != 46 && (code < 48 || code > 57)) return false;
+
+		int current = fmin(3,fmax(0,freqdigit>10?(freqdigit-20):freqdigit));
+		int dotpos = 4;
+		int nums[4];
+		for(int n = 0; n < 4; ++n) {
+			nums[n] = mesh.text[3+(1+n*6+mesh.boxes[selectedpage->knobbox[freqdigit>10?8:7]].textmesh)*4]-51;
+			if(nums[n] < 0) dotpos = n;
+		}
+
+		// dot
+		if(code == 46) {
+			if(current == 0) {
+				//if first digit, set start to 0., skip to third digit
+				nums[0] = 0;
+				nums[1] = -3;
+				if(dotpos >= 2) {
+					for(int i = 2; i < 4; ++i) {
+						if((i+dotpos-1) >= 4)
+							nums[i] = 0;
+						else
+							nums[i] = nums[i+dotpos-1];
+					}
+				}
+				dotpos = 1;
+				current = 1;
+			} else {
+				//if dot is ahead, truncate number
+				if(dotpos > current) {
+					for(int i = current+1; i < 4; ++i) {
+						if((i+dotpos-current) >= 4)
+							nums[i] = 0;
+						else
+							nums[i] = nums[i+dotpos-current];
+					}
+					nums[current] = -3;
+					dotpos = current;
+				//if dot is before, do nothing
+				} else if(dotpos < current) {
+					return true;
+				}
+				//if dot is current, ignore
+			}
+
+		// digit
+		} else if(nums[current] >= 0 || current <= 1 || freqdigit >= 10) {
+			//if dot is current, inflate.
+			if(freqdigit < 10 && current == 0 && dotpos == 2 && (code-48) > 2) {
+				nums[0] = code-48;
+				nums[1] = -3;
+				for(int i = 2; i < 3; ++i) nums[i] = nums[i+1];
+				nums[3] = 0;
+				--dotpos;
+				++current;
+			} else {
+				if(nums[current] < 0) {
+					for(int i = 3; i >= (current+1); --i) nums[i] = nums[i-1];
+					++dotpos;
+				}
+				//replace digit
+				nums[current] = code-48;
+				if(nums[current] == 0 && current == 0 && dotpos > 1) --current;
+				else if(freqdigit < 10 && ((current == 1 && dotpos == 2) || (current == 0 && nums[current] > 2))) ++current;
+			}
+		}
+
+		float v = 0;
+		for(int n = 0; n < 4; ++n) {
+			if(dotpos == n) continue;
+			v += nums[n]*pow(10,dotpos-n-(dotpos>n?1:0));
+		}
+		if(freqdigit <= 10) {
+			audio_processor.apvts.getParameter("o"+(String)mesh.o+selectedpage->params[7].id)->setValueNotifyingHost(selectedpage->params[7].normalize(v));
+		} else {
+			if(selectedpage->valuenorm[8][mesh.o] < .5f) v *= -1;
+			audio_processor.apvts.getParameter("o"+(String)mesh.o+selectedpage->params[8].id)->setValueNotifyingHost(                 freqaddnormalize(v));
+		}
+
+		if(current == 3)
+			freqselect(-20);
 		else
-			audio_processor.apvts.getParameter("o"+(String)mesh.o+selectedpage->params[7].id)->setValueNotifyingHost(selectedpage->params[7].normalize(selectedpage->params[7].inflate(selectedpage->valuenorm[7][mesh.o])+(up?1:-1)*freqstep));
+			freqselect(current+(freqdigit>10?21:1));
+
 		return true;
 	}
 
-	if(code != 46 && (code < 48 || code > 57)) return false;
-
-	int current = fmin(3,fmax(0,freqdigit>10?(freqdigit-20):freqdigit));
-	int dotpos = 4;
-	int nums[4];
-	for(int n = 0; n < 4; ++n) {
-		nums[n] = mesh.text[3+(1+n*6+mesh.boxes[selectedpage->knobbox[freqdigit>10?8:7]].textmesh)*4]-51;
-		if(nums[n] < 0) dotpos = n;
+	if(code == 9) { // tab
+		rebuildtab(fmod(mesh.tab+(key.getModifiers().isShiftDown()?-1:1)+TABC,TABC));
+		audio_processor.params.selectedtab = mesh.tab;
+		return true;
+	}
+	if(code == 71 || code == 103 || code == 79 || code == 111) { // G g O o
+		rebuildtab(0);
+		audio_processor.params.selectedtab = 0;
+		return true;
+	}
+	if(code == 86 || code == 118) { // V v
+		rebuildtab(1);
+		audio_processor.params.selectedtab = 1;
+		return true;
+	}
+	if(code == 88 || code == 120) { // X x
+		rebuildtab(2);
+		audio_processor.params.selectedtab = 2;
+		return true;
+	}
+	if(code >= 49 && code <= 56) { // 1 - 8
+		rebuildtab(code-46);
+		audio_processor.params.selectedtab = mesh.tab;
+		return true;
+	}
+	if(code == 70 || code == 102) { // F f
+		audio_processor.tabp[2] = 3;
+		audio_processor.params.fxtab = 3;
+		rebuildtab(2);
+		audio_processor.params.selectedtab = 2;
+		return true;
+	}
+	if(code == 68 || code == 100) { // D d
+		audio_processor.tabp[2] = 4;
+		audio_processor.params.fxtab = 4;
+		rebuildtab(2);
+		audio_processor.params.selectedtab = 2;
+		return true;
+	}
+	if(code == 80 || code == 112) { // P p
+		audio_processor.tabp[2] = 5;
+		audio_processor.params.fxtab = 5;
+		rebuildtab(2);
+		audio_processor.params.selectedtab = 2;
+		return true;
+	}
+	if(code == 83 || code == 115) { // S s
+		audio_processor.tabp[2] = 6;
+		audio_processor.params.fxtab = 6;
+		rebuildtab(2);
+		audio_processor.params.selectedtab = 2;
+		return true;
+	}
+	if(code == 69 || code == 101) { // E e
+		audio_processor.tabp[2] = 7;
+		audio_processor.params.fxtab = 7;
+		rebuildtab(2);
+		audio_processor.params.selectedtab = 2;
+		return true;
+	}
+	if(code == 67 || code == 99) { // C c
+		audio_processor.tabp[2] = 8;
+		audio_processor.params.fxtab = 8;
+		rebuildtab(2);
+		audio_processor.params.selectedtab = 2;
+		return true;
+	}
+	if(code == 89 || code == 121) { // Y y
+		audio_processor.tabp[2] = 9;
+		audio_processor.params.fxtab = 9;
+		rebuildtab(2);
+		audio_processor.params.selectedtab = 2;
+		return true;
+	}
+	if(code == 82 || code == 114) { // R r
+		audio_processor.tabp[2] = 10;
+		audio_processor.params.fxtab = 10;
+		rebuildtab(2);
+		audio_processor.params.selectedtab = 2;
+		return true;
 	}
 
-	// dot
-	if(code == 46) {
-		if(current == 0) {
-			//if first digit, set start to 0., skip to third digit
-			nums[0] = 0;
-			nums[1] = -3;
-			if(dotpos >= 2) {
-				for(int i = 2; i < 4; ++i) {
-					if((i+dotpos-1) >= 4)
-						nums[i] = 0;
-					else
-						nums[i] = nums[i+dotpos-1];
-				}
-			}
-			dotpos = 1;
-			current = 1;
-		} else {
-			//if dot is ahead, truncate number
-			if(dotpos > current) {
-				for(int i = current+1; i < 4; ++i) {
-					if((i+dotpos-current) >= 4)
-						nums[i] = 0;
-					else
-						nums[i] = nums[i+dotpos-current];
-				}
-				nums[current] = -3;
-				dotpos = current;
-			//if dot is before, do nothing
-			} else if(dotpos < current) {
-				return true;
-			}
-			//if dot is current, ignore
-		}
-
-	// digit
-	} else if(nums[current] >= 0 || current <= 1 || freqdigit >= 10) {
-		//if dot is current, inflate.
-		if(freqdigit < 10 && current == 0 && dotpos == 2 && (code-48) > 2) {
-			nums[0] = code-48;
-			nums[1] = -3;
-			for(int i = 2; i < 3; ++i) nums[i] = nums[i+1];
-			nums[3] = 0;
-			--dotpos;
-			++current;
-		} else {
-			if(nums[current] < 0) {
-				for(int i = 3; i >= (current+1); --i) nums[i] = nums[i-1];
-				++dotpos;
-			}
-			//replace digit
-			nums[current] = code-48;
-			if(nums[current] == 0 && current == 0 && dotpos > 1) --current;
-			else if(freqdigit < 10 && ((current == 1 && dotpos == 2) || (current == 0 && nums[current] > 2))) ++current;
-		}
-	}
-
-	float v = 0;
-	for(int n = 0; n < 4; ++n) {
-		if(dotpos == n) continue;
-		v += nums[n]*pow(10,dotpos-n-(dotpos>n?1:0));
-	}
-	if(freqdigit <= 10) {
-		audio_processor.apvts.getParameter("o"+(String)mesh.o+selectedpage->params[7].id)->setValueNotifyingHost(selectedpage->params[7].normalize(v));
-	} else {
-		if(selectedpage->valuenorm[8][mesh.o] < .5f) v *= -1;
-		audio_processor.apvts.getParameter("o"+(String)mesh.o+selectedpage->params[8].id)->setValueNotifyingHost(                 freqaddnormalize(v));
-	}
-
-	if(current == 3)
-		freqselect(-20);
-	else
-		freqselect(current+(freqdigit>10?21:1));
-
-	return true;
+	return false;
 }
 int FMPlusAudioProcessorEditor::recalc_hover(float x, float y) {
 	if(dpi < 0) return -1;
