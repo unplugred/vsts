@@ -47,7 +47,7 @@ public:
 	void resortop();
 	void sortconnectors(signed char o, bool outputs);
 	void calcline();
-	int makeconnector(int x1, int y1, int x2, int y2, int oo, int io, int on, int in, bool isdrag = false);
+	int makeconnector(int x1, int y1, int x2, int y2, int oo, int io, int on, int in, bool isdrag = false, bool duplex = false);
 	void rebuildtab(int tab);
 	void updatevalue(int param);
 	void paint(Graphics&) override;

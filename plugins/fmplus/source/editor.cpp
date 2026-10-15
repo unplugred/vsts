@@ -4,9 +4,6 @@
 // TODO line lerp anim
 // TODO dot shift anim
 //
-// TODO autohide influence
-// TODO reroute crosshatched connections
-//
 // TODO fm
 //
 // TODO tabular save file
@@ -1064,7 +1061,7 @@ void FMPlusAudioProcessorEditor::calcline() {
 					tn = nn;
 					break;
 				}
-				if(circlehover >= -1 && ((o == (initialdrag+21) && circlesnapt == n && circlehover < 9) || (t == (initialdrag+21) && circlesnapt == tn && circlehover >= 9))) {
+				if((circlehover >= -1 && ((o == (initialdrag+21) && circlesnapt == n && circlehover < 9) || (t == (initialdrag+21) && circlesnapt == tn && circlehover >= 9))) || (dragoutop && t == (initialdrag+21))) {
 					ops[0][o].influencemesh[n] = -1;
 					continue;
 				}
@@ -1074,10 +1071,21 @@ void FMPlusAudioProcessorEditor::calcline() {
 				int x2 = 153+17+ops[0][o].pos[0]+ioffset;
 				int y1 = 256+ 4-ops[0][t].pos[1];
 				int y2 = 256+14-ops[0][o].pos[1];
-				x1 = makeconnector(x1,y1,x2,y2,ooffset+18,ioffset+18,tn,n);
-				ops[0][o].influencemesh[n] = mesh.textlength;
-				mesh.addsquare(x1-7,round(300-(y1+y2+10)*.5f),15,10,0);
-				mesh.addtext  (x1-7,round(300-(y1+y2+10)*.5f),((String)round(ops[0][o].influence[n]*99)).paddedLeft('0',2),1);
+				bool duplex = false;
+				if(o != t && ((y1+10) < y2 || ((y1+10) == y2 && x1 < x2))) {
+					for(int nn = 0; nn < inputs[t]; ++nn) if(ops[0][t].inputs[nn] == o) {
+						duplex = true;
+						break;
+					}
+				}
+				x1 = makeconnector(x1,y1,x2,y2,ooffset+18,ioffset+18,tn,n,false,duplex);
+				if(x1 >= 0) {
+					ops[0][o].influencemesh[n] = mesh.textlength;
+					mesh.addsquare(x1-7,round(300-(y1+y2+10)*.5f),15,10,0);
+					mesh.addtext  (x1-7,round(300-(y1+y2+10)*.5f),((String)round(ops[0][o].influence[n]*99)).paddedLeft('0',2),1);
+				} else {
+					ops[0][o].influencemesh[n] = -1;
+				}
 			}
 		}
 		if(circlesnapo >= 0) {
@@ -1095,11 +1103,18 @@ void FMPlusAudioProcessorEditor::calcline() {
 			}
 			int ooffset = tn*8-(outputs[t]-1)*8*.5f;
 			int ioffset =  n*8-(inputs [o]-1)*8*.5f;
-			makeconnector(
-				153.f+17+ops[0][t].pos[0]+ooffset,
-				256.f+ 4-ops[0][t].pos[1],
-				153.f+17+ops[0][o].pos[0]+ioffset,
-				256.f+14-ops[0][o].pos[1],ooffset+18,ioffset+18,tn,n);
+			int x1 = 153.f+17+ops[0][t].pos[0]+ooffset;
+			int x2 = 153.f+17+ops[0][o].pos[0]+ioffset;
+			int y1 = 256.f+ 4-ops[0][t].pos[1];
+			int y2 = 256.f+14-ops[0][o].pos[1];
+			bool duplex = false;
+			if(o != t && ((y1+10) < y2 || ((y1+10) == y2 && x1 < x2))) {
+				for(int nn = 0; nn < inputs[t]; ++nn) if(ops[0][t].inputs[nn] == o) {
+					duplex = true;
+					break;
+				}
+			}
+			makeconnector(x1,y1,x2,y2,ooffset+18,ioffset+18,tn,n,false,duplex);
 		}
 		mesh.connectorsquare = mesh.squarelength-prevsquare;
 		mesh.squarelength = prevsquare;
@@ -1109,9 +1124,9 @@ void FMPlusAudioProcessorEditor::calcline() {
 	mesh.connectorlength[0] = mesh.linewritepos-mesh.linelength;
 	mesh.connectorlength[1] = mesh.connectorlength[0];
 }
-int FMPlusAudioProcessorEditor::makeconnector(int x1, int y1, int x2, int y2, int oo, int io, int on, int in, bool isdrag) {
-	if((y2+(isdrag?5.5f:9)) > (y1-(isdrag?5.5f:0)) && (!isdrag || fabs((x2-io)-(x1-oo)) >= 33 || (y2-1) > y1)) {
-	if(fabs((x2-io)-(x1-oo)) < 33) {
+int FMPlusAudioProcessorEditor::makeconnector(int x1, int y1, int x2, int y2, int oo, int io, int on, int in, bool isdrag, bool duplex) {
+	if((y2+(isdrag?5.5f:10)) > (y1-(isdrag?5.5f:0)) && (!isdrag || fabs((x2-io)-(x1-oo)) >= 33 || (y2-1) > y1)) {
+	if(duplex || fabs((x2-io)-(x1-oo)) < (y2-y1<30?43:33)) { // wrap around
 		int x = fmax(154,fmin(x1-oo-on*2,x2-io-in*2)-5);
 		mesh.beginline(x1+.5f,y1                            );
 		mesh.nextpoint(x1+.5f,fmax(   .5f,y1-on*2-5.5f),true);
@@ -1121,8 +1136,9 @@ int FMPlusAudioProcessorEditor::makeconnector(int x1, int y1, int x2, int y2, in
 		mesh.nextpoint(x2+.5f,y2                       ,true);
 		mesh.nextpoint(x2+.5f,y2                            );
 		mesh.endline();
+		if(x < 158 && (y2-30) < y1) return -10;
 		return fmax(160,x);
-	} else {
+	} else { // half point switch
 		int half = round(((x2-io)+(x1-oo)+18*2)*.5f);
 		mesh.beginline(x1  +.5f,y1                                           );
 		mesh.nextpoint(x1  +.5f,fmax(   .5f,y1-(x1>x2?on:(2-on))*2-5.5f),true);
@@ -1134,7 +1150,7 @@ int FMPlusAudioProcessorEditor::makeconnector(int x1, int y1, int x2, int y2, in
 		mesh.endline();
 		return half;
 	}
-	} else if(y2+(isdrag?11:18) > y1) {
+	} else if((y2+(isdrag?11:18)) > y1) { // flat
 		int half = round((y2+y1)*.5f);
 		mesh.beginline(x1+.5f,y1           );
 		mesh.nextpoint(x1+.5f,half-.5f,true);
@@ -1142,14 +1158,15 @@ int FMPlusAudioProcessorEditor::makeconnector(int x1, int y1, int x2, int y2, in
 		mesh.nextpoint(x2+.5f,y2      ,true);
 		mesh.nextpoint(x2+.5f,y2           );
 		mesh.endline();
-	} else if(fabs(x1-x2) >= (y1-y2-8)) {
+		if((y2+18) > y1 && fabs(x2-x1) < 20) return -10;
+	} else if(fabs(x1-x2) >= (y1-y2-8)) { // compressed
 		mesh.beginline(x1+.5f,y1          );
 		mesh.nextpoint(x1+.5f,y1-5.5f,true);
 		mesh.nextpoint(x2+.5f,y2+5.5f,true);
 		mesh.nextpoint(x2+.5f,y2     ,true);
 		mesh.nextpoint(x2+.5f,y2          );
 		mesh.endline();
-	} else {
+	} else { // diagonal
 		float half =     (y2+y1)*.5f;
 		float div  = fabs(x2-x1)*.5f;
 		mesh.beginline(x1+.5f,y1                      );
@@ -2274,18 +2291,21 @@ void FMPlusAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 			sl = selectedpage->tabname.length();
 		signed short x = initialvalue[0]+event.getDistanceFromDragStartX()/ui_scales[ui_scale_index];
 		signed short y = initialvalue[1]+event.getDistanceFromDragStartY()/ui_scales[ui_scale_index];
+		bool docalcline = false;
 		if(mesh.tab != 2 && o != 0) {
 			if((x < -100 || y < -100 || x > (133-3*7+100) || y > (257+100))) {
 				if(!dragoutop) {
 					dragoutop = true;
 					for(int n = (ops[0][o].textmesh+1); n < (ops[0][o].textmesh+3*6+1); ++n)
 						mesh.text[2+n*4] = -10;
+					calcline();
 				}
 			} else {
 				if(dragoutop) {
 					dragoutop = false;
 					for(int n = (ops[0][o].textmesh+1); n < (ops[0][o].textmesh+3*6+1); ++n)
 						mesh.text[2+n*4] = 0;
+					docalcline = true;
 				}
 			}
 		}
@@ -2302,7 +2322,10 @@ void FMPlusAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 			if(ops[t][o].pos[0] < 14) y = 25;
 			else                      x = 14;
 		}
-		if(ops[t][o].pos[0] == x && ops[t][o].pos[1] == y) return;
+		if(ops[t][o].pos[0] == x && ops[t][o].pos[1] == y) {
+			if(docalcline) calcline();
+			return;
+		}
 		ops[t][o].pos[0] = x;
 		ops[t][o].pos[1] = y;
 		updatefxop();
