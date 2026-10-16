@@ -142,6 +142,8 @@ private:
 
 	int prevtextindex[4];
 	int pagestart = 0;
+	signed char textappear = -1;
+	bool textappeardelay = false;
 	OpenGLTexture texttex;
 	std::shared_ptr<OpenGLShaderProgram> textshader;
 

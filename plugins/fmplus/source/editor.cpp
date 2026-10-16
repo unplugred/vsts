@@ -1,7 +1,6 @@
-// TODO op appear anim
+// TODO line lerp anim
 // TODO influence anim
 // TODO dot scale anim
-// TODO line lerp anim
 // TODO dot shift anim
 //
 // TODO fm
@@ -1082,7 +1081,7 @@ void FMPlusAudioProcessorEditor::calcline() {
 				if(x1 >= 0) {
 					ops[0][o].influencemesh[n] = mesh.textlength;
 					mesh.addsquare(x1-7,round(300-(y1+y2+10)*.5f),15,10,0);
-					mesh.addtext  (x1-7,round(300-(y1+y2+10)*.5f),((String)round(ops[0][o].influence[n]*99)).paddedLeft('0',2),1);
+					mesh.addtext  (x1-7,round(300-(y1+y2+10)*.5f),((String)round(ops[0][o].influence[n]*99)).paddedLeft('0',2),(textappear==o||textappear==t)?-10:1);
 				} else {
 					ops[0][o].influencemesh[n] = -1;
 				}
@@ -1469,6 +1468,27 @@ void FMPlusAudioProcessorEditor::timerCallback() {
 	}
 	if(fxanim <= 6 && opanimation < 30) ++opanimation;
 
+	if(textappeardelay) textappeardelay = false;
+	else if(textappear >= 0) {
+		for(int c = (ops[0][textappear].textmesh+1); c < (ops[0][textappear].textmesh+3*6+1); ++c)
+			mesh.text[2+c*4] = 0;
+		for(int n = 0; n < 3; ++n) {
+			int influencemesh = ops[0][textappear].influencemesh[n];
+			if(influencemesh >= 0 && mesh.text[2+(influencemesh+1)*4] < 0) for(int c = (influencemesh+1); c < (influencemesh+2*6+1); ++c)
+				mesh.text[2+c*4] = 1;
+		}
+		for(int n = 0; n < 3; ++n) {
+			int output = ops[0][textappear].outputs[n];
+			if(output >= 0) for(int nn = 0; nn < 3; ++nn) if(ops[0][output].inputs[nn] == textappear) {
+				int influencemesh = ops[0][output].influencemesh[nn];
+				if(influencemesh >= 0 && mesh.text[2+(influencemesh+1)*4] < 0) for(int c = (influencemesh+1); c < (influencemesh+2*6+1); ++c)
+					mesh.text[2+c*4] = 1;
+				break;
+			}
+		}
+		textappear = -1;
+	}
+
 	// smooth value
 	bool updateline[MC+1];
 	for(int i = 0; i < (selectedpage->linesnum+1); ++i)
@@ -1664,8 +1684,31 @@ void FMPlusAudioProcessorEditor::parameterChanged(const String& parameterID, flo
 						if(mesh.tab != 2) {
 							for(int n = 0; n < 6; ++n)
 								mesh.text[2+n*4] = displayaddremove[0]?(hover==-25?2:1):-10;
-							for(int n = (ops[0][o+1].textmesh+1); n < (ops[0][o+1].textmesh+3*6+1); ++n)
-								mesh.text[2+n*4] = audio_processor.pages[p]->valuenorm[i][o]>.5f?0:-10;
+							if(audio_processor.pages[p]->valuenorm[i][o] > .5f) {
+								if(textappear > -1 && textappear != (o+1)) {
+									for(int n = (ops[0][textappear].textmesh+1); n < (ops[0][textappear].textmesh+3*6+1); ++n)
+										mesh.text[2+n*4] = 0;
+									for(int n = 0; n < 3; ++n) {
+										int influencemesh = ops[0][textappear].influencemesh[n];
+										if(influencemesh >= 0 && mesh.text[2+(influencemesh+1)*4] < 0) for(int c = (influencemesh+1); c < (influencemesh+2*6+1); ++c)
+											mesh.text[2+c*4] = 1;
+									}
+									for(int n = 0; n < 3; ++n) {
+										int output = ops[0][textappear].outputs[n];
+										if(output >= 0) for(int nn = 0; nn < 3; ++nn) if(ops[0][output].inputs[nn] == textappear) {
+											int influencemesh = ops[0][output].influencemesh[nn];
+											if(influencemesh >= 0 && mesh.text[2+(influencemesh+1)*4] < 0) for(int c = (influencemesh+1); c < (influencemesh+2*6+1); ++c)
+												mesh.text[2+c*4] = 1;
+											break;
+										}
+									}
+								}
+								textappeardelay = true;
+								textappear = o+1;
+							} else {
+								for(int n = (ops[0][o+1].textmesh+1); n < (ops[0][o+1].textmesh+3*6+1); ++n)
+									mesh.text[2+n*4] = -10;
+							}
 						}
 
 						for(int n = 0; n < 3; ++n) {
@@ -2303,8 +2346,26 @@ void FMPlusAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 			} else {
 				if(dragoutop) {
 					dragoutop = false;
-					for(int n = (ops[0][o].textmesh+1); n < (ops[0][o].textmesh+3*6+1); ++n)
-						mesh.text[2+n*4] = 0;
+					if(textappear > -1 && textappear != o) {
+						for(int n = (ops[0][textappear].textmesh+1); n < (ops[0][textappear].textmesh+3*6+1); ++n)
+							mesh.text[2+n*4] = 0;
+						for(int n = 0; n < 3; ++n) {
+							int influencemesh = ops[0][textappear].influencemesh[n];
+							if(influencemesh >= 0 && mesh.text[2+(influencemesh+1)*4] < 0) for(int c = (influencemesh+1); c < (influencemesh+2*6+1); ++c)
+								mesh.text[2+c*4] = 1;
+						}
+						for(int n = 0; n < 3; ++n) {
+							int output = ops[0][textappear].outputs[n];
+							if(output >= 0) for(int nn = 0; nn < 3; ++nn) if(ops[0][output].inputs[nn] == textappear) {
+								int influencemesh = ops[0][output].influencemesh[nn];
+								if(influencemesh >= 0 && mesh.text[2+(influencemesh+1)*4] < 0) for(int c = (influencemesh+1); c < (influencemesh+2*6+1); ++c)
+									mesh.text[2+c*4] = 1;
+								break;
+							}
+						}
+					}
+					textappeardelay = true;
+					textappear = o;
 					docalcline = true;
 				}
 			}
