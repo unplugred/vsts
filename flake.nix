@@ -25,7 +25,7 @@
 				#jack2         #libjack-jackd2-dev
 				#ladspa-sdk    #ladspa-sdk
 				#curl          #libcurl4-openssl-dev
-				#fontconfig    #libfontconfig1-dev
+				fontconfig    #libfontconfig1-dev
 				freetype      #libfreetype-dev
 				libx11        #libx11-dev
 				libxcomposite #libxcomposite-dev
@@ -34,9 +34,11 @@
 				libxinerama   #libxinerama-dev
 				libxrandr     #libxrandr-dev
 				#libxrender    #libxrender-dev
+				libxi         #libxi-dev
 				#webkitgtk_4_1 #libwebkit2gtk-4.1-dev
-				libGL         #libglu1-mesa-dev
-				#mesa          #mesa-common-dev
+				egl-x11       #libegl-dev
+				mesa_glu      #libglu1-mesa-dev
+				mesa          #mesa-common-dev
 			];
 
 			# environment variables
