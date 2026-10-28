@@ -971,9 +971,9 @@ void FMPlusAudioProcessorEditor::sortconnectors(signed char o, bool outputs) {
 		if(t < 0) {
 			val[n] = 900;
 		} else {
-			val[n]  =      ops[0][t].pos[0]-ops[0][o].pos[0];
-			val[n] += fabs(ops[0][t].pos[1]-ops[0][o].pos[1]+150)*(val[n]<0?-1:1);
-			if(((ops[0][t].pos[1]-ops[0][o].pos[1]) > -19) && (fabs(ops[0][t].pos[0]-ops[0][o].pos[0]) < 33))
+			val[n]  =                                                                      ops[0][t].pos[0]-ops[0][o].pos[0];
+			val[n] += ((ops[0][t].pos[1]-ops[0][o].pos[1])*(outputs?-1:1)+150)*(val[n]<0?-1:1);
+			if(((      (ops[0][t].pos[1]-ops[0][o].pos[1])*(outputs?-1:1)) > -19) && (fabs(ops[0][t].pos[0]-ops[0][o].pos[0]) < 33))
 				val[n] -= 900;
 		}
 	}
