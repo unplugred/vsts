@@ -1,4 +1,4 @@
-project(Proto VERSION 1.0.0)
+project(DietAudio VERSION 1.0.0)
 set(BaseTargetName DietAudio)
 
 juce_add_plugin("${BaseTargetName}"
