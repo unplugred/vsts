@@ -84,7 +84,7 @@ struct box {
 	}
 };
 struct meshdata {
-	float text[(1877+(MC+1)*3*12+1)*4]; // X Y COL CHAR
+	float text[(1835+(MC+1)*3*12+1)*4]; // X Y COL CHAR
 	int textlength = -1;
 	int connectortext = 0;
 	void addtext(float x, float y, String txt, float color = 0, bool rotated = false);

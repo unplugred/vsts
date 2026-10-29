@@ -2,8 +2,8 @@
 
 FMPlusPageGeneral::FMPlusPageGeneral() : FMPlusPage() {
 	tabname = "Gen";
-	paramstart = -3;
-	params.resize(16);
+	paramstart = -2;
+	params.resize(18);
 	params[ 0] = potentiometer("Voices"						,"voices"			,"Voices"		,0		,1	,VC	,potentiometer::inttype		);
 	params[ 1] = potentiometer("Pitch Bend"					,"pitchbend"		,"Pitch Bend"	,0		,0	,24	,potentiometer::inttype		);
 	params[ 2] = potentiometer("Glide"						,"glide"			,"Glide"		,0		);
@@ -11,22 +11,24 @@ FMPlusPageGeneral::FMPlusPageGeneral() : FMPlusPage() {
 	params[ 4] = potentiometer("LFO Sync"					,"lfosync"			,"LFO Sync"		,0		,0	,3	,potentiometer::inttype		);
 	params[ 5] = potentiometer("Arp On"						,"arpon"			,"Arp"			,0		,0	,1	,potentiometer::booltype	);
 	params[ 6] = potentiometer("Arp Direction"				,"arpdirection"		,"Direction"	,0		,0	,5	,potentiometer::inttype		);
-	params[ 7] = potentiometer("Arp Length"					,"arplength"		,"Length"		,0		);
-	params[ 8] = potentiometer("Arp Speed"					,"arpspeed"			,"Speed"		,0		);
-	params[ 8].bpmsync = 1;
-	params[ 8].defaultbpm = true;
-	params[ 9] = potentiometer("Arp Speed (BPM sync)"		,"arpbpm"			,"Speed"		,0		,0	,12	,potentiometer::inttype		);
-	params[ 9].bpmsync = 2;
+	params[ 7] = potentiometer("Arp Octave"					,"arpoctave"		,"Octave"		,0		,1	,3	,potentiometer::inttype		);
+	params[ 8] = potentiometer("Arp Length"					,"arplength"		,"Length"		,0		);
+	params[ 9] = potentiometer("Arp Speed"					,"arpspeed"			,"Speed"		,0		);
+	params[ 9].bpmsync = 1;
 	params[ 9].defaultbpm = true;
-	params[10] = potentiometer("Vibrato On"					,"vibratoon"		,"Vibrato"		,.001f	,0	,1	,potentiometer::booltype	);
-	params[11] = potentiometer("Vibrato Rate"				,"vibratorate"		,"Rate"			,0		);
-	params[11].bpmsync = 1;
-	params[12] = potentiometer("Vibrato Rate (BPM sync)"	,"vibratobpm"		,"Rate"			,0		,0	,12	,potentiometer::inttype		);
-	params[12].bpmsync = 2;
-	params[13] = potentiometer("Vibrato Amount"				,"vibratoamount"	,"Amount"		,.001f	);
-	params[14] = potentiometer("Vibrato Attack"				,"vibratoattack"	,"Attack"		,0		);
-	params[15] = potentiometer("Anti-Alias"					,"antialias"		,"Anti-Alias"	,0		); // 0.0 aa, 0.5 1x, 0.625 2x, 0.75 4x, 0.875 8x
-	params[15].saved = false;
+	params[10] = potentiometer("Arp Speed (BPM sync)"		,"arpbpm"			,"Speed"		,0		,0	,12	,potentiometer::inttype		);
+	params[10].bpmsync = 2;
+	params[10].defaultbpm = true;
+	params[11] = potentiometer("Vibrato On"					,"vibratoon"		,"Vibrato"		,.001f	,0	,1	,potentiometer::booltype	);
+	params[12] = potentiometer("Vibrato Shape"				,"vibratoshape"		,"Shape"		,0		,0	,3	,potentiometer::inttype		);
+	params[13] = potentiometer("Vibrato Rate"				,"vibratorate"		,"Rate"			,0		);
+	params[13].bpmsync = 1;
+	params[14] = potentiometer("Vibrato Rate (BPM sync)"	,"vibratobpm"		,"Rate"			,0		,0	,12	,potentiometer::inttype		);
+	params[14].bpmsync = 2;
+	params[15] = potentiometer("Vibrato Amount"				,"vibratoamount"	,"Amount"		,.001f	);
+	params[16] = potentiometer("Vibrato Attack"				,"vibratoattack"	,"Attack"		,0		);
+	params[17] = potentiometer("Anti-Alias"					,"antialias"		,"Anti-Alias"	,0		); // 0.0 aa, 0.5 1x, 0.625 2x, 0.75 4x, 0.875 8x
+	params[17].saved = false;
 }
 FMPlusPageGeneral::~FMPlusPageGeneral() { }
 void FMPlusPageGeneral::rebuildtab() {
@@ -41,33 +43,31 @@ void FMPlusPageGeneral::rebuildtab() {
 	sections[0] = 5;
 	mesh->boxes[mesh->boxnum++] = box(              5, 31, 91,  8,  8,3);
 	mesh->boxes[mesh->boxnum++] = box(              6,107,101, 44, 11,0, 6);
-	mesh->boxes[mesh->boxnum++] = box(              7,107,113, 44, 11,0, 4);
-	mesh->boxes[mesh->boxnum++] = box(              8,107,125, 44, 11,0, 6,true);
-	knobbox[ 9] = mesh->boxnum-1;
+	mesh->boxes[mesh->boxnum++] = box(              7,107,113, 44, 11,0, 1);
+	mesh->boxes[mesh->boxnum++] = box(              8,107,125, 44, 11,0, 4);
+	mesh->boxes[mesh->boxnum++] = box(              9,107,137, 44, 11,0, 6,true);
+	knobbox[10] = mesh->boxnum-1;
 
-	sections[1] = 10;
-	mesh->boxes[mesh->boxnum++] = box(             10, 31,146,  8,  8,3);
-	mesh->boxes[mesh->boxnum++] = box(             11, 86,156, 65, 11,0, 6);
-	knobbox[12] = mesh->boxnum-1;
-	mesh->boxes[mesh->boxnum++] = box(             13, 86,168, 65, 11,0, 4);
-	mesh->boxes[mesh->boxnum++] = box(             14, 86,180, 65, 11,0, 5,true);
+	sections[1] = 11;
+	mesh->boxes[mesh->boxnum++] = box(             11, 31,158,  8,  8,3);
+	mesh->boxes[mesh->boxnum++] = box(             12, 86,168, 65, 11,0, 7);
+	mesh->boxes[mesh->boxnum++] = box(             13, 86,180, 65, 11,0, 6);
+	knobbox[14] = mesh->boxnum-1;
+	mesh->boxes[mesh->boxnum++] = box(             15, 86,192, 65, 11,0, 4);
+	mesh->boxes[mesh->boxnum++] = box(             16, 86,204, 65, 11,0, 5,true);
 
-	sections[2] = 15;
-	mesh->boxes[mesh->boxnum++] = box(             15,114,201, 37, 11,0, 3);
-	mesh->boxes[mesh->boxnum++] = box(             -1, 31,224,111, 10,2,15);
-	mesh->boxes[mesh->boxnum++] = box(             -1,143,224,  8, 10,2);
+	sections[2] = 17;
+	mesh->boxes[mesh->boxnum++] = box(             17,114,224, 37, 11,0, 3);
 	mesh->boxes[mesh->boxnum++] = box(             -1, 31,246,111, 10,2,15);
 	mesh->boxes[mesh->boxnum++] = box(             -1,143,246,  8, 10,2);
 }
 void FMPlusPageGeneral::addtext(int i) {
 	if(i ==  0) mesh->addtext(mesh->boxes[i].x+109,mesh->boxes[i].y,">",0,true);
-	if(i == 15) mesh->addtext(mesh->boxes[i].x-1,mesh->boxes[i].y-11,"Tuning File:");
-	if(i == 16) mesh->addtext(mesh->boxes[i].x,mesh->boxes[i].y,"X");
 	if(i == 17) mesh->addtext(mesh->boxes[i].x-1,mesh->boxes[i].y-11,"Theme:");
 	if(i == 18) mesh->addtext(mesh->boxes[i].x,mesh->boxes[i].y,"X");
 };
 bool FMPlusPageGeneral::updatevalue(int param) {
-	if(param == -3) { // preset name
+	if(param == -2) { // preset name
 		String text = presetname;
 		int textlength = fmin(mesh->boxes[0].textamount,text.length());
 		if(textlength == (mesh->boxes[0].textamount-1)) textlength += 1;
@@ -83,9 +83,9 @@ bool FMPlusPageGeneral::updatevalue(int param) {
 		mesh->replacetext(mesh->boxes[0].textmesh,text,mesh->boxes[0].textamount);
 		return true;
 	}
-	if(param == -2 || param == -1) { // tuning/theme
+	if(param == -1) { // theme
 		int box = knobbox[15]+(param==-2?1:3);
-		String text = (param==-2?tuningfile:themefile).substring(0,mesh->boxes[box].textamount);
+		String text = themefile.substring(0,mesh->boxes[box].textamount);
 		float x = mesh->boxes[box].x+floor(mesh->boxes[box].w*.5f-text.length()*3.5f);
 		for(int i = 0; i < mesh->boxes[box].textamount; ++i) for(int t = 0; t < 6; ++t) {
 			if(fmod(fmax(1,fmin(4,t)),2) == 1)

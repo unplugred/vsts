@@ -395,7 +395,7 @@ void midihandler::tick() {
 	// ---- ARP ----
 	if(page_gen->state.value[5][0] > .5f && (arporder[0] != -1 || arplastnote != -1)) {
 		arpprogress += arpspeed;
-		if(arpon && arpprogress >= page_gen->state.value[7][0]) { // note off
+		if(arpon && arpprogress >= page_gen->state.value[8][0]) { // note off
 			if(arpdirty) {
 				for(int v = 0; v < inactivevoicessize; ++v)
 					if(voices[inactivevoices[v]].ison)

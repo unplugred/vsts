@@ -12,7 +12,6 @@ public:
 	void addtext(int i) override;
 	bool updatevalue(int param) override;
 
-	String tuningfile = "";
 	String themefile = "";
 	String presetname = "";
 	bool presetunsaved = false;

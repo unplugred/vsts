@@ -147,7 +147,6 @@ private:
 	OpenGLTexture texttex;
 	std::shared_ptr<OpenGLShaderProgram> textshader;
 
-	std::unique_ptr<FileChooser> tuningchooser;
 	std::unique_ptr<FileChooser> themechooser;
 	void updatetheme();
 

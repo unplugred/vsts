@@ -249,18 +249,29 @@ static String get_string(int param, float value, int page) {
 			if(value == 5)
 				return "Random";
 		} if(param ==  7) {
-			return (String)round(value*100)+'%';
+			return (String)round(value);
 		} if(param ==  8) {
+			return (String)round(value*100)+'%';
+		} if(param ==  9) {
 			return format_time(value*value*(MAXARP-MINARP)+MINARP,true);
-		} if(param == 11) {
-			return format_time(value*value*(MAXVIB-MINVIB)+MINVIB,true);
-		} if(param ==  9 || param == 12) {
-			return bpmsyncs_s[(int)round(value)];
+		} if(param == 12) {
+			if(value == 0)
+				return "Flutter";
+			if(value == 1)
+				return "Sine";
+			if(value == 2)
+				return "Square";
+			if(value == 3)
+				return "S&H";
 		} if(param == 13) {
-			return (String)round(value*value*100)+'C';
-		} if(param == 14) {
-			return format_time(value*value*MAXVIBATT);
+			return format_time(value*value*(MAXVIB-MINVIB)+MINVIB,true);
+		} if(param == 11 || param == 14) {
+			return bpmsyncs_s[(int)round(value)];
 		} if(param == 15) {
+			return (String)round(value*value*100)+'C';
+		} if(param == 16) {
+			return format_time(value*value*MAXVIBATT);
+		} if(param == 17) {
 			if(value < .5)
 				return (String)floor(value*200)+'%';
 			return (String)pow(2,fmin(3,fmax(0,floor(value*8-4))))+'x';
@@ -354,50 +365,62 @@ static std::function<String(int v, int max)> toarpdirection = [](int v, int max)
 static std::function<int(const String& s)> fromarpdirection = [](const String& s) { // TODO
 	return jlimit(0.f,1.f,s.getFloatValue());
 };
-static std::function<String(float v, int max)> toarplength = [](float v, int max) {
+static std::function<String(int v, int max)> toarpoctave = [](int v, int max) {
 	return get_string(7,v,0);
+};
+static std::function<int(const String& s)> fromarpoctave = [](const String& s) { // TODO
+	return jlimit(0.f,1.f,s.getFloatValue());
+};
+static std::function<String(float v, int max)> toarplength = [](float v, int max) {
+	return get_string(8,v,0);
 };
 static std::function<float(const String& s)> fromarplength = [](const String& s) { // TODO
 	return jlimit(0.f,1.f,s.getFloatValue());
 };
 static std::function<String(float v, int max)> toarpspeed = [](float v, int max) {
-	return get_string(8,v,0);
+	return get_string(9,v,0);
 };
 static std::function<float(const String& s)> fromarpspeed = [](const String& s) { // TODO
 	return jlimit(0.f,1.f,s.getFloatValue());
 };
 static std::function<String(int v, int max)> toarpbpm = [](int v, int max) {
-	return get_string(9,v,0);
+	return get_string(10,v,0);
 };
 static std::function<int(const String& s)> fromarpbpm = [](const String& s) { // TODO
 	return jlimit(0.f,1.f,s.getFloatValue());
 };
+static std::function<String(int v, int max)> tovibratoshape = [](int v, int max) {
+	return get_string(12,v,0);
+};
+static std::function<int(const String& s)> fromvibratoshape = [](const String& s) { // TODO
+	return jlimit(0.f,1.f,s.getFloatValue());
+};
 static std::function<String(float v, int max)> tovibratorate = [](float v, int max) {
-	return get_string(11,v,0);
+	return get_string(13,v,0);
 };
 static std::function<float(const String& s)> fromvibratorate = [](const String& s) { // TODO
 	return jlimit(0.f,1.f,s.getFloatValue());
 };
 static std::function<String(int v, int max)> tovibratobpm = [](int v, int max) {
-	return get_string(12,v,0);
+	return get_string(14,v,0);
 };
 static std::function<int(const String& s)> fromvibratobpm = [](const String& s) { // TODO
 	return jlimit(0.f,1.f,s.getFloatValue());
 };
 static std::function<String(float v, int max)> tovibratoamount = [](float v, int max) {
-	return get_string(13,v,0);
+	return get_string(15,v,0);
 };
 static std::function<float(const String& s)> fromvibratoamount = [](const String& s) { // TODO
 	return jlimit(0.f,1.f,s.getFloatValue());
 };
 static std::function<String(float v, int max)> tovibratoattack = [](float v, int max) {
-	return get_string(14,v,0);
+	return get_string(16,v,0);
 };
 static std::function<float(const String& s)> fromvibratoattack = [](const String& s) { // TODO
 	return jlimit(0.f,1.f,s.getFloatValue());
 };
 static std::function<String(float v, int max)> toantialias = [](float v, int max) {
-	return get_string(15,v,0);
+	return get_string(17,v,0);
 };
 static std::function<float(const String& s)> fromantialias = [](const String& s) { // TODO
 	return jlimit(0.f,1.f,s.getFloatValue());

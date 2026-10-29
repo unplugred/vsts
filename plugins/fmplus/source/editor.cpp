@@ -1501,7 +1501,7 @@ void FMPlusAudioProcessorEditor::timerCallback() {
 		if(selectedpage->params[i].bpmsync == 1) // tempo sync is active, use that value instead
 			if(selectedpage->valuenorm[i+1][mesh.o] > 0)
 				target = (selectedpage->valuenorm[i+1][mesh.o]*selectedpage->params[i+1].maximumvalue-1)/(selectedpage->params[i+1].maximumvalue-1);
-		if(mesh.p == 0 && i == 15 && target >= .5f) target = fmin(6,floor(target*8-1))/6.f; // round second half of anti aliasing knob
+		if(mesh.p == 0 && i == 17 && target >= .5f) target = fmin(6,floor(target*8-1))/6.f; // round second half of anti aliasing knob
 		if(selectedpage->params[i].adsrstage == 0) { // interpolate adsr
 			bool updated = false;
 			int adsrid = selectedpage->params[i].adsr;
@@ -1591,7 +1591,7 @@ void FMPlusAudioProcessorEditor::timerCallback() {
 
 	if(mesh.p == 0 && audio_processor.updatepreset.get()) {
 		audio_processor.updatepreset = false;
-		updatevalue(-3); // update preset name
+		updatevalue(-2); // update preset name
 	}
 
 	// fx ops
@@ -1866,15 +1866,6 @@ void FMPlusAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 			} else if(mesh.p == 0) {
 				       if(initialdrag ==  0) { // preset
 					// TODO preset select
-				} else if(initialdrag == 15) { // tuning select
-					File tuningdir = audio_processor.params.tuningdir;
-					if(!tuningdir.exists()) tuningdir = File();
-					tuningchooser = std::make_unique<FileChooser>("Open tuning...",tuningdir,"*.scl;*.kbm");
-					int folderChooserFlags = FileBrowserComponent::openMode | FileBrowserComponent::canSelectFiles;
-					tuningchooser->launchAsync(folderChooserFlags,[this](const FileChooser& chooser) {
-						audio_processor.updatetuning(chooser.getResult());
-						updatevalue(-2);
-					});
 				} else if(initialdrag == 17) { // theme select
 					File themedir = audio_processor.params.themedir;
 					if(!themedir.exists()) themedir = File();
@@ -1885,9 +1876,6 @@ void FMPlusAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 						updatevalue(-1);
 						updatetheme();
 					});
-				} else if(initialdrag == 16) { // default tuning
-					audio_processor.resettuning();
-					updatevalue(-2);
 				} else if(initialdrag == 18) { // default theme
 					audio_processor.resettheme();
 					updatevalue(-1);

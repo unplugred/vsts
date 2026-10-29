@@ -1,3 +1,6 @@
+// TODO arp octave
+// TODO vibrato shape
+
 #include "processor.h"
 #include "editor.h"
 #include "curves.h"
@@ -266,7 +269,7 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 	for(int i = 0; i < getTotalNumOutputChannels(); ++i)
 		buffer.clear(i, 0, buffer.getNumSamples());
 
-	int newindex = fmin(3,fmax(0,floor(page_gen.state.value[15][0]*8-4)));
+	int newindex = fmin(3,fmax(0,floor(page_gen.state.value[17][0]*8-4)));
 	if(newindex != osindex) setoversampling();
 
 	if(updateconnections.get()) {
@@ -389,16 +392,16 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 	} else {
 
 		// ---- VIBRATO ----
-		if((page_gen.state.value[10][0] > .00001 || page_gen.presets[currentpreset].value[10][0] > .00001) && (page_gen.state.value[13][0] > .00001 || page_gen.presets[currentpreset].value[13][0] > .00001)) {
+		if((page_gen.state.value[11][0] > .00001 || page_gen.presets[currentpreset].value[11][0] > .00001) && (page_gen.state.value[15][0] > .00001 || page_gen.presets[currentpreset].value[15][0] > .00001)) {
 			float attackdelta = 1;
-			if(page_gen.state.value[14][0] > .0001f)
-				attackdelta = 1.f/(page_gen.state.value[14][0]*page_gen.state.value[14][0]*MAXVIBATT*ossamplerate);
+			if(page_gen.state.value[16][0] > .0001f)
+				attackdelta = 1.f/(page_gen.state.value[16][0]*page_gen.state.value[16][0]*MAXVIBATT*ossamplerate);
 			for(int v = 0; v < voicecount; ++v)
 				midihandle.voices[voiceorder[v]].eventindex = 0;
 			for(int s = 0; s < numsamples; ++s) {
-				page_gen.state.value[10][0] = page_gen.smooth[10][0].getNextValue();
-				page_gen.state.value[13][0] = page_gen.smooth[13][0].getNextValue();
-				float amt = page_gen.state.value[10][0]*page_gen.state.value[13][0];
+				page_gen.state.value[11][0] = page_gen.smooth[11][0].getNextValue();
+				page_gen.state.value[15][0] = page_gen.smooth[15][0].getNextValue();
+				float amt = page_gen.state.value[11][0]*page_gen.state.value[15][0];
 				vibphase = fmod(vibphase+vibdelta,1.f);
 				float vib = sinapprox(vibphase*2-1)*amt*amt/12;
 
@@ -756,7 +759,7 @@ void FMPlusAudioProcessor::processBlock(AudioBuffer<float>& buffer, MidiBuffer& 
 
 void FMPlusAudioProcessor::setoversampling() {
 	if(!preparedtoplay) return;
-	osindex = fmin(3,fmax(0,floor(page_gen.state.value[15][0]*8-4)));
+	osindex = fmin(3,fmax(0,floor(page_gen.state.value[17][0]*8-4)));
 	if(osindex > 0) {
 		if(channelnum <= 0) return;
 		os[osindex-1]->reset();
@@ -800,7 +803,6 @@ void FMPlusAudioProcessor::getStateInformation(MemoryBlock& destData) {
 	data << version << delimiter
 		<< currentpreset << delimiter
 		<< (page_gen.presetunsaved?1:0) << delimiter
-		<< page_gen.state.value[15][0] << delimiter
 		<< params.selectedtab.get() << delimiter
 		<< params.fxtab.get() << delimiter
 		<< page_gen.tuningfile.replace(",","/") << delimiter;
@@ -862,8 +864,8 @@ void FMPlusAudioProcessor::setStateInformation(const void* data, int sizeInBytes
 		debug((String)"Error loading saved data");
 	}
 
-	apvts.getParameter("antialias")->setValueNotifyingHost(page_gen.state.value[15][0]); // TODO
 	//*/
+	apvts.getParameter("antialias")->setValueNotifyingHost(page_gen.state.value[17][0]); // TODO
 }
 const String FMPlusAudioProcessor::get_preset(int preset_id, const char delimiter) {
 
@@ -1151,16 +1153,16 @@ void FMPlusAudioProcessor::updateconnectors(signed char o, bool outputs, signed 
 	updateconnections = true;
 }
 void FMPlusAudioProcessor::updatearpspeed() {
-	if(page_gen.state.value[ 9][0] > 0)
-		midihandle.arpspeed = bpm/(bpmsyncs_f  [(int)page_gen.state.value  [ 9][0]]*samplerate*pow(2,osindex)*60);
+	if(page_gen.state.value[10][0] > 0)
+		midihandle.arpspeed = bpm/(bpmsyncs_f  [(int)page_gen.state.value  [10][0]]*samplerate*pow(2,osindex)*60);
 	else
-		midihandle.arpspeed = 1.f/((page_gen.state.value  [ 8][0]*page_gen.state.value  [ 8][0]*(MAXARP-MINARP)+MINARP)*samplerate*pow(2,osindex));
+		midihandle.arpspeed = 1.f/((page_gen.state.value  [ 9][0]*page_gen.state.value  [ 9][0]*(MAXARP-MINARP)+MINARP)*samplerate*pow(2,osindex));
 }
 void FMPlusAudioProcessor::updatevibspeed() {
-	if(page_gen.state.value[12][0] > 0)
-		vibdelta            = bpm/(bpmsyncs_f  [(int)page_gen.state.value  [12][0]]*samplerate*pow(2,osindex)*60);
+	if(page_gen.state.value[14][0] > 0)
+		vibdelta            = bpm/(bpmsyncs_f  [(int)page_gen.state.value  [14][0]]*samplerate*pow(2,osindex)*60);
 	else
-		vibdelta            = 1.f/((page_gen.state.value  [11][0]*page_gen.state.value  [11][0]*(MAXVIB-MINVIB)+MINVIB)*samplerate*pow(2,osindex));
+		vibdelta            = 1.f/((page_gen.state.value  [13][0]*page_gen.state.value  [13][0]*(MAXVIB-MINVIB)+MINVIB)*samplerate*pow(2,osindex));
 }
 void FMPlusAudioProcessor::updatea(int o) {
 	egd[o*5  ]              = 1.f/((page_op.state.value[ 9][o]*page_op.state.value[ 9][o]*(MAXA  -MINA  )+MINA  )*samplerate*pow(2,osindex));
@@ -1354,10 +1356,12 @@ AudioProcessorValueTreeState::ParameterLayout FMPlusAudioProcessor::create_param
 	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"lfosync"						,1},"LFO Sync"																		 ,0		,3		 ,0		,AudioParameterIntAttributes()	.withStringFromValueFunction(tolfosync			).withValueFromStringFunction(fromlfosync		))); // NOTE, RANDOM, FREE, TRIGGER
 	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"arpon"						,1},"Arp On"																		 				 ,false	,AudioParameterBoolAttributes()	.withStringFromValueFunction(tobool				).withValueFromStringFunction(frombool			)));
 	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"arpdirection"				,1},"Arp Direction"																	 ,0		,5		 ,0		,AudioParameterIntAttributes()	.withStringFromValueFunction(toarpdirection		).withValueFromStringFunction(fromarpdirection	))); // SEQUENCE, UP, DOWN, U&D, D&U, RANDOM
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"arpoctave"					,1},"Arp Octave"																	 ,1		,3		 ,0		,AudioParameterIntAttributes()	.withStringFromValueFunction(toarpoctave		).withValueFromStringFunction(fromarpoctave		)));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"arpspeed"					,1},"Arp Speed"										,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.5f	,AudioParameterFloatAttributes().withStringFromValueFunction(toarpspeed			).withValueFromStringFunction(fromarpspeed		)));
 	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"arpbpm"						,1},"Arp Speed (BPM sync)"															 ,0		,12		 ,0		,AudioParameterIntAttributes()	.withStringFromValueFunction(toarpbpm			).withValueFromStringFunction(fromarpbpm		)));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"arplength"					,1},"Arp Length"									,juce::NormalisableRange<float	>(0.0f	,1.0f	),1.0f	,AudioParameterFloatAttributes().withStringFromValueFunction(toarplength		).withValueFromStringFunction(fromarplength		)));
 	parameters.push_back(std::make_unique<AudioParameterBool	>(ParameterID{"vibratoon"					,1},"Vibrato On"																	 				 ,false	,AudioParameterBoolAttributes()	.withStringFromValueFunction(tobool				).withValueFromStringFunction(frombool			)));
+	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"vibratoshape"				,1},"Vobrato Shape"																	 ,0		,3		 ,0		,AudioParameterIntAttributes()	.withStringFromValueFunction(tovibratoshape		).withValueFromStringFunction(fromvibratoshape	))); // FLUTTER, SINE, SQUARE, S&H
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"vibratorate"					,1},"Vibrato Rate"									,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.5f	,AudioParameterFloatAttributes().withStringFromValueFunction(tovibratorate		).withValueFromStringFunction(fromvibratorate	)));
 	parameters.push_back(std::make_unique<AudioParameterInt		>(ParameterID{"vibratobpm"					,1},"Vibrato Rate (BPM sync)"														 ,0		,12		 ,0		,AudioParameterIntAttributes()	.withStringFromValueFunction(tovibratobpm		).withValueFromStringFunction(fromvibratobpm	)));
 	parameters.push_back(std::make_unique<AudioParameterFloat	>(ParameterID{"vibratoamount"				,1},"Vibrato Amount"								,juce::NormalisableRange<float	>(0.0f	,1.0f	),0.5f	,AudioParameterFloatAttributes().withStringFromValueFunction(tovibratoamount	).withValueFromStringFunction(fromvibratoamount	)));
