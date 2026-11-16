@@ -5,6 +5,8 @@ plugmachine_look_n_feel::plugmachine_look_n_feel() {
 plugmachine_look_n_feel::~plugmachine_look_n_feel() {
 }
 String plugmachine_look_n_feel::find_font(String query) {
+	return "None";
+
 	std::stringstream ss(query.toRawUTF8());
 	std::string token;
 	std::vector<String> words;
