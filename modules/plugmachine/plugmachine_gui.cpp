@@ -23,6 +23,8 @@ String plugmachine_look_n_feel::find_font(String query) {
 	return words[index];
 }
 String plugmachine_look_n_feel::add_line_breaks(String input, int width) {
+	return input;
+	/*
 	Font font(getPopupMenuFont());
 	std::stringstream ss(input.toRawUTF8());
 	std::string token;
@@ -47,6 +49,7 @@ String plugmachine_look_n_feel::add_line_breaks(String input, int width) {
 			line += word;
 	}
 	return out;
+	*/
 }
 
 plugmachine_gui::plugmachine_gui(Component& c, plugmachine_dsp& p, int _width, int _height, float _target_dpi, float _scale_step, bool _do_banner, bool _do_scale) : audio_processor(p), component(c) {
