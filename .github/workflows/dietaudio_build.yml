@@ -23,7 +23,7 @@ jobs:
         include:
         - {
             name: "Mac",
-            os: macos-14,
+            os: macos-15,
             folder: "build_mac"
           }
         - {

@@ -138,7 +138,7 @@ void VUAudioProcessorEditor::renderOpenGL() {
 	//glDisable(GL_LIGHTING);
 	glDisable(GL_BLEND);
 	glDisable(GL_DEPTH_TEST);
-	glDisable(GL_ALPHA_TEST);
+	//glDisable(GL_ALPHA_TEST);
 
 	context.extensions.glBindBuffer(GL_ARRAY_BUFFER, array_buffer);
 	vushader->use();

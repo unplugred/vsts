@@ -31,7 +31,7 @@ ScopeAudioProcessorEditor::ScopeAudioProcessorEditor(ScopeAudioProcessor& p, int
 	else val = round(val);
 	knobs[2].svalue = (String)val+"ms";
 
-	bgcol = Colour::fromHSV(knobs[7].value,knobs[8].value,1,1);
+	bgcol = Colour::fromHSV(knobs[7].value,knobs[8].value,1.f,1.f);
 	ampdamp	.reset(knobs[3].value		,.08,-1,30);
 	griddamp.reset(knobs[6].value		,.08,-1,30);
 	rdamp	.reset(bgcol.getFloatRed()	,.15,-1,30);
@@ -461,7 +461,7 @@ void ScopeAudioProcessorEditor::parameterChanged(const String& parameterID, floa
 		} else if(parameterID == "scale") {
 			knobs[3].svalue = (String)(round(knobs[3].value*400)*.1f)+"dB";
 		} else if(parameterID == "hue" || parameterID == "saturation" || parameterID == "value") {
-			bgcol = Colour::fromHSV(knobs[7].value,knobs[8].value,1,1);
+			bgcol = Colour::fromHSV(knobs[7].value,knobs[8].value,1.f,1.f);
 		}
 		return;
 	}

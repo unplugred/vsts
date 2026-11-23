@@ -629,11 +629,9 @@ LookNFeel::LookNFeel() {
 LookNFeel::~LookNFeel() {
 }
 Font LookNFeel::getPopupMenuFont() {
-	Font fontt;
-	if(font == "None")
-		fontt = Font(18.f*scale,Font::plain);
-	else
-		fontt = Font(font,"Regular",18.f*scale);
+	Font fontt = Font(FontOptions(18.f*scale,Font::plain));
+	if(font != "None")
+		fontt = Font(FontOptions(font,"Regular",18.f*scale));
 	fontt.setHorizontalScale(.9f);
 	fontt.setExtraKerningFactor(-.05f);
 	return fontt;
@@ -735,7 +733,7 @@ void LookNFeel::getIdealPopupMenuItemSize(const String& text, const bool isSepar
 		idealWidth = 0;
 		int lines = 0;
 		while(std::getline(ss, token, '\n')) {
-			idealWidth = fmax(idealWidth,font.getStringWidth(token));
+			idealWidth = fmax(idealWidth,GlyphArrangement::getStringWidth(font,token));
 			++lines;
 		}
 

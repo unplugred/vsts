@@ -23,8 +23,6 @@ String plugmachine_look_n_feel::find_font(String query) {
 	return words[index];
 }
 String plugmachine_look_n_feel::add_line_breaks(String input, int width) {
-	return input;
-	/*
 	Font font(getPopupMenuFont());
 	std::stringstream ss(input.toRawUTF8());
 	std::string token;
@@ -33,9 +31,9 @@ String plugmachine_look_n_feel::add_line_breaks(String input, int width) {
 	while(std::getline(ss, token, ' ')) {
 		float word = 0;
 		if(((String)token).containsChar('\n'))
-			word = font.getStringWidthFloat((line==0?"":" ")+((String)token).upToFirstOccurrenceOf("\n",false,false));
+			word = GlyphArrangement::getStringWidth(font,(line==0?"":" ")+((String)token).upToFirstOccurrenceOf("\n",false,false));
 		else
-			word = font.getStringWidthFloat((line==0?"":" ")+token);
+			word = GlyphArrangement::getStringWidth(font,(line==0?"":" ")+token);
 		if(line == 0 || (line+word) < (width*scale)) {
 			if(line != 0) out += (String)" ";
 			out += (String)token;
@@ -44,12 +42,11 @@ String plugmachine_look_n_feel::add_line_breaks(String input, int width) {
 			out += (String)"\n"+token;
 		}
 		if(((String)token).containsChar('\n'))
-			line = font.getStringWidthFloat(((String)token).fromLastOccurrenceOf("\n",false,false));
+			line = GlyphArrangement::getStringWidth(font,((String)token).fromLastOccurrenceOf("\n",false,false));
 		else
 			line += word;
 	}
 	return out;
-	*/
 }
 
 plugmachine_gui::plugmachine_gui(Component& c, plugmachine_dsp& p, int _width, int _height, float _target_dpi, float _scale_step, bool _do_banner, bool _do_scale) : audio_processor(p), component(c) {

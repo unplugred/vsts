@@ -771,16 +771,14 @@ int SucroseAudioProcessorEditor::recalc_hover(float x, float y) {
 
 LookNFeel::LookNFeel() {
 	setColour(PopupMenu::backgroundColourId,Colour::fromFloatRGBA(0.f,0.f,0.f,0.f));
-	//font = find_font("Arial|Helvetica Neue|Helvetica|Roboto");
+	font = find_font("Arial|Helvetica Neue|Helvetica|Roboto");
 }
 LookNFeel::~LookNFeel() {
 }
 Font LookNFeel::getPopupMenuFont() {
-	Font fontt;
-	//if(font == "None")
-		fontt = Font(FontOptions(16.f*scale,Font::plain));
-	//else
-	//	fontt = Font(font,"Regular",16.f*scale);
+	Font fontt = Font(FontOptions(16.f*scale,Font::plain));
+	if(font != "None")
+		fontt = Font(FontOptions(font,"Regular",16.f*scale));
 	fontt.setHorizontalScale(1.1f);
 	fontt.setExtraKerningFactor(-.05f);
 	return fontt;
@@ -851,8 +849,7 @@ void LookNFeel::drawPopupMenuItem(Graphics &g, const Rectangle<int> &area, bool 
 int LookNFeel::getPopupMenuBorderSize() {
 	return (int)round(scale);
 }
-void LookNFeel::getIdealPopupMenuItemSize(const String& text, const bool isSeparator, int standardMenuItemHeight, int& idealWidth, int& idealHeight)
-{
+void LookNFeel::getIdealPopupMenuItemSize(const String& text, const bool isSeparator, int standardMenuItemHeight, int& idealWidth, int& idealHeight) {
 	if(isSeparator) {
 		idealWidth = 50*scale;
 		idealHeight = (int)round(scale);
@@ -871,12 +868,12 @@ void LookNFeel::getIdealPopupMenuItemSize(const String& text, const bool isSepar
 
 		std::stringstream ss(newtext.trim().toRawUTF8());
 		std::string token;
-		idealWidth = 30;
+		idealWidth = 0;
 		int lines = 0;
-		//while(std::getline(ss, token, '\n')) {
-		//	idealWidth = fmax(idealWidth,font.getStringWidth(token));
-		//	++lines;
-		//}
+		while(std::getline(ss, token, '\n')) {
+			idealWidth = fmax(idealWidth,GlyphArrangement::getStringWidth(font,token));
+			++lines;
+		}
 
 		if(removeleft)
 			idealWidth += idealheightsingle*2-5*scale;

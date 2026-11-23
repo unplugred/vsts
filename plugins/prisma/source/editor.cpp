@@ -751,7 +751,7 @@ uniform float banner;
 out vec2 uv;
 void main(){
 	gl_Position = vec4(vec2(aPos.x*size.x,aPos.y*size.y*(1-banner)+banner)*2-1,0,1);
-	uv = vec2(1-(1-aPos.x)*texscale.x,(aPos.y-texscale.z)*texscale.y);
+	uv = vec2(1-(1.5-aPos.x)*texscale.x,(aPos.y-texscale.z)*texscale.y);
 })",
 //LOGO FRAG
 R"(#version 150 core
@@ -2138,11 +2138,9 @@ LookNFeel::LookNFeel() {
 LookNFeel::~LookNFeel() {
 }
 Font LookNFeel::getPopupMenuFont() {
-	Font fontt;
-	if(font == "None")
-		fontt = Font(14.f*scale,Font::plain);
-	else
-		fontt = Font(font,"Regular",14.f*scale);
+	Font fontt = Font(FontOptions(14.f*scale,Font::plain));
+	if(font != "None")
+		fontt = Font(FontOptions(font,"Regular",14.f*scale));
 	fontt.setHorizontalScale(1.2f);
 	fontt.setExtraKerningFactor(-.05f);
 	return fontt;
@@ -2248,7 +2246,7 @@ void LookNFeel::getIdealPopupMenuItemSize(const String& text, const bool isSepar
 		idealWidth = 0;
 		int lines = 0;
 		while(std::getline(ss, token, '\n')) {
-			idealWidth = fmax(idealWidth,font.getStringWidth(token));
+			idealWidth = fmax(idealWidth,GlyphArrangement::getStringWidth(font,token));
 			++lines;
 		}
 

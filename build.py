@@ -19,7 +19,7 @@ codes = {
 systems = [{
 	"name": "Mac",
 	"code": "mac",
-	"image": "macos-14",
+	"image": "macos-15",
 	"compiler": "Xcode",
 	"executable": ".app"
 },{
@@ -395,8 +395,11 @@ def product_build(plugin):
 	<allowed-os-versions>
 		<os-version min="11"/>
 	</allowed-os-versions>
+	<options hostArchitectures="arm64,x86_64"/>
 	<options customize="always" require-scripts="false" rootVolumeOnly="true"/>
 	<welcome file="pages/welcome.html" mime-type="text/html"/>
+	<background file="pages/bg.png" mime-type="image/png" scaling="none" alignment="bottomleft"/>
+	<background-darkAqua file="pages/bg.png" mime-type="image/png" scaling="none" alignment="bottomleft"/>
 	<conclusion file="pages/conclusion.html" mime-type="text/html"/>
 	<choices-outline>''')
 	for target in targets:

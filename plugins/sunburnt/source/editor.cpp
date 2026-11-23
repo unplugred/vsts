@@ -1703,8 +1703,8 @@ LookNFeel::~LookNFeel() {
 }
 Font LookNFeel::getPopupMenuFont() {
 	if(ENGFont == "None")
-		return Font(14.f*scale,Font::plain);
-	return Font(ENGFont,"Regular",14.f*scale);
+		return Font(FontOptions(14.f*scale,Font::plain));
+	return Font(FontOptions(ENGFont,"Regular",14.f*scale));
 }
 int LookNFeel::getMenuWindowFlags() {
 	//return ComponentPeer::windowHasDropShadow;
@@ -1743,8 +1743,8 @@ void LookNFeel::drawPopupMenuItem(Graphics &g, const Rectangle<int> &area, bool 
 	float maxFontHeight = ((float)r.getHeight())/1.45f;
 	if(((int)text.toRawUTF8()[1]) < 0) {
 		if(CJKFont == "None")
-			font = Font(20.f*scale,Font::plain);
-		font = Font(CJKFont,"Regular",20.f*scale);
+			font = Font(FontOptions(20.f*scale,Font::plain));
+		font = Font(FontOptions(CJKFont,"Regular",20.f*scale));
 		maxFontHeight = r.getHeight();
 	}
 	if(!isActive && removeleft) font.setBold(true);
@@ -1810,7 +1810,7 @@ void LookNFeel::getIdealPopupMenuItemSize(const String& text, const bool isSepar
 		idealWidth = 0;
 		int lines = 0;
 		while(std::getline(ss, token, '\n')) {
-			idealWidth = fmax(idealWidth,font.getStringWidth(token));
+			idealWidth = fmax(idealWidth,GlyphArrangement::getStringWidth(font,token));
 			++lines;
 		}
 

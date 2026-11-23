@@ -4,6 +4,8 @@
 
 VUAudioProcessorSettings::VUAudioProcessorSettings(VUAudioProcessor& p, int paramcount, knob* k) : audio_processor(p), knobs(k), DocumentWindow("VU Settings", Colours::black, DocumentWindow::closeButton), plugmachine_gui(*this, p, 200, (16+PADDING*2+MARGIN*2)*(paramcount+2)+30, 1, 1, false, false) {
 
+	//setAlwaysOnTop(true);
+
 	knobcount = paramcount;
 	for(int i = 0; i < knobcount; i++)
 		add_listener(knobs[i].id);
@@ -14,7 +16,6 @@ VUAudioProcessorSettings::VUAudioProcessorSettings(VUAudioProcessor& p, int para
 	init();
 	setUsingNativeTitleBar(true);
 	setVisible(true);
-	setAlwaysOnTop(true);
 }
 VUAudioProcessorSettings::~VUAudioProcessorSettings() {
 	audio_processor.settingswindow = nullptr;

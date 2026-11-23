@@ -289,10 +289,10 @@ void ClickBoxAudioProcessorEditor::renderOpenGL() {
 	context.extensions.glActiveTexture(GL_TEXTURE0);
 	slidertex.bind();
 	slidershader->setUniform("tex",0);
-	slidershader->setUniform("value",0.f);
+	slidershader->setUniform("value",-1.f);
 	slidershader->setUniform("texscale",0.f,0.f,1.f,.4453125f);
 	slidershader->setUniform("col",.23828125f,.23828125f,.23828125f);
-	slidershader->setUniform("margin",0.f);
+	slidershader->setUniform("margin",0.f,0.f);
 	slidershader->setUniform("hover",0.f);
 	slidershader->setUniform("scale",scaled_dpi);
 	coord = context.extensions.glGetAttribLocation(slidershader->getProgramID(),"aPos");
@@ -498,7 +498,7 @@ void ClickBoxAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 	}
 
 	initialdrag = hover;
-	if(hover > -1) {
+	if(initialdrag > -1) {
 		initialvalue = sliders[hover].value;
 		audio_processor.undo_manager.beginNewTransaction();
 		audio_processor.apvts.getParameter(sliders[hover].id)->beginChangeGesture();
@@ -507,7 +507,7 @@ void ClickBoxAudioProcessorEditor::mouseDown(const MouseEvent& event) {
 			audio_processor.apvts.getParameter(sliders[hover].id)->setValueNotifyingHost(((float)event.x/ui_scales[ui_scale_index]-sliders[hover].hx-2)/(sliders[hover].hw-sliders[hover].hx-4));
 		else
 			audio_processor.apvts.getParameter(sliders[hover].id)->setValueNotifyingHost(1-initialvalue);
-	} else if(hover == -2) {
+	} else if(initialdrag == -2) {
 		audio_processor.undo_manager.beginNewTransaction();
 		overridee = true;
 		audio_processor.apvts.getParameter("x")->setValueNotifyingHost((event.x/ui_scales[ui_scale_index]-5)*.0040650407f);
@@ -541,10 +541,10 @@ void ClickBoxAudioProcessorEditor::mouseDrag(const MouseEvent& event) {
 void ClickBoxAudioProcessorEditor::mouseUp(const MouseEvent& event) {
 	if(dpi < 0) return;
 	if(event.mods.isRightButtonDown()) return;
-	if(hover > -1) {
+	if(initialdrag > -1) {
 		audio_processor.undo_manager.setCurrentTransactionName(
-			(String)((sliders[hover].value - initialvalue) >= 0 ? "Increased " : "Decreased ") += sliders[hover].name);
-		audio_processor.apvts.getParameter(sliders[hover].id)->endChangeGesture();
+			(String)((sliders[initialdrag].value - initialvalue) >= 0 ? "Increased " : "Decreased ") += sliders[initialdrag].name);
+		audio_processor.apvts.getParameter(sliders[initialdrag].id)->endChangeGesture();
 		audio_processor.undo_manager.beginNewTransaction();
 	} else if(hover == -2) {
 		overridee = false;
@@ -611,11 +611,9 @@ LookNFeel::LookNFeel() {
 LookNFeel::~LookNFeel() {
 }
 Font LookNFeel::getPopupMenuFont() {
-	Font fontt;
-	if(font == "None")
-		fontt = Font(18.f*scale,Font::plain);
-	else
-		fontt = Font(font,"Regular",18.f*scale);
+	Font fontt = Font(FontOptions(18.f*scale,Font::plain));
+	if(font != "None")
+		fontt = Font(FontOptions(font,"Regular",18.f*scale));
 	fontt.setBold(true);
 	fontt.setExtraKerningFactor(-.05f);
 	return fontt;
@@ -720,7 +718,7 @@ void LookNFeel::getIdealPopupMenuItemSize(const String& text, const bool isSepar
 		idealWidth = 0;
 		int lines = 0;
 		while(std::getline(ss, token, '\n')) {
-			idealWidth = fmax(idealWidth,font.getStringWidth(token));
+			idealWidth = fmax(idealWidth,GlyphArrangement::getStringWidth(font,token));
 			++lines;
 		}
 

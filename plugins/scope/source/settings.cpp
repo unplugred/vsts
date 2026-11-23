@@ -4,6 +4,8 @@
 
 ScopeAudioProcessorSettings::ScopeAudioProcessorSettings(ScopeAudioProcessor& p, int paramcount, knob* k) : audio_processor(p), knobs(k), DocumentWindow("Scope Settings", Colours::black, DocumentWindow::closeButton), plugmachine_gui(*this, p, 200, (16+PADDING*2+MARGIN*2)*(paramcount+1)+30, 1, 1, false, false) {
 
+	//setAlwaysOnTop(true);
+
 	knobcount = paramcount;
 	for(int i = 0; i < knobcount; i++)
 		add_listener(knobs[i].id);
@@ -14,7 +16,6 @@ ScopeAudioProcessorSettings::ScopeAudioProcessorSettings(ScopeAudioProcessor& p,
 	init();
 	setUsingNativeTitleBar(true);
 	setVisible(true);
-	setAlwaysOnTop(true);
 }
 ScopeAudioProcessorSettings::~ScopeAudioProcessorSettings() {
 	audio_processor.settingswindow = nullptr;
