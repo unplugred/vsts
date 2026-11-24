@@ -53,10 +53,10 @@ target_compile_definitions("${BaseTargetName}" PUBLIC
 	JUCE_USE_CAMERA=0)
 
 juce_add_binary_data("${BaseTargetName}BinaryData" HEADER_NAME BinaryData.h NAMESPACE BinaryData SOURCES
-	../resources/base.png
-	../resources/elements.png
-	../resources/modules.png
-	../resources/selector.png
+	../resources/base.webp
+	../resources/elements.webp
+	../resources/modules.webp
+	../resources/selector.webp
 	../impulses/t_5150.wav
 	../impulses/b_5150.wav
 	../impulses/t_boogera.wav

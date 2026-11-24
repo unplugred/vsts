@@ -165,7 +165,7 @@ void main(){
 })");
 
 
-	add_texture(&texttex, BinaryData::text_png, BinaryData::text_pngSize, GL_NEAREST, GL_NEAREST);
+	add_texture(&texttex, BinaryData::text_webp, BinaryData::text_webpSize, GL_NEAREST, GL_NEAREST);
 
 	add_frame_buffer(&feedbackbuffer, width, height);
 	add_frame_buffer(&mainbuffer, width, height);

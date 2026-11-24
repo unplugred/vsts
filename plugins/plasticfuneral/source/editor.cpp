@@ -208,9 +208,9 @@ void main(){
 		texture(buffertex,uv).r)*.333333333),1.);
 })");
 
-	add_texture(&basetex, BinaryData::base_png, BinaryData::base_pngSize);
-	add_texture(&knobtex, BinaryData::knob_png, BinaryData::knob_pngSize, GL_LINEAR, GL_LINEAR, GL_REPEAT, GL_REPEAT);
-	add_texture(&creditstex, BinaryData::credits_png, BinaryData::credits_pngSize);
+	add_texture(&basetex, BinaryData::base_webp, BinaryData::base_webpSize);
+	add_texture(&knobtex, BinaryData::knob_webp, BinaryData::knob_webpSize, GL_LINEAR, GL_LINEAR, GL_REPEAT, GL_REPEAT);
+	add_texture(&creditstex, BinaryData::credits_webp, BinaryData::credits_webpSize);
 
 	add_frame_buffer(&framebuffer, width, height);
 

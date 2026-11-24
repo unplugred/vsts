@@ -47,9 +47,9 @@ void main(){
 		fragColor.r = fragColor.g;
 })");
 
-	add_texture(&errortex, BinaryData::error_png, BinaryData::error_pngSize);
-	add_texture(&rulertex, BinaryData::ruler_png, BinaryData::ruler_pngSize);
-	add_texture(&icontex, BinaryData::largeicon_png, BinaryData::largeicon_pngSize, GL_LINEAR, GL_LINEAR, GL_REPEAT, GL_REPEAT);
+	add_texture(&errortex, BinaryData::error_webp, BinaryData::error_webpSize);
+	add_texture(&rulertex, BinaryData::ruler_webp, BinaryData::ruler_webpSize);
+	add_texture(&icontex, BinaryData::largeicon_webp, BinaryData::largeicon_webpSize, GL_LINEAR, GL_LINEAR, GL_REPEAT, GL_REPEAT);
 
 	draw_init();
 }

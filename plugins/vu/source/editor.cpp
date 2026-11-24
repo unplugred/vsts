@@ -127,7 +127,7 @@ void main(){
 	fragColor = vec4(fragColor.rgb*(1-meter)*shadow+mask.rgb*meter,1.);
 })");
 
-	add_texture(&vutex, BinaryData::map_png, BinaryData::map_pngSize);
+	add_texture(&vutex, BinaryData::map_webp, BinaryData::map_webpSize);
 
 	draw_init();
 }

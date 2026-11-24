@@ -103,8 +103,8 @@ void main(){
 	fragColor = vec4(o*colone+(1-o)*coltwo,1);
 })");
 
-	add_texture(&basetex, BinaryData::base_png, BinaryData::base_pngSize, GL_NEAREST, GL_NEAREST);
-	add_texture(&creditstex, BinaryData::credits_png, BinaryData::credits_pngSize, GL_NEAREST, GL_NEAREST);
+	add_texture(&basetex, BinaryData::base_webp, BinaryData::base_webpSize, GL_NEAREST, GL_NEAREST);
+	add_texture(&creditstex, BinaryData::credits_webp, BinaryData::credits_webpSize, GL_NEAREST, GL_NEAREST);
 
 	draw_init();
 }

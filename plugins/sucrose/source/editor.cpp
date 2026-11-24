@@ -335,9 +335,9 @@ void main(){
 	//fragColor = texture(buffertex,uv);
 })");
 
-	add_texture(&bgtex  ,BinaryData::bg_png  ,BinaryData::bg_pngSize  );
-	add_texture(&fgtex  ,BinaryData::fg_png  ,BinaryData::fg_pngSize  );
-	add_texture(&linetex,BinaryData::line_png,BinaryData::line_pngSize);
+	add_texture(&bgtex  ,BinaryData::bg_webp  ,BinaryData::bg_webpSize  );
+	add_texture(&fgtex  ,BinaryData::fg_webp  ,BinaryData::fg_webpSize  );
+	add_texture(&linetex,BinaryData::line_webp,BinaryData::line_webpSize);
 
 	add_frame_buffer(&frame_buffer,width,height);
 

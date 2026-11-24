@@ -163,9 +163,9 @@ void main(){
 	fragColor = vec4(vec2(creditols.r),shine,creditols.g);
 })");
 
-	add_texture(&basetex, BinaryData::base_png, BinaryData::base_pngSize, GL_NEAREST, GL_NEAREST, GL_REPEAT, GL_REPEAT);
-	add_texture(&oversamplingtex, BinaryData::oversampling_png, BinaryData::oversampling_pngSize, GL_NEAREST, GL_NEAREST);
-	add_texture(&creditstex, BinaryData::credits_png, BinaryData::credits_pngSize, GL_NEAREST, GL_NEAREST);
+	add_texture(&basetex, BinaryData::base_webp, BinaryData::base_webpSize, GL_NEAREST, GL_NEAREST, GL_REPEAT, GL_REPEAT);
+	add_texture(&oversamplingtex, BinaryData::oversampling_webp, BinaryData::oversampling_webpSize, GL_NEAREST, GL_NEAREST);
+	add_texture(&creditstex, BinaryData::credits_webp, BinaryData::credits_webpSize, GL_NEAREST, GL_NEAREST);
 
 	draw_init();
 }

@@ -258,9 +258,9 @@ void main() {
 	}
 })");
 
-	add_texture(&slidertex, BinaryData::tex_png,BinaryData::tex_pngSize, GL_NEAREST, GL_NEAREST, GL_REPEAT, GL_REPEAT);
-	add_texture(&creditstex, BinaryData::credits_png,BinaryData::credits_pngSize, GL_NEAREST, GL_NEAREST, GL_REPEAT, GL_REPEAT);
-	add_texture(&cursortex, BinaryData::cursor_png,BinaryData::cursor_pngSize, GL_NEAREST, GL_NEAREST, GL_REPEAT, GL_REPEAT);
+	add_texture(&slidertex, BinaryData::tex_webp,BinaryData::tex_webpSize, GL_NEAREST, GL_NEAREST, GL_REPEAT, GL_REPEAT);
+	add_texture(&creditstex, BinaryData::credits_webp,BinaryData::credits_webpSize, GL_NEAREST, GL_NEAREST, GL_REPEAT, GL_REPEAT);
+	add_texture(&cursortex, BinaryData::cursor_webp,BinaryData::cursor_webpSize, GL_NEAREST, GL_NEAREST, GL_REPEAT, GL_REPEAT);
 
 	add_frame_buffer(&framebuffer, width, height, false, false, GL_NEAREST, GL_NEAREST);
 

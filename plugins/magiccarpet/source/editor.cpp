@@ -299,9 +299,9 @@ void main(){
 	//fragColor = texture(noisetex,uvc);
 })");
 
-	add_texture(&carpettex, BinaryData::carpet_png, BinaryData::carpet_pngSize);
-	add_texture(&logotex, BinaryData::logo_png, BinaryData::logo_pngSize);
-	add_texture(&noisetex, BinaryData::noise_png, BinaryData::noise_pngSize, GL_NEAREST, GL_NEAREST, GL_REPEAT, GL_REPEAT);
+	add_texture(&carpettex, BinaryData::carpet_webp, BinaryData::carpet_webpSize);
+	add_texture(&logotex, BinaryData::logo_webp, BinaryData::logo_webpSize);
+	add_texture(&noisetex, BinaryData::noise_webp, BinaryData::noise_webpSize, GL_NEAREST, GL_NEAREST, GL_REPEAT, GL_REPEAT);
 
 	add_frame_buffer(&frame_buffer, width, height);
 

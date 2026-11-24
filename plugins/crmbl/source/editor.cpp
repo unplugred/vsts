@@ -377,9 +377,9 @@ void main(){
 	fragColor = vec4(texture(numbertex,uv).r)*vec4(col,1);
 })");
 
-	add_texture(&basetex  ,BinaryData::map_png    ,BinaryData::map_pngSize    );
-	add_texture(&numbertex,BinaryData::numbers_png,BinaryData::numbers_pngSize,GL_NEAREST,GL_NEAREST);
-	add_texture(&noisetex ,BinaryData::noise_png  ,BinaryData::noise_pngSize  ,GL_NEAREST,GL_NEAREST,GL_REPEAT,GL_REPEAT);
+	add_texture(&basetex  ,BinaryData::map_webp    ,BinaryData::map_webpSize    );
+	add_texture(&numbertex,BinaryData::numbers_webp,BinaryData::numbers_webpSize,GL_NEAREST,GL_NEAREST);
+	add_texture(&noisetex ,BinaryData::noise_webp  ,BinaryData::noise_webpSize  ,GL_NEAREST,GL_NEAREST,GL_REPEAT,GL_REPEAT);
 
 	add_frame_buffer(&feedbackbuffer, width, height);
 	add_frame_buffer(&mainbuffer, width, height);

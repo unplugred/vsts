@@ -460,18 +460,18 @@ void main(){
 	//fragColor = vec4(coldark.g,colgray.g,colwite.g,1);
 })");
 
-	add_texture(&baseentex, BinaryData::base_en_png, BinaryData::base_en_pngSize);
+	add_texture(&baseentex, BinaryData::base_en_webp, BinaryData::base_en_webpSize);
 	if(jpmode)
-		add_texture(&basejptex, BinaryData::base_jp_png, BinaryData::base_jp_pngSize);
-	add_texture(&disptex, BinaryData::disp_png, BinaryData::disp_pngSize);
-	add_texture(&nonetex, BinaryData::none_png, BinaryData::none_pngSize);
-	add_texture(&selecttex, BinaryData::curvelabels_png, BinaryData::curvelabels_pngSize);
+		add_texture(&basejptex, BinaryData::base_jp_webp, BinaryData::base_jp_webpSize);
+	add_texture(&disptex, BinaryData::disp_webp, BinaryData::disp_webpSize);
+	add_texture(&nonetex, BinaryData::none_webp, BinaryData::none_webpSize);
+	add_texture(&selecttex, BinaryData::curvelabels_webp, BinaryData::curvelabels_webpSize);
 	if(jpmode)
-		add_texture(&papertex, BinaryData::paper_jp_png, BinaryData::paper_jp_pngSize);
+		add_texture(&papertex, BinaryData::paper_jp_webp, BinaryData::paper_jp_webpSize);
 	else
-		add_texture(&papertex, BinaryData::paper_en_png, BinaryData::paper_en_pngSize);
-	add_texture(&handtex, BinaryData::hands_png, BinaryData::hands_pngSize);
-	add_texture(&overlaytex, BinaryData::overlay_png, BinaryData::overlay_pngSize, GL_LINEAR, GL_LINEAR, GL_MIRRORED_REPEAT, GL_MIRRORED_REPEAT);
+		add_texture(&papertex, BinaryData::paper_en_webp, BinaryData::paper_en_webpSize);
+	add_texture(&handtex, BinaryData::hands_webp, BinaryData::hands_webpSize);
+	add_texture(&overlaytex, BinaryData::overlay_webp, BinaryData::overlay_webpSize, GL_LINEAR, GL_LINEAR, GL_MIRRORED_REPEAT, GL_MIRRORED_REPEAT);
 
 	add_frame_buffer(&frame_buffer, width, height);
 
@@ -490,10 +490,10 @@ void SunBurntAudioProcessorEditor::renderOpenGL() {
 		prevjpmode = jpmode;
 		remove_texture(&papertex);
 		if(jpmode) {
-			add_texture(&papertex, BinaryData::paper_jp_png, BinaryData::paper_jp_pngSize);
-			add_texture(&basejptex, BinaryData::base_jp_png, BinaryData::base_jp_pngSize);
+			add_texture(&papertex, BinaryData::paper_jp_webp, BinaryData::paper_jp_webpSize);
+			add_texture(&basejptex, BinaryData::base_jp_webp, BinaryData::base_jp_webpSize);
 		} else {
-			add_texture(&papertex, BinaryData::paper_en_png, BinaryData::paper_en_pngSize);
+			add_texture(&papertex, BinaryData::paper_en_webp, BinaryData::paper_en_webpSize);
 			remove_texture(&basejptex);
 		}
 	}

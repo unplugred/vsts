@@ -52,19 +52,19 @@ target_compile_definitions("${BaseTargetName}" PUBLIC
 	JUCE_USE_CAMERA=0)
 
 juce_add_binary_data("${BaseTargetName}BinaryData" HEADER_NAME BinaryData.h NAMESPACE BinaryData SOURCES
-	resources/base.png
-	resources/banner.png
-	resources/flowers.png
-	resources/labels.png
-	resources/numbers.png
-	resources/tacks.png
-	resources/cuber.png
-	resources/onoff.png
-	resources/knob.png
-	resources/logo.png
-	resources/logoalpha.png
-	resources/dots.png
-	resources/line.png)
+	resources/base.webp
+	resources/banner.webp
+	resources/flowers.webp
+	resources/labels.webp
+	resources/numbers.webp
+	resources/tacks.webp
+	resources/cuber.webp
+	resources/onoff.webp
+	resources/knob.webp
+	resources/logo.webp
+	resources/logoalpha.webp
+	resources/dots.webp
+	resources/line.webp)
 set_target_properties("${BaseTargetName}BinaryData" PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
 
 target_link_libraries("${BaseTargetName}" PRIVATE

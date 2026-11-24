@@ -180,8 +180,8 @@ void main() {
 	fragColor = vec4((bgcolshift*val*(1-((1-ui.g)*grid))+pow(vec3(render*(1-((1-ui.g)*grid))+bloom),(3-bgcolshift*2)*(1-val)+val)-(1-texture(noisetex,uv*res+noiseoffset).rgb)*.09*(val*.75+.25))*ui.r+ui.b*val,1);
 })");
 
-	add_texture(&basetex,BinaryData::base_png,BinaryData::base_pngSize,GL_LINEAR,GL_LINEAR,GL_REPEAT,GL_REPEAT);
-	add_texture(&noisetex,BinaryData::noise_png,BinaryData::noise_pngSize,GL_NEAREST,GL_NEAREST,GL_REPEAT,GL_REPEAT);
+	add_texture(&basetex,BinaryData::base_webp,BinaryData::base_webpSize,GL_LINEAR,GL_LINEAR,GL_REPEAT,GL_REPEAT);
+	add_texture(&noisetex,BinaryData::noise_webp,BinaryData::noise_webpSize,GL_NEAREST,GL_NEAREST,GL_REPEAT,GL_REPEAT);
 
 	add_frame_buffer(&framebuffer,width,height);
 	add_frame_buffer(&downscalebuffer,200/DOWNSCALEFACTOR,150/DOWNSCALEFACTOR,false,false);

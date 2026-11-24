@@ -834,14 +834,14 @@ void main(){
 })");
 
 #ifdef PRISMON
-	add_texture(&basetex, BinaryData::basemon_png, BinaryData::basemon_pngSize);
-	add_texture(&logomontex, BinaryData::logo_png, BinaryData::logo_pngSize);
+	add_texture(&basetex, BinaryData::basemon_webp, BinaryData::basemon_webpSize);
+	add_texture(&logomontex, BinaryData::logo_webp, BinaryData::logo_webpSize);
 #else
-	add_texture(&basetex, BinaryData::base_png, BinaryData::base_pngSize);
+	add_texture(&basetex, BinaryData::base_webp, BinaryData::base_webpSize);
 #endif
-	add_texture(&selectortex, BinaryData::selector_png, BinaryData::selector_pngSize, GL_LINEAR, GL_LINEAR, GL_REPEAT, GL_MIRROR_CLAMP_TO_EDGE);
-	add_texture(&modulestex, BinaryData::modules_png, BinaryData::modules_pngSize, GL_LINEAR, GL_LINEAR, GL_REPEAT, GL_REPEAT);
-	add_texture(&elementstex, BinaryData::elements_png, BinaryData::elements_pngSize);
+	add_texture(&selectortex, BinaryData::selector_webp, BinaryData::selector_webpSize, GL_LINEAR, GL_LINEAR, GL_REPEAT, GL_MIRROR_CLAMP_TO_EDGE);
+	add_texture(&modulestex, BinaryData::modules_webp, BinaryData::modules_webpSize, GL_LINEAR, GL_LINEAR, GL_REPEAT, GL_REPEAT);
+	add_texture(&elementstex, BinaryData::elements_webp, BinaryData::elements_webpSize);
 
 	draw_init();
 }

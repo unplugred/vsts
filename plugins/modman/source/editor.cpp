@@ -453,19 +453,19 @@ void main() {
 	fragColor = texture(dotstex,uv);
 })");
 
-	add_texture(&basetex, BinaryData::base_png, BinaryData::base_pngSize);
-	add_texture(&bannertex, BinaryData::banner_png, BinaryData::banner_pngSize);
-	add_texture(&flowerstex, BinaryData::flowers_png, BinaryData::flowers_pngSize);
-	add_texture(&labelstex, BinaryData::labels_png, BinaryData::labels_pngSize);
-	add_texture(&tackstex, BinaryData::tacks_png, BinaryData::tacks_pngSize);
-	add_texture(&numberstex, BinaryData::numbers_png, BinaryData::numbers_pngSize);
-	add_texture(&cubertex, BinaryData::cuber_png, BinaryData::cuber_pngSize);
-	add_texture(&onofftex, BinaryData::onoff_png, BinaryData::onoff_pngSize);
-	add_texture(&knobtex, BinaryData::knob_png, BinaryData::knob_pngSize);
-	add_texture(&logotex, BinaryData::logo_png, BinaryData::logo_pngSize);
-	add_texture(&logoalphatex, BinaryData::logoalpha_png, BinaryData::logoalpha_pngSize);
-	add_texture(&linetex, BinaryData::line_png, BinaryData::line_pngSize);
-	add_texture(&dotstex, BinaryData::dots_png, BinaryData::dots_pngSize);
+	add_texture(&basetex, BinaryData::base_webp, BinaryData::base_webpSize);
+	add_texture(&bannertex, BinaryData::banner_webp, BinaryData::banner_webpSize);
+	add_texture(&flowerstex, BinaryData::flowers_webp, BinaryData::flowers_webpSize);
+	add_texture(&labelstex, BinaryData::labels_webp, BinaryData::labels_webpSize);
+	add_texture(&tackstex, BinaryData::tacks_webp, BinaryData::tacks_webpSize);
+	add_texture(&numberstex, BinaryData::numbers_webp, BinaryData::numbers_webpSize);
+	add_texture(&cubertex, BinaryData::cuber_webp, BinaryData::cuber_webpSize);
+	add_texture(&onofftex, BinaryData::onoff_webp, BinaryData::onoff_webpSize);
+	add_texture(&knobtex, BinaryData::knob_webp, BinaryData::knob_webpSize);
+	add_texture(&logotex, BinaryData::logo_webp, BinaryData::logo_webpSize);
+	add_texture(&logoalphatex, BinaryData::logoalpha_webp, BinaryData::logoalpha_webpSize);
+	add_texture(&linetex, BinaryData::line_webp, BinaryData::line_webpSize);
+	add_texture(&dotstex, BinaryData::dots_webp, BinaryData::dots_webpSize);
 
 	draw_init();
 }

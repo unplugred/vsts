@@ -183,8 +183,8 @@ void main() {
 	fragColor = vec4(1,1,1,texture(tex,uv).r);
 })");
 
-	add_texture(&basetex,rumode?BinaryData::base_ru_png:BinaryData::base_en_png,rumode?BinaryData::base_ru_pngSize:BinaryData::base_en_pngSize,GL_NEAREST,GL_NEAREST);
-	add_texture(&texttex,rumode?BinaryData::txt_ru_png :BinaryData::txt_en_png ,rumode?BinaryData::txt_ru_pngSize :BinaryData::txt_en_pngSize ,GL_NEAREST,GL_NEAREST);
+	add_texture(&basetex,rumode?BinaryData::base_ru_webp:BinaryData::base_en_webp,rumode?BinaryData::base_ru_webpSize:BinaryData::base_en_webpSize,GL_NEAREST,GL_NEAREST);
+	add_texture(&texttex,rumode?BinaryData::txt_ru_webp :BinaryData::txt_en_webp ,rumode?BinaryData::txt_ru_webpSize :BinaryData::txt_en_webpSize ,GL_NEAREST,GL_NEAREST);
 
 	add_frame_buffer(&framebuffer,(int)(width*.5),1,true,false,GL_NEAREST,GL_NEAREST);
 
@@ -204,8 +204,8 @@ void RedBassAudioProcessorEditor::renderOpenGL() {
 		prevrumode = rumode;
 		remove_texture(&basetex);
 		remove_texture(&texttex);
-		add_texture(&basetex,rumode?BinaryData::base_ru_png:BinaryData::base_en_png,rumode?BinaryData::base_ru_pngSize:BinaryData::base_en_pngSize,GL_NEAREST,GL_NEAREST);
-		add_texture(&texttex,rumode?BinaryData::txt_ru_png :BinaryData::txt_en_png ,rumode?BinaryData::txt_ru_pngSize :BinaryData::txt_en_pngSize ,GL_NEAREST,GL_NEAREST);
+		add_texture(&basetex,rumode?BinaryData::base_ru_webp:BinaryData::base_en_webp,rumode?BinaryData::base_ru_webpSize:BinaryData::base_en_webpSize,GL_NEAREST,GL_NEAREST);
+		add_texture(&texttex,rumode?BinaryData::txt_ru_webp :BinaryData::txt_en_webp ,rumode?BinaryData::txt_ru_webpSize :BinaryData::txt_en_webpSize ,GL_NEAREST,GL_NEAREST);
 	}
 
 	context.extensions.glBindBuffer(GL_ARRAY_BUFFER, array_buffer);
